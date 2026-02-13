@@ -1,0 +1,94 @@
+﻿Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+node.exe : ÔÜá The "middleware" file 
+convention is deprecated. Please use 
+"proxy" instead. Learn more: https://n
+extjs.org/docs/messages/middleware-to-
+proxy
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpec 
+   ified: (ÔÜá The "middle...leware-  
+  to-proxy:String) [], RemoteExcept   
+ ion
+    + FullyQualifiedErrorId : NativeC 
+   ommandError
+ 
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 9.7s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+Error: Failed to load external module 
+@prisma/client-2c3a283f134fdcb6: 
+Error: Cannot find module 
+'.prisma/client/default'
+Require stack:
+- D:\tailor_project\tailorapp\node_mod
+ules\@prisma\client\default.js
+- D:\tailor_project\tailorapp\.next\se
+rver\chunks\[root-of-the-server]__0cf3
+0f06._.js
+- D:\tailor_project\tailorapp\.next\se
+rver\chunks\[turbopack]_runtime.js
+- D:\tailor_project\tailorapp\.next\se
+rver\app\api\auth\[...nextauth]\route.
+js
+- D:\tailor_project\tailorapp\node_mod
+ules\next\dist\server\require.js
+- D:\tailor_project\tailorapp\node_mod
+ules\next\dist\server\load-components.
+js
+- D:\tailor_project\tailorapp\node_mod
+ules\next\dist\build\utils.js
+- D:\tailor_project\tailorapp\node_mod
+ules\next\dist\build\worker.js
+- D:\tailor_project\tailorapp\node_mod
+ules\next\dist\compiled\jest-worker\pr
+ocessChild.js
+    at Context.externalRequire [as x] 
+(D:\tailor_project\tailorapp\.next\ser
+ver\chunks\[turbopack]_runtime.js:535:
+15)
+    at module evaluation (D:\tailor_pr
+oject\tailorapp\.next\server\chunks\[r
+oot-of-the-server]__0cf30f06._.js:34:4
+5131)
+    at instantiateModule (D:\tailor_pr
+oject\tailorapp\.next\server\chunks\[t
+urbopack]_runtime.js:740:9)
+    at 
+getOrInstantiateModuleFromParent (D:\t
+ailor_project\tailorapp\.next\server\c
+hunks\[turbopack]_runtime.js:763:12)
+    at Context.esmImport [as i] (D:\ta
+ilor_project\tailorapp\.next\server\ch
+unks\[turbopack]_runtime.js:228:20)
+    at module evaluation (D:\tailor_pr
+oject\tailorapp\.next\server\chunks\[r
+oot-of-the-server]__0cf30f06._.js:34:4
+5590)
+    at instantiateModule (D:\tailor_pr
+oject\tailorapp\.next\server\chunks\[t
+urbopack]_runtime.js:740:9)
+    at instantiateRuntimeModule (D:\ta
+ilor_project\tailorapp\.next\server\ch
+unks\[turbopack]_runtime.js:768:12)
+    at getOrInstantiateRuntimeModule (
+D:\tailor_project\tailorapp\.next\serv
+er\chunks\[turbopack]_runtime.js:781:1
+2)
+    at Object.m (D:\tailor_project\tai
+lorapp\.next\server\chunks\[turbopack]
+_runtime.js:790:18)
+
+> Build error occurred
+Error: Failed to collect page data 
+for /api/auth/[...nextauth]
+    at ignore-listed frames {
+  type: 'Error'
+}
