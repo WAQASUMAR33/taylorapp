@@ -35,7 +35,7 @@ const navItems = [
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
     { name: "Cash Management", href: "/dashboard/cash", icon: Landmark, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stitching Orders", href: "/dashboard/bookings", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Stitching Orders", href: "/dashboard/stitching-orders", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "User Management", href: "/dashboard/users", icon: Settings, roles: ["ADMIN"] },
 ];
 

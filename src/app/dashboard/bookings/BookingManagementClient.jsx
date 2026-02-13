@@ -1634,42 +1634,40 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Box>
                         </Box>
                     ) : (
-                        // --- STITCHING DETAILS LAYOUT ---
-                        <Box>
-                            <Box sx={{ textAlign: 'center', mb: 3, borderBottom: '2px solid #000', pb: 2 }}>
-                                <Typography variant="h4" fontWeight="bold">STITCHING ORDER</Typography>
-                                <Typography variant="h6">Booking #{printBooking.bookingNumber}</Typography>
+                        // --- STITCHING DETAILS LAYOUT (URDU) ---
+                        <Box dir="rtl" sx={{ fontFamily: 'Arial, sans-serif', p: 1 }}>
+                            <Box sx={{ textAlign: 'center', mb: 1, borderBottom: '1px solid #000', pb: 0.5 }}>
+                                <Typography variant="h6" fontWeight="bold">سلائی آرڈر (Booking #{printBooking.bookingNumber})</Typography>
                             </Box>
 
-                            <Grid container spacing={2} sx={{ mb: 4 }}>
+                            <Grid container spacing={1} sx={{ mb: 1 }}>
                                 <Grid item xs={6}>
-                                    <Typography variant="h6" fontWeight="bold">{printBooking.customer?.name}</Typography>
-                                    <Typography variant="body1">Phone: {printBooking.customer?.phone}</Typography>
+                                    <Typography variant="subtitle2" fontWeight="bold">{printBooking.customer?.name}</Typography>
                                 </Grid>
-                                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                                    <Typography variant="body1"><strong>Delivery Date:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : 'N/A'}</Typography>
-                                    <Typography variant="body1"><strong>Trial Date:</strong> {printBooking.trialDate ? new Date(printBooking.trialDate).toLocaleDateString() : 'N/A'}</Typography>
+                                <Grid item xs={6} sx={{ textAlign: 'left' }}>
+                                    <Typography variant="caption" display="block"><strong>تاریخ حوالگی:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
+                                    <Typography variant="caption" display="block"><strong>ٹرائل کی تاریخ:</strong> {printBooking.trialDate ? new Date(printBooking.trialDate).toLocaleDateString() : '-'}</Typography>
                                 </Grid>
                             </Grid>
 
                             {/* MEASUREMENTS SECTION */}
                             {customerMeasurements && (
-                                <Box sx={{ mb: 4, p: 2, border: '1px solid #000', borderRadius: 2 }}>
-                                    <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, textDecoration: 'underline' }}>MEASUREMENTS</Typography>
+                                <Box sx={{ mb: 1, p: 1, border: '1px solid #000', borderRadius: 1 }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5, textDecoration: 'underline' }}>پیمائش (Measurements)</Typography>
                                     <Grid container spacing={2}>
                                         {/* Shalwar Qameez Measurements */}
                                         <Grid item xs={12}>
                                             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>Kameez / Shalwar</Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                                                {customerMeasurements.qameez_lambai && <Typography><strong>Length:</strong> {customerMeasurements.qameez_lambai}</Typography>}
-                                                {customerMeasurements.teera && <Typography><strong>Teera:</strong> {customerMeasurements.teera}</Typography>}
-                                                {customerMeasurements.bazoo && <Typography><strong>Bazoo:</strong> {customerMeasurements.bazoo}</Typography>}
-                                                {customerMeasurements.galaa && <Typography><strong>Gala:</strong> {customerMeasurements.galaa}</Typography>}
-                                                {customerMeasurements.chaati && <Typography><strong>Chaati:</strong> {customerMeasurements.chaati}</Typography>}
-                                                {customerMeasurements.kamar_around && <Typography><strong>Kamar:</strong> {customerMeasurements.kamar_around}</Typography>}
-                                                {customerMeasurements.gheera && <Typography><strong>Ghera:</strong> {customerMeasurements.gheera}</Typography>}
-                                                {customerMeasurements.shalwar_lambai && <Typography><strong>Shalwar Length:</strong> {customerMeasurements.shalwar_lambai}</Typography>}
-                                                {customerMeasurements.puhncha && <Typography><strong>Pohncha:</strong> {customerMeasurements.puhncha}</Typography>}
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                                                {customerMeasurements.qameez_lambai && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>لمبائی:</strong> {customerMeasurements.qameez_lambai}</Typography>}
+                                                {customerMeasurements.teera && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>تیرا:</strong> {customerMeasurements.teera}</Typography>}
+                                                {customerMeasurements.bazoo && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>بازو:</strong> {customerMeasurements.bazoo}</Typography>}
+                                                {customerMeasurements.galaa && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>گلہ:</strong> {customerMeasurements.galaa}</Typography>}
+                                                {customerMeasurements.chaati && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>چھاتی:</strong> {customerMeasurements.chaati}</Typography>}
+                                                {customerMeasurements.kamar_around && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>کمر:</strong> {customerMeasurements.kamar_around}</Typography>}
+                                                {customerMeasurements.gheera && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>گھیرا:</strong> {customerMeasurements.gheera}</Typography>}
+                                                {customerMeasurements.shalwar_lambai && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>شلوار لمبائی:</strong> {customerMeasurements.shalwar_lambai}</Typography>}
+                                                {customerMeasurements.puhncha && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>پائنچہ:</strong> {customerMeasurements.puhncha}</Typography>}
                                             </Box>
                                         </Grid>
                                     </Grid>
@@ -1677,56 +1675,56 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             )}
 
                             {/* STITCHING ITEMS SECTION */}
-                            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, textDecoration: 'underline' }}>ORDER DETAILS</Typography>
+                            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5, textDecoration: 'underline' }}>آرڈر کی تفصیلات (Order Details)</Typography>
                             {printBooking.items?.map((item, idx) => (
-                                <Box key={idx} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
-                                    <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-                                        {idx + 1}. {item.product?.name} <span style={{ fontWeight: 'normal' }}>(Qty: {item.quantity})</span>
+                                <Box key={idx} sx={{ mb: 1, p: 0.5, border: '1px solid #ccc', borderRadius: 1 }}>
+                                    <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5, fontSize: '12px' }}>
+                                        {idx + 1}. {item.product?.name} <span style={{ fontWeight: 'normal' }}>(تعداد: {item.quantity})</span>
                                     </Typography>
 
-                                    {(item.bookingType === 'STITCHING' || item.isStitching) ? (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, ml: 2 }}>
+                                    {(item.cuffType || item.pohnchaType || item.galaType || item.shalwarType || item.pocketType || item.gheraType || item.hasFrontPockets || item.hasShalwarPocket) ? (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mr: 1 }}>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="bold">Style Details:</Typography>
-                                                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                                    {item.cuffType && <li>Cuff: {item.cuffType}</li>}
-                                                    {item.galaType && <li>Gala: {item.galaType} ({item.galaSize})</li>}
-                                                    {item.pocketType && <li>Pocket: {item.pocketType}</li>}
-                                                    {item.gheraType && <li>Ghera: {item.gheraType}</li>}
+                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>اسٹائل (Style):</Typography>
+                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
+                                                    {item.cuffType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>کف: {item.cuffType === 'single' ? 'سنگل' : item.cuffType === 'double folding' ? 'ڈبل' : item.cuffType === 'open sleeve' ? 'کھلی آستین' : item.cuffType}</Typography></li>}
+                                                    {item.galaType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>گلہ: {item.galaType === 'ban' ? 'بین' : 'کالر'} ({item.galaSize})</Typography></li>}
+                                                    {item.pocketType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>جیب: {item.pocketType === 'single' ? 'سنگل' : 'ڈبل'}</Typography></li>}
+                                                    {item.gheraType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>گھیرا: {item.gheraType === 'seedha' ? 'سیدھا' : 'گول'}</Typography></li>}
                                                 </ul>
                                             </Box>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="bold">Shalwar/Trouser:</Typography>
-                                                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                                    {item.shalwarType && <li>Type: {item.shalwarType}</li>}
-                                                    {item.pohnchaType && <li>Pohncha: {item.pohnchaType}</li>}
-                                                    <li>Shalwar Pocket: {item.hasShalwarPocket ? 'Yes' : 'No'}</li>
+                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>شلوار (Shalwar):</Typography>
+                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
+                                                    {item.shalwarType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>قسم: {item.shalwarType === 'pajama' ? 'پاجامہ' : 'شلوار'}</Typography></li>}
+                                                    {item.pohnchaType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>پائنچہ: {item.pohnchaType === 'saada' ? 'سادہ' : item.pohnchaType === 'jaali' ? 'جالی والا' : item.pohnchaType === 'karhaai' ? 'کڑھائی والا' : 'جالی بمعہ کڑھائی'}</Typography></li>}
+                                                    {item.hasShalwarPocket && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>شلوار جیب: جی ہاں</Typography></li>}
                                                 </ul>
                                             </Box>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="bold">Extras:</Typography>
-                                                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                                    <li>Front Pocket: {item.hasFrontPockets ? 'Yes' : 'No'}</li>
+                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>دیگر (Extras):</Typography>
+                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
+                                                    {item.hasFrontPockets && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>سامنے والی جیب: جی ہاں</Typography></li>}
                                                 </ul>
                                             </Box>
                                         </Box>
                                     ) : (
-                                        <Typography variant="body2" sx={{ ml: 2, fontStyle: 'italic' }}>Readymade Item (No Stitching instructions)</Typography>
+                                        <Typography variant="caption" sx={{ mr: 2, fontStyle: 'italic', fontSize: '10px' }}>سلائی کی کوئی ہدایت نہیں (Readymade)</Typography>
                                     )}
                                 </Box>
                             ))}
 
-                            <Box sx={{ mt: 4, borderTop: '1px solid #000', pt: 4, display: 'flex', justifyContent: 'space-between' }}>
-                                <Box sx={{ borderTop: '1px solid #000', width: '250px', textAlign: 'center', pt: 1 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>Master / Cutter</Typography>
-                                    <Typography variant="body2" sx={{ minHeight: '20px' }}>
-                                        {[...new Set(printBooking.items?.map(i => i.cutterId).filter(Boolean))].map(id => employees?.find(e => e.id === id)?.name).filter(Boolean).join(', ')}
+                            <Box sx={{ mt: 2, borderTop: '1px solid #000', pt: 1, display: 'flex', justifyContent: 'space-between' }}>
+                                <Box sx={{ borderTop: '1px solid #000', width: '150px', textAlign: 'center', pt: 0.5 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', fontSize: '10px' }}>ماسٹر / کٹر (Master)</Typography>
+                                    <Typography variant="caption" sx={{ minHeight: '15px', display: 'block' }}>
+                                        {employees?.find(e => e.id === printBooking.cutterId)?.name || ""}
                                     </Typography>
                                 </Box>
-                                <Box sx={{ borderTop: '1px solid #000', width: '250px', textAlign: 'center', pt: 1 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>Tailor</Typography>
-                                    <Typography variant="body2" sx={{ minHeight: '20px' }}>
-                                        {[...new Set(printBooking.items?.map(i => i.tailorId).filter(Boolean))].map(id => employees?.find(e => e.id === id)?.name).filter(Boolean).join(', ')}
+                                <Box sx={{ borderTop: '1px solid #000', width: '150px', textAlign: 'center', pt: 0.5 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', fontSize: '10px' }}>درزی (Tailor)</Typography>
+                                    <Typography variant="caption" sx={{ minHeight: '15px', display: 'block' }}>
+                                        {employees?.find(e => e.id === printBooking.tailorId)?.name || ""}
                                     </Typography>
                                 </Box>
                             </Box>
