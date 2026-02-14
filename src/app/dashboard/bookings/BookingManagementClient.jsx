@@ -48,7 +48,8 @@ import {
     Eye,
     Printer,
     BookText,
-    Ruler
+    Ruler,
+    MessageCircle
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -184,6 +185,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const product = products.find(p => p.id === parseInt(productId));
         if (product) {
             const newItems = [...cartItems];
+
+            // Auto-select bookingType based on product category
+            // Category "Suit" -> needs stitching (STITCHING enum displays breakdown)
+            // Category "Stitched" -> readymade (SUIT enum hides breakdown)
+            let bookingType = "SUIT";
+            if (product.category?.name?.toLowerCase().includes("suit")) {
+                bookingType = "STITCHING";
+            }
+
             newItems[index] = {
                 ...newItems[index],
                 productId: product.id,
@@ -192,7 +202,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 quantity: newItems[index].quantity || 1,
                 discount: newItems[index].discount || 0,
                 totalPrice: ((newItems[index].quantity || 1) * parseFloat(product.unitPrice || 0)) - (parseFloat(newItems[index].discount) || 0),
-                isCollapsed: true, // Auto-copy and collapse
+                bookingType: bookingType,
+                isStitching: bookingType === 'STITCHING',
+                isCollapsed: bookingType === 'SUIT', // Auto-collapse for readymade
             };
             setCartItems(newItems);
         }
@@ -691,23 +703,21 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                             />
                                                                         )}
                                                                     />
-                                                                    <FormControl component="fieldset">
-                                                                        <RadioGroup
-                                                                            row
-                                                                            name={`booking-type-${index}`}
-                                                                            value={item.bookingType}
-                                                                            onChange={(e) => {
-                                                                                const newItems = [...cartItems];
-                                                                                const newVal = e.target.value;
-                                                                                newItems[index].bookingType = newVal;
-                                                                                newItems[index].isStitching = newVal === 'STITCHING';
-                                                                                setCartItems(newItems);
+                                                                    {/* Category selection is now automated based on product selection */}
+                                                                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={item.bookingType === 'STITCHING' ? 'Suit (Needs Stitching)' : 'Stitched (Readymade)'}
+                                                                            variant="outlined"
+                                                                            sx={{
+                                                                                fontSize: '0.7rem',
+                                                                                height: 20,
+                                                                                color: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#6b7280',
+                                                                                borderColor: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#e5e7eb',
+                                                                                bgcolor: item.bookingType === 'STITCHING' ? '#f5f3ff' : '#f9fafb'
                                                                             }}
-                                                                        >
-                                                                            <FormControlLabel value="STITCHING" control={<Radio size="small" />} label={<Typography variant="body2">Stitching</Typography>} />
-                                                                            <FormControlLabel value="SUIT" control={<Radio size="small" />} label={<Typography variant="body2">Suit</Typography>} />
-                                                                        </RadioGroup>
-                                                                    </FormControl>
+                                                                        />
+                                                                    </Box>
                                                                 </Box>
                                                             </TableCell>
                                                             <TableCell>
@@ -1634,98 +1644,163 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Box>
                         </Box>
                     ) : (
-                        // --- STITCHING DETAILS LAYOUT (URDU) ---
-                        <Box dir="rtl" sx={{ fontFamily: 'Arial, sans-serif', p: 1 }}>
-                            <Box sx={{ textAlign: 'center', mb: 1, borderBottom: '1px solid #000', pb: 0.5 }}>
-                                <Typography variant="h6" fontWeight="bold">سلائی آرڈر (Booking #{printBooking.bookingNumber})</Typography>
+                        <Box
+                            dir="rtl"
+                            sx={{
+                                fontFamily: 'Arial, sans-serif',
+                                p: 1,
+                                color: 'black',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                minHeight: '10in', // Approximate A4 height to help keep footer at bottom
+                                width: '100%',
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
+                                <Typography variant="subtitle1" fontWeight="bold">سلائی آرڈر (Booking #{printBooking.bookingNumber})</Typography>
                             </Box>
 
-                            <Grid container spacing={1} sx={{ mb: 1 }}>
-                                <Grid item xs={6}>
-                                    <Typography variant="subtitle2" fontWeight="bold">{printBooking.customer?.name}</Typography>
-                                </Grid>
-                                <Grid item xs={6} sx={{ textAlign: 'left' }}>
-                                    <Typography variant="caption" display="block"><strong>تاریخ حوالگی:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
-                                    <Typography variant="caption" display="block"><strong>ٹرائل کی تاریخ:</strong> {printBooking.trialDate ? new Date(printBooking.trialDate).toLocaleDateString() : '-'}</Typography>
-                                </Grid>
-                            </Grid>
-
-                            {/* MEASUREMENTS SECTION */}
-                            {customerMeasurements && (
-                                <Box sx={{ mb: 1, p: 1, border: '1px solid #000', borderRadius: 1 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5, textDecoration: 'underline' }}>پیمائش (Measurements)</Typography>
-                                    <Grid container spacing={2}>
-                                        {/* Shalwar Qameez Measurements */}
-                                        <Grid item xs={12}>
-                                            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>Kameez / Shalwar</Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                                                {customerMeasurements.qameez_lambai && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>لمبائی:</strong> {customerMeasurements.qameez_lambai}</Typography>}
-                                                {customerMeasurements.teera && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>تیرا:</strong> {customerMeasurements.teera}</Typography>}
-                                                {customerMeasurements.bazoo && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>بازو:</strong> {customerMeasurements.bazoo}</Typography>}
-                                                {customerMeasurements.galaa && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>گلہ:</strong> {customerMeasurements.galaa}</Typography>}
-                                                {customerMeasurements.chaati && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>چھاتی:</strong> {customerMeasurements.chaati}</Typography>}
-                                                {customerMeasurements.kamar_around && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>کمر:</strong> {customerMeasurements.kamar_around}</Typography>}
-                                                {customerMeasurements.gheera && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>گھیرا:</strong> {customerMeasurements.gheera}</Typography>}
-                                                {customerMeasurements.shalwar_lambai && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>شلوار لمبائی:</strong> {customerMeasurements.shalwar_lambai}</Typography>}
-                                                {customerMeasurements.puhncha && <Typography variant="caption" sx={{ fontSize: '11px' }}><strong>پائنچہ:</strong> {customerMeasurements.puhncha}</Typography>}
-                                            </Box>
-                                        </Grid>
+                            <Box sx={{ mb: 2, pb: 1 }}>
+                                <Grid container spacing={1}>
+                                    <Grid item xs={12}>
+                                        <Typography variant="body1"><strong>نام کسٹمر:</strong> {printBooking.customer?.name || ''}</Typography>
                                     </Grid>
-                                </Box>
-                            )}
+                                    <Grid item xs={12} sx={{ minHeight: '3em' }}>
+                                        <Typography variant="body1"><strong>پتہ:</strong> {printBooking.customer?.address || ''}</Typography>
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="body1"><strong>فون نمبر:</strong> {printBooking.customer?.phone || ''}</Typography>
+                                    </Grid>
+                                </Grid>
+                            </Box>
 
-                            {/* STITCHING ITEMS SECTION */}
-                            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5, textDecoration: 'underline' }}>آرڈر کی تفصیلات (Order Details)</Typography>
-                            {printBooking.items?.map((item, idx) => (
-                                <Box key={idx} sx={{ mb: 1, p: 0.5, border: '1px solid #ccc', borderRadius: 1 }}>
-                                    <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5, fontSize: '12px' }}>
-                                        {idx + 1}. {item.product?.name} <span style={{ fontWeight: 'normal' }}>(تعداد: {item.quantity})</span>
-                                    </Typography>
+                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
+                                <Typography variant="body1"><strong>تاریخ بکنگ:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString() : ''}</Typography>
+                                <Typography variant="body1"><strong>تاریخ حوالگی:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : ''}</Typography>
+                            </Box>
 
-                                    {(item.cuffType || item.pohnchaType || item.galaType || item.shalwarType || item.pocketType || item.gheraType || item.hasFrontPockets || item.hasShalwarPocket) ? (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mr: 1 }}>
-                                            <Box>
-                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>اسٹائل (Style):</Typography>
-                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
-                                                    {item.cuffType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>کف: {item.cuffType === 'single' ? 'سنگل' : item.cuffType === 'double folding' ? 'ڈبل' : item.cuffType === 'open sleeve' ? 'کھلی آستین' : item.cuffType}</Typography></li>}
-                                                    {item.galaType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>گلہ: {item.galaType === 'ban' ? 'بین' : 'کالر'} ({item.galaSize})</Typography></li>}
-                                                    {item.pocketType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>جیب: {item.pocketType === 'single' ? 'سنگل' : 'ڈبل'}</Typography></li>}
-                                                    {item.gheraType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>گھیرا: {item.gheraType === 'seedha' ? 'سیدھا' : 'گول'}</Typography></li>}
-                                                </ul>
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>شلوار (Shalwar):</Typography>
-                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
-                                                    {item.shalwarType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>قسم: {item.shalwarType === 'pajama' ? 'پاجامہ' : 'شلوار'}</Typography></li>}
-                                                    {item.pohnchaType && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>پائنچہ: {item.pohnchaType === 'saada' ? 'سادہ' : item.pohnchaType === 'jaali' ? 'جالی والا' : item.pohnchaType === 'karhaai' ? 'کڑھائی والا' : 'جالی بمعہ کڑھائی'}</Typography></li>}
-                                                    {item.hasShalwarPocket && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>شلوار جیب: جی ہاں</Typography></li>}
-                                                </ul>
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '10px' }}>دیگر (Extras):</Typography>
-                                                <ul style={{ margin: 0, paddingRight: 15, listStyle: 'none' }}>
-                                                    {item.hasFrontPockets && <li><Typography variant="caption" sx={{ fontSize: '10px' }}>سامنے والی جیب: جی ہاں</Typography></li>}
-                                                </ul>
-                                            </Box>
-                                        </Box>
-                                    ) : (
-                                        <Typography variant="caption" sx={{ mr: 2, fontStyle: 'italic', fontSize: '10px' }}>سلائی کی کوئی ہدایت نہیں (Readymade)</Typography>
-                                    )}
-                                </Box>
-                            ))}
+                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
+                                <Typography variant="body1"><strong>کٹر:</strong> {employees?.find(e => e.id === printBooking.cutterId)?.name || ''}</Typography>
+                                <Typography variant="body1"><strong>کیریگر (درزی):</strong> {employees?.find(e => e.id === printBooking.tailorId)?.name || ''}</Typography>
+                            </Box>
 
-                            <Box sx={{ mt: 2, borderTop: '1px solid #000', pt: 1, display: 'flex', justifyContent: 'space-between' }}>
-                                <Box sx={{ borderTop: '1px solid #000', width: '150px', textAlign: 'center', pt: 0.5 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', fontSize: '10px' }}>ماسٹر / کٹر (Master)</Typography>
-                                    <Typography variant="caption" sx={{ minHeight: '15px', display: 'block' }}>
-                                        {employees?.find(e => e.id === printBooking.cutterId)?.name || ""}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ borderTop: '1px solid #000', width: '150px', textAlign: 'center', pt: 0.5 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', fontSize: '10px' }}>درزی (Tailor)</Typography>
-                                    <Typography variant="caption" sx={{ minHeight: '15px', display: 'block' }}>
-                                        {employees?.find(e => e.id === printBooking.tailorId)?.name || ""}
-                                    </Typography>
+                            {/* MERGED MEASUREMENTS AND STITCHING DETAILS TABLE */}
+                            <TableContainer component={Box} sx={{ mb: 2 }}>
+                                <Table size="small" sx={{ border: '1px solid #000' }}>
+                                    <TableHead>
+                                        <TableRow sx={{ bgcolor: '#f3f4f6' }}>
+                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>تفصیل (Detail)</TableCell>
+                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>پیمائش / سلائی (Measurement / Stitching)</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {printBooking.items?.map((item, idx) => (
+                                            <React.Fragment key={idx}>
+                                                {/* Product Header if more than 1 item */}
+                                                {printBooking.items.length > 1 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={2} sx={{ border: '1px solid #000', fontWeight: 'bold', bgcolor: '#f9fafb', textAlign: 'center' }}>
+                                                            {item.product?.name} (تعداد: {item.quantity})
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+
+                                                {/* Measurements & Related Stitching Details */}
+                                                {true && (
+                                                    <>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>لمبائی (Length)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.qameez_lambai || ''}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>تیرا (Shoulder)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.teera || ''}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>بازو (Sleeve) / کف</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                                {customerMeasurements?.bazoo || ''}
+                                                                {item.cuffType ? ` (${item.cuffType === 'single' ? 'سنگل' : item.cuffType === 'double folding' ? 'ڈبل' : item.cuffType === 'open sleeve' ? 'کھلی آستین' : item.cuffType})` : ''}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>گلہ (Neck) / گالہ</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                                {customerMeasurements?.galaa || ''}
+                                                                {item.galaType ? ` (${item.galaType === 'ban' ? 'بین' : 'کالر'}${item.galaSize ? ` : ${item.galaSize}` : ''})` : ''}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>چھاتی (Chest)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.chaati || ''}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>کمر (Waist)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.kamar_around || ''}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>گھیرا (Daman)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                                {customerMeasurements?.gheera || ''}
+                                                                {item.gheraType ? ` (${item.gheraType === 'seedha' ? 'سیدھا' : 'گول'})` : ''}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار لمبائی (Shalwar Length)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.shalwar_lambai || ''}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>پائنچہ (Bottom)</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                                {customerMeasurements?.puhncha || ''}
+                                                                {item.pohnchaType ? ` (${item.pohnchaType === 'saada' ? 'سادہ' : item.pohnchaType === 'jaali' ? 'جالی والا' : item.pohnchaType === 'karhaai' ? 'کڑھائی والا' : 'جالی بمعہ کڑھائی'})` : ''}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    </>
+                                                )}
+
+                                                {/* Stitching Only Details */}
+                                                <TableRow>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>جیب (Pocket)</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.pocketType === 'single' ? 'سنگل' : (item.pocketType === 'double' ? 'ڈبل' : '')}</TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>سامنے والی جیب (Front Pocket)</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.hasFrontPockets ? 'جی ہاں (Yes)' : ''}</TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار جیب (Shalwar Pocket)</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.hasShalwarPocket ? 'جی ہاں (Yes)' : ''}</TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار کی قسم (Shalwar Type)</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.shalwarType === 'pajama' ? 'پاجامہ' : (item.shalwarType === 'shalwar' ? 'شلوار' : '')}</TableCell>
+                                                </TableRow>
+                                            </React.Fragment>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+
+                            {/* NOTE SECTION */}
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="body1"><strong>نوٹ (Note):</strong></Typography>
+                                <Typography variant="body2" sx={{ p: 1, border: '1px dashed #000', borderRadius: 1, minHeight: '60px' }}>
+                                    {printBooking.notes || ''}
+                                </Typography>
+                            </Box>
+
+                            {/* FOOTER */}
+                            <Box sx={{ mt: 'auto', pt: 2, borderTop: '2px solid #000', textAlign: 'center' }}>
+                                <Typography variant="body2" fontWeight="bold">
+                                    fazal plaza, dhulyan chowk dinga, tel: 053-7401543
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 1 }}>
+                                    <Typography variant="body2" fontWeight="bold">Zameer Ahmed raza</Typography>
+                                    <MessageCircle size={16} color="#25D366" />
+                                    <Typography variant="body2" fontWeight="bold">0300-6284318</Typography>
                                 </Box>
                             </Box>
                         </Box>

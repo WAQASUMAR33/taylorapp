@@ -115,9 +115,9 @@ export default function ProductManagementClient({ initialProducts, categories })
         setFormData(prev => {
             const updated = { ...prev, [name]: value };
 
-            // Auto-calculate Total Cost for Stitching category
+            // Auto-calculate Total Cost for Suit category (requires breakdown)
             const selectedCategory = categories.find(c => c.id === updated.categoryId);
-            if (selectedCategory && selectedCategory.name.toLowerCase().includes('stitching')) {
+            if (selectedCategory && selectedCategory.name.toLowerCase().includes('suit')) {
                 // If any cost component or category changes, recalculate
                 if (['cuttingCost', 'stitchingCost', 'materialCost', 'categoryId'].includes(name)) {
                     const cutting = parseFloat(updated.cuttingCost) || 0;
@@ -130,11 +130,11 @@ export default function ProductManagementClient({ initialProducts, categories })
         });
     };
 
-    // Helper to check if selected category is stitching
-    const isStitching = () => {
+    // Helper to check if selected category is "Suit" (needs breakdown)
+    const isSuit = () => {
         if (!formData.categoryId) return false;
         const cat = categories.find(c => c.id === formData.categoryId);
-        return cat && cat.name.toLowerCase().includes('stitching');
+        return cat && cat.name.toLowerCase().includes('suit');
     };
 
     const handleSubmit = async (e) => {
@@ -332,7 +332,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 />
                             </Grid>
 
-                            {isStitching() ? (
+                            {isSuit() ? (
                                 <>
                                     <Grid item xs={12} md={4}>
                                         <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cutting Cost</Typography>

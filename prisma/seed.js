@@ -26,6 +26,21 @@ async function main() {
     });
 
     console.log('Admin user created:', admin);
+
+    // Create default categories
+    const categories = [
+        { name: 'Stitched', description: 'Readymade items' },
+        { name: 'Suit', description: 'Items requiring stitching (needs breakdown)' },
+    ];
+
+    for (const cat of categories) {
+        await prisma.category.upsert({
+            where: { name: cat.name },
+            update: {},
+            create: cat,
+        });
+    }
+    console.log('Default categories created/verified');
 }
 
 main()

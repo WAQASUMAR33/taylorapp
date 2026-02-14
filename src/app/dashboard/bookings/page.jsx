@@ -58,7 +58,7 @@ async function getProducts() {
         const products = await prisma.product.findMany({
             where: { quantity: { gt: 0 } },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true }
+            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true, category: { select: { name: true } } }
         });
         return JSON.parse(JSON.stringify(products));
     } catch (error) {

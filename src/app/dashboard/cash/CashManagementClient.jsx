@@ -52,16 +52,55 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
+    const CASH_CATEGORIES = {
+        DEBIT: ["Sale", "Advance", "Investment", "Others"],
+        CREDIT: ["Purchase", "Salary", "Rent", "Utility", "Drawing", "Expense", "Others"]
+    };
+
     const [formData, setFormData] = useState({
         type: "DEBIT",
+        category: "Others",
         amount: "",
         description: "",
         bookingId: ""
     });
 
+    const getEntryDetails = (entry) => {
+        let category = "Manual";
+        let party = "-";
+
+        // 1. Identify Party
+        if (entry.booking?.customer?.name) {
+            party = entry.booking.customer.name;
+        } else if (entry.purchase?.supplierRel?.name) {
+            party = entry.purchase.supplierRel.name;
+        } else if (entry.purchase?.supplier) {
+            party = entry.purchase.supplier;
+        } else if (entry.description?.includes("Advance from")) {
+            // Fallback for system strings if relation is missing
+            const parts = entry.description.split("Advance from ");
+            if (parts.length > 1) party = parts[1].split("(")[0].trim();
+        }
+
+        // 2. Identify Category
+        if (entry.description?.startsWith("[")) {
+            const match = entry.description.match(/^\[(.*?)\]/);
+            if (match) category = match[1];
+        } else if (entry.bookingId && entry.description?.includes("Advance")) {
+            category = "Advance";
+        } else if (entry.bookingId) {
+            category = "Sale";
+        } else if (entry.purchaseId) {
+            category = "Purchase";
+        }
+
+        return { category, party };
+    };
+
     const handleOpen = () => {
         setFormData({
             type: "DEBIT",
+            category: "Others",
             amount: "",
             description: "",
             bookingId: ""
@@ -88,10 +127,15 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
         setError("");
 
         try {
+            const submissionData = {
+                ...formData,
+                description: `[${formData.category}] ${formData.description}`
+            };
+
             const response = await fetch("/api/cash", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(submissionData),
             });
 
             if (!response.ok) {
@@ -249,8 +293,10 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
                 <Table>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Ref #</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Party / Detail</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Debit (In)</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Credit (Out)</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Balance</TableCell>
@@ -271,27 +317,51 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
                                     running += (debit - credit);
                                     const current = running;
 
+                                    const { category, party } = getEntryDetails(entry);
+
                                     return (
                                         <TableRow key={entry.id} sx={{ '&:hover': { bgcolor: '#f3f4f6' } }}>
+                                            <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>#{entry.id}</TableCell>
                                             <TableCell>{new Date(entry.entryDate).toLocaleDateString()}</TableCell>
                                             <TableCell>
-                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{entry.description}</Typography>
-                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                    <Typography variant="caption" color="textSecondary">#{entry.id}</Typography>
-                                                    {entry.booking && (
+                                                <Chip
+                                                    label={category}
+                                                    size="small"
+                                                    sx={{
+                                                        height: 20,
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 600,
+                                                        bgcolor: category === 'Sale' || category === 'Advance' ? '#dcfce7' : '#fee2e2',
+                                                        color: category === 'Sale' || category === 'Advance' ? '#166534' : '#991b1b',
+                                                        border: 'none'
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{party}</Typography>
+                                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                    {entry.description?.startsWith('[') ? entry.description.split('] ')[1] : entry.description}
+                                                </Typography>
+                                                {entry.booking && (
+                                                    <Box sx={{ mt: 0.5 }}>
                                                         <Chip
                                                             size="small"
                                                             icon={<LinkIcon size={12} />}
-                                                            label={entry.booking.bookingNumber}
-                                                            sx={{ height: 20, fontSize: '0.75rem' }}
+                                                            label={`Booking: ${entry.booking.bookingNumber}`}
+                                                            sx={{ height: 18, fontSize: '0.65rem' }}
                                                         />
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography variant="body2">
-                                                    Rs. {preBalance.toLocaleString()}
-                                                </Typography>
+                                                    </Box>
+                                                )}
+                                                {entry.purchase && (
+                                                    <Box sx={{ mt: 0.5 }}>
+                                                        <Chip
+                                                            size="small"
+                                                            icon={<LinkIcon size={12} />}
+                                                            label={`Inv: ${entry.purchase.invoiceNumber}`}
+                                                            sx={{ height: 18, fontSize: '0.65rem' }}
+                                                        />
+                                                    </Box>
+                                                )}
                                             </TableCell>
                                             <TableCell align="right">
                                                 <Typography variant="body2" sx={{ color: debit > 0 ? '#2563eb' : '#9ca3af', fontWeight: debit > 0 ? 600 : 400 }}>
@@ -348,6 +418,21 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
                                 >
                                     <MenuItem value="DEBIT">Cash In (Debit)</MenuItem>
                                     <MenuItem value="CREDIT">Cash Out (Credit)</MenuItem>
+                                </TextField>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Category</Typography>
+                                <TextField
+                                    fullWidth
+                                    select
+                                    name="category"
+                                    value={formData.category}
+                                    onChange={handleInputChange}
+                                    size="small"
+                                >
+                                    {CASH_CATEGORIES[formData.type].map(cat => (
+                                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                                    ))}
                                 </TextField>
                             </Grid>
                             <Grid item xs={12} md={6}>

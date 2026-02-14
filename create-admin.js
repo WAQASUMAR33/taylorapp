@@ -3,10 +3,11 @@ const bcrypt = require('bcryptjs');
 
 async function createAdminUser() {
     const connection = await mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: '',
-        database: 'tailordb2'
+        host: '153.92.15.57',
+        port: 3306,
+        user: 'u726235305_tailor',
+        password: 'DildilPakistan786Tailor',
+        database: 'u726235305_tailor'
     });
 
     try {

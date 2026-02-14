@@ -26,8 +26,12 @@ export default async function CashPage() {
             where: { customerId: cashAccount.id },
             include: {
                 customer: true,
-                purchase: true,
-                booking: true,
+                purchase: {
+                    include: { supplierRel: true }
+                },
+                booking: {
+                    include: { customer: true }
+                },
             },
             orderBy: { entryDate: "asc" },
         }),

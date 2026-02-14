@@ -1,5 +1,8 @@
+import { Suspense } from "react";
 import prisma from "@/lib/prisma";
 import LedgerManagementClient from "./LedgerManagementClient";
+
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
     title: "Ledger | TailorFlow",
@@ -46,5 +49,9 @@ export default async function LedgerPage() {
         balance: customer.balance ? parseFloat(customer.balance.toString()) : 0
     }));
 
-    return <LedgerManagementClient initialEntries={serializedEntries} customers={serializedCustomers} />;
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LedgerManagementClient initialEntries={serializedEntries} customers={serializedCustomers} />
+        </Suspense>
+    );
 }
