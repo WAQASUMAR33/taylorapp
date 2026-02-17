@@ -46,6 +46,7 @@ import { Autocomplete } from "@mui/material";
 export default function CustomerManagementClient({ initialCustomers, accountCategories }) {
     const [customers, setCustomers] = useState(initialCustomers);
     const [searchQuery, setSearchQuery] = useState("");
+    const [filterCategory, setFilterCategory] = useState(null);
 
     // UI States
     const [showForm, setShowForm] = useState(false);
@@ -186,11 +187,22 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
-    const filteredCustomers = customers.filter(customer =>
-        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.phone?.includes(searchQuery) ||
-        customer.code?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCustomers = customers.filter(customer => {
+        const matchesSearch =
+            customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            customer.phone?.includes(searchQuery) ||
+            customer.code?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
+
+        return matchesSearch && matchesCategory;
+    });
+
+    // Calculate stats for summary cards
+    const categoryStats = accountCategories.map(cat => ({
+        ...cat,
+        count: customers.filter(c => c.accountCategoryId === cat.id).length
+    }));
 
     if (showForm) {
         return (
@@ -496,29 +508,90 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     {error}
                 </Alert>
             )}
+            {/* Summary Cards */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} md={3}>
+                    <Card sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        bgcolor: 'white',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}>
+                        <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>Total Customers</Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{customers.length}</Typography>
+                            <Avatar sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6' }}>
+                                <Users size={20} />
+                            </Avatar>
+                        </Box>
+                    </Card>
+                </Grid>
+                {categoryStats.slice(0, 3).map((stat, idx) => (
+                    <Grid item xs={12} md={3} key={stat.id}>
+                        <Card sx={{
+                            p: 2.5,
+                            borderRadius: 3,
+                            bgcolor: 'white',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}>
+                            <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>{stat.name}</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{stat.count}</Typography>
+                                <Avatar sx={{
+                                    bgcolor: idx === 0 ? '#ecfdf5' : (idx === 1 ? '#eff6ff' : '#fff7ed'),
+                                    color: idx === 0 ? '#10b981' : (idx === 1 ? '#3b82f6' : '#f59e0b')
+                                }}>
+                                    <User size={20} />
+                                </Avatar>
+                            </Box>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
+
             {/* Action Bar */}
             <Box sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
-                gap: 2
+                gap: 2,
+                flexWrap: 'wrap'
             }}>
-                <TextField
-                    placeholder="Search customers by name, phone or code..."
-                    variant="outlined"
-                    size="small"
-                    sx={{ width: 450, bgcolor: 'white' }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
-                        ),
-                    }}
-                />
+                <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+                    <TextField
+                        placeholder="Search customers by name, phone or code..."
+                        variant="outlined"
+                        size="small"
+                        sx={{ width: 400, bgcolor: 'white' }}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Search size={18} />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                    <Autocomplete
+                        options={accountCategories}
+                        getOptionLabel={(option) => option.name}
+                        value={filterCategory}
+                        onChange={(e, newValue) => setFilterCategory(newValue)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Filter by Category"
+                                size="small"
+                                sx={{ width: 250, bgcolor: 'white' }}
+                            />
+                        )}
+                        sx={{ borderRadius: 2 }}
+                    />
+                </Box>
                 <Button
                     variant="contained"
                     startIcon={<UserPlus size={18} />}
