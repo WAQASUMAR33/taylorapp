@@ -142,6 +142,9 @@ export async function POST(req) {
             }
 
             return purchase;
+        }, {
+            maxWait: 5000,
+            timeout: 20000
         });
 
         return NextResponse.json(result, { status: 201 });
