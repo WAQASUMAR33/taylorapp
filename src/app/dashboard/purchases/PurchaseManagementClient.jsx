@@ -328,6 +328,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
                                                     borderRadius: '10px',
+                                                    width: 300,
                                                     '& fieldset': { borderColor: '#e5e7eb' },
                                                     '&:hover fieldset': { borderColor: '#3b82f6' },
                                                     '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
@@ -677,7 +678,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2">
-                                            {purchase.supplier?.name}
+                                            {purchase.supplierRel?.name || purchase.supplier}
                                         </Typography>
                                     </TableCell>
                                     <TableCell>

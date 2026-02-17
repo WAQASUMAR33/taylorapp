@@ -39,7 +39,8 @@ export default async function PurchasesPage() {
                 include: {
                     bank: true
                 }
-            }
+            },
+            supplierRel: true
         },
         orderBy: { createdAt: "desc" },
     });
@@ -86,7 +87,11 @@ export default async function PurchasesPage() {
         payments: purchase.payments.map(payload => ({
             ...payload,
             amount: payload.amount.toString(),
-        }))
+        })),
+        supplierRel: purchase.supplierRel ? {
+            id: purchase.supplierRel.id,
+            name: purchase.supplierRel.name
+        } : null
     }));
 
     return (
