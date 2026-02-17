@@ -110,9 +110,16 @@ export async function DELETE(req) {
             include: { _count: { select: { products: true } } }
         });
 
-        if (category?._count.products > 0) {
+        if (!category) {
             return NextResponse.json(
-                { error: "Cannot delete category that has products assigned to it" },
+                { error: "Category not found" },
+                { status: 404 }
+            );
+        }
+
+        if (category._count.products > 0) {
+            return NextResponse.json(
+                { error: `Cannot delete category "${category.name}" because it has ${category._count.products} product(s) assigned to it.` },
                 { status: 400 }
             );
         }
@@ -125,7 +132,7 @@ export async function DELETE(req) {
     } catch (error) {
         console.error("Failed to delete category:", error);
         return NextResponse.json(
-            { error: "Internal Server Error" },
+            { error: "Failed to delete category: " + error.message, details: error.stack },
             { status: 500 }
         );
     }
