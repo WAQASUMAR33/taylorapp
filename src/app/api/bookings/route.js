@@ -293,13 +293,16 @@ export async function POST(req) {
             }
 
             return booking;
+        }, {
+            maxWait: 5000,
+            timeout: 20000
         });
 
         return NextResponse.json(result, { status: 201 });
     } catch (error) {
         console.error("Failed to create booking:", error);
         return NextResponse.json(
-            { error: "Failed to create booking: " + error.message },
+            { error: "Failed to create booking: " + error.message, details: error.stack },
             { status: 500 }
         );
     }
