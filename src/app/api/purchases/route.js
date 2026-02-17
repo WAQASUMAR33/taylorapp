@@ -12,21 +12,23 @@ export async function POST(req) {
             const purchase = await tx.purchase.create({
                 data: {
                     invoiceNumber,
-                    supplierId: supplierId ? parseInt(supplierId) : null,
                     supplier: supplier || "N/A",
+                    supplierRel: supplierId ? {
+                        connect: { id: parseInt(supplierId) }
+                    } : undefined,
                     purchaseDate: new Date(purchaseDate),
-                    totalAmount: parseFloat(totalAmount),
+                    totalAmount: parseFloat(totalAmount) || 0,
                     items: {
                         create: items.map(item => ({
                             productId: parseInt(item.productId),
-                            quantity: parseInt(item.quantity),
-                            unitCost: parseFloat(item.unitCost),
-                            totalCost: parseFloat(item.totalCost)
+                            quantity: parseInt(item.quantity) || 1,
+                            unitCost: parseFloat(item.unitCost) || 0,
+                            totalCost: parseFloat(item.totalCost) || 0
                         }))
                     },
                     payments: {
                         create: payments.filter(p => parseFloat(p.amount) > 0).map(p => ({
-                            amount: parseFloat(p.amount),
+                            amount: parseFloat(p.amount) || 0,
                             method: p.method,
                             bankId: p.bankId ? parseInt(p.bankId) : null,
                             paymentDate: new Date(purchaseDate)

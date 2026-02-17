@@ -184,14 +184,15 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
         }
 
         try {
-            // Sanitize payload: ensure decimals are strings
+            // Sanitize payload: ensure decimals are handled correctly
             const payload = {
                 ...formData,
+                totalAmount: calculateGrandTotal().toString(),
                 items: formData.items.map(item => ({
-                    ...item,
+                    productId: parseInt(item.productId),
                     quantity: parseInt(item.quantity),
-                    costPrice: item.costPrice.toString(),
-                    unitPrice: item.unitPrice.toString()
+                    unitCost: parseFloat(item.costPrice).toString(),
+                    totalCost: (parseInt(item.quantity) * parseFloat(item.costPrice)).toString()
                 })),
                 payments: formData.payments.map(payment => ({
                     ...payment,
