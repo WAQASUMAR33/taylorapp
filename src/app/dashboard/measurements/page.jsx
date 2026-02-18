@@ -31,7 +31,7 @@ async function getCustomers() {
     try {
         const customers = await prisma.customer.findMany({
             orderBy: { name: "asc" },
-            select: { id: true, name: true, phone: true }
+            select: { id: true, name: true, phone: true, address: true }
         });
         return customers;
     } catch (error) {

@@ -29,7 +29,8 @@ import {
     Tab,
     Divider,
     ToggleButton,
-    ToggleButtonGroup
+    ToggleButtonGroup,
+    Autocomplete
 } from "@mui/material";
 import {
     Edit,
@@ -43,7 +44,9 @@ import {
     Printer,
     Shirt,
     Square,
-    Languages
+    Languages,
+    MapPin,
+    Phone
 } from "lucide-react";
 
 const translations = {
@@ -430,7 +433,8 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
 
     const filteredMeasurements = measurements.filter(m =>
         m.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.customer?.phone?.includes(searchQuery)
+        m.customer?.phone?.includes(searchQuery) ||
+        m.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -627,32 +631,77 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                         <Grid container spacing={3} sx={{ mb: 2 }}>
                             <Grid item xs={12} md={6}>
                                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>{t('selectCustomer')}</Typography>
-                                <TextField
+                                <Autocomplete
                                     fullWidth
-                                    select
-                                    name="customerId"
-                                    required
-                                    value={formData.customerId}
-                                    onChange={handleInputChange}
-                                    disabled={editMode}
-                                    variant="outlined"
                                     size="small"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                    options={customers}
+                                    getOptionLabel={(option) => `${option.name} (${option.phone})`}
+                                    value={customers.find(c => c.id === formData.customerId) || null}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            customerId: newValue ? newValue.id : ""
+                                        }));
                                     }}
-                                >
-                                    {customers.map((c) => (
-                                        <MenuItem key={c.id} value={c.id}>
-                                            {c.name} ({c.phone})
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
+                                    disabled={editMode}
+                                    filterOptions={(options, { inputValue }) => {
+                                        const query = inputValue.toLowerCase();
+                                        return options.filter(option =>
+                                            option.name.toLowerCase().includes(query) ||
+                                            option.phone.includes(query) ||
+                                            (option.address && option.address.toLowerCase().includes(query))
+                                        );
+                                    }}
+                                    renderOption={(props, option) => (
+                                        <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
+                                            <Grid container alignItems="center">
+                                                <Grid item sx={{ display: 'flex', width: 44 }}>
+                                                    <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
+                                                        <User size={18} />
+                                                    </Box>
+                                                </Grid>
+                                                <Grid item xs sx={{ wordWrap: 'break-word' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
+                                                        {option.name}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <Phone size={12} className="text-zinc-400" />
+                                                            <Typography variant="caption" color="textSecondary">
+                                                                {option.phone}
+                                                            </Typography>
+                                                        </Box>
+                                                        {option.address && (
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                <MapPin size={12} className="text-zinc-400" />
+                                                                <Typography variant="caption" color="textSecondary">
+                                                                    {option.address}
+                                                                </Typography>
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </Grid>
+                                            </Grid>
+                                        </Box>
+                                    )}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            required={!formData.customerId}
+                                            placeholder="Search by name, phone or area..."
+                                            variant="outlined"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                />
                             </Grid>
                             {formData.customerId && (
                                 <Grid item xs={12} md={3}>
