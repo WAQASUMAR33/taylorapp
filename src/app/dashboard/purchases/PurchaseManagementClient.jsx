@@ -248,10 +248,11 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
     };
 
     // Filter Logic
-    const filteredPurchases = purchases.filter(p =>
-        p.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.supplier.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredPurchases = (purchases || []).filter(p => {
+        const query = (searchQuery || "").toLowerCase();
+        return (p.invoiceNumber || "").toLowerCase().includes(query) ||
+            (p.supplier?.name || "").toLowerCase().includes(query);
+    });
 
     if (showForm) {
         return (

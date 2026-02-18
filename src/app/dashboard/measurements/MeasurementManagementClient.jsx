@@ -431,11 +431,12 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
         printWindow.document.close();
     };
 
-    const filteredMeasurements = measurements.filter(m =>
-        m.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.customer?.phone?.includes(searchQuery) ||
-        m.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredMeasurements = (measurements || []).filter(m => {
+        const query = (searchQuery || "").toLowerCase();
+        return (m.customer?.name || "").toLowerCase().includes(query) ||
+            (m.customer?.phone || "").includes(searchQuery || "") ||
+            (m.customer?.address || "").toLowerCase().includes(query);
+    });
 
     return (
         <Box sx={{ width: '100%' }}>

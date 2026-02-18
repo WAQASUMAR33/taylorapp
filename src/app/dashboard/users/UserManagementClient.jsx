@@ -179,11 +179,12 @@ export default function UserManagementClient({ initialUsers }) {
         }
     };
 
-    const filteredUsers = users.filter(user =>
-        user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredUsers = (users || []).filter(user => {
+        const query = (searchQuery || "").toLowerCase();
+        return (user.fullName || "").toLowerCase().includes(query) ||
+            (user.email || "").toLowerCase().includes(query) ||
+            (user.username || "").toLowerCase().includes(query);
+    });
 
     const getRoleColor = (role) => {
         switch (role) {

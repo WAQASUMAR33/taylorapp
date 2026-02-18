@@ -114,9 +114,10 @@ export default function AccountCategoryClient({ initialCategories }) {
         }
     };
 
-    const filteredCategories = categories.filter(cat =>
-        cat.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCategories = (categories || []).filter(cat => {
+        const query = (searchQuery || "").toLowerCase();
+        return (cat.name || "").toLowerCase().includes(query);
+    });
 
     const totalCustomers = categories.reduce((sum, cat) => sum + (cat._count?.customers || 0), 0);
 

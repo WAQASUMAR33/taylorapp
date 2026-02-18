@@ -222,10 +222,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
-    const filteredCustomers = customers.filter(customer => {
+    const filteredCustomers = (customers || []).filter(customer => {
+        const query = (searchQuery || "").toLowerCase();
         const matchesSearch =
-            customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.phone?.includes(searchQuery);
+            (customer.name || "").toLowerCase().includes(query) ||
+            (customer.phone || "").includes(searchQuery || "");
 
         const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
 
@@ -233,16 +234,16 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     });
 
     // Calculate stats for summary cards
-    const customerCategories = categories.filter(cat =>
-        !cat.name.toLowerCase().includes("cutter") &&
-        !cat.name.toLowerCase().includes("tailor")
+    const customerCategories = (categories || []).filter(cat =>
+        !(cat.name || "").toLowerCase().includes("cutter") &&
+        !(cat.name || "").toLowerCase().includes("tailor")
     );
 
-    const filteredInitialCustomers = customers.filter(c => {
-        const cat = categories.find(cat => cat.id === c.accountCategoryId);
+    const filteredInitialCustomers = (customers || []).filter(c => {
+        const cat = (categories || []).find(cat => cat.id === c.accountCategoryId);
         return !cat || (
-            !cat.name.toLowerCase().includes("cutter") &&
-            !cat.name.toLowerCase().includes("tailor")
+            !(cat.name || "").toLowerCase().includes("cutter") &&
+            !(cat.name || "").toLowerCase().includes("tailor")
         );
     });
 
@@ -584,7 +585,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             />
                             <Autocomplete
                                 options={customerCategories}
-                                getOptionLabel={(option) => option.name}
+                                getOptionLabel={(option) => option.name || ""}
                                 value={filterCategory}
                                 onChange={(e, newValue) => setFilterCategory(newValue)}
                                 renderInput={(params) => (

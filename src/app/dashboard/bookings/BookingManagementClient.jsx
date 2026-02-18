@@ -430,12 +430,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setViewOpen(true);
     };
 
-    const filteredBookings = bookings.filter(b =>
-        b.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.id.toString().includes(searchQuery) ||
-        b.bookingNumber?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredBookings = (bookings || []).filter(b =>
+        (b.customer?.name || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+        (b.customer?.phone || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+        (b.customer?.address || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+        (b.id || "").toString().includes(searchQuery || "") ||
+        (b.bookingNumber || "").toLowerCase().includes((searchQuery || "").toLowerCase())
     );
 
     const getStatusColor = (status) => {
@@ -1080,7 +1080,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Tailor</Typography>
                                             <Autocomplete
                                                 options={tailors}
-                                                getOptionLabel={(option) => option.name}
+                                                getOptionLabel={(option) => option.name || ""}
                                                 value={tailors.find(t => t.id === formData.tailorId) || null}
                                                 onChange={(event, newValue) => {
                                                     setFormData({ ...formData, tailorId: newValue ? newValue.id : "" });
@@ -1110,7 +1110,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cutter</Typography>
                                             <Autocomplete
                                                 options={cutters}
-                                                getOptionLabel={(option) => option.name}
+                                                getOptionLabel={(option) => option.name || ""}
                                                 value={cutters.find(c => c.id === formData.cutterId) || null}
                                                 onChange={(event, newValue) => {
                                                     setFormData({ ...formData, cutterId: newValue ? newValue.id : "" });

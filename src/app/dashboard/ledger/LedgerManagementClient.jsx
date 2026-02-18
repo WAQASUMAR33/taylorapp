@@ -142,9 +142,10 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
     };
 
     const filteredEntries = entries.filter(entry => {
-        const matchesSearch = entry.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            entry.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            entry.customer.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const query = (searchQuery || "").toLowerCase();
+        const matchesSearch = (entry.description || "").toLowerCase().includes(query) ||
+            (entry.customer?.name || "").toLowerCase().includes(query) ||
+            (entry.customer?.code || "").toLowerCase().includes(query) ||
             entry.id.toString().includes(searchQuery);
         const matchesCustomer = !filterCustomer || entry.customerId === filterCustomer.id;
         return matchesSearch && matchesCustomer;
@@ -203,7 +204,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                 </Box>
                                 <Autocomplete
                                     options={customers}
-                                    getOptionLabel={(option) => `${option.name}${option.code ? ` (${option.code})` : ''}`}
+                                    getOptionLabel={(option) => `${option.name || ""}${option.code ? ` (${option.code})` : ''}`}
                                     value={customers.find(c => c.id === formData.customerId) || null}
                                     onChange={(e, newValue) => setFormData(prev => ({ ...prev, customerId: newValue?.id || '' }))}
                                     renderInput={(params) => (
@@ -412,7 +413,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                     />
                     <Autocomplete
                         options={customers}
-                        getOptionLabel={(option) => option.name}
+                        getOptionLabel={(option) => option.name || ""}
                         value={filterCustomer}
                         onChange={(e, newValue) => setFilterCustomer(newValue)}
                         renderInput={(params) => (

@@ -142,8 +142,8 @@ export default function ProductManagementClient({ initialProducts, categories })
             const updated = { ...prev, [name]: value };
 
             // Auto-calculate Total Cost for Suit category (requires breakdown)
-            const selectedCategory = categories.find(c => c.id === updated.categoryId);
-            if (selectedCategory && selectedCategory.name.toLowerCase().includes('suit')) {
+            const selectedCategory = categories?.find(c => c.id === updated.categoryId);
+            if (selectedCategory && selectedCategory.name?.toLowerCase().includes('suit')) {
                 // If any cost component or category changes, recalculate
                 if (['cuttingCost', 'stitchingCost', 'materialCost', 'categoryId'].includes(name)) {
                     const cutting = parseFloat(updated.cuttingCost) || 0;
@@ -159,8 +159,8 @@ export default function ProductManagementClient({ initialProducts, categories })
     // Helper to check if selected category is "Suit" (needs breakdown)
     const isSuit = () => {
         if (!formData.categoryId) return false;
-        const cat = categories.find(c => c.id === formData.categoryId);
-        return cat && cat.name.toLowerCase().includes('suit');
+        const cat = categories?.find(c => c.id === formData.categoryId);
+        return cat && cat.name?.toLowerCase().includes('suit');
     };
 
     const handleSubmit = async (e) => {
@@ -222,9 +222,9 @@ export default function ProductManagementClient({ initialProducts, categories })
         }
     };
 
-    const filteredProducts = products.filter(prod =>
-        prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.category?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredProducts = (products || []).filter(prod =>
+        (prod.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (prod.category?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     if (showForm) {

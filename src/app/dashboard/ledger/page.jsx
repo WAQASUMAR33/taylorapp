@@ -26,9 +26,18 @@ export default async function LedgerPage() {
             where: {
                 NOT: { name: 'Cash Account' }
             },
+            include: {
+                accountCategory: true
+            },
             orderBy: { name: "asc" },
         }),
     ]);
+
+    // Filter out employee categories (Cutter, Tailor)
+    const filteredCustomersForList = customers.filter(c => {
+        const catName = c.accountCategory?.name?.toLowerCase() || "";
+        return !catName.includes("cutter") && !catName.includes("tailor");
+    });
 
     // Serialize Decimal fields
     const serializedEntries = ledgerEntries.map(entry => ({
@@ -44,7 +53,7 @@ export default async function LedgerPage() {
         } : null
     }));
 
-    const serializedCustomers = customers.map(customer => ({
+    const serializedCustomers = filteredCustomersForList.map(customer => ({
         ...customer,
         balance: customer.balance ? parseFloat(customer.balance.toString()) : 0
     }));

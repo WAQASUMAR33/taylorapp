@@ -146,10 +146,11 @@ export default function CategoryManagementClient({ initialCategories }) {
         }
     };
 
-    const filteredCategories = categories.filter(cat =>
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cat.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCategories = (categories || []).filter(cat => {
+        const query = (searchQuery || "").toLowerCase();
+        return (cat.name || "").toLowerCase().includes(query) ||
+            (cat.description || "").toLowerCase().includes(query);
+    });
 
     if (showForm) {
         return (

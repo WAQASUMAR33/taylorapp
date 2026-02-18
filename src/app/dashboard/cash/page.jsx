@@ -36,10 +36,22 @@ export default async function CashPage() {
             orderBy: { entryDate: "asc" },
         }),
         prisma.booking.findMany({
-            include: { customer: true },
+            include: {
+                customer: {
+                    include: {
+                        accountCategory: true
+                    }
+                }
+            },
             orderBy: { bookingDate: "desc" },
         }),
     ]);
+
+    // Filter out bookings for customers in employee categories (Cutter, Tailor)
+    const filteredBookings = bookings.filter(b => {
+        const catName = b.customer?.accountCategory?.name?.toLowerCase() || "";
+        return !catName.includes("cutter") && !catName.includes("tailor");
+    });
 
     // Serialize Decimal fields
     const serializedEntries = ledgerEntries.map(entry => ({
@@ -65,5 +77,5 @@ export default async function CashPage() {
         balance: cashAccount.balance.toString()
     };
 
-    return <CashManagementClient initialEntries={serializedEntries} cashAccount={serializedAccount} bookings={bookings} />;
+    return <CashManagementClient initialEntries={serializedEntries} cashAccount={serializedAccount} bookings={filteredBookings} />;
 }

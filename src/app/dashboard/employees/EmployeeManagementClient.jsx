@@ -184,10 +184,11 @@ export default function EmployeeManagementClient({ initialEmployees }) {
         }
     };
 
-    const filteredEmployees = employees.filter(emp =>
-        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredEmployees = (employees || []).filter(emp => {
+        const query = (searchQuery || "").toLowerCase();
+        return (emp.name || "").toLowerCase().includes(query) ||
+            (emp.role || "").toLowerCase().includes(query);
+    });
 
     if (showForm) {
         return (

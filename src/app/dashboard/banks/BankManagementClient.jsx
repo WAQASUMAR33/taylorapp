@@ -110,10 +110,11 @@ export default function BankManagementClient({ initialBanks }) {
         }
     };
 
-    const filteredBanks = banks.filter(b =>
-        b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (b.accountNumber && b.accountNumber.includes(searchQuery))
-    );
+    const filteredBanks = (banks || []).filter(b => {
+        const query = (searchQuery || "").toLowerCase();
+        return (b.name || "").toLowerCase().includes(query) ||
+            (b.accountNumber || "").includes(searchQuery || "");
+    });
 
     if (showForm) {
         return (

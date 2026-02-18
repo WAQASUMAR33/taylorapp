@@ -152,8 +152,10 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
     };
 
     const filteredEntries = entries.filter(entry => {
-        return entry.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            entry.id.toString().includes(searchQuery);
+        const query = (searchQuery || "").toLowerCase();
+        return (entry.description || "").toLowerCase().includes(query) ||
+            (entry.customer?.name || "").toLowerCase().includes(query) ||
+            (entry.customer?.code || "").toLowerCase().includes(query);
     });
 
     // Calculate totals
@@ -292,7 +294,7 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
                                 </Box>
                                 <Autocomplete
                                     options={bookings}
-                                    getOptionLabel={(option) => `${option.bookingNumber} - ${option.customer.name}`}
+                                    getOptionLabel={(option) => `${option.bookingNumber || ""} - ${option.customer?.name || ""}`}
                                     value={bookings.find(b => b.id === formData.bookingId) || null}
                                     onChange={(e, newValue) => setFormData(prev => ({ ...prev, bookingId: newValue?.id || "" }))}
                                     renderInput={(params) => (
