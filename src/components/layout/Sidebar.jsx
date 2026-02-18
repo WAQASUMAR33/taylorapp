@@ -29,7 +29,6 @@ const navItems = [
     { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Employees", href: "/dashboard/employees", icon: UserRound, roles: ["ADMIN", "MANAGER"] },
     { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
-    { name: "Categories", href: "/dashboard/categories", icon: Tag, roles: ["ADMIN", "MANAGER"] },
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },

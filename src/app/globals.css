@@ -10,6 +10,11 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-urdu: var(--font-noto-nastaliq-urdu);
+}
+
+.font-urdu {
+  font-family: var(--font-urdu), "Noto Nastaliq Urdu", serif;
 }
 
 @media (prefers-color-scheme: dark) {

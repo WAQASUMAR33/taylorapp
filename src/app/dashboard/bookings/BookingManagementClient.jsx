@@ -432,6 +432,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
     const filteredBookings = bookings.filter(b =>
         b.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.id.toString().includes(searchQuery) ||
         b.bookingNumber?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -491,6 +494,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             size="small"
                                             type="date"
                                             name="bookingDate"
+                                            required
                                             value={formData.bookingDate}
                                             onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
                                             InputProps={{
@@ -524,6 +528,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             size="small"
                                             type="date"
                                             name="deliveryDate"
+                                            required
                                             value={formData.deliveryDate}
                                             onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
                                             InputProps={{
@@ -562,9 +567,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         renderInput={(params) => (
                                                             <TextField
                                                                 {...params}
-                                                                placeholder="Search and select customer..."
+                                                                placeholder="نام، فون، آئی ڈی، یا پتے سے تلاش کریں..."
                                                                 size="small"
                                                                 fullWidth
+                                                                required
                                                                 InputProps={{
                                                                     ...params.InputProps,
                                                                     startAdornment: (
@@ -577,7 +583,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                     ),
                                                                 }}
                                                                 sx={{
-                                                                    width: 300,
+                                                                    width: 400,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         bgcolor: 'white',
                                                                         borderRadius: '10px',
@@ -688,8 +694,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                         renderInput={(params) => (
                                                                             <TextField
                                                                                 {...params}
-                                                                                placeholder="Select Product"
+                                                                                placeholder="منتخب کریں"
                                                                                 size="small"
+                                                                                required
                                                                                 fullWidth
                                                                                 sx={{
                                                                                     '& .MuiOutlinedInput-root': {
@@ -723,6 +730,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                             <TableCell>
                                                                 <TextField
                                                                     size="small"
+                                                                    required
                                                                     value={item.quantity}
                                                                     onFocus={(e) => e.target.select()}
                                                                     onChange={(e) => {
@@ -738,6 +746,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                             <TableCell>
                                                                 <TextField
                                                                     size="small"
+                                                                    required
                                                                     value={item.unitPrice} // Changed from salePrice to unitPrice
                                                                     onFocus={(e) => e.target.select()}
                                                                     onChange={(e) => {
@@ -801,8 +810,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                     setCartItems(newItems);
                                                                                 }}
                                                                                 sx={{ color: '#8b5cf6' }}
+                                                                                className="font-urdu"
                                                                             >
-                                                                                Edit Details
+                                                                                تبدیلی کریں
                                                                             </Button>
                                                                         </Box>
                                                                     ) : (
@@ -828,9 +838,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                             )}
                                                                             <Grid container spacing={2}>
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>کف (Cuff)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>کف</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.cuffType}
                                                                                         onChange={(e) => {
@@ -840,15 +851,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                         }}
                                                                                         sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
                                                                                     >
-                                                                                        <MenuItem value="single">سنگل (Single)</MenuItem>
-                                                                                        <MenuItem value="double folding">ڈبل فولڈنگ (Double)</MenuItem>
-                                                                                        <MenuItem value="open sleeve">کھلی آستین (Open)</MenuItem>
+                                                                                        <MenuItem value="single">سنگل</MenuItem>
+                                                                                        <MenuItem value="double folding">ڈبل فولڈنگ</MenuItem>
+                                                                                        <MenuItem value="open sleeve">کھلی آستین</MenuItem>
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>پائنچہ (Pohncha)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>پائنچہ</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.pohnchaType}
                                                                                         onChange={(e) => {
@@ -860,14 +872,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                     >
                                                                                         <MenuItem value="jaali">جالی والا</MenuItem>
                                                                                         <MenuItem value="karhaai">کڑھائی والا</MenuItem>
-                                                                                        <MenuItem value="jaali_karhaai">جالی بمعہ کڑھائی (Jaali with Karhai)</MenuItem>
+                                                                                        <MenuItem value="jaali_karhaai">جالی بمعہ کڑھائی</MenuItem>
                                                                                         <MenuItem value="saada">سادہ</MenuItem>
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>گھیرا (Ghera)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>گھیرا</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.gheraType}
                                                                                         onChange={(e) => {
@@ -882,9 +895,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>گالہ (Gala)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>گالہ</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.galaType}
                                                                                         onChange={(e) => {
@@ -894,15 +908,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                         }}
                                                                                         sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
                                                                                     >
-                                                                                        <MenuItem value="ban">بین (Ban)</MenuItem>
-                                                                                        <MenuItem value="collar">کالر (Collar)</MenuItem>
+                                                                                        <MenuItem value="ban">بین</MenuItem>
+                                                                                        <MenuItem value="collar">کالر</MenuItem>
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 {item.galaType && (
                                                                                     <Grid item xs={12} sm={4}>
-                                                                                        <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>سائز (Size)</Typography>
+                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>سائز</Typography>
                                                                                         <TextField
                                                                                             select
+                                                                                            required
                                                                                             size="small"
                                                                                             value={item.galaSize}
                                                                                             onChange={(e) => {
@@ -917,9 +932,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                     </Grid>
                                                                                 )}
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>جیب (Pocket)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>جیب</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.pocketType}
                                                                                         onChange={(e) => {
@@ -929,14 +945,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                         }}
                                                                                         sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
                                                                                     >
-                                                                                        <MenuItem value="single">سنگل (Single)</MenuItem>
-                                                                                        <MenuItem value="double">ڈبل (Double)</MenuItem>
+                                                                                        <MenuItem value="single">سنگل</MenuItem>
+                                                                                        <MenuItem value="double">ڈبل</MenuItem>
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
-                                                                                    <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>شلوار کی قسم (Shalwar Type)</Typography>
+                                                                                    <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: '#6d28d9' }}>شلوار کی قسم</Typography>
                                                                                     <TextField
                                                                                         select
+                                                                                        required
                                                                                         size="small"
                                                                                         value={item.shalwarType}
                                                                                         onChange={(e) => {
@@ -946,9 +963,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                         }}
                                                                                         sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
                                                                                     >
-                                                                                        <MenuItem value="pajama">پاجامہ (Pajama)</MenuItem>
-                                                                                        <MenuItem value="shalwar">شلوار (Shalwar)</MenuItem>
-                                                                                        <MenuItem value="trouser">ٹراؤزر (Trouser)</MenuItem>
+                                                                                        <MenuItem value="pajama">پاجامہ</MenuItem>
+                                                                                        <MenuItem value="shalwar">شلوار</MenuItem>
+                                                                                        <MenuItem value="trouser">ٹراؤزر</MenuItem>
                                                                                     </TextField>
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
@@ -965,7 +982,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                                     }}
                                                                                                 />
                                                                                             }
-                                                                                            label={<Typography variant="caption" sx={{ fontWeight: 600 }}>شلوار جیب (Sh. Pocket)</Typography>}
+                                                                                            label={<Typography variant="caption" className="font-urdu" sx={{ fontWeight: 600 }}>شلوار جیب</Typography>}
                                                                                             sx={{ m: 0 }}
                                                                                         />
                                                                                         <FormControlLabel
@@ -980,7 +997,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                                     }}
                                                                                                 />
                                                                                             }
-                                                                                            label={<Typography variant="caption" sx={{ fontWeight: 600 }}>سامنے والی جیبیں (Front Pockets)</Typography>}
+                                                                                            label={<Typography variant="caption" className="font-urdu" sx={{ fontWeight: 600 }}>سامنے والی جیبیں</Typography>}
                                                                                             sx={{ m: 0 }}
                                                                                         />
                                                                                     </Box>
@@ -1009,8 +1026,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                             });
                                                                                         }}
                                                                                         sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
+                                                                                        className="font-urdu"
                                                                                     >
-                                                                                        Save Details
+                                                                                        تفصیلات محفوظ کریں
                                                                                     </Button>
                                                                                 </Grid>
                                                                             </Grid>
@@ -1029,8 +1047,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         onClick={handleAddRow}
                                         sx={{ mt: 1 }}
                                         size="small"
+                                        className="font-urdu"
                                     >
-                                        Add Row
+                                        نیا کالم شامل کریں
                                     </Button>
 
                                     <Grid container spacing={2} sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
@@ -1049,6 +1068,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         placeholder="Select Tailor"
                                                         size="small"
                                                         fullWidth
+                                                        required
                                                         sx={{
                                                             minWidth: 300,
                                                             '& .MuiOutlinedInput-root': {
@@ -1078,6 +1098,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         placeholder="Select Cutter"
                                                         size="small"
                                                         fullWidth
+                                                        required
                                                         sx={{
                                                             minWidth: 300,
                                                             '& .MuiOutlinedInput-root': {
@@ -1139,8 +1160,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                     <TextField
                                                         fullWidth
                                                         size="small"
-                                                        type="number"
-                                                        placeholder="e.g. 500"
+                                                        required
+                                                        placeholder="0.00"
                                                         value={formData.advanceAmount}
                                                         onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                                         InputProps={{
@@ -1169,11 +1190,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
-                                                                bgcolor: balanceAmount > 0 ? '#fff1f2' : '#f0fdf4',
+                                                                bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4',
                                                                 borderRadius: '10px',
+                                                                border: balanceAmount > 0 ? '2px solid #ef4444' : '1px solid #e5e7eb',
                                                                 '& .MuiInputBase-input': {
-                                                                    fontWeight: 700,
-                                                                    color: balanceAmount > 0 ? '#dc2626' : '#059669'
+                                                                    fontWeight: 800,
+                                                                    fontSize: '1.1rem',
+                                                                    color: balanceAmount > 0 ? '#b91c1c' : '#059669',
+                                                                    textAlign: 'center'
                                                                 }
                                                             }
                                                         }}

@@ -51,7 +51,6 @@ export default function ProductManagementClient({ initialProducts, categories })
     const [successMessage, setSuccessMessage] = useState("");
 
     const [formData, setFormData] = useState({
-        sku: "",
         name: "",
         description: "",
         categoryId: "",
@@ -63,9 +62,13 @@ export default function ProductManagementClient({ initialProducts, categories })
         materialCost: ""
     });
 
+    const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
+    const [newCatName, setNewCatName] = useState("");
+    const [newCatLoading, setNewCatLoading] = useState(false);
+    const [localCategories, setLocalCategories] = useState(categories);
+
     const resetForm = () => {
         setFormData({
-            sku: "",
             name: "",
             description: "",
             categoryId: "",
@@ -79,6 +82,29 @@ export default function ProductManagementClient({ initialProducts, categories })
         setEditMode(false);
         setSelectedProdId(null);
         setError("");
+    };
+
+    const handleQuickAddCategory = async () => {
+        if (!newCatName) return;
+        setNewCatLoading(true);
+        try {
+            const response = await fetch("/api/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newCatName }),
+            });
+            if (!response.ok) throw new Error("Failed to add category");
+            const newCat = await response.json();
+            setLocalCategories(prev => [...prev, newCat]);
+            setFormData(prev => ({ ...prev, categoryId: newCat.id }));
+            setQuickAddCatOpen(false);
+            setNewCatName("");
+            setSuccessMessage("Category added successfully!");
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setNewCatLoading(false);
+        }
     };
 
     const handleOpen = () => {
@@ -144,7 +170,11 @@ export default function ProductManagementClient({ initialProducts, categories })
 
         try {
             const method = editMode ? "PUT" : "POST";
-            const payload = editMode ? { ...formData, id: selectedProdId } : formData;
+            // Generate a random SKU since it's required by the DB but removed from UI
+            const finalSku = editMode ? products.find(p => p.id === selectedProdId)?.sku : `PRD-${Date.now()}`;
+            const payload = editMode
+                ? { ...formData, id: selectedProdId, sku: finalSku }
+                : { ...formData, sku: finalSku };
 
             const response = await fetch("/api/products", {
                 method,
@@ -194,7 +224,6 @@ export default function ProductManagementClient({ initialProducts, categories })
 
     const filteredProducts = products.filter(prod =>
         prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prod.category?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -204,9 +233,9 @@ export default function ProductManagementClient({ initialProducts, categories })
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {editMode ? "EDIT PRODUCT" : "NEW PRODUCT"}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'right' }}>
+                            {editMode ? "پروڈکٹ میں ترمیم کریں" : "نیا پروڈکٹ"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -230,20 +259,21 @@ export default function ProductManagementClient({ initialProducts, categories })
                     </Box>
 
                     <Box sx={{ p: 3 }}>
-                        <Grid container spacing={3}>
+                        <Grid container spacing={3} sx={{ direction: 'rtl' }}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Product Name</Typography>
+                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>پروڈکٹ کا نام</Typography>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
-                                    placeholder="e.g. Cotton Shirt"
+                                    placeholder="مثال: کاٹن شرٹ"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
+                                    inputProps={{ style: { textAlign: 'right' } }}
                                     InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
+                                        endAdornment: (
+                                            <InputAdornment position="end">
                                                 <Package size={18} color="#9ca3af" />
                                             </InputAdornment>
                                         ),
@@ -260,92 +290,65 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>SKU / Barcode</Typography>
-                                <TextField
-                                    fullWidth
-                                    name="sku"
-                                    required
-                                    placeholder="e.g. SHIRT-001"
-                                    value={formData.sku}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Hash size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Category</Typography>
-                                <Autocomplete
-                                    options={categories}
-                                    getOptionLabel={(option) => option.name || ""}
-                                    value={categories.find(c => c.id === formData.categoryId) || null}
-                                    onChange={(event, newValue) => {
-                                        const syntheticEvent = {
-                                            target: {
-                                                name: 'categoryId',
-                                                value: newValue ? newValue.id : ""
-                                            }
-                                        };
-                                        handleInputChange(syntheticEvent);
-                                    }}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            placeholder="Select category"
-                                            variant="outlined"
-                                            InputProps={{
-                                                ...params.InputProps,
-                                                startAdornment: (
-                                                    <>
-                                                        <InputAdornment position="start" sx={{ ml: 1 }}>
-                                                            <Layers size={18} color="#9ca3af" />
-                                                        </InputAdornment>
-                                                        {params.InputProps.startAdornment}
-                                                    </>
-                                                ),
-                                            }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کیٹیگری</Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Autocomplete
+                                        fullWidth
+                                        options={localCategories}
+                                        getOptionLabel={(option) => option.name || ""}
+                                        value={localCategories.find(c => c.id === formData.categoryId) || null}
+                                        onChange={(event, newValue) => {
+                                            const syntheticEvent = {
+                                                target: {
+                                                    name: 'categoryId',
+                                                    value: newValue ? newValue.id : ""
                                                 }
-                                            }}
-                                        />
-                                    )}
-                                />
+                                            };
+                                            handleInputChange(syntheticEvent);
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                placeholder="کیٹیگری منتخب کریں"
+                                                variant="outlined"
+                                                inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
+                                                sx={{
+                                                    minWidth: '300px',
+                                                    '& .MuiOutlinedInput-root': {
+                                                        bgcolor: 'white',
+                                                        borderRadius: '10px',
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                    <IconButton
+                                        onClick={() => setQuickAddCatOpen(true)}
+                                        sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6', '&:hover': { bgcolor: '#ede9fe' } }}
+                                    >
+                                        <Plus size={20} />
+                                    </IconButton>
+                                </Box>
                             </Grid>
 
                             {isSuit() ? (
                                 <>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cutting Cost</Typography>
+                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کٹنگ لاگت</Typography>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="cuttingCost"
-                                            placeholder="e.g. 500"
+                                            placeholder="مثال: 500"
                                             value={formData.cuttingCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
+                                            inputProps={{ style: { textAlign: 'right' } }}
                                             InputProps={{
-                                                startAdornment: <InputAdornment position="start"><Typography sx={{ fontWeight: 600, color: '#374151', mr: 1 }}>Rs.</Typography></InputAdornment>,
+                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
@@ -359,17 +362,18 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Stitching Cost</Typography>
+                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>سلائی لاگت</Typography>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="stitchingCost"
-                                            placeholder="e.g. 1500"
+                                            placeholder="مثال: 1500"
                                             value={formData.stitchingCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
+                                            inputProps={{ style: { textAlign: 'right' } }}
                                             InputProps={{
-                                                startAdornment: <InputAdornment position="start"><Typography sx={{ fontWeight: 600, color: '#374151', mr: 1 }}>Rs.</Typography></InputAdornment>,
+                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
@@ -383,17 +387,18 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Material Cost</Typography>
+                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>میٹیرئیل لاگت</Typography>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="materialCost"
-                                            placeholder="e.g. 1000"
+                                            placeholder="مثال: 1000"
                                             value={formData.materialCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
+                                            inputProps={{ style: { textAlign: 'right' } }}
                                             InputProps={{
-                                                startAdornment: <InputAdornment position="start"><Typography sx={{ fontWeight: 600, color: '#374151', mr: 1 }}>Rs.</Typography></InputAdornment>,
+                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
@@ -407,17 +412,18 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={6}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Total Cost (Calculated)</Typography>
+                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کل لاگت (حساب شدہ)</Typography>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="costPrice"
                                             value={formData.costPrice}
+                                            inputProps={{ style: { textAlign: 'right' } }}
                                             InputProps={{
                                                 readOnly: true,
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 600 }}>Rs.</Typography>
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
                                                     </InputAdornment>
                                                 ),
                                             }}
@@ -433,19 +439,20 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 </>
                             ) : (
                                 <Grid item xs={12} md={6}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cost Price</Typography>
+                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>لاگت کی قیمت</Typography>
                                     <TextField
                                         fullWidth
                                         type="number"
                                         name="costPrice"
-                                        placeholder="e.g. 3000"
+                                        placeholder="مثال: 3000"
                                         value={formData.costPrice}
                                         onChange={handleInputChange}
                                         variant="outlined"
+                                        inputProps={{ style: { textAlign: 'right' } }}
                                         InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 600 }}>Rs.</Typography>
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
                                                 </InputAdornment>
                                             ),
                                         }}
@@ -463,19 +470,20 @@ export default function ProductManagementClient({ initialProducts, categories })
                             )}
 
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Unit Price (Selling Price)</Typography>
+                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>یونٹ کی قیمت (فروخت کی قیمت)</Typography>
                                 <TextField
                                     fullWidth
                                     type="number"
                                     name="unitPrice"
-                                    placeholder="e.g. 4500"
+                                    placeholder="مثال: 4500"
                                     value={formData.unitPrice}
                                     onChange={handleInputChange}
                                     variant="outlined"
+                                    inputProps={{ style: { textAlign: 'right' } }}
                                     InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 600 }}>Rs.</Typography>
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
                                             </InputAdornment>
                                         ),
                                     }}
@@ -491,18 +499,19 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Initial Quantity</Typography>
+                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>ابتدائی مقدار</Typography>
                                 <TextField
                                     fullWidth
                                     type="number"
                                     name="quantity"
-                                    placeholder="e.g. 100"
+                                    placeholder="مثال: 100"
                                     value={formData.quantity}
                                     onChange={handleInputChange}
                                     variant="outlined"
+                                    inputProps={{ style: { textAlign: 'right' } }}
                                     InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
+                                        endAdornment: (
+                                            <InputAdornment position="end">
                                                 <ClipboardList size={18} color="#9ca3af" />
                                             </InputAdornment>
                                         ),
@@ -519,20 +528,21 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 />
                             </Grid>
                             <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, mt: 1, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
+                                <Box sx={{ mb: 1.5, mt: 1, display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', gap: 1.5, borderRight: '4px solid #8b5cf6', pr: 1.5 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Description
+                                        تفصیل
                                     </Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="description"
-                                    placeholder="e.g. High quality cotton fabric with premium stitching..."
+                                    placeholder="مثال: پریمیم سلائی کے ساتھ اعلیٰ کوالٹی کا سوتی کپڑا..."
                                     multiline
                                     rows={4}
                                     value={formData.description}
                                     onChange={handleInputChange}
                                     variant="outlined"
+                                    inputProps={{ style: { textAlign: 'right' } }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -547,6 +557,33 @@ export default function ProductManagementClient({ initialProducts, categories })
                         </Grid>
                     </Box>
                 </Card>
+
+                {/* Quick Add Category Dialog */}
+                <Dialog open={quickAddCatOpen} onClose={() => setQuickAddCatOpen(false)}>
+                    <DialogTitle sx={{ fontWeight: 600 }}>نئی کیٹیگری لاگ انگ کریں</DialogTitle>
+                    <DialogContent>
+                        <Box sx={{ pt: 1 }}>
+                            <TextField
+                                fullWidth
+                                label="کیٹیگری کا نام"
+                                value={newCatName}
+                                onChange={(e) => setNewCatName(e.target.value)}
+                                autoFocus
+                            />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button onClick={() => setQuickAddCatOpen(false)}>منسوخ کریں</Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleQuickAddCategory}
+                            disabled={newCatLoading || !newCatName}
+                            sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
+                        >
+                            {newCatLoading ? <CircularProgress size={24} /> : "شامل کریں"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         );
     }
@@ -556,21 +593,23 @@ export default function ProductManagementClient({ initialProducts, categories })
             {/* Action Bar */}
             <Box sx={{
                 display: 'flex',
+                flexDirection: 'row-reverse',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
                 gap: 2
             }}>
                 <TextField
-                    placeholder="Search by name, SKU, or category..."
+                    placeholder="نام، یا کیٹیگری سے تلاش کریں..."
                     variant="outlined"
                     size="small"
                     sx={{ width: 450, bgcolor: 'white' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    inputProps={{ style: { textAlign: 'right' } }}
                     InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
+                        endAdornment: (
+                            <InputAdornment position="end">
                                 <Search size={18} />
                             </InputAdornment>
                         ),
@@ -589,7 +628,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                         '&:hover': { bgcolor: '#7c3aed' }
                     }}
                 >
-                    Add Product
+                    پروڈکٹ شامل کریں
                 </Button>
             </Box>
 
@@ -630,6 +669,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                     {prod.name}
                                                 </Typography>
+                                                {/* SKU was here, but it's being removed as per instruction */}
                                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                                                     {prod.description || 'No description'}
                                                 </Typography>
