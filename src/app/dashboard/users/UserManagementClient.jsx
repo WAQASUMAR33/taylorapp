@@ -200,9 +200,9 @@ export default function UserManagementClient({ initialUsers }) {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {editMode ? "EDIT SYSTEM USER" : "NEW SYSTEM USER"}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {editMode ? "صارف کی معلومات تبدیل کریں" : "نیا صارف شامل کریں"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -211,16 +211,18 @@ export default function UserManagementClient({ initialUsers }) {
                                 onClick={handleSubmit}
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<XIcon size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -228,12 +230,15 @@ export default function UserManagementClient({ initialUsers }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Full Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">مکمل نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="fullName"
                                     required
-                                    placeholder="e.g. John Doe"
+                                    dir="rtl"
+                                    placeholder="نام درج کریں"
                                     value={formData.fullName}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -245,28 +250,25 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Username</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">صارف کا نام (Username)</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="username"
                                     required
-                                    placeholder="e.g. johndoe"
+                                    dir="rtl"
+                                    placeholder="username درج کریں"
                                     value={formData.username}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={16} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -274,16 +276,21 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Role</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">عہدہ (Role)</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     select
+                                    required
                                     name="role"
+                                    dir="rtl"
                                     value={formData.role}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -295,7 +302,8 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 >
                                     {roles.map((option) => (
@@ -306,23 +314,20 @@ export default function UserManagementClient({ initialUsers }) {
                                 </TextField>
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Email</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ای میل</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="email"
                                     type="email"
-                                    placeholder="e.g. john@example.com"
+                                    required
+                                    dir="rtl"
+                                    placeholder="ای میل درج کریں"
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Mail size={16} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -330,27 +335,25 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Phone</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="phone"
-                                    placeholder="e.g. +92 300 1234567"
+                                    required
+                                    dir="rtl"
+                                    placeholder="نمبر درج کریں"
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Phone size={16} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -358,31 +361,28 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>
-                                    {editMode ? "Change Password (optional)" : "Password"}
-                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">
+                                        {editMode ? "پاس ورڈ تبدیل کریں (آپشنل)" : "پاس ورڈ"}
+                                    </Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="password"
                                     type="password"
                                     required={!editMode}
+                                    dir="rtl"
                                     value={formData.password}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
-                                    placeholder={editMode ? "Leave blank to keep current" : "e.g. ••••••••"}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Lock size={16} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
+                                    placeholder={editMode ? "خالی چھوڑ دیں اگر تبدیل نہیں کرنا" : "پاس ورڈ درج کریں"}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -390,24 +390,24 @@ export default function UserManagementClient({ initialUsers }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             {editMode && (
-                                <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={formData.isActive}
-                                                onChange={handleInputChange}
-                                                name="isActive"
-                                                color="primary"
-                                            />
-                                        }
-                                        label="Account Active"
-                                    />
-                                </Grid>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={formData.isActive}
+                                            onChange={handleInputChange}
+                                            name="isActive"
+                                            color="primary"
+                                        />
+                                    }
+                                    label={<Typography variant="body2" className="font-urdu">اکاؤنٹ فعال ہے</Typography>}
+                                    sx={{ flexDirection: 'row-reverse', gap: 1, mr: 0 }}
+                                />
                             )}
                         </Grid>
                     </Box>
@@ -421,15 +421,17 @@ export default function UserManagementClient({ initialUsers }) {
             {/* Action Bar */}
             <Box sx={{
                 display: 'flex',
+                flexDirection: 'row-reverse',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
                 gap: 2
             }}>
                 <TextField
-                    placeholder="Search users..."
+                    placeholder="صارف کو تلاش کریں..."
                     variant="outlined"
                     size="small"
+                    dir="rtl"
                     sx={{ width: 400, bgcolor: 'white' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -439,6 +441,7 @@ export default function UserManagementClient({ initialUsers }) {
                                 <Search size={18} />
                             </InputAdornment>
                         ),
+                        style: { textAlign: 'right' }
                     }}
                 />
                 <Button
@@ -453,8 +456,9 @@ export default function UserManagementClient({ initialUsers }) {
                         bgcolor: '#8b5cf6',
                         '&:hover': { bgcolor: '#7c3aed' }
                     }}
+                    className="font-urdu"
                 >
-                    Add New User
+                    نیا صارف شامل کریں
                 </Button>
             </Box>
 
@@ -467,12 +471,12 @@ export default function UserManagementClient({ initialUsers }) {
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 200 }}>User</TableCell>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 150 }}>Username</TableCell>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>Role</TableCell>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 200 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600, minWidth: 100 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 100 }} align="right" className="font-urdu">ایکشن</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 200 }} align="right" className="font-urdu">رابطہ</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 120 }} align="right" className="font-urdu">اسٹیٹس</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 120 }} align="right" className="font-urdu">عہدہ</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 150 }} align="right" className="font-urdu">صارف کا نام</TableCell>
+                            <TableCell sx={{ fontWeight: 600, minWidth: 200 }} align="right" className="font-urdu">صارف</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -481,8 +485,61 @@ export default function UserManagementClient({ initialUsers }) {
                                 key={user.id}
                                 sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
                             >
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                        <IconButton size="small" color="primary" onClick={() => handleEdit(user)}>
+                                            <Edit size={18} />
+                                        </IconButton>
+                                        <IconButton size="small" color="error" onClick={() => handleDelete(user.id)}>
+                                            <Trash2 size={18} />
+                                        </IconButton>
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-end' }}>
+                                        {user.email && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexDirection: 'row-reverse' }}>
+                                                <Mail size={14} className="text-zinc-400" />
+                                                <Typography variant="caption">{user.email}</Typography>
+                                            </Box>
+                                        )}
+                                        {user.phone && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexDirection: 'row-reverse' }}>
+                                                <Phone size={14} className="text-zinc-400" />
+                                                <Typography variant="caption">{user.phone}</Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                        <Typography variant="body2" className="font-urdu">
+                                            {user.isActive ? 'فعال' : 'غیر فعال'}
+                                        </Typography>
+                                        <Box sx={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            bgcolor: user.isActive ? '#10b981' : '#ef4444'
+                                        }} />
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Chip
+                                        label={user.role}
+                                        size="small"
+                                        color={getRoleColor(user.role)}
+                                        variant="outlined"
+                                        sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
+                                    />
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography variant="body2" color="textSecondary">
+                                        @{user.username}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
                                         <Avatar sx={{
                                             bgcolor: user.role === 'ADMIN' ? '#fee2e2' : '#dbeafe',
                                             color: user.role === 'ADMIN' ? '#991b1b' : '#1e40af',
@@ -492,66 +549,13 @@ export default function UserManagementClient({ initialUsers }) {
                                             {user.fullName.charAt(0)}
                                         </Avatar>
                                         <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, textAlign: 'right' }}>
                                                 {user.fullName}
                                             </Typography>
-                                            <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.75rem' }}>
+                                            <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.75rem', textAlign: 'right' }}>
                                                 ID: {user.id}
                                             </Typography>
                                         </Box>
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2" color="textSecondary">
-                                        @{user.username}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={user.role}
-                                        size="small"
-                                        color={getRoleColor(user.role)}
-                                        variant="outlined"
-                                        sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            bgcolor: user.isActive ? '#10b981' : '#ef4444'
-                                        }} />
-                                        <Typography variant="body2">
-                                            {user.isActive ? 'Active' : 'Inactive'}
-                                        </Typography>
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {user.email && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Mail size={14} className="text-zinc-400" />
-                                                <Typography variant="caption">{user.email}</Typography>
-                                            </Box>
-                                        )}
-                                        {user.phone && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Phone size={14} className="text-zinc-400" />
-                                                <Typography variant="caption">{user.phone}</Typography>
-                                            </Box>
-                                        )}
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                        <IconButton size="small" color="primary" onClick={() => handleEdit(user)}>
-                                            <Edit size={18} />
-                                        </IconButton>
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(user.id)}>
-                                            <Trash2 size={18} />
-                                        </IconButton>
                                     </Box>
                                 </TableCell>
                             </TableRow>

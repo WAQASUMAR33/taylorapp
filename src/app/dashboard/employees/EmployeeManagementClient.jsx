@@ -195,9 +195,9 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {editMode ? "EDIT EMPLOYEE" : "NEW EMPLOYEE"}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {editMode ? "ملازم کی معلومات تبدیل کریں" : "نیا ملازم شامل کریں"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -207,7 +207,7 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
@@ -215,7 +215,7 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -223,22 +223,18 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Full name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">مکمل نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
-                                    placeholder="e.g. John Doe"
+                                    dir="rtl"
+                                    placeholder="نام درج کریں"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -246,26 +242,24 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Father Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">والد کا نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="fatherName"
-                                    placeholder="e.g. Robert Doe"
+                                    required
+                                    dir="rtl"
+                                    placeholder="والد کا نام درج کریں"
                                     value={formData.fatherName}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Users size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -273,12 +267,15 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Role</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">عہدہ</Typography>
+                                </Box>
                                 <Autocomplete
                                     options={employeeRoles}
                                     value={formData.role || null}
@@ -286,8 +283,9 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
-                                            placeholder="Select role"
                                             required
+                                            dir="rtl"
+                                            placeholder="عہدہ منتخب کریں"
                                             variant="outlined"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
@@ -296,18 +294,23 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                                     '& fieldset': { borderColor: '#e5e7eb' },
                                                     '&:hover fieldset': { borderColor: '#8b5cf6' },
                                                     '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                }
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     )}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Phone number</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="phone"
-                                    placeholder="111-222-3333"
+                                    required
+                                    dir="rtl"
+                                    placeholder="فون نمبر درج کریں"
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -318,27 +321,25 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Salary (Monthly)</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">تنخواہ (ماہانہ)</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="salary"
+                                    required
                                     type="number"
-                                    placeholder="e.g. 25000"
+                                    dir="rtl"
+                                    placeholder="تنخواہ درج کریں"
                                     value={formData.salary}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Typography sx={{ fontWeight: 600, color: '#374151', mr: 1 }}>Rs.</Typography>
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -346,15 +347,19 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Status</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سٹیٹس</Typography>
+                                </Box>
                                 <Box sx={{
                                     display: 'flex',
                                     alignItems: 'center',
+                                    justifyContent: 'flex-end',
                                     p: 1.5,
                                     bgcolor: 'white',
                                     borderRadius: '10px',
@@ -370,21 +375,22 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                                 color="primary"
                                             />
                                         }
-                                        label={formData.isActive ? "Active" : "Inactive"}
-                                        sx={{ ml: 1, '& .MuiFormControlLabel-label': { fontWeight: 500, color: '#374151' } }}
+                                        label={formData.isActive ? "ایکٹیو" : "ان ایکٹیو"}
+                                        labelPlacement="start"
+                                        sx={{ mr: 1, '& .MuiFormControlLabel-label': { fontWeight: 500, color: '#374151' } }}
                                     />
                                 </Box>
                             </Grid>
                             <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, mt: 1, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Home Address
-                                    </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">گھر کا پتہ</Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="address"
-                                    placeholder="e.g. 123 Street, City"
+                                    required
+                                    dir="rtl"
+                                    placeholder="پتہ درج کریں"
                                     multiline
                                     rows={4}
                                     value={formData.address}
@@ -397,7 +403,8 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>

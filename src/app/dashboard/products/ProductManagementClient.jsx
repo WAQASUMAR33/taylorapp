@@ -234,7 +234,7 @@ export default function ProductManagementClient({ initialProducts, categories })
 
                 <Card sx={{ mb: 2 }}>
                     <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'right' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'right' }} className="font-urdu">
                             {editMode ? "پروڈکٹ میں ترمیم کریں" : "نیا پروڈکٹ"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -244,16 +244,18 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 onClick={handleSubmit}
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<XIcon size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -261,23 +263,18 @@ export default function ProductManagementClient({ initialProducts, categories })
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3} sx={{ direction: 'rtl' }}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>پروڈکٹ کا نام</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">پروڈکٹ کا نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
+                                    dir="rtl"
                                     placeholder="مثال: کاٹن شرٹ"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    inputProps={{ style: { textAlign: 'right' } }}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Package size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -285,12 +282,15 @@ export default function ProductManagementClient({ initialProducts, categories })
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کیٹیگری</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کیٹیگری</Typography>
+                                </Box>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
@@ -309,9 +309,9 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
+                                                dir="rtl"
                                                 placeholder="کیٹیگری منتخب کریں"
                                                 variant="outlined"
-                                                inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
                                                 sx={{
                                                     minWidth: '300px',
                                                     '& .MuiOutlinedInput-root': {
@@ -320,7 +320,8 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                         '& fieldset': { borderColor: '#e5e7eb' },
                                                         '&:hover fieldset': { borderColor: '#8b5cf6' },
                                                         '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                    }
+                                                    },
+                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                                 }}
                                             />
                                         )}
@@ -337,19 +338,19 @@ export default function ProductManagementClient({ initialProducts, categories })
                             {isSuit() ? (
                                 <>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کٹنگ لاگت</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کٹنگ لاگت</Typography>
+                                        </Box>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="cuttingCost"
+                                            required
+                                            dir="rtl"
                                             placeholder="مثال: 500"
                                             value={formData.cuttingCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
-                                            inputProps={{ style: { textAlign: 'right' } }}
-                                            InputProps={{
-                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
-                                            }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
@@ -357,24 +358,25 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                     '& fieldset': { borderColor: '#e5e7eb' },
                                                     '&:hover fieldset': { borderColor: '#3b82f6' },
                                                     '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>سلائی لاگت</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سلائی لاگت</Typography>
+                                        </Box>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="stitchingCost"
+                                            required
+                                            dir="rtl"
                                             placeholder="مثال: 1500"
                                             value={formData.stitchingCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
-                                            inputProps={{ style: { textAlign: 'right' } }}
-                                            InputProps={{
-                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
-                                            }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
@@ -382,24 +384,25 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                     '& fieldset': { borderColor: '#e5e7eb' },
                                                     '&:hover fieldset': { borderColor: '#3b82f6' },
                                                     '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>میٹیرئیل لاگت</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">میٹیرئیل لاگت</Typography>
+                                        </Box>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="materialCost"
+                                            required
+                                            dir="rtl"
                                             placeholder="مثال: 1000"
                                             value={formData.materialCost}
                                             onChange={handleInputChange}
                                             variant="outlined"
-                                            inputProps={{ style: { textAlign: 'right' } }}
-                                            InputProps={{
-                                                endAdornment: <InputAdornment position="end"><Typography sx={{ fontWeight: 600, color: '#374151', ml: 1 }}>روپے</Typography></InputAdornment>,
-                                            }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
@@ -407,55 +410,50 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                     '& fieldset': { borderColor: '#e5e7eb' },
                                                     '&:hover fieldset': { borderColor: '#3b82f6' },
                                                     '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={6}>
-                                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>کل لاگت (حساب شدہ)</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کل لاگت (حساب شدہ)</Typography>
+                                        </Box>
                                         <TextField
                                             fullWidth
                                             type="number"
                                             name="costPrice"
                                             value={formData.costPrice}
-                                            inputProps={{ style: { textAlign: 'right' } }}
+                                            dir="rtl"
                                             InputProps={{
                                                 readOnly: true,
-                                                endAdornment: (
-                                                    <InputAdornment position="end">
-                                                        <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
-                                                    </InputAdornment>
-                                                ),
                                             }}
                                             variant="filled"
                                             sx={{
                                                 '& .MuiFilledInput-root': {
                                                     bgcolor: '#f1f5f9',
                                                     borderRadius: '10px',
-                                                }
+                                                },
+                                                '& .MuiFilledInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     </Grid>
                                 </>
                             ) : (
                                 <Grid item xs={12} md={6}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>لاگت کی قیمت</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">لاگت کی قیمت</Typography>
+                                    </Box>
                                     <TextField
                                         fullWidth
                                         type="number"
                                         name="costPrice"
+                                        required
+                                        dir="rtl"
                                         placeholder="مثال: 3000"
                                         value={formData.costPrice}
                                         onChange={handleInputChange}
                                         variant="outlined"
-                                        inputProps={{ style: { textAlign: 'right' } }}
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
-                                                </InputAdornment>
-                                            ),
-                                        }}
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 bgcolor: 'white',
@@ -463,30 +461,27 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                 '& fieldset': { borderColor: '#e5e7eb' },
                                                 '&:hover fieldset': { borderColor: '#3b82f6' },
                                                 '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                            }
+                                            },
+                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                         }}
                                     />
                                 </Grid>
                             )}
 
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>یونٹ کی قیمت (فروخت کی قیمت)</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">یونٹ کی قیمت (فروخت کی قیمت)</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     type="number"
                                     name="unitPrice"
+                                    required
+                                    dir="rtl"
                                     placeholder="مثال: 4500"
                                     value={formData.unitPrice}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    inputProps={{ style: { textAlign: 'right' } }}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 600 }}>روپے</Typography>
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -494,28 +489,25 @@ export default function ProductManagementClient({ initialProducts, categories })
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#3b82f6' },
                                             '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem', textAlign: 'right' }}>ابتدائی مقدار</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ابتدائی مقدار</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     type="number"
                                     name="quantity"
+                                    required
+                                    dir="rtl"
                                     placeholder="مثال: 100"
                                     value={formData.quantity}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    inputProps={{ style: { textAlign: 'right' } }}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <ClipboardList size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -523,26 +515,28 @@ export default function ProductManagementClient({ initialProducts, categories })
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#3b82f6' },
                                             '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12}>
                                 <Box sx={{ mb: 1.5, mt: 1, display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', gap: 1.5, borderRight: '4px solid #8b5cf6', pr: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem' }} className="font-urdu">
                                         تفصیل
                                     </Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="description"
+                                    required
+                                    dir="rtl"
                                     placeholder="مثال: پریمیم سلائی کے ساتھ اعلیٰ کوالٹی کا سوتی کپڑا..."
                                     multiline
                                     rows={4}
                                     value={formData.description}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    inputProps={{ style: { textAlign: 'right' } }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -550,7 +544,8 @@ export default function ProductManagementClient({ initialProducts, categories })
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#3b82f6' },
                                             '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
@@ -641,92 +636,91 @@ export default function ProductManagementClient({ initialProducts, categories })
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Product Details</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Stock</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">ایکشن</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">قیمت</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">اسٹاک</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">کیٹیگری</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">پروڈکٹ کی تفصیل</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredProducts.length > 0 ? (
-                            filteredProducts.map((prod) => (
-                                <TableRow
-                                    key={prod.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Box sx={{
-                                                p: 1,
-                                                bgcolor: '#f5f3ff',
-                                                borderRadius: 2,
-                                                color: '#8b5cf6'
-                                            }}>
-                                                <Package size={20} />
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {prod.name}
-                                                </Typography>
-                                                {/* SKU was here, but it's being removed as per instruction */}
-                                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                                                    {prod.description || 'No description'}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Tag size={14} className="text-zinc-400" />
-                                            <Typography variant="body2">
-                                                {prod.category?.name || 'Uncategorized'}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontWeight: 600,
-                                                color: prod.quantity <= 5 ? '#ef4444' : 'inherit'
-                                            }}
+                            filteredProducts.map((prod) => <TableRow
+                                key={prod.id}
+                                sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                            >
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                        <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
+                                            <Edit size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleDelete(prod.id)}
                                         >
-                                            {prod.quantity} Units
+                                            <Trash2 size={18} />
+                                        </IconButton>
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
+                                            فروخت: Rs. {parseFloat(prod.unitPrice || 0).toFixed(2)}
                                         </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
-                                                Selling: Rs. {parseFloat(prod.unitPrice || 0).toFixed(2)}
+                                        <Typography variant="caption" color="textSecondary" className="font-urdu">
+                                            لاگت: Rs. {parseFloat(prod.costPrice || 0).toFixed(2)}
+                                        </Typography>
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            fontWeight: 600,
+                                            color: prod.quantity <= 5 ? '#ef4444' : 'inherit',
+                                            textAlign: 'right'
+                                        }}
+                                    >
+                                        {prod.quantity} یونٹس
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                        <Typography variant="body2">
+                                            {prod.category?.name || 'غیر متعلقہ'}
+                                        </Typography>
+                                        <Tag size={14} className="text-zinc-400" />
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
+                                        <Box sx={{
+                                            p: 1,
+                                            bgcolor: '#f5f3ff',
+                                            borderRadius: 2,
+                                            color: '#8b5cf6'
+                                        }}>
+                                            <Package size={20} />
+                                        </Box>
+                                        <Box sx={{ textAlign: 'right' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                {prod.name}
                                             </Typography>
-                                            <Typography variant="caption" color="textSecondary">
-                                                Cost: Rs. {parseFloat(prod.costPrice || 0).toFixed(2)}
+                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                {prod.description || 'کوئی تفصیل نہیں'}
                                             </Typography>
                                         </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
-                                                <Edit size={18} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                color="error"
-                                                onClick={() => handleDelete(prod.id)}
-                                            >
-                                                <Trash2 size={18} />
-                                            </IconButton>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No products found.</Typography>
+                                    </Box>
                                 </TableCell>
                             </TableRow>
+                            ))
+                        ) : (
+                        <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                <Typography color="textSecondary" className="font-urdu">کوئی پروڈکٹ نہیں ملی۔</Typography>
+                            </TableCell>
+                        </TableRow>
                         )}
                     </TableBody>
                 </Table>

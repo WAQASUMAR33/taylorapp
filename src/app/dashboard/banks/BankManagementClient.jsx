@@ -121,9 +121,9 @@ export default function BankManagementClient({ initialBanks }) {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {formData.id ? 'EDIT BANK' : 'NEW BANK'}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {formData.id ? "بینک تبدیل کریں" : "نیا بینک"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -132,16 +132,18 @@ export default function BankManagementClient({ initialBanks }) {
                                 onClick={handleSubmit}
                                 disabled={loading || !formData.name.trim()}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<XIcon size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -149,21 +151,17 @@ export default function BankManagementClient({ initialBanks }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Bank Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">بینک کا نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
-                                    placeholder="e.g. HBL, Alfalah, Meezan Bank..."
+                                    placeholder="نام درج کریں"
                                     required
+                                    dir="rtl"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Landmark size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -171,25 +169,23 @@ export default function BankManagementClient({ initialBanks }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Account Number</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">اکاؤنٹ نمبر</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
-                                    placeholder="e.g. 1234 5678 9012 3456"
+                                    placeholder="نمبر درج کریں"
+                                    required
+                                    dir="rtl"
                                     value={formData.accountNumber}
                                     onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Hash size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -197,25 +193,23 @@ export default function BankManagementClient({ initialBanks }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Branch</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">برانچ</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
-                                    placeholder="e.g. Main Boulevard Branch, Lahore"
+                                    placeholder="برانچ درج کریں"
+                                    required
+                                    dir="rtl"
                                     value={formData.branch}
                                     onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <GitBranch size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -223,26 +217,24 @@ export default function BankManagementClient({ initialBanks }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Opening Balance</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ابتدائی بیلنس</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     type="number"
+                                    required
+                                    dir="rtl"
                                     value={formData.balance}
                                     onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
                                     variant="outlined"
-                                    placeholder="e.g. 50000"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Typography sx={{ color: '#374151', fontWeight: 600, fontSize: '0.875rem' }}>Rs.</Typography>
-                                            </InputAdornment>
-                                        ),
-                                    }}
+                                    placeholder="بیلنس درج کریں"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -250,7 +242,8 @@ export default function BankManagementClient({ initialBanks }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>

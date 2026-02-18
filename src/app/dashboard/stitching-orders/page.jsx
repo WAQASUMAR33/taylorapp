@@ -106,8 +106,8 @@ export default async function StitchingOrdersPage() {
                         <Scissors size={28} />
                     </Box>
                     <Box>
-                        <h1 className="text-3xl font-bold text-zinc-900">Stitching Orders</h1>
-                        <p className="text-zinc-500 mt-1">Manage all bookings specifically marked as Stitching.</p>
+                        <h1 className="text-3xl font-bold text-zinc-900 font-urdu">سلائی آرڈرز</h1>
+                        <p className="text-zinc-500 mt-1 font-urdu">وہ تمام بکنگز جو صرف 'سلائی' کے لیے نشان زد ہیں۔</p>
                     </Box>
                 </Box>
             </Box>

@@ -126,9 +126,9 @@ export default function AccountCategoryClient({ initialCategories }) {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {editingCategory ? 'EDIT CATEGORY' : 'NEW CATEGORY'}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {editingCategory ? 'کیٹگری تبدیل کریں' : 'نئی کیٹگری'}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -137,16 +137,18 @@ export default function AccountCategoryClient({ initialCategories }) {
                                 onClick={handleSubmit}
                                 disabled={loading || !categoryName.trim()}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<XIcon size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -154,21 +156,17 @@ export default function AccountCategoryClient({ initialCategories }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Category Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کیٹگری کا نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
-                                    placeholder="e.g. VIP Customers, Corporate, Wholesale..."
+                                    placeholder="نام درج کریں"
                                     required
+                                    dir="rtl"
                                     value={categoryName}
                                     onChange={(e) => setCategoryName(e.target.value)}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Tag size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -176,7 +174,8 @@ export default function AccountCategoryClient({ initialCategories }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>

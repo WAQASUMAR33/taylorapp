@@ -173,18 +173,17 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
         setError("");
 
         if (!formData.supplierId) {
-            setError("Please select a supplier.");
+            setError("براہ کرم سپلائر کا انتخاب کریں۔");
             setLoading(false);
             return;
         }
         if (formData.items.length === 0) {
-            setError("Please add at least one item.");
+            setError("براہ کرم کم از کم ایک آئٹم شامل کریں۔");
             setLoading(false);
             return;
         }
 
         try {
-            // Sanitize payload: ensure decimals are handled correctly
             const payload = {
                 ...formData,
                 totalAmount: calculateGrandTotal().toString(),
@@ -212,11 +211,8 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
             }
 
             const savedPurchase = await response.json();
-
-            // Refresh purchase list (simplified for now, ideally re-fetch)
             setPurchases(prev => [savedPurchase, ...prev]);
-
-            setSuccessMessage("Purchase recorded successfully!");
+            setSuccessMessage("خریداری کی انٹری کامیابی سے محفوظ ہو گئی!");
             setShowForm(false);
             resetForm();
         } catch (err) {
@@ -263,9 +259,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            NEW PURCHASE ORDER
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            خریداری کی انٹری
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -274,43 +270,46 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 onClick={handleSubmit}
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<XIcon size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
 
                     <Box sx={{ p: 3 }}>
                         {/* Header Details */}
-                        <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid container spacing={3} sx={{ mb: 4, flexDirection: 'row-reverse' }}>
                             <Grid item xs={12} md={4}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Invoice Number</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">انوائس نمبر</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     size="small"
                                     value={formData.invoiceNumber}
                                     disabled
+                                    dir="rtl"
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <FileText size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: '10px' },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
-                                    sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: '10px' } }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={4}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Supplier</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سپلائر کا انتخاب کریں</Typography>
+                                </Box>
                                 <Autocomplete
                                     options={suppliers}
                                     getOptionLabel={(option) => option.name || ""}
@@ -321,44 +320,47 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
-                                            placeholder="Search and select supplier..."
+                                            placeholder="سپلائر تلاش کریں"
                                             required
                                             size="small"
+                                            dir="rtl"
                                             variant="outlined"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
                                                     borderRadius: '10px',
-                                                    width: 300,
                                                     '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
                                         />
                                     )}
                                 />
                             </Grid>
                             <Grid item xs={12} md={4}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Purchase Date</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">خریداری کی تاریخ</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     size="small"
                                     type="date"
+                                    required
                                     value={formData.purchaseDate}
                                     onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                                    InputProps={{
-                                        startAdornment: <InputAdornment position="start"><Calendar size={18} color="#9ca3af" /></InputAdornment>,
-                                    }}
+                                    dir="rtl"
                                     variant="outlined"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
                                             borderRadius: '10px',
                                             '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
@@ -368,17 +370,18 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
 
                         {/* Items Section */}
                         <Box sx={{ mb: 4 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <ShoppingCart size={20} /> Order Items
+                            <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
+                                    خریداری کی اشیاء
                                 </Typography>
                                 <Button
                                     startIcon={<Plus size={16} />}
                                     variant="outlined"
                                     size="small"
                                     onClick={handleAddItem}
+                                    className="font-urdu"
                                 >
-                                    Add Item
+                                    آئٹم شامل کریں
                                 </Button>
                             </Box>
 
@@ -386,17 +389,49 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: '#f3f4f6' }}>
                                         <TableRow>
-                                            <TableCell width="35%">Product</TableCell>
-                                            <TableCell width="15%">Quantity</TableCell>
-                                            <TableCell width="20%">Cost Price</TableCell>
-                                            <TableCell width="20%">Total</TableCell>
                                             <TableCell width="10%"></TableCell>
+                                            <TableCell width="20%" align="right" className="font-urdu">کل قیمت</TableCell>
+                                            <TableCell width="20%" align="right" className="font-urdu">قیمتِ خرید</TableCell>
+                                            <TableCell width="15%" align="right" className="font-urdu">تعداد</TableCell>
+                                            <TableCell width="35%" align="right" className="font-urdu">پروڈکٹ</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {formData.items.map((item, index) => (
                                             <TableRow key={index}>
                                                 <TableCell>
+                                                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
+                                                        <Trash2 size={16} />
+                                                    </IconButton>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography fontWeight="bold">
+                                                        Rs. {calculateItemTotal(item).toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <TextField
+                                                        type="number"
+                                                        value={item.costPrice}
+                                                        onChange={(e) => handleItemChange(index, 'costPrice', e.target.value)}
+                                                        variant="standard"
+                                                        dir="rtl"
+                                                        fullWidth
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <TextField
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                                        variant="standard"
+                                                        dir="rtl"
+                                                        fullWidth
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="right">
                                                     <Autocomplete
                                                         options={products}
                                                         getOptionLabel={(option) => option.name || ""}
@@ -405,65 +440,39 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                         renderInput={(params) => (
                                                             <TextField
                                                                 {...params}
-                                                                placeholder="Select Product"
+                                                                placeholder="پروڈکٹ کا انتخاب کریں"
                                                                 variant="outlined"
                                                                 size="small"
+                                                                dir="rtl"
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
                                                                         bgcolor: 'white',
                                                                         borderRadius: '8px',
                                                                         '& fieldset': { borderColor: '#e5e7eb' },
-                                                                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                                        '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                                    }
+                                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                                    },
+                                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                                                 }}
                                                             />
                                                         )}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
-                                                    <TextField
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                        variant="standard"
-                                                        fullWidth
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField
-                                                        type="number"
-                                                        value={item.costPrice}
-                                                        onChange={(e) => handleItemChange(index, 'costPrice', e.target.value)}
-                                                        variant="standard"
-                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                                        fullWidth
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography fontWeight="bold">
-                                                        Rs. {calculateItemTotal(item).toFixed(2)}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
-                                                        <Trash2 size={16} />
-                                                    </IconButton>
-                                                </TableCell>
                                             </TableRow>
                                         ))}
                                         {formData.items.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                                                    No items added.
+                                                <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }} className="font-urdu">
+                                                    کوئی آئٹم شامل نہیں کیا گیا۔
                                                 </TableCell>
                                             </TableRow>
                                         )}
                                         <TableRow sx={{ bgcolor: '#fafafa' }}>
-                                            <TableCell colSpan={3} align="right" sx={{ fontWeight: 'bold' }}>Grand Total:</TableCell>
-                                            <TableCell colSpan={2} sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '1.1rem' }}>
-                                                Rs. {calculateGrandTotal().toFixed(2)}
+                                            <TableCell colSpan={1}></TableCell>
+                                            <TableCell colSpan={2} align="right" sx={{ fontWeight: 'bold', color: '#8b5cf6', fontSize: '1.1rem' }}>
+                                                Rs. {calculateGrandTotal().toLocaleString()}
                                             </TableCell>
+                                            <TableCell colSpan={2} align="right" sx={{ fontWeight: 'bold' }} className="font-urdu">کل رقم:</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -474,17 +483,18 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
 
                         {/* Payments Section */}
                         <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CreditCard size={20} /> Payments
+                            <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
+                                    ادائیگیاں
                                 </Typography>
                                 <Button
                                     startIcon={<Plus size={16} />}
                                     variant="outlined"
                                     size="small"
                                     onClick={handleAddPayment}
+                                    className="font-urdu"
                                 >
-                                    Add Payment
+                                    ادائیگی شامل کریں
                                 </Button>
                             </Box>
 
@@ -492,69 +502,78 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: '#f3f4f6' }}>
                                         <TableRow>
-                                            <TableCell width="25%">Amount</TableCell>
-                                            <TableCell width="25%">Method</TableCell>
-                                            <TableCell width="25%">Date</TableCell>
-                                            <TableCell width="15%">Notes</TableCell>
                                             <TableCell width="10%"></TableCell>
+                                            <TableCell width="15%" align="right" className="font-urdu">نوٹس</TableCell>
+                                            <TableCell width="25%" align="right" className="font-urdu">تاریخ</TableCell>
+                                            <TableCell width="25%" align="right" className="font-urdu">طریقہ کار</TableCell>
+                                            <TableCell width="25%" align="right" className="font-urdu">رقم</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {formData.payments.map((payment, index) => (
                                             <TableRow key={index}>
                                                 <TableCell>
+                                                    <IconButton size="small" color="error" onClick={() => handleRemovePayment(index)}>
+                                                        <Trash2 size={16} />
+                                                    </IconButton>
+                                                </TableCell>
+                                                <TableCell align="right">
                                                     <TextField
-                                                        type="number"
-                                                        value={payment.amount}
-                                                        onChange={(e) => handlePaymentChange(index, 'amount', e.target.value)}
+                                                        value={payment.notes}
+                                                        onChange={(e) => handlePaymentChange(index, 'notes', e.target.value)}
+                                                        placeholder="اختیاری"
                                                         variant="standard"
-                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                        dir="rtl"
+                                                        fullWidth
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
-                                                    <TextField
-                                                        select
-                                                        value={payment.method}
-                                                        onChange={(e) => handlePaymentChange(index, 'method', e.target.value)}
-                                                        variant="standard"
-                                                        fullWidth
-                                                    >
-                                                        {['CASH', 'BANK_TRANSFER', 'CHEQUE', 'ONLINE'].map(m => (
-                                                            <MenuItem key={m} value={m}>{m}</MenuItem>
-                                                        ))}
-                                                    </TextField>
-                                                </TableCell>
-                                                <TableCell>
+                                                <TableCell align="right">
                                                     <TextField
                                                         type="date"
                                                         value={payment.date}
                                                         onChange={(e) => handlePaymentChange(index, 'date', e.target.value)}
                                                         variant="standard"
+                                                        dir="rtl"
                                                         fullWidth
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell align="right">
                                                     <TextField
-                                                        value={payment.notes}
-                                                        onChange={(e) => handlePaymentChange(index, 'notes', e.target.value)}
-                                                        placeholder="Optional"
+                                                        select
+                                                        value={payment.method}
+                                                        onChange={(e) => handlePaymentChange(index, 'method', e.target.value)}
                                                         variant="standard"
+                                                        dir="rtl"
                                                         fullWidth
-                                                    />
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
+                                                    >
+                                                        <MenuItem value="CASH">نقد (Cash)</MenuItem>
+                                                        <MenuItem value="BANK_TRANSFER">بینک ٹرانسفر (Bank Transfer)</MenuItem>
+                                                        <MenuItem value="CHEQUE">چیک (Cheque)</MenuItem>
+                                                        <MenuItem value="ONLINE">آن لائن (Online)</MenuItem>
+                                                    </TextField>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <IconButton size="small" color="error" onClick={() => handleRemovePayment(index)}>
-                                                        <Trash2 size={16} />
-                                                    </IconButton>
+                                                <TableCell align="right">
+                                                    <TextField
+                                                        type="number"
+                                                        value={payment.amount}
+                                                        onChange={(e) => handlePaymentChange(index, 'amount', e.target.value)}
+                                                        variant="standard"
+                                                        dir="rtl"
+                                                        fullWidth
+                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
+                                                    />
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                         {formData.payments.length > 0 && (
                                             <TableRow sx={{ bgcolor: '#fafafa' }}>
                                                 <TableCell colSpan={5}>
-                                                    <Box sx={{ display: 'flex', gap: 4, justifyContent: 'flex-end', px: 2 }}>
-                                                        <Typography variant="body2">Total Paid: <b>Rs. {calculateTotalPaid().toFixed(2)}</b></Typography>
-                                                        <Typography variant="body2" color="error">Balance Due: <b>Rs. {calculateBalance().toFixed(2)}</b></Typography>
+                                                    <Box sx={{ display: 'flex', gap: 4, flexDirection: 'row-reverse', px: 2 }}>
+                                                        <Typography variant="body2" className="font-urdu">کل ادا شدہ: <b>Rs. {calculateTotalPaid().toLocaleString()}</b></Typography>
+                                                        <Typography variant="body2" color="error" className="font-urdu">بقیہ رقم: <b>Rs. {calculateBalance().toLocaleString()}</b></Typography>
                                                     </Box>
                                                 </TableCell>
                                             </TableRow>
@@ -566,27 +585,29 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
 
                         <Grid container spacing={2} sx={{ mt: 2 }}>
                             <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Additional Notes
+                                <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem' }} className="font-urdu">
+                                        اضافی نوٹس
                                     </Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
-                                    placeholder="e.g. Fragile items, handle with care, special delivery instructions..."
+                                    placeholder="تفصیل یا خصوصی ہدایات یہاں درج کریں..."
                                     multiline
                                     rows={3}
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    dir="rtl"
                                     variant="outlined"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
                                             borderRadius: '12px',
                                             '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
+                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
@@ -603,15 +624,17 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
             {/* Action Bar */}
             <Box sx={{
                 display: 'flex',
+                flexDirection: 'row-reverse',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
                 gap: 2
             }}>
                 <TextField
-                    placeholder="Search purchases..."
+                    placeholder="خریداری تلاش کریں..."
                     variant="outlined"
                     size="small"
+                    dir="rtl"
                     sx={{ width: 450, bgcolor: 'white' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -621,6 +644,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 <Search size={18} />
                             </InputAdornment>
                         ),
+                        style: { textAlign: 'right' }
                     }}
                 />
                 <Button
@@ -635,8 +659,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                         bgcolor: '#8b5cf6',
                         '&:hover': { bgcolor: '#7c3aed' }
                     }}
+                    className="font-urdu"
                 >
-                    New Purchase
+                    نئی خریداری
                 </Button>
             </Box>
 
@@ -649,12 +674,12 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Invoice #</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Supplier</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشن</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">اسٹیٹس</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">کل رقم</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">سپلائر</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">انوائس #</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -664,43 +689,6 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                     key={purchase.id}
                                     sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
                                 >
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Calendar size={14} className="text-zinc-400" />
-                                            <Typography variant="body2">
-                                                {new Date(purchase.purchaseDate).toLocaleDateString()}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                            {purchase.invoiceNumber}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {purchase.supplierRel?.name || purchase.supplier}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight="bold">
-                                            Rs. {parseFloat(purchase.totalAmount).toFixed(2)}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{
-                                            px: 1.5,
-                                            py: 0.5,
-                                            bgcolor: purchase.paidAmount >= purchase.totalAmount ? '#dcfce7' : '#fee2e2',
-                                            color: purchase.paidAmount >= purchase.totalAmount ? '#166534' : '#991b1b',
-                                            borderRadius: 1,
-                                            display: 'inline-block',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 600
-                                        }}>
-                                            {purchase.paidAmount >= purchase.totalAmount ? 'PAID' : 'PARTIAL'}
-                                        </Box>
-                                    </TableCell>
                                     <TableCell align="right">
                                         <IconButton
                                             size="small"
@@ -711,12 +699,48 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                             <Trash2 size={18} />
                                         </IconButton>
                                     </TableCell>
+                                    <TableCell align="right">
+                                        <Box sx={{
+                                            px: 1.5,
+                                            py: 0.5,
+                                            bgcolor: purchase.paidAmount >= purchase.totalAmount ? '#dcfce7' : '#fee2e2',
+                                            color: purchase.paidAmount >= purchase.totalAmount ? '#166534' : '#991b1b',
+                                            borderRadius: 1,
+                                            display: 'inline-block',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600
+                                        }} className="font-urdu">
+                                            {purchase.paidAmount >= purchase.totalAmount ? 'مکمل ادا شدہ' : 'جزوی ادائیگی'}
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Typography variant="body2" fontWeight="bold">
+                                            Rs. {parseFloat(purchase.totalAmount).toLocaleString()}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Typography variant="body2">
+                                            {purchase.supplierRel?.name || purchase.supplier}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                                            {purchase.invoiceNumber}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="body2">
+                                                {new Date(purchase.purchaseDate).toLocaleDateString()}
+                                            </Typography>
+                                        </Box>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No purchases found.</Typography>
+                                    <Typography color="textSecondary" className="font-urdu">کوئی خریداری نہیں ملی۔</Typography>
                                 </TableCell>
                             </TableRow>
                         )}

@@ -157,9 +157,9 @@ export default function CategoryManagementClient({ initialCategories }) {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {editMode ? "EDIT CATEGORY" : "NEW CATEGORY"}
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {editMode ? "کیٹیگری تبدیل کریں" : "نئی کیٹیگری"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -168,16 +168,18 @@ export default function CategoryManagementClient({ initialCategories }) {
                                 onClick={handleSubmit}
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<X size={18} />}
                                 onClick={handleClose}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -185,23 +187,19 @@ export default function CategoryManagementClient({ initialCategories }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Category Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
-                                    placeholder="e.g. Cotton Fabrics"
+                                    dir="rtl"
+                                    placeholder="نام درج کریں"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Tag size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -209,20 +207,23 @@ export default function CategoryManagementClient({ initialCategories }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Description
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">
+                                        تفصیل
                                     </Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="description"
-                                    placeholder="e.g. All types of cotton based fabrics and materials..."
+                                    required
+                                    dir="rtl"
+                                    placeholder="تفصیل درج کریں"
                                     multiline
                                     rows={3}
                                     value={formData.description}
@@ -235,7 +236,8 @@ export default function CategoryManagementClient({ initialCategories }) {
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>

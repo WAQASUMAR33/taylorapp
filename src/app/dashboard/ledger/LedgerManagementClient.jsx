@@ -61,7 +61,6 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
     }, [customerIdParam, customers]);
 
     // UI States
-    const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
@@ -73,6 +72,8 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
         description: ""
     });
 
+    const [showForm, setShowForm] = useState(false);
+
     const handleOpen = () => {
         setFormData({
             customerId: "",
@@ -81,19 +82,11 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
             description: ""
         });
         setError("");
-        setOpen(true);
+        setShowForm(true);
     };
 
     const handleClose = () => {
-        if (!loading) setOpen(false);
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        if (!loading) setShowForm(false);
     };
 
     const handleSubmit = async (e) => {
@@ -114,10 +107,9 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
             }
 
             const savedEntry = await response.json();
-
             setEntries(prev => [...prev, savedEntry]);
-            setSuccessMessage("Ledger entry created successfully!");
-            setOpen(false);
+            setSuccessMessage("انٹری کامیابی سے محفوظ ہو گئی!");
+            setShowForm(false);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -170,10 +162,162 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
 
     const balance = totals.debit - totals.credit;
 
+    if (showForm) {
+        return (
+            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+                <Card sx={{ mb: 2 }}>
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            لیجر انٹری درج کریں
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="contained"
+                                startIcon={<Save size={18} />}
+                                onClick={handleSubmit}
+                                disabled={loading || !formData.customerId || !formData.amount}
+                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                className="font-urdu"
+                            >
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<X size={18} />}
+                                onClick={handleClose}
+                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
+                                className="font-urdu"
+                            >
+                                کینسل
+                            </Button>
+                        </Box>
+                    </Box>
+
+                    <Box sx={{ p: 3 }}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">گاہک کا انتخاب کریں</Typography>
+                                </Box>
+                                <Autocomplete
+                                    options={customers}
+                                    getOptionLabel={(option) => `${option.name}${option.code ? ` (${option.code})` : ''}`}
+                                    value={customers.find(c => c.id === formData.customerId) || null}
+                                    onChange={(e, newValue) => setFormData(prev => ({ ...prev, customerId: newValue?.id || '' }))}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            placeholder="گاہک تلاش کریں"
+                                            required
+                                            dir="rtl"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            }}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">انٹری کی قسم</Typography>
+                                </Box>
+                                <TextField
+                                    fullWidth
+                                    select
+                                    required
+                                    name="type"
+                                    dir="rtl"
+                                    value={formData.type}
+                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                    variant="outlined"
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: 'white',
+                                            borderRadius: '10px',
+                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                    }}
+                                >
+                                    <MenuItem value="DEBIT">وصولی (Debit)</MenuItem>
+                                    <MenuItem value="CREDIT">ادائیگی (Credit)</MenuItem>
+                                </TextField>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">رقم</Typography>
+                                </Box>
+                                <TextField
+                                    fullWidth
+                                    name="amount"
+                                    type="number"
+                                    required
+                                    dir="rtl"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                    variant="outlined"
+                                    placeholder="رقم درج کریں"
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: 'white',
+                                            borderRadius: '10px',
+                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">تفصیل</Typography>
+                                </Box>
+                                <TextField
+                                    fullWidth
+                                    name="description"
+                                    multiline
+                                    rows={3}
+                                    required
+                                    dir="rtl"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="تفصیل درج کریں"
+                                    variant="outlined"
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: 'white',
+                                            borderRadius: '10px',
+                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </Card>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ width: '100%', p: 3 }}>
             {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid container spacing={3} sx={{ mb: 3, flexDirection: 'row-reverse' }}>
                 <Grid item xs={12} md={4}>
                     <Card sx={{
                         p: 3,
@@ -182,10 +326,10 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         borderRadius: 3,
                         boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)'
                     }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>Total Debit</Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500, textAlign: 'right' }} className="font-urdu">کل ڈیبٹ</Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, textAlign: 'right' }}>
                                     Rs. {totals.debit.toLocaleString()}
                                 </Typography>
                             </div>
@@ -201,10 +345,10 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         borderRadius: 3,
                         boxShadow: '0 10px 40px rgba(240, 147, 251, 0.3)'
                     }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>Total Credit</Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500, textAlign: 'right' }} className="font-urdu">کل کریڈٹ</Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, textAlign: 'right' }}>
                                     Rs. {totals.credit.toLocaleString()}
                                 </Typography>
                             </div>
@@ -220,10 +364,10 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         borderRadius: 3,
                         boxShadow: '0 10px 40px rgba(79, 172, 254, 0.3)'
                     }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>Current Balance</Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500, textAlign: 'right' }} className="font-urdu">موجودہ بیلنس</Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, textAlign: 'right' }}>
                                     Rs. {balance.toLocaleString()}
                                 </Typography>
                             </div>
@@ -236,17 +380,24 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
             {/* Action Bar */}
             <Box sx={{
                 display: 'flex',
+                flexDirection: 'row-reverse',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
                 gap: 2,
                 flexWrap: 'wrap'
             }}>
-                <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row-reverse',
+                    gap: 2,
+                    flex: 1
+                }}>
                     <TextField
-                        placeholder="Search by ID, customer name, code, or description..."
+                        placeholder="تلاش کریں..."
                         variant="outlined"
                         size="small"
+                        dir="rtl"
                         sx={{ minWidth: 300, bgcolor: 'white' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -256,6 +407,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                     <Search size={18} />
                                 </InputAdornment>
                             ),
+                            style: { textAlign: 'right' }
                         }}
                     />
                     <Autocomplete
@@ -263,8 +415,20 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         getOptionLabel={(option) => option.name}
                         value={filterCustomer}
                         onChange={(e, newValue) => setFilterCustomer(newValue)}
-                        renderInput={(params) => <TextField {...params} label="Filter by Customer" size="small" sx={{ minWidth: 300 }} />}
-                        sx={{ minWidth: 300, bgcolor: 'white', borderRadius: 2 }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="گاہک سے فلٹر کریں"
+                                size="small"
+                                dir="rtl"
+                                sx={{
+                                    minWidth: 300,
+                                    '& .MuiInputLabel-root': { right: 28, left: 'auto', transformOrigin: 'top right' },
+                                    '& .MuiOutlinedInput-root': { paddingRight: '39px !important' }
+                                }}
+                            />
+                        )}
+                        sx={{ minWidth: 300, bgcolor: 'white' }}
                     />
                 </Box>
                 <Button
@@ -276,11 +440,12 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         textTransform: 'none',
                         px: 3,
                         py: 1,
-                        bgcolor: '#3b82f6',
-                        '&:hover': { bgcolor: '#2563eb' }
+                        bgcolor: '#8b5cf6',
+                        '&:hover': { bgcolor: '#7c3aed' }
                     }}
+                    className="font-urdu"
                 >
-                    Add Entry
+                    نئی انٹری درج کریں
                 </Button>
             </Box>
 
@@ -294,14 +459,14 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                 <Table sx={{ minWidth: 1000 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Pre-Balance</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Debit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Credit</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Current Balance</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">ایکشن</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">موجودہ بیلنس</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">کریڈٹ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">ڈیبٹ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">سابقہ بیلنس</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">تاریخ / تفصیل</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">گاہک کا نام</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right">حوالہ #</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -323,45 +488,30 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                                 key={entry.id}
                                                 sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
                                             >
-                                                <TableCell>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                        #{entry.id}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                        {entry.customer.name}
-                                                    </Typography>
-                                                    {entry.customer.code && (
-                                                        <Typography variant="caption" color="textSecondary">
-                                                            {entry.customer.code}
-                                                        </Typography>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2">
-                                                        {new Date(entry.entryDate).toLocaleDateString()}
-                                                    </Typography>
-                                                    {entry.description && (
-                                                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                                                            {entry.description}
-                                                        </Typography>
-                                                    )}
-                                                </TableCell>
                                                 <TableCell align="right">
-                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                        Rs. {preBalance.toLocaleString()}
-                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                                        <Tooltip title="Print Entry">
+                                                            <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(entry)}>
+                                                                <Printer size={18} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Delete Entry">
+                                                            <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
+                                                                <Trash2 size={18} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </Box>
                                                 </TableCell>
                                                 <TableCell align="right">
                                                     <Typography
                                                         variant="body2"
                                                         sx={{
-                                                            fontWeight: 600,
-                                                            color: debitAmount > 0 ? '#1e40af' : '#9ca3af'
+                                                            fontWeight: 700,
+                                                            color: currentBalance >= 0 ? '#059669' : '#dc2626',
+                                                            fontSize: '0.9rem'
                                                         }}
                                                     >
-                                                        {debitAmount > 0 ? `Rs. ${debitAmount.toLocaleString()}` : '-'}
+                                                        Rs. {currentBalance.toLocaleString()}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell align="right">
@@ -379,27 +529,42 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                                     <Typography
                                                         variant="body2"
                                                         sx={{
-                                                            fontWeight: 700,
-                                                            color: currentBalance >= 0 ? '#059669' : '#dc2626',
-                                                            fontSize: '0.9rem'
+                                                            fontWeight: 600,
+                                                            color: debitAmount > 0 ? '#1e40af' : '#9ca3af'
                                                         }}
                                                     >
-                                                        Rs. {currentBalance.toLocaleString()}
+                                                        {debitAmount > 0 ? `Rs. ${debitAmount.toLocaleString()}` : '-'}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                                        <Tooltip title="Print Entry">
-                                                            <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(entry)}>
-                                                                <Printer size={18} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        <Tooltip title="Delete Entry">
-                                                            <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
-                                                                <Trash2 size={18} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    </Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                        Rs. {preBalance.toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2">
+                                                        {new Date(entry.entryDate).toLocaleDateString()}
+                                                    </Typography>
+                                                    {entry.description && (
+                                                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                            {entry.description}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                        {entry.customer.name}
+                                                    </Typography>
+                                                    {entry.customer.code && (
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {entry.customer.code}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        #{entry.id}
+                                                    </Typography>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -417,165 +582,6 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
             </TableContainer>
 
             {/* Add Entry Modal */}
-            <Dialog
-                open={open}
-                onClose={handleClose}
-                fullWidth
-                maxWidth="sm"
-                PaperProps={{
-                    sx: { borderRadius: 3, p: 1 }
-                }}
-            >
-                <DialogTitle sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontWeight: 'bold'
-                }}>
-                    Add Ledger Entry
-                    <IconButton onClick={handleClose} disabled={loading}>
-                        <X size={20} />
-                    </IconButton>
-                </DialogTitle>
-                <form onSubmit={handleSubmit}>
-                    <DialogContent>
-                        {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Select Customer</Typography>
-                                <Autocomplete
-                                    options={customers}
-                                    getOptionLabel={(option) => `${option.name}${option.code ? ` (${option.code})` : ''}`}
-                                    onChange={(e, newValue) => setFormData(prev => ({ ...prev, customerId: newValue?.id || '' }))}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            placeholder="Search and select customer..."
-                                            required
-                                            variant="outlined"
-                                            size="small"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Entry Type</Typography>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    name="type"
-                                    required
-                                    value={formData.type}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    size="small"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
-                                    }}
-                                >
-                                    <MenuItem value="DEBIT">Debit</MenuItem>
-                                    <MenuItem value="CREDIT">Credit</MenuItem>
-                                </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Amount</Typography>
-                                <TextField
-                                    fullWidth
-                                    name="amount"
-                                    type="number"
-                                    required
-                                    placeholder="e.g. 1000"
-                                    value={formData.amount}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Typography sx={{ color: '#9ca3af', fontWeight: 600, fontSize: '0.875rem' }}>Rs.</Typography>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Description / Remarks
-                                    </Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="description"
-                                    placeholder="e.g. Payment received against invoice #123, or custom order advance..."
-                                    multiline
-                                    rows={3}
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#3b82f6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </DialogContent>
-                    <DialogActions sx={{ p: 3 }}>
-                        <Button
-                            onClick={handleClose}
-                            disabled={loading}
-                            sx={{ color: 'text.secondary', textTransform: 'none' }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={loading}
-                            sx={{
-                                borderRadius: 2,
-                                textTransform: 'none',
-                                px: 4,
-                                bgcolor: '#3b82f6',
-                                '&:hover': { bgcolor: '#2563eb' },
-                                minWidth: 120
-                            }}
-                        >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : "Save Entry"}
-                        </Button>
-                    </DialogActions>
-                </form>
-            </Dialog>
 
             {/* Success Notification */}
             <Snackbar

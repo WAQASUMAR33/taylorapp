@@ -391,11 +391,13 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
             {/* Add Stock Dialog */}
             <Dialog open={stockDialogOpen} onClose={() => setStockDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700 }}>Update Material Stock</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#f59e0b', color: 'white', mb: 2 }} className="font-urdu">سٹاک اپ ڈیٹ کریں</DialogTitle>
                 <DialogContent>
                     <Grid container spacing={3} sx={{ mt: 0.5 }}>
                         <Grid item xs={12}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Select Material</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">مٹیریل منتخب کریں</Typography>
+                            </Box>
                             <Autocomplete
                                 fullWidth
                                 size="small"
@@ -408,12 +410,14 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        placeholder="Search and select material..."
+                                        dir="rtl"
+                                        placeholder="تلاش کریں..."
                                         required
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 borderRadius: '10px'
-                                            }
+                                            },
+                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                         }}
                                     />
                                 )}
@@ -423,37 +427,47 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         {stockFormData.materialId && (
                             <>
                                 <Grid item xs={12} md={4}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Previous Qty</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">پہلے والی مقدار</Typography>
+                                    </Box>
                                     <TextField
                                         fullWidth
                                         size="small"
                                         disabled
+                                        dir="rtl"
                                         value={materials.find(m => m.id === parseInt(stockFormData.materialId))?.quantity || 0}
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                                     />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Add Quantity</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">نئی مقدار شامل کریں</Typography>
+                                    </Box>
                                     <TextField
                                         fullWidth
                                         size="small"
                                         type="number"
+                                        required
+                                        dir="rtl"
                                         value={stockFormData.addQuantity}
                                         onChange={(e) => setStockFormData({ ...stockFormData, addQuantity: e.target.value })}
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                                     />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Total Quantity</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">کل مقدار</Typography>
+                                    </Box>
                                     <TextField
                                         fullWidth
                                         size="small"
                                         disabled
+                                        dir="rtl"
                                         value={
                                             (parseFloat(materials.find(m => m.id === parseInt(stockFormData.materialId))?.quantity || 0) +
                                                 parseFloat(stockFormData.addQuantity || 0)).toFixed(2)
                                         }
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#f0fdf4' } }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#f0fdf4' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                                     />
                                 </Grid>
                             </>
@@ -461,83 +475,89 @@ export default function MaterialManagementClient({ initialMaterials }) {
                     </Grid>
                     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
                 </DialogContent>
-                <DialogActions sx={{ p: 2, gap: 1 }}>
-                    <Button onClick={() => setStockDialogOpen(false)} color="inherit">Cancel</Button>
+                <DialogActions sx={{ p: 2, gap: 1, flexDirection: 'row-reverse' }}>
                     <Button
                         onClick={handleStockSubmit}
                         variant="contained"
                         disabled={loading || !stockFormData.materialId || !stockFormData.addQuantity}
                         sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
+                        className="font-urdu"
                     >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "Update Stock"}
+                        {loading ? <CircularProgress size={20} color="inherit" /> : "اپ ڈیٹ کریں"}
                     </Button>
+                    <Button onClick={() => setStockDialogOpen(false)} color="inherit" className="font-urdu">کینسل</Button>
                 </DialogActions>
             </Dialog>
 
             {/* Add/Edit Material Dialog */}
             <Dialog open={showForm} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#8b5cf6', color: 'white', mb: 2 }}>
-                    {formData.id ? 'EDIT MATERIAL' : 'NEW MATERIAL'}
+                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#8b5cf6', color: 'white', mb: 2 }} className="font-urdu">
+                    {formData.id ? 'مٹیریل تبدیل کریں' : 'نیا مٹیریل شامل کریں'}
                 </DialogTitle>
                 <DialogContent>
                     <Grid container spacing={3} sx={{ mt: 0.5 }}>
                         <Grid item xs={12}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151' }}>Material Title</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">نام</Typography>
+                            </Box>
                             <TextField
                                 fullWidth
                                 name="title"
                                 required
-                                placeholder="e.g. Silk Thread, Button Large"
+                                dir="rtl"
+                                placeholder="نام درج کریں"
                                 value={formData.title}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                             />
                         </Grid>
                         <Grid item xs={12} md={6}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151' }}>Initial Quantity</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">ابتدائی مقدار</Typography>
+                            </Box>
                             <TextField
                                 fullWidth
                                 name="quantity"
+                                required
+                                dir="rtl"
                                 type="number"
                                 value={formData.quantity}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                             />
                         </Grid>
                         <Grid item xs={12} md={6}>
-                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151' }}>Price per Unit</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">قیمت فی یونٹ</Typography>
+                            </Box>
                             <TextField
                                 fullWidth
                                 name="price"
+                                required
+                                dir="rtl"
                                 type="number"
                                 value={formData.price}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Rs.</Typography>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
                             />
                         </Grid>
                     </Grid>
                     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
                 </DialogContent>
-                <DialogActions sx={{ p: 2, gap: 1 }}>
-                    <Button onClick={handleClose} color="inherit">Cancel</Button>
+                <DialogActions sx={{ p: 2, gap: 1, flexDirection: 'row-reverse' }}>
                     <Button
                         onClick={handleSubmit}
                         variant="contained"
                         disabled={loading}
                         sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                        className="font-urdu"
                     >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                        {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                     </Button>
+                    <Button onClick={handleClose} color="inherit" className="font-urdu">کینسل</Button>
                 </DialogActions>
             </Dialog>
 
