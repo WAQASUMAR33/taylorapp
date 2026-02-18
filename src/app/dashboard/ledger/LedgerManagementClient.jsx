@@ -231,29 +231,39 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">انٹری کی قسم</Typography>
                                 </Box>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    required
-                                    name="type"
-                                    dir="rtl"
-                                    value={formData.type}
-                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                <Autocomplete
+                                    options={[
+                                        { label: "وصولی (Debit)", value: "DEBIT" },
+                                        { label: "ادائیگی (Credit)", value: "CREDIT" }
+                                    ]}
+                                    getOptionLabel={(option) => option.label || ""}
+                                    value={[{ label: "وصولی (Debit)", value: "DEBIT" }, { label: "ادائیگی (Credit)", value: "CREDIT" }].find(o => o.value === formData.type) || null}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({ ...prev, type: newValue?.value || "DEBIT" }));
                                     }}
-                                >
-                                    <MenuItem value="DEBIT">وصولی (Debit)</MenuItem>
-                                    <MenuItem value="CREDIT">ادائیگی (Credit)</MenuItem>
-                                </TextField>
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            required
+                                            dir="rtl"
+                                            placeholder="انٹری منتخب کریں"
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            }}
+                                        />
+                                    )}
+                                    sx={{ minWidth: 300 }}
+                                />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>

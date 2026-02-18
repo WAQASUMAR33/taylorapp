@@ -300,6 +300,7 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             }}
                                         />
                                     )}
+                                    sx={{ minWidth: 300 }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>

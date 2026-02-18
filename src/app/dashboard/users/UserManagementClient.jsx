@@ -23,8 +23,8 @@ import {
     Alert,
     Snackbar,
     MenuItem,
-    Switch,
-    FormControlLabel
+    FormControlLabel,
+    Autocomplete
 } from "@mui/material";
 import {
     Edit,
@@ -286,33 +286,38 @@ export default function UserManagementClient({ initialUsers }) {
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">عہدہ (Role)</Typography>
                                 </Box>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    required
-                                    name="role"
-                                    dir="rtl"
-                                    value={formData.role}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    size="small"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                <Autocomplete
+                                    options={roles}
+                                    value={formData.role || "STAFF"}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            role: newValue || "STAFF"
+                                        }));
                                     }}
-                                >
-                                    {roles.map((option) => (
-                                        <MenuItem key={option} value={option}>
-                                            {option}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            required
+                                            dir="rtl"
+                                            placeholder="عہدہ منتخب کریں"
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            }}
+                                        />
+                                    )}
+                                    sx={{ minWidth: 300 }}
+                                />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>

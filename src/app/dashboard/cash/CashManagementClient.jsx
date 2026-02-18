@@ -26,7 +26,8 @@ import {
     DialogContent,
     DialogActions,
     Tooltip,
-    Chip
+    Chip,
+    Autocomplete
 } from "@mui/material";
 
 import {
@@ -40,7 +41,6 @@ import {
     Printer,
     Link as LinkIcon
 } from "lucide-react";
-import { Autocomplete } from "@mui/material";
 
 export default function CashManagementClient({ initialEntries, cashAccount, bookings = [] }) {
     const [entries, setEntries] = useState(initialEntries);
@@ -209,58 +209,77 @@ export default function CashManagementClient({ initialEntries, cashAccount, book
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">قسم (Type)</Typography>
                                 </Box>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    required
-                                    name="type"
-                                    dir="rtl"
-                                    value={formData.type}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                <Autocomplete
+                                    options={[
+                                        { label: "کیش ان (ڈیبٹ)", value: "DEBIT" },
+                                        { label: "کیش آؤٹ (کریڈٹ)", value: "CREDIT" }
+                                    ]}
+                                    getOptionLabel={(option) => option.label || ""}
+                                    value={[{ label: "کیش ان (ڈیبٹ)", value: "DEBIT" }, { label: "کیش آؤٹ (کریڈٹ)", value: "CREDIT" }].find(o => o.value === formData.type) || null}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            type: newValue?.value || "DEBIT",
+                                            category: "" // Reset category when type changes
+                                        }));
                                     }}
-                                >
-                                    <MenuItem value="DEBIT">کیش ان (ڈیبٹ)</MenuItem>
-                                    <MenuItem value="CREDIT">کیش آؤٹ (کریڈٹ)</MenuItem>
-                                </TextField>
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            required
+                                            dir="rtl"
+                                            placeholder="قسم منتخب کریں"
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            }}
+                                        />
+                                    )}
+                                    sx={{ minWidth: 300 }}
+                                />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کیٹیگری</Typography>
                                 </Box>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    required
-                                    name="category"
-                                    dir="rtl"
-                                    value={formData.category}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                <Autocomplete
+                                    options={CASH_CATEGORIES[formData.type] || []}
+                                    value={formData.category || null}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({ ...prev, category: newValue || "" }));
                                     }}
-                                >
-                                    {CASH_CATEGORIES[formData.type].map(cat => (
-                                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                                    ))}
-                                </TextField>
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            required
+                                            dir="rtl"
+                                            placeholder="کیٹیگری منتخب کریں"
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: 'white',
+                                                    borderRadius: '10px',
+                                                    '& fieldset': { borderColor: '#e5e7eb' },
+                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                },
+                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            }}
+                                        />
+                                    )}
+                                    sx={{ minWidth: 300 }}
+                                />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
