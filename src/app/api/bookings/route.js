@@ -341,40 +341,106 @@ export async function PUT(req) {
         if (tailorId !== undefined) updateData.tailorId = tailorId ? parseInt(tailorId) : null;
         if (cutterId !== undefined) updateData.cutterId = cutterId ? parseInt(cutterId) : null;
 
-        if (totalAmount !== undefined || advanceAmount !== undefined) {
-            const currentBooking = await prisma.booking.findUnique({
-                where: { id: parseInt(id) }
+        const booking = await prisma.$transaction(async (tx) => {
+            const currentBooking = await tx.booking.findUnique({
+                where: { id: parseInt(id) },
+                include: { customer: true }
             });
+
+            if (!currentBooking) {
+                throw new Error("Booking not found");
+            }
 
             const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentBooking.totalAmount);
             const newAdvance = advanceAmount !== undefined ? parseFloat(advanceAmount) : parseFloat(currentBooking.advanceAmount);
 
+            // 1. Calculate Adjustments
+            const totalDiff = newTotal - parseFloat(currentBooking.totalAmount);
+            const advanceDiff = newAdvance - parseFloat(currentBooking.advanceAmount);
+            const balanceAdjustment = totalDiff - advanceDiff;
+
+            // 2. Create Ledger Entries for Adjustments
+            if (totalDiff !== 0) {
+                await tx.ledgerentry.create({
+                    data: {
+                        customerId: currentBooking.customerId,
+                        type: totalDiff > 0 ? "DEBIT" : "CREDIT",
+                        amount: Math.abs(totalDiff),
+                        description: `Booking Adjustment (Total): ${currentBooking.bookingNumber}`,
+                        bookingId: currentBooking.id
+                    }
+                });
+            }
+
+            if (advanceDiff !== 0) {
+                await tx.ledgerentry.create({
+                    data: {
+                        customerId: currentBooking.customerId,
+                        type: advanceDiff > 0 ? "CREDIT" : "DEBIT",
+                        amount: Math.abs(advanceDiff),
+                        description: `Booking Adjustment (Advance): ${currentBooking.bookingNumber}`,
+                        bookingId: currentBooking.id
+                    }
+                });
+
+                // SYNC TO CASH ACCOUNT
+                const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                if (cashAccount) {
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: cashAccount.id,
+                            type: advanceDiff > 0 ? 'DEBIT' : 'CREDIT',
+                            amount: Math.abs(advanceDiff),
+                            description: `Booking Advance Adjustment - ${currentBooking.customer.name} (Booking #${currentBooking.bookingNumber})`,
+                        }
+                    });
+                    await tx.customer.update({
+                        where: { id: cashAccount.id },
+                        data: { balance: { [advanceDiff > 0 ? 'increment' : 'decrement']: Math.abs(advanceDiff) } }
+                    });
+                }
+            }
+
+            // 3. Update Customer Balance
+            if (balanceAdjustment !== 0) {
+                await tx.customer.update({
+                    where: { id: currentBooking.customerId },
+                    data: {
+                        balance: { [balanceAdjustment > 0 ? 'increment' : 'decrement']: Math.abs(balanceAdjustment) }
+                    }
+                });
+            }
+
+            // 4. Perform the actually update
             updateData.totalAmount = newTotal;
             updateData.advanceAmount = newAdvance;
             updateData.remainingAmount = newTotal - newAdvance;
-        }
 
-        const booking = await prisma.booking.update({
-            where: { id: parseInt(id) },
-            data: updateData,
-            include: {
-                customer: {
-                    select: { id: true, name: true, phone: true, email: true }
-                },
-                tailor: {
-                    select: { id: true, name: true, role: true }
-                },
-                cutter: {
-                    select: { id: true, name: true, role: true }
-                },
-                items: {
-                    include: {
-                        product: {
-                            select: { id: true, name: true, sku: true }
+            return await tx.booking.update({
+                where: { id: parseInt(id) },
+                data: updateData,
+                include: {
+                    customer: {
+                        select: { id: true, name: true, phone: true, email: true }
+                    },
+                    tailor: {
+                        select: { id: true, name: true, role: true }
+                    },
+                    cutter: {
+                        select: { id: true, name: true, role: true }
+                    },
+                    items: {
+                        include: {
+                            product: {
+                                select: { id: true, name: true, sku: true }
+                            }
                         }
                     }
                 }
-            }
+            });
+        }, {
+            maxWait: 5000,
+            timeout: 20000
         });
 
         return NextResponse.json(booking);
@@ -400,9 +466,67 @@ export async function DELETE(req) {
             );
         }
 
-        await prisma.booking.delete({
-            where: { id: parseInt(id) }
+        const result = await prisma.$transaction(async (tx) => {
+            const booking = await tx.booking.findUnique({
+                where: { id: parseInt(id) },
+                include: { items: true, customer: true }
+            });
+
+            if (!booking) {
+                throw new Error("Booking not found");
+            }
+
+            // 1. Revert Balance
+            const balanceReversal = parseFloat(booking.totalAmount) - parseFloat(booking.advanceAmount);
+            await tx.customer.update({
+                where: { id: booking.customerId },
+                data: {
+                    balance: { decrement: balanceReversal }
+                }
+            });
+
+            // 2. Revert Cash if advance was paid
+            if (parseFloat(booking.advanceAmount) > 0) {
+                const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                if (cashAccount) {
+                    await tx.customer.update({
+                        where: { id: cashAccount.id },
+                        data: { balance: { decrement: parseFloat(booking.advanceAmount) } }
+                    });
+                }
+            }
+
+            // 3. Revert Stock
+            for (const item of booking.items) {
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: { quantity: { increment: item.quantity } }
+                });
+
+                await tx.stockmovement.create({
+                    data: {
+                        productId: item.productId,
+                        type: 'IN',
+                        quantity: item.quantity,
+                        notes: `Booking Deletion Reversal: ${booking.bookingNumber}`
+                    }
+                });
+            }
+
+            // 4. Delete Ledger Entries
+            await tx.ledgerentry.deleteMany({
+                where: { bookingId: parseInt(id) }
+            });
+
+            // 5. Delete the booking
+            await tx.booking.delete({
+                where: { id: parseInt(id) }
+            });
+
+            return { message: "Booking and association records reverted successfully" };
         });
+
+        return NextResponse.json(result);
 
         return NextResponse.json({ message: "Booking deleted successfully" });
     } catch (error) {

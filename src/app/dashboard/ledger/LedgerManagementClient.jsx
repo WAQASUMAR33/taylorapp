@@ -115,7 +115,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
 
             const savedEntry = await response.json();
 
-            setEntries(prev => [savedEntry, ...prev]);
+            setEntries(prev => [...prev, savedEntry]);
             setSuccessMessage("Ledger entry created successfully!");
             setOpen(false);
         } catch (err) {
@@ -308,99 +308,102 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         {filteredEntries.length > 0 ? (
                             (() => {
                                 let running = 0;
-                                return filteredEntries.map((entry) => {
-                                    const preBalance = running;
-                                    const debitAmount = entry.type === 'DEBIT' ? parseFloat(entry.amount) : 0;
-                                    const creditAmount = entry.type === 'CREDIT' ? parseFloat(entry.amount) : 0;
-                                    running += (debitAmount - creditAmount);
-                                    const currentBalance = running;
+                                return filteredEntries
+                                    .slice()
+                                    .sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id)
+                                    .map((entry) => {
+                                        const preBalance = running;
+                                        const debitAmount = entry.type === 'DEBIT' ? parseFloat(entry.amount) : 0;
+                                        const creditAmount = entry.type === 'CREDIT' ? parseFloat(entry.amount) : 0;
+                                        running += (debitAmount - creditAmount);
+                                        const currentBalance = running;
 
-                                    return (
-                                        <TableRow
-                                            key={entry.id}
-                                            sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                        >
-                                            <TableCell>
-                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                    #{entry.id}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {entry.customer.name}
-                                                </Typography>
-                                                {entry.customer.code && (
-                                                    <Typography variant="caption" color="textSecondary">
-                                                        {entry.customer.code}
+                                        return (
+                                            <TableRow
+                                                key={entry.id}
+                                                sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                            >
+                                                <TableCell>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        #{entry.id}
                                                     </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {new Date(entry.entryDate).toLocaleDateString()}
-                                                </Typography>
-                                                {entry.description && (
-                                                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                                                        {entry.description}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                        {entry.customer.name}
                                                     </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                    Rs. {preBalance.toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        color: debitAmount > 0 ? '#1e40af' : '#9ca3af'
-                                                    }}
-                                                >
-                                                    {debitAmount > 0 ? `Rs. ${debitAmount.toLocaleString()}` : '-'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        color: creditAmount > 0 ? '#9f1239' : '#9ca3af'
-                                                    }}
-                                                >
-                                                    {creditAmount > 0 ? `Rs. ${creditAmount.toLocaleString()}` : '-'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: 700,
-                                                        color: currentBalance >= 0 ? '#059669' : '#dc2626',
-                                                        fontSize: '0.9rem'
-                                                    }}
-                                                >
-                                                    Rs. {currentBalance.toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                                    <Tooltip title="Print Entry">
-                                                        <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(entry)}>
-                                                            <Printer size={18} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Delete Entry">
-                                                        <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
-                                                            <Trash2 size={18} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                });
+                                                    {entry.customer.code && (
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {entry.customer.code}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {new Date(entry.entryDate).toLocaleDateString()}
+                                                    </Typography>
+                                                    {entry.description && (
+                                                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                            {entry.description}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                        Rs. {preBalance.toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            color: debitAmount > 0 ? '#1e40af' : '#9ca3af'
+                                                        }}
+                                                    >
+                                                        {debitAmount > 0 ? `Rs. ${debitAmount.toLocaleString()}` : '-'}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            color: creditAmount > 0 ? '#9f1239' : '#9ca3af'
+                                                        }}
+                                                    >
+                                                        {creditAmount > 0 ? `Rs. ${creditAmount.toLocaleString()}` : '-'}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontWeight: 700,
+                                                            color: currentBalance >= 0 ? '#059669' : '#dc2626',
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    >
+                                                        Rs. {currentBalance.toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                                        <Tooltip title="Print Entry">
+                                                            <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(entry)}>
+                                                                <Printer size={18} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Delete Entry">
+                                                            <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
+                                                                <Trash2 size={18} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    });
                             })()
                         ) : (
                             <TableRow>
