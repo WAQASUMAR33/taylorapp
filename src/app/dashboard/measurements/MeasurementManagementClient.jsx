@@ -447,300 +447,261 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
     });
 
     return (
-        <Box sx={{ width: '100%' }}>
-            {/* Action Bar */}
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'row-reverse',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-                gap: 2
-            }}>
-                <TextField
-                    placeholder="گاہک کے نام یا فون سے تلاش کریں..."
-                    variant="outlined"
-                    size="small"
-                    dir="rtl"
-                    sx={{ width: 450, bgcolor: 'white' }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
-                        ),
-                        style: { textAlign: 'right' }
-                    }}
-                />
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={() => handleOpen()}
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
-                    }}
-                    className="font-urdu"
-                >
-                    نئی پیمائش درج کریں
-                </Button>
-            </Box>
+        <Box sx={{ width: '100%', minHeight: '100vh', p: 3, bgcolor: open ? '#f9fafb' : 'transparent' }}>
+            {!open ? (
+                <>
+                    {/* Action Bar */}
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'row-reverse',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 3,
+                        gap: 2
+                    }}>
+                        <TextField
+                            placeholder="گاہک کے نام یا فون سے تلاش کریں..."
+                            variant="outlined"
+                            size="small"
+                            dir="rtl"
+                            sx={{ width: 450, bgcolor: 'white' }}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search size={18} />
+                                    </InputAdornment>
+                                ),
+                                style: { textAlign: 'right' }
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            startIcon={<Plus size={18} />}
+                            onClick={() => handleOpen()}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                px: 3,
+                                py: 1,
+                                bgcolor: '#8b5cf6',
+                                '&:hover': { bgcolor: '#7c3aed' }
+                            }}
+                            className="font-urdu"
+                        >
+                            نئی پیمائش درج کریں
+                        </Button>
+                    </Box>
 
-            {/* Table */}
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشن</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">واسکٹ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">شلوار قمیض</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">گاہک</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredMeasurements.length > 0 ? (
-                            filteredMeasurements.map((m) => {
-                                if (!m) return null;
-                                return (
-                                    <TableRow
-                                        key={m.id}
-                                        sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                    >
-                                        <TableCell align="right">
-                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                                <Tooltip title="Print Measurement">
-                                                    <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(m)}>
-                                                        <Printer size={18} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <IconButton size="small" color="primary" onClick={() => handleOpen(m)}>
-                                                    <Edit size={18} />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDelete(m.id)}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </IconButton>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            {m.wskot_lambai ? (
-                                                <Typography variant="body2" sx={{ color: '#2563eb', fontWeight: 500 }} className="font-urdu">
-                                                    ریکارڈڈ
-                                                </Typography>
-                                            ) : (
-                                                <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            {m.qameez_lambai ? (
-                                                <Typography variant="body2" sx={{ color: '#059669', fontWeight: 500 }} className="font-urdu">
-                                                    ریکارڈڈ
-                                                </Typography>
-                                            ) : (
-                                                <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                                <Typography variant="body2">
-                                                    {m.takenAt ? new Date(m.takenAt).toLocaleDateString() : 'N/A'}
-                                                </Typography>
-                                                <Calendar size={14} className="text-zinc-400" />
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                                <Box sx={{
-                                                    p: 1,
-                                                    bgcolor: '#f5f3ff',
-                                                    borderRadius: 2,
-                                                    color: '#8b5cf6'
-                                                }}>
-                                                    <User size={20} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, textAlign: 'right' }}>
-                                                        {m.customer?.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'right' }}>
-                                                        {m.customer?.phone}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                    {/* Table */}
+                    <TableContainer component={Paper} elevation={0} sx={{
+                        borderRadius: 3,
+                        border: '1px solid #e5e7eb',
+                        overflow: 'hidden'
+                    }}>
+                        <Table sx={{ minWidth: 650 }}>
+                            <TableHead sx={{ bgcolor: '#f9fafb' }}>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشن</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">واسکٹ</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">شلوار قمیض</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">گاہک</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {filteredMeasurements.length > 0 ? (
+                                    filteredMeasurements.map((m) => {
+                                        if (!m) return null;
+                                        return (
+                                            <TableRow
+                                                key={m.id}
+                                                sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                            >
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                                        <Tooltip title="Print Measurement">
+                                                            <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(m)}>
+                                                                <Printer size={18} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <IconButton size="small" color="primary" onClick={() => handleOpen(m)}>
+                                                            <Edit size={18} />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={() => handleDelete(m.id)}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </IconButton>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    {m.wskot_lambai ? (
+                                                        <Typography variant="body2" sx={{ color: '#2563eb', fontWeight: 500 }} className="font-urdu">
+                                                            ریکارڈڈ
+                                                        </Typography>
+                                                    ) : (
+                                                        <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    {m.qameez_lambai ? (
+                                                        <Typography variant="body2" sx={{ color: '#059669', fontWeight: 500 }} className="font-urdu">
+                                                            ریکارڈڈ
+                                                        </Typography>
+                                                    ) : (
+                                                        <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                                        <Typography variant="body2">
+                                                            {m.takenAt ? new Date(m.takenAt).toLocaleDateString() : 'N/A'}
+                                                        </Typography>
+                                                        <Calendar size={14} className="text-zinc-400" />
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
+                                                        <Box sx={{
+                                                            p: 1,
+                                                            bgcolor: '#f5f3ff',
+                                                            borderRadius: 2,
+                                                            color: '#8b5cf6'
+                                                        }}>
+                                                            <User size={20} />
+                                                        </Box>
+                                                        <Box>
+                                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, textAlign: 'right' }}>
+                                                                {m.customer?.name}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'right' }}>
+                                                                {m.customer?.phone}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                                            <Typography color="textSecondary" className="font-urdu">کوئی پیمائش نہیں ملی</Typography>
                                         </TableCell>
                                     </TableRow>
-                                );
-                            })
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary" className="font-urdu">کوئی پیمائش نہیں ملی</Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            {/* Form Card Overlay */}
-            {open && (
-                <Box sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    minHeight: '100%',
-                    bgcolor: '#f9fafb',
-                    zIndex: 10,
-                    p: 0
-                }}>
-                    <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-                        <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                                {editMode ? "پیمائش تبدیل کریں" : "نئی پیمائش شامل کریں"}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<Save size={18} />}
-                                    onClick={handleSubmit}
-                                    disabled={loading}
-                                    sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' }, textTransform: 'none' }}
-                                    className="font-urdu"
-                                >
-                                    {loading ? <CircularProgress size={20} color="inherit" /> : (editMode ? "اپ ڈیٹ کریں" : "محفوظ کریں")}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<X size={18} />}
-                                    onClick={handleClose}
-                                    sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' }, textTransform: 'none' }}
-                                    className="font-urdu"
-                                >
-                                    منسوخ
-                                </Button>
-                            </Box>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            ) : (
+                <Card sx={{ mb: 2, borderRadius: 3, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
+                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
+                            {editMode ? "پیمائش تبدیل کریں" : "نئی پیمائش شامل کریں"}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="contained"
+                                startIcon={<Save size={18} />}
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' }, textTransform: 'none' }}
+                                className="font-urdu"
+                            >
+                                {loading ? <CircularProgress size={20} color="inherit" /> : (editMode ? "اپ ڈیٹ کریں" : "محفوظ کریں")}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<X size={18} />}
+                                onClick={handleClose}
+                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' }, textTransform: 'none' }}
+                                className="font-urdu"
+                            >
+                                منسوخ
+                            </Button>
                         </Box>
-                        <Box sx={{ p: 3 }}>
-                            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                    </Box>
+                    <Box sx={{ p: 3 }}>
+                        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                            <Grid container spacing={3} sx={{ mb: 2 }}>
-                                <Grid item xs={12} md={6}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">
-                                            {t('selectCustomer')}
-                                        </Typography>
-                                    </Box>
-                                    <Autocomplete
-                                        fullWidth
-                                        size="small"
-                                        sx={{ minWidth: 400 }}
-                                        options={customers || []}
-                                        getOptionLabel={(option) => option ? `${option.name || ""} ${option.phone ? `(${option.phone})` : ""}` : ""}
-                                        value={(customers || []).find(c => c && c.id === formData.customerId) || null}
-                                        onChange={(event, newValue) => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                customerId: newValue ? newValue.id : ""
-                                            }));
-                                        }}
-                                        disabled={editMode}
-                                        filterOptions={(options, { inputValue }) => {
-                                            const query = (inputValue || "").toLowerCase();
-                                            return (options || []).filter(option => {
-                                                if (!option) return false;
-                                                const nameMatch = (option.name || "").toLowerCase().includes(query);
-                                                const phoneMatch = String(option.phone || "").includes(query);
-                                                const addressMatch = (option.address || "").toLowerCase().includes(query);
-                                                return nameMatch || phoneMatch || addressMatch;
-                                            });
-                                        }}
-                                        renderOption={(props, option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
-                                                    <Grid container alignItems="center" sx={{ flexDirection: 'row-reverse' }}>
-                                                        <Grid item sx={{ display: 'flex', width: 44, ml: 2 }}>
-                                                            <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
-                                                                <User size={18} />
-                                                            </Box>
-                                                        </Grid>
-                                                        <Grid item xs sx={{ wordWrap: 'break-word', textAlign: 'right' }}>
-                                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
-                                                                {option.name}
-                                                            </Typography>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, justifyContent: 'flex-end' }}>
-                                                                {option.address && (
-                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                        <Typography variant="caption" color="textSecondary">
-                                                                            {option.address}
-                                                                        </Typography>
-                                                                        <MapPin size={12} className="text-zinc-400" />
-                                                                    </Box>
-                                                                )}
+                        <Grid container spacing={3} sx={{ mb: 2 }}>
+                            <Grid item xs={12} md={6}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">
+                                        {t('selectCustomer')}
+                                    </Typography>
+                                </Box>
+                                <Autocomplete
+                                    fullWidth
+                                    size="small"
+                                    sx={{ minWidth: 400 }}
+                                    options={customers || []}
+                                    getOptionLabel={(option) => option ? `${option.name || ""} ${option.phone ? `(${option.phone})` : ""}` : ""}
+                                    value={(customers || []).find(c => c && c.id === formData.customerId) || null}
+                                    onChange={(event, newValue) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            customerId: newValue ? newValue.id : ""
+                                        }));
+                                    }}
+                                    disabled={editMode}
+                                    filterOptions={(options, { inputValue }) => {
+                                        const query = (inputValue || "").toLowerCase();
+                                        return (options || []).filter(option => {
+                                            if (!option) return false;
+                                            const nameMatch = (option.name || "").toLowerCase().includes(query);
+                                            const phoneMatch = String(option.phone || "").includes(query);
+                                            const addressMatch = (option.address || "").toLowerCase().includes(query);
+                                            return nameMatch || phoneMatch || addressMatch;
+                                        });
+                                    }}
+                                    renderOption={(props, option) => {
+                                        if (!option) return null;
+                                        return (
+                                            <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
+                                                <Grid container alignItems="center" sx={{ flexDirection: 'row-reverse' }}>
+                                                    <Grid item sx={{ display: 'flex', width: 44, ml: 2 }}>
+                                                        <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
+                                                            <User size={18} />
+                                                        </Box>
+                                                    </Grid>
+                                                    <Grid item xs sx={{ wordWrap: 'break-word', textAlign: 'right' }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
+                                                            {option.name}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, justifyContent: 'flex-end' }}>
+                                                            {option.address && (
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                                     <Typography variant="caption" color="textSecondary">
-                                                                        {option.phone}
+                                                                        {option.address}
                                                                     </Typography>
-                                                                    <Phone size={12} className="text-zinc-400" />
+                                                                    <MapPin size={12} className="text-zinc-400" />
                                                                 </Box>
+                                                            )}
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                <Typography variant="caption" color="textSecondary">
+                                                                    {option.phone}
+                                                                </Typography>
+                                                                <Phone size={12} className="text-zinc-400" />
                                                             </Box>
-                                                        </Grid>
+                                                        </Box>
                                                     </Grid>
-                                                </Box>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                required
-                                                placeholder="..."
-                                                variant="outlined"
-                                                dir="rtl"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        bgcolor: 'white',
-                                                        borderRadius: '10px',
-                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                    },
-                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                }}
-                                            />
-                                        )}
-                                    />
-                                </Grid>
-                                {formData.customerId && (
-                                    <Grid item xs={12} md={3}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">
-                                                {t('unit')}
-                                            </Typography>
-                                        </Box>
+                                                </Grid>
+                                            </Box>
+                                        );
+                                    }}
+                                    renderInput={(params) => (
                                         <TextField
-                                            fullWidth
-                                            select
+                                            {...params}
                                             required
-                                            name="unit"
-                                            value={formData.unit}
-                                            onChange={handleInputChange}
+                                            placeholder="..."
                                             variant="outlined"
-                                            size="small"
+                                            dir="rtl"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
@@ -751,232 +712,261 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                 },
                                                 '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                             }}
-                                        >
-                                            <MenuItem value="in">{t('inches')}</MenuItem>
-                                            <MenuItem value="cm">{t('centimeters')}</MenuItem>
-                                        </TextField>
-                                    </Grid>
-                                )}
+                                        />
+                                    )}
+                                />
                             </Grid>
-
-                            {!formData.customerId ? (
-                                <Box sx={{
-                                    py: 8,
-                                    textAlign: 'center',
-                                    bgcolor: '#f9fafb',
-                                    borderRadius: 2,
-                                    border: '2px dashed #e5e7eb'
-                                }}>
-                                    <User size={48} className="text-zinc-300 mb-2 mx-auto" />
-                                    <Typography color="textSecondary" variant="h6" className="font-urdu">
-                                        {t('pleaseSelectCustomer')}
-                                    </Typography>
-                                    <Typography color="textSecondary" variant="body2" className="font-urdu">
-                                        {t('measurementFieldsAppear')}
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <>
-                                    <Divider sx={{ my: 2 }} />
-
-                                    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                                        <Tabs value={modalTab} onChange={(e, v) => setModalTab(v)} aria-label="measurement tabs" sx={{ '& .MuiTab-root': { flexDirection: 'row-reverse', gap: 1 } }}>
-                                            <Tab icon={<Shirt size={18} />} iconPosition="start" label={t('shalwarQameez')} className="font-urdu" sx={{ fontWeight: 700 }} />
-                                            <Tab icon={<Square size={18} />} iconPosition="start" label={t('waistcoat')} className="font-urdu" sx={{ fontWeight: 700 }} />
-                                        </Tabs>
+                            {formData.customerId && (
+                                <Grid item xs={12} md={3}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">
+                                            {t('unit')}
+                                        </Typography>
                                     </Box>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        required
+                                        name="unit"
+                                        value={formData.unit}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: 'white',
+                                                borderRadius: '10px',
+                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                            },
+                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                        }}
+                                    >
+                                        <MenuItem value="in">{t('inches')}</MenuItem>
+                                        <MenuItem value="cm">{t('centimeters')}</MenuItem>
+                                    </TextField>
+                                </Grid>
+                            )}
+                        </Grid>
 
-                                    {modalTab === 0 && (
-                                        <Box sx={{ p: 1 }}>
-                                            {/* Qameez Section */}
-                                            <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, mt: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#8b5cf6' }} className="font-urdu">
-                                                    {t('qameez')}
-                                                </Typography>
-                                            </Box>
-                                            <Grid container spacing={2} sx={{ mb: 4 }}>
-                                                {[
-                                                    { name: 'qameez_lambai', label: 'qameez_lambai' },
-                                                    { name: 'bazoo', label: 'bazoo' },
-                                                    { name: 'teera', label: 'teera' },
-                                                    { name: 'galaa', label: 'galaa' },
-                                                    { name: 'chaati', label: 'chaati' },
-                                                    { name: 'gheera', label: 'gheera' },
-                                                    { name: 'kaf', label: 'kaf' },
-                                                    { name: 'kandha', label: 'kandha' },
-                                                    { name: 'chaati_around', label: 'chaati_around' },
-                                                    { name: 'kamar_around', label: 'kamar_around' },
-                                                    { name: 'hip_around', label: 'hip_around' },
-                                                ].map((field) => (
-                                                    <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
-                                                                {t(field.label)}
-                                                            </Typography>
-                                                        </Box>
-                                                        <TextField
-                                                            fullWidth
-                                                            size="small"
-                                                            type="number"
-                                                            required
-                                                            name={field.name}
-                                                            value={formData[field.name]}
-                                                            onChange={handleInputChange}
-                                                            variant="outlined"
-                                                            dir="rtl"
-                                                            InputProps={{
-                                                                endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
-                                                            }}
-                                                            sx={{
-                                                                '& .MuiOutlinedInput-root': {
-                                                                    bgcolor: 'white',
-                                                                    borderRadius: '8px',
-                                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                },
-                                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                            }}
-                                                        />
-                                                    </Grid>
-                                                ))}
-                                            </Grid>
+                        {!formData.customerId ? (
+                            <Box sx={{
+                                py: 8,
+                                textAlign: 'center',
+                                bgcolor: '#f9fafb',
+                                borderRadius: 2,
+                                border: '2px dashed #e5e7eb'
+                            }}>
+                                <User size={48} className="text-zinc-300 mb-2 mx-auto" />
+                                <Typography color="textSecondary" variant="h6" className="font-urdu">
+                                    {t('pleaseSelectCustomer')}
+                                </Typography>
+                                <Typography color="textSecondary" variant="body2" className="font-urdu">
+                                    {t('measurementFieldsAppear')}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <>
+                                <Divider sx={{ my: 2 }} />
 
-                                            {/* Shalwar Section */}
-                                            <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, mt: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#8b5cf6' }} className="font-urdu">
-                                                    {t('shalwar')}
-                                                </Typography>
-                                            </Box>
-                                            <Grid container spacing={2}>
-                                                {[
-                                                    { name: 'shalwar_lambai', label: 'shalwar_lambai' },
-                                                    { name: 'puhncha', label: 'puhncha' },
-                                                    { name: 'shalwar_gheera', label: 'shalwar_gheera' },
-                                                ].map((field) => (
-                                                    <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
-                                                                {t(field.label)}
-                                                            </Typography>
-                                                        </Box>
-                                                        <TextField
-                                                            fullWidth
-                                                            size="small"
-                                                            type="number"
-                                                            required
-                                                            name={field.name}
-                                                            value={formData[field.name]}
-                                                            onChange={handleInputChange}
-                                                            variant="outlined"
-                                                            dir="rtl"
-                                                            InputProps={{
-                                                                endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
-                                                            }}
-                                                            sx={{
-                                                                '& .MuiOutlinedInput-root': {
-                                                                    bgcolor: 'white',
-                                                                    borderRadius: '8px',
-                                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                },
-                                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                            }}
-                                                        />
-                                                    </Grid>
-                                                ))}
-                                            </Grid>
-                                        </Box>
-                                    )}
+                                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                                    <Tabs value={modalTab} onChange={(e, v) => setModalTab(v)} aria-label="measurement tabs" sx={{ '& .MuiTab-root': { flexDirection: 'row-reverse', gap: 1 } }}>
+                                        <Tab icon={<Shirt size={18} />} iconPosition="start" label={t('shalwarQameez')} className="font-urdu" sx={{ fontWeight: 700 }} />
+                                        <Tab icon={<Square size={18} />} iconPosition="start" label={t('waistcoat')} className="font-urdu" sx={{ fontWeight: 700 }} />
+                                    </Tabs>
+                                </Box>
 
-                                    {modalTab === 1 && (
-                                        <Box sx={{ p: 1 }}>
-                                            <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 700 }} className="font-urdu">
-                                                    {t('waistcoat')}
-                                                </Typography>
-                                                <Ruler size={18} />
-                                            </Box>
-                                            <Grid container spacing={2}>
-                                                {[
-                                                    { name: 'wskot_lambai', label: 'wskot_lambai' },
-                                                    { name: 'wskot_teera', label: 'wskot_teera' },
-                                                    { name: 'wskot_gala', label: 'wskot_gala' },
-                                                    { name: 'wskot_chaati', label: 'wskot_chaati' },
-                                                    { name: 'wskot_kamar', label: 'wskot_kamar' },
-                                                    { name: 'wskot_hip', label: 'wskot_hip' },
-                                                ].map((field) => (
-                                                    <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
-                                                                {t(field.label)}
-                                                            </Typography>
-                                                        </Box>
-                                                        <TextField
-                                                            fullWidth
-                                                            size="small"
-                                                            type="number"
-                                                            required
-                                                            name={field.name}
-                                                            value={formData[field.name]}
-                                                            onChange={handleInputChange}
-                                                            variant="outlined"
-                                                            dir="rtl"
-                                                            InputProps={{
-                                                                endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
-                                                            }}
-                                                            sx={{
-                                                                '& .MuiOutlinedInput-root': {
-                                                                    bgcolor: 'white',
-                                                                    borderRadius: '8px',
-                                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                },
-                                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                            }}
-                                                        />
-                                                    </Grid>
-                                                ))}
-                                            </Grid>
-                                        </Box>
-                                    )}
-
-                                    <Box sx={{ mt: 3 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">
-                                                {t('additionalNotes')}
+                                {modalTab === 0 && (
+                                    <Box sx={{ p: 1 }}>
+                                        {/* Qameez Section */}
+                                        <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, mt: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#8b5cf6' }} className="font-urdu">
+                                                {t('qameez')}
                                             </Typography>
                                         </Box>
-                                        <TextField
-                                            fullWidth
-                                            name="notes"
-                                            required
-                                            placeholder="..."
-                                            multiline
-                                            rows={3}
-                                            dir="rtl"
-                                            value={formData.notes}
-                                            onChange={handleInputChange}
-                                            variant="outlined"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '12px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                },
-                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                            }}
-                                        />
+                                        <Grid container spacing={2} sx={{ mb: 4 }}>
+                                            {[
+                                                { name: 'qameez_lambai', label: 'qameez_lambai' },
+                                                { name: 'bazoo', label: 'bazoo' },
+                                                { name: 'teera', label: 'teera' },
+                                                { name: 'galaa', label: 'galaa' },
+                                                { name: 'chaati', label: 'chaati' },
+                                                { name: 'gheera', label: 'gheera' },
+                                                { name: 'kaf', label: 'kaf' },
+                                                { name: 'kandha', label: 'kandha' },
+                                                { name: 'chaati_around', label: 'chaati_around' },
+                                                { name: 'kamar_around', label: 'kamar_around' },
+                                                { name: 'hip_around', label: 'hip_around' },
+                                            ].map((field) => (
+                                                <Grid item xs={6} sm={4} md={3} key={field.name}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
+                                                            {t(field.label)}
+                                                        </Typography>
+                                                    </Box>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        required
+                                                        name={field.name}
+                                                        value={formData[field.name]}
+                                                        onChange={handleInputChange}
+                                                        variant="outlined"
+                                                        dir="rtl"
+                                                        InputProps={{
+                                                            endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                bgcolor: 'white',
+                                                                borderRadius: '8px',
+                                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                            },
+                                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                                        }}
+                                                    />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+
+                                        {/* Shalwar Section */}
+                                        <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, mt: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#8b5cf6' }} className="font-urdu">
+                                                {t('shalwar')}
+                                            </Typography>
+                                        </Box>
+                                        <Grid container spacing={2}>
+                                            {[
+                                                { name: 'shalwar_lambai', label: 'shalwar_lambai' },
+                                                { name: 'puhncha', label: 'puhncha' },
+                                                { name: 'shalwar_gheera', label: 'shalwar_gheera' },
+                                            ].map((field) => (
+                                                <Grid item xs={6} sm={4} md={3} key={field.name}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
+                                                            {t(field.label)}
+                                                        </Typography>
+                                                    </Box>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        required
+                                                        name={field.name}
+                                                        value={formData[field.name]}
+                                                        onChange={handleInputChange}
+                                                        variant="outlined"
+                                                        dir="rtl"
+                                                        InputProps={{
+                                                            endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                bgcolor: 'white',
+                                                                borderRadius: '8px',
+                                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                            },
+                                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                                        }}
+                                                    />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
                                     </Box>
-                                </>
-                            )}
-                        </Box>
-                    </Card>
-                </Box>
+                                )}
+
+                                {modalTab === 1 && (
+                                    <Box sx={{ p: 1 }}>
+                                        <Box sx={{ borderBottom: '1px solid #f3f4f6', pb: 1, mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }} className="font-urdu">
+                                                {t('waistcoat')}
+                                            </Typography>
+                                            <Ruler size={18} />
+                                        </Box>
+                                        <Grid container spacing={2}>
+                                            {[
+                                                { name: 'wskot_lambai', label: 'wskot_lambai' },
+                                                { name: 'wskot_teera', label: 'wskot_teera' },
+                                                { name: 'wskot_gala', label: 'wskot_gala' },
+                                                { name: 'wskot_chaati', label: 'wskot_chaati' },
+                                                { name: 'wskot_kamar', label: 'wskot_kamar' },
+                                                { name: 'wskot_hip', label: 'wskot_hip' },
+                                            ].map((field) => (
+                                                <Grid item xs={6} sm={4} md={3} key={field.name}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4b5563' }} className="font-urdu">
+                                                            {t(field.label)}
+                                                        </Typography>
+                                                    </Box>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        required
+                                                        name={field.name}
+                                                        value={formData[field.name]}
+                                                        onChange={handleInputChange}
+                                                        variant="outlined"
+                                                        dir="rtl"
+                                                        InputProps={{
+                                                            endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 600 }}>{formData.unit}</Typography></InputAdornment>,
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                bgcolor: 'white',
+                                                                borderRadius: '8px',
+                                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                            },
+                                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                                        }}
+                                                    />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                <Box sx={{ mt: 3 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">
+                                            {t('additionalNotes')}
+                                        </Typography>
+                                    </Box>
+                                    <TextField
+                                        fullWidth
+                                        name="notes"
+                                        required
+                                        placeholder="..."
+                                        multiline
+                                        rows={3}
+                                        dir="rtl"
+                                        value={formData.notes}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: 'white',
+                                                borderRadius: '12px',
+                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                            },
+                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                        }}
+                                    />
+                                </Box>
+                            </>
+                        )}
+                    </Box>
+                </Card>
             )}
 
             <Snackbar
