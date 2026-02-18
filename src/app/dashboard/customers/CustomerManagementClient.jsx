@@ -233,18 +233,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     });
 
     // Calculate stats for summary cards
-    const customerCategories = categories.filter(cat =>
-        !cat.name.toLowerCase().includes("cutter") &&
-        !cat.name.toLowerCase().includes("supplier")
-    );
+    const customerCategories = categories;
 
-    const filteredInitialCustomers = customers.filter(c => {
-        const cat = categories.find(cat => cat.id === c.accountCategoryId);
-        return !cat || (
-            !cat.name.toLowerCase().includes("cutter") &&
-            !cat.name.toLowerCase().includes("supplier")
-        );
-    });
+    const filteredInitialCustomers = customers;
 
     const categoryStats = customerCategories.map(cat => ({
         ...cat,
@@ -316,7 +307,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 <TextField
                                     fullWidth
                                     name="fatherName"
-                                    required
                                     dir="rtl"
                                     placeholder="والد کا نام درج کریں"
                                     value={formData.fatherName || ""}
@@ -341,7 +331,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 <TextField
                                     fullWidth
                                     name="phone"
-                                    required
                                     placeholder="03001234567"
                                     value={formData.phone}
                                     onChange={handleInputChange}
@@ -407,10 +396,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
-                                        options={categories.filter(cat =>
-                                            !cat.name.toLowerCase().includes("supplier") &&
-                                            !cat.name.toLowerCase().includes("cutter")
-                                        )}
+                                        options={categories}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={categories.find(c => c.id === formData.accountCategoryId) || null}
                                         onChange={(event, newValue) => {
@@ -640,20 +626,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {filteredCustomers.filter(c => {
-                                    const cat = categories.find(cat => cat.id === c.accountCategoryId);
-                                    return !cat || (
-                                        !cat.name.toLowerCase().includes("cutter") &&
-                                        !cat.name.toLowerCase().includes("supplier")
-                                    );
-                                }).length > 0 ? (
-                                    filteredCustomers.filter(c => {
-                                        const cat = categories.find(cat => cat.id === c.accountCategoryId);
-                                        return !cat || (
-                                            !cat.name.toLowerCase().includes("cutter") &&
-                                            !cat.name.toLowerCase().includes("supplier")
-                                        );
-                                    }).map((customer) => (
+                                {filteredCustomers.length > 0 ? (
+                                    filteredCustomers.map((customer) => (
                                         <TableRow
                                             key={customer.id}
                                             sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
