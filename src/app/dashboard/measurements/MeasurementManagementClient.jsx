@@ -638,7 +638,7 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                         size="small"
                                         sx={{ minWidth: 400 }}
                                         options={customers}
-                                        getOptionLabel={(option) => `${option.name} (${option.phone})`}
+                                        getOptionLabel={(option) => `${option.name || ""} ${option.phone ? `(${option.phone})` : ""}`}
                                         value={customers.find(c => c.id === formData.customerId) || null}
                                         onChange={(event, newValue) => {
                                             setFormData(prev => ({
@@ -648,12 +648,13 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                         }}
                                         disabled={editMode}
                                         filterOptions={(options, { inputValue }) => {
-                                            const query = inputValue.toLowerCase();
-                                            return options.filter(option =>
-                                                option.name.toLowerCase().includes(query) ||
-                                                option.phone.includes(query) ||
-                                                (option.address && option.address.toLowerCase().includes(query))
-                                            );
+                                            const query = (inputValue || "").toLowerCase();
+                                            return options.filter(option => {
+                                                const nameMatch = (option.name || "").toLowerCase().includes(query);
+                                                const phoneMatch = (option.phone || "").includes(query);
+                                                const addressMatch = (option.address || "").toLowerCase().includes(query);
+                                                return nameMatch || phoneMatch || addressMatch;
+                                            });
                                         }}
                                         renderOption={(props, option) => (
                                             <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>

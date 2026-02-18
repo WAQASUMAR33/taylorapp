@@ -30,10 +30,22 @@ async function getMeasurements() {
 async function getCustomers() {
     try {
         const customers = await prisma.customer.findMany({
+            include: {
+                accountCategory: true
+            },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, phone: true, address: true }
         });
-        return customers;
+
+        // Filter out employee categories (Cutter, Tailor)
+        return customers.filter(c => {
+            const catName = c.accountCategory?.name?.toLowerCase() || "";
+            return !catName.includes("cutter") && !catName.includes("tailor");
+        }).map(c => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone || "",
+            address: c.address || ""
+        }));
     } catch (error) {
         console.error("Database error fetching customers:", error);
         return [];

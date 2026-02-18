@@ -233,9 +233,18 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     });
 
     // Calculate stats for summary cards
-    const customerCategories = categories;
+    const customerCategories = categories.filter(cat =>
+        !cat.name.toLowerCase().includes("cutter") &&
+        !cat.name.toLowerCase().includes("tailor")
+    );
 
-    const filteredInitialCustomers = customers;
+    const filteredInitialCustomers = customers.filter(c => {
+        const cat = categories.find(cat => cat.id === c.accountCategoryId);
+        return !cat || (
+            !cat.name.toLowerCase().includes("cutter") &&
+            !cat.name.toLowerCase().includes("tailor")
+        );
+    });
 
     const categoryStats = customerCategories.map(cat => ({
         ...cat,
@@ -396,7 +405,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
-                                        options={categories}
+                                        options={categories.filter(cat =>
+                                            !cat.name.toLowerCase().includes("cutter") &&
+                                            !cat.name.toLowerCase().includes("tailor")
+                                        )}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={categories.find(c => c.id === formData.accountCategoryId) || null}
                                         onChange={(event, newValue) => {
@@ -626,8 +638,20 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {filteredCustomers.length > 0 ? (
-                                    filteredCustomers.map((customer) => (
+                                {filteredCustomers.filter(c => {
+                                    const cat = categories.find(cat => cat.id === c.accountCategoryId);
+                                    return !cat || (
+                                        !cat.name.toLowerCase().includes("cutter") &&
+                                        !cat.name.toLowerCase().includes("tailor")
+                                    );
+                                }).length > 0 ? (
+                                    filteredCustomers.filter(c => {
+                                        const cat = categories.find(cat => cat.id === c.accountCategoryId);
+                                        return !cat || (
+                                            !cat.name.toLowerCase().includes("cutter") &&
+                                            !cat.name.toLowerCase().includes("tailor")
+                                        );
+                                    }).map((customer) => (
                                         <TableRow
                                             key={customer.id}
                                             sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
