@@ -450,7 +450,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                 <Card sx={{ mb: 2 }}>
                     <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>SALE ORDER / BOOKING</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">سیل آرڈر / بکنگ</Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
                                 variant="contained"
@@ -459,7 +459,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 disabled={loading}
                                 sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
                             </Button>
                             <Button
                                 variant="contained"
@@ -467,7 +467,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 onClick={() => setShowForm(false)}
                                 sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
                             >
-                                Cancel
+                                کینسل
                             </Button>
                         </Box>
                     </Box>
@@ -1065,7 +1065,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 renderInput={(params) => (
                                                     <TextField
                                                         {...params}
-                                                        placeholder="Select Tailor"
+                                                        placeholder="درزی منتخب کریں"
                                                         size="small"
                                                         fullWidth
                                                         required
@@ -1095,7 +1095,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 renderInput={(params) => (
                                                     <TextField
                                                         {...params}
-                                                        placeholder="Select Cutter"
+                                                        placeholder="کٹر منتخب کریں"
                                                         size="small"
                                                         fullWidth
                                                         required
@@ -1121,7 +1121,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     <Grid item xs={12} md={6}>
                                         <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                                Remarks
+                                                ریمارکس / نوٹ
                                             </Typography>
                                         </Box>
                                         <TextField
@@ -1148,7 +1148,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4' }}>
                                             <Grid container spacing={2}>
                                                 <Grid item xs={6}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>Total Amount:</Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">کل رقم:</Typography>
                                                 </Grid>
                                                 <Grid item xs={6}>
                                                     <Typography variant="body2" sx={{ fontWeight: 700, textAlign: 'right' }}>
@@ -1156,7 +1156,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                     </Typography>
                                                 </Grid>
                                                 <Grid item xs={6}>
-                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Advance Received</Typography>
+                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ایڈوانس رقم</Typography>
                                                     <TextField
                                                         fullWidth
                                                         size="small"
@@ -1179,7 +1179,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                     />
                                                 </Grid>
                                                 <Grid item xs={6}>
-                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Balance</Typography>
+                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">بقایا رقم</Typography>
                                                     <TextField
                                                         fullWidth
                                                         size="small"
@@ -1252,7 +1252,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         '&:hover': { bgcolor: '#7c3aed' }
                     }}
                 >
-                    New Booking
+                    نئی بکینگ
                 </Button>
             </Box>
 
@@ -1264,13 +1264,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Booking #</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Dates</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Delivery Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">بکنگ نمبر</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">کسٹمر</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">تاریخ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">اسٹیٹس</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">ڈیلیوری کی تاریخ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} className="font-urdu">رقم</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشنز</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
