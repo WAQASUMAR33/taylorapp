@@ -327,6 +327,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                             dir="rtl"
                                             variant="outlined"
                                             sx={{
+                                                minWidth: 300,
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'white',
                                                     borderRadius: '10px',
@@ -446,6 +447,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                                 size="small"
                                                                 dir="rtl"
                                                                 sx={{
+                                                                    minWidth: 300,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         bgcolor: 'white',
                                                                         borderRadius: '8px',
@@ -541,20 +543,37 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                     />
                                                 </TableCell>
                                                 <TableCell align="right">
-                                                    <TextField
-                                                        select
-                                                        value={payment.method}
-                                                        onChange={(e) => handlePaymentChange(index, 'method', e.target.value)}
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    >
-                                                        <MenuItem value="CASH">نقد (Cash)</MenuItem>
-                                                        <MenuItem value="BANK_TRANSFER">بینک ٹرانسفر (Bank Transfer)</MenuItem>
-                                                        <MenuItem value="CHEQUE">چیک (Cheque)</MenuItem>
-                                                        <MenuItem value="ONLINE">آن لائن (Online)</MenuItem>
-                                                    </TextField>
+                                                    <Autocomplete
+                                                        options={[
+                                                            { value: "CASH", label: "نقد (Cash)" },
+                                                            { value: "BANK_TRANSFER", label: "بینک ٹرانسفر (Bank Transfer)" },
+                                                            { value: "CHEQUE", label: "چیک (Cheque)" },
+                                                            { value: "ONLINE", label: "آن لائن (Online)" }
+                                                        ]}
+                                                        getOptionLabel={(option) => option.label || ""}
+                                                        value={[
+                                                            { value: "CASH", label: "نقد (Cash)" },
+                                                            { value: "BANK_TRANSFER", label: "بینک ٹرانسفر (Bank Transfer)" },
+                                                            { value: "CHEQUE", label: "چیک (Cheque)" },
+                                                            { value: "ONLINE", label: "آن لائن (Online)" }
+                                                        ].find(m => m.value === payment.method) || null}
+                                                        onChange={(_, newValue) => handlePaymentChange(index, 'method', newValue ? newValue.value : "")}
+                                                        renderInput={(params) => (
+                                                            <TextField
+                                                                {...params}
+                                                                placeholder="طریقہ کار منتخب کریں"
+                                                                variant="standard"
+                                                                size="small"
+                                                                dir="rtl"
+                                                                fullWidth
+                                                                required
+                                                                sx={{
+                                                                    minWidth: 300,
+                                                                    '& .MuiInput-input': { textAlign: 'right' }
+                                                                }}
+                                                            />
+                                                        )}
+                                                    />
                                                 </TableCell>
                                                 <TableCell align="right">
                                                     <TextField
@@ -636,7 +655,19 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                     variant="outlined"
                     size="small"
                     dir="rtl"
-                    sx={{ width: 450, bgcolor: 'white' }}
+                    sx={{
+                        width: '100%',
+                        maxWidth: 450,
+                        minWidth: 300,
+                        bgcolor: 'white',
+                        '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: '10px',
+                            '& fieldset': { borderColor: '#e5e7eb' },
+                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                        }
+                    }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{

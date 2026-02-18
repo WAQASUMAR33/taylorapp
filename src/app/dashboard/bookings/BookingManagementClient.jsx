@@ -596,6 +596,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                 }}
                                                                 sx={{
                                                                     width: '100%',
+                                                                    minWidth: 300,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         bgcolor: 'white',
                                                                         borderRadius: '10px',
@@ -706,6 +707,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 fullWidth
                                                                                 dir="rtl"
                                                                                 sx={{
+                                                                                    minWidth: 300,
                                                                                     '& .MuiOutlinedInput-root': {
                                                                                         bgcolor: 'white',
                                                                                         borderRadius: '8px',
@@ -850,146 +852,235 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>کف</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.cuffType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "single", label: "سنگل" },
+                                                                                            { value: "double folding", label: "ڈبل فولڈنگ" },
+                                                                                            { value: "open sleeve", label: "کھلی آستین" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "single", label: "سنگل" },
+                                                                                            { value: "double folding", label: "ڈبل فولڈنگ" },
+                                                                                            { value: "open sleeve", label: "کھلی آستین" }
+                                                                                        ].find(o => o.value === item.cuffType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].cuffType = e.target.value;
+                                                                                            newItems[index].cuffType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="single">سنگل</MenuItem>
-                                                                                        <MenuItem value="double folding">ڈبل فولڈنگ</MenuItem>
-                                                                                        <MenuItem value="open sleeve">کھلی آستین</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="کف منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>پائنچہ</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.pohnchaType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "jaali", label: "جالی والا" },
+                                                                                            { value: "karhaai", label: "کڑھائی والا" },
+                                                                                            { value: "jaali_karhaai", label: "جالی بمعہ کڑھائی" },
+                                                                                            { value: "saada", label: "سادہ" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "jaali", label: "جالی والا" },
+                                                                                            { value: "karhaai", label: "کڑھائی والا" },
+                                                                                            { value: "jaali_karhaai", label: "جالی بمعہ کڑھائی" },
+                                                                                            { value: "saada", label: "سادہ" }
+                                                                                        ].find(o => o.value === item.pohnchaType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].pohnchaType = e.target.value;
+                                                                                            newItems[index].pohnchaType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="jaali">جالی والا</MenuItem>
-                                                                                        <MenuItem value="karhaai">کڑھائی والا</MenuItem>
-                                                                                        <MenuItem value="jaali_karhaai">جالی بمعہ کڑھائی</MenuItem>
-                                                                                        <MenuItem value="saada">سادہ</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="پائنچہ منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>گھیرا</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.gheraType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "seedha", label: "سیدھا" },
+                                                                                            { value: "gol", label: "گول" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "seedha", label: "سیدھا" },
+                                                                                            { value: "gol", label: "گول" }
+                                                                                        ].find(o => o.value === item.gheraType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].gheraType = e.target.value;
+                                                                                            newItems[index].gheraType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="seedha">سیدھا</MenuItem>
-                                                                                        <MenuItem value="gol">گول</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="گھیرا منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>گالہ</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.galaType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "ban", label: "بین" },
+                                                                                            { value: "collar", label: "کالر" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "ban", label: "بین" },
+                                                                                            { value: "collar", label: "کالر" }
+                                                                                        ].find(o => o.value === item.galaType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].galaType = e.target.value;
+                                                                                            newItems[index].galaType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="ban">بین</MenuItem>
-                                                                                        <MenuItem value="collar">کالر</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="گالہ منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 {item.galaType && (
                                                                                     <Grid item xs={12} sm={4}>
                                                                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                             <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>سائز</Typography>
                                                                                         </Box>
-                                                                                        <TextField
-                                                                                            select
-                                                                                            required
-                                                                                            size="small"
-                                                                                            value={item.galaSize}
-                                                                                            onChange={(e) => {
+                                                                                        <Autocomplete
+                                                                                            options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
+                                                                                            value={item.galaSize || null}
+                                                                                            onChange={(_, newValue) => {
                                                                                                 const newItems = [...cartItems];
-                                                                                                newItems[index].galaSize = e.target.value;
+                                                                                                newItems[index].galaSize = newValue || "";
                                                                                                 setCartItems(newItems);
                                                                                             }}
-                                                                                            sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                        >
-                                                                                            {[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => <MenuItem key={s} value={s.toString()}>{s}</MenuItem>)}
-                                                                                        </TextField>
+                                                                                            renderInput={(params) => (
+                                                                                                <TextField
+                                                                                                    {...params}
+                                                                                                    placeholder="سائز"
+                                                                                                    size="small"
+                                                                                                    required
+                                                                                                    sx={{
+                                                                                                        width: '300px',
+                                                                                                        '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                    }}
+                                                                                                />
+                                                                                            )}
+                                                                                        />
                                                                                     </Grid>
                                                                                 )}
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>جیب</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.pocketType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "single", label: "سنگل" },
+                                                                                            { value: "double", label: "ڈبل" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "single", label: "سنگل" },
+                                                                                            { value: "double", label: "ڈبل" }
+                                                                                        ].find(o => o.value === item.pocketType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].pocketType = e.target.value;
+                                                                                            newItems[index].pocketType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="single">سنگل</MenuItem>
-                                                                                        <MenuItem value="double">ڈبل</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="جیب منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
                                                                                         <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>شلوار کی قسم</Typography>
                                                                                     </Box>
-                                                                                    <TextField
-                                                                                        select
-                                                                                        required
-                                                                                        size="small"
-                                                                                        value={item.shalwarType}
-                                                                                        onChange={(e) => {
+                                                                                    <Autocomplete
+                                                                                        options={[
+                                                                                            { value: "pajama", label: "پاجامہ" },
+                                                                                            { value: "shalwar", label: "شلوار" },
+                                                                                            { value: "trouser", label: "ٹراؤزر" }
+                                                                                        ]}
+                                                                                        getOptionLabel={(option) => option.label || ""}
+                                                                                        value={[
+                                                                                            { value: "pajama", label: "پاجامہ" },
+                                                                                            { value: "shalwar", label: "شلوار" },
+                                                                                            { value: "trouser", label: "ٹراؤزر" }
+                                                                                        ].find(o => o.value === item.shalwarType) || null}
+                                                                                        onChange={(_, newValue) => {
                                                                                             const newItems = [...cartItems];
-                                                                                            newItems[index].shalwarType = e.target.value;
+                                                                                            newItems[index].shalwarType = newValue ? newValue.value : "";
                                                                                             setCartItems(newItems);
                                                                                         }}
-                                                                                        sx={{ width: '300px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                                    >
-                                                                                        <MenuItem value="pajama">پاجامہ</MenuItem>
-                                                                                        <MenuItem value="shalwar">شلوار</MenuItem>
-                                                                                        <MenuItem value="trouser">ٹراؤزر</MenuItem>
-                                                                                    </TextField>
+                                                                                        renderInput={(params) => (
+                                                                                            <TextField
+                                                                                                {...params}
+                                                                                                placeholder="شلوار کی قسم منتخب کریں"
+                                                                                                size="small"
+                                                                                                required
+                                                                                                sx={{
+                                                                                                    width: '300px',
+                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                    />
                                                                                 </Grid>
                                                                                 <Grid item xs={12} sm={4}>
                                                                                     <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'flex-end', pb: 0.5 }}>
@@ -1260,7 +1351,19 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     variant="outlined"
                     size="small"
                     dir="rtl"
-                    sx={{ width: 450, bgcolor: 'white' }}
+                    sx={{
+                        width: '100%',
+                        maxWidth: 450,
+                        minWidth: 300,
+                        bgcolor: 'white',
+                        '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: '10px',
+                            '& fieldset': { borderColor: '#e5e7eb' },
+                            '&:hover fieldset': { borderColor: '#8b5cf6' },
+                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                        }
+                    }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
