@@ -438,7 +438,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         const query = (searchQuery || "").toLowerCase();
         const customer = m.customer || {};
         const name = (customer.name || "").toLowerCase();
-        const phone = (customer.phone || "");
+        const phone = String(customer.phone || "");
         const address = (customer.address || "").toLowerCase();
 
         return name.includes(query) || phone.includes(searchQuery || "") || address.includes(query);
@@ -662,7 +662,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                             return (options || []).filter(option => {
                                                 if (!option) return false;
                                                 const nameMatch = (option.name || "").toLowerCase().includes(query);
-                                                const phoneMatch = (option.phone || "").includes(query);
+                                                const phoneMatch = String(option.phone || "").includes(query);
                                                 const addressMatch = (option.address || "").toLowerCase().includes(query);
                                                 return nameMatch || phoneMatch || addressMatch;
                                             });
