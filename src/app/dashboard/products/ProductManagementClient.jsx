@@ -645,82 +645,83 @@ export default function ProductManagementClient({ initialProducts, categories })
                     </TableHead>
                     <TableBody>
                         {filteredProducts.length > 0 ? (
-                            filteredProducts.map((prod) => <TableRow
-                                key={prod.id}
-                                sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                            >
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                        <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
-                                            <Edit size={18} />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={() => handleDelete(prod.id)}
-                                        >
-                                            <Trash2 size={18} />
-                                        </IconButton>
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
-                                            فروخت: Rs. {parseFloat(prod.unitPrice || 0).toFixed(2)}
-                                        </Typography>
-                                        <Typography variant="caption" color="textSecondary" className="font-urdu">
-                                            لاگت: Rs. {parseFloat(prod.costPrice || 0).toFixed(2)}
-                                        </Typography>
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            fontWeight: 600,
-                                            color: prod.quantity <= 5 ? '#ef4444' : 'inherit',
-                                            textAlign: 'right'
-                                        }}
-                                    >
-                                        {prod.quantity} یونٹس
-                                    </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                        <Typography variant="body2">
-                                            {prod.category?.name || 'غیر متعلقہ'}
-                                        </Typography>
-                                        <Tag size={14} className="text-zinc-400" />
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                        <Box sx={{
-                                            p: 1,
-                                            bgcolor: '#f5f3ff',
-                                            borderRadius: 2,
-                                            color: '#8b5cf6'
-                                        }}>
-                                            <Package size={20} />
+                            filteredProducts.map((prod) => (
+                                <TableRow
+                                    key={prod.id}
+                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                >
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                            <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
+                                                <Edit size={18} />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDelete(prod.id)}
+                                            >
+                                                <Trash2 size={18} />
+                                            </IconButton>
                                         </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
                                         <Box sx={{ textAlign: 'right' }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                {prod.name}
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
+                                                فروخت: Rs. {parseFloat(prod.unitPrice || 0).toFixed(2)}
                                             </Typography>
-                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                                                {prod.description || 'کوئی تفصیل نہیں'}
+                                            <Typography variant="caption" color="textSecondary" className="font-urdu">
+                                                لاگت: Rs. {parseFloat(prod.costPrice || 0).toFixed(2)}
                                             </Typography>
                                         </Box>
-                                    </Box>
-                                </TableCell>
-                            </TableRow>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontWeight: 600,
+                                                color: prod.quantity <= 5 ? '#ef4444' : 'inherit',
+                                                textAlign: 'right'
+                                            }}
+                                        >
+                                            {prod.quantity} یونٹس
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                            <Typography variant="body2">
+                                                {prod.category?.name || 'غیر متعلقہ'}
+                                            </Typography>
+                                            <Tag size={14} className="text-zinc-400" />
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
+                                            <Box sx={{
+                                                p: 1,
+                                                bgcolor: '#f5f3ff',
+                                                borderRadius: 2,
+                                                color: '#8b5cf6'
+                                            }}>
+                                                <Package size={20} />
+                                            </Box>
+                                            <Box sx={{ textAlign: 'right' }}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                    {prod.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                    {prod.description || 'کوئی تفصیل نہیں'}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
                             ))
                         ) : (
-                        <TableRow>
-                            <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                <Typography color="textSecondary" className="font-urdu">کوئی پروڈکٹ نہیں ملی۔</Typography>
-                            </TableCell>
-                        </TableRow>
+                            <TableRow>
+                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                    <Typography color="textSecondary" className="font-urdu">کوئی پروڈکٹ نہیں ملی۔</Typography>
+                                </TableCell>
+                            </TableRow>
                         )}
                     </TableBody>
                 </Table>
