@@ -93,8 +93,8 @@ const translations = {
     wskot_hip: { en: "Hip", ur: "ہپ" },
 };
 
-export default function MeasurementManagementClient({ initialMeasurements, customers }) {
-    const [measurements, setMeasurements] = useState(initialMeasurements);
+export default function MeasurementManagementClient({ initialMeasurements = [], customers = [] }) {
+    const [measurements, setMeasurements] = useState(initialMeasurements || []);
     const [searchQuery, setSearchQuery] = useState("");
     const [modalTab, setModalTab] = useState(0); // 0 for Shalwar Qameez, 1 for Wskot
     const [language, setLanguage] = useState("ur");
@@ -202,7 +202,9 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
             // Refresh
             const refreshRes = await fetch("/api/measurements");
             const refreshed = await refreshRes.json();
-            setMeasurements(refreshed);
+            if (Array.isArray(refreshed)) {
+                setMeasurements(refreshed);
+            }
 
             setSuccessMessage(`Measurement ${editMode ? 'updated' : 'added'} successfully!`);
             setOpen(false);
@@ -432,10 +434,14 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
     };
 
     const filteredMeasurements = (measurements || []).filter(m => {
+        if (!m) return false;
         const query = (searchQuery || "").toLowerCase();
-        return (m.customer?.name || "").toLowerCase().includes(query) ||
-            (m.customer?.phone || "").includes(searchQuery || "") ||
-            (m.customer?.address || "").toLowerCase().includes(query);
+        const customer = m.customer || {};
+        const name = (customer.name || "").toLowerCase();
+        const phone = (customer.phone || "");
+        const address = (customer.address || "").toLowerCase();
+
+        return name.includes(query) || phone.includes(searchQuery || "") || address.includes(query);
     });
 
     return (
@@ -502,78 +508,81 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                     </TableHead>
                     <TableBody>
                         {filteredMeasurements.length > 0 ? (
-                            filteredMeasurements.map((m) => (
-                                <TableRow
-                                    key={m.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <Tooltip title="Print Measurement">
-                                                <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(m)}>
-                                                    <Printer size={18} />
+                            filteredMeasurements.map((m) => {
+                                if (!m) return null;
+                                return (
+                                    <TableRow
+                                        key={m.id}
+                                        sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                    >
+                                        <TableCell align="right">
+                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                                <Tooltip title="Print Measurement">
+                                                    <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handlePrint(m)}>
+                                                        <Printer size={18} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <IconButton size="small" color="primary" onClick={() => handleOpen(m)}>
+                                                    <Edit size={18} />
                                                 </IconButton>
-                                            </Tooltip>
-                                            <IconButton size="small" color="primary" onClick={() => handleOpen(m)}>
-                                                <Edit size={18} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                color="error"
-                                                onClick={() => handleDelete(m.id)}
-                                            >
-                                                <Trash2 size={18} />
-                                            </IconButton>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {m.wskot_lambai ? (
-                                            <Typography variant="body2" sx={{ color: '#2563eb', fontWeight: 500 }} className="font-urdu">
-                                                ریکارڈڈ
-                                            </Typography>
-                                        ) : (
-                                            <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {m.qameez_lambai ? (
-                                            <Typography variant="body2" sx={{ color: '#059669', fontWeight: 500 }} className="font-urdu">
-                                                ریکارڈڈ
-                                            </Typography>
-                                        ) : (
-                                            <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                            <Typography variant="body2">
-                                                {new Date(m.takenAt).toLocaleDateString()}
-                                            </Typography>
-                                            <Calendar size={14} className="text-zinc-400" />
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                            <Box sx={{
-                                                p: 1,
-                                                bgcolor: '#f5f3ff',
-                                                borderRadius: 2,
-                                                color: '#8b5cf6'
-                                            }}>
-                                                <User size={20} />
+                                                <IconButton
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() => handleDelete(m.id)}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </IconButton>
                                             </Box>
-                                            <Box>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, textAlign: 'right' }}>
-                                                    {m.customer?.name}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {m.wskot_lambai ? (
+                                                <Typography variant="body2" sx={{ color: '#2563eb', fontWeight: 500 }} className="font-urdu">
+                                                    ریکارڈڈ
                                                 </Typography>
-                                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'right' }}>
-                                                    {m.customer?.phone}
+                                            ) : (
+                                                <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {m.qameez_lambai ? (
+                                                <Typography variant="body2" sx={{ color: '#059669', fontWeight: 500 }} className="font-urdu">
+                                                    ریکارڈڈ
                                                 </Typography>
+                                            ) : (
+                                                <Typography variant="body2" color="textSecondary" className="font-urdu">نہیں ہے</Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                                <Typography variant="body2">
+                                                    {m.takenAt ? new Date(m.takenAt).toLocaleDateString() : 'N/A'}
+                                                </Typography>
+                                                <Calendar size={14} className="text-zinc-400" />
                                             </Box>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
+                                                <Box sx={{
+                                                    p: 1,
+                                                    bgcolor: '#f5f3ff',
+                                                    borderRadius: 2,
+                                                    color: '#8b5cf6'
+                                                }}>
+                                                    <User size={20} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, textAlign: 'right' }}>
+                                                        {m.customer?.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'right' }}>
+                                                        {m.customer?.phone}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
@@ -638,9 +647,9 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                         fullWidth
                                         size="small"
                                         sx={{ minWidth: 400 }}
-                                        options={customers}
-                                        getOptionLabel={(option) => `${option.name || ""} ${option.phone ? `(${option.phone})` : ""}`}
-                                        value={customers.find(c => c.id === formData.customerId) || null}
+                                        options={customers || []}
+                                        getOptionLabel={(option) => option ? `${option.name || ""} ${option.phone ? `(${option.phone})` : ""}` : ""}
+                                        value={(customers || []).find(c => c && c.id === formData.customerId) || null}
                                         onChange={(event, newValue) => {
                                             setFormData(prev => ({
                                                 ...prev,
@@ -650,45 +659,49 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                         disabled={editMode}
                                         filterOptions={(options, { inputValue }) => {
                                             const query = (inputValue || "").toLowerCase();
-                                            return options.filter(option => {
+                                            return (options || []).filter(option => {
+                                                if (!option) return false;
                                                 const nameMatch = (option.name || "").toLowerCase().includes(query);
                                                 const phoneMatch = (option.phone || "").includes(query);
                                                 const addressMatch = (option.address || "").toLowerCase().includes(query);
                                                 return nameMatch || phoneMatch || addressMatch;
                                             });
                                         }}
-                                        renderOption={(props, option) => (
-                                            <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
-                                                <Grid container alignItems="center" sx={{ flexDirection: 'row-reverse' }}>
-                                                    <Grid item sx={{ display: 'flex', width: 44, ml: 2 }}>
-                                                        <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
-                                                            <User size={18} />
-                                                        </Box>
-                                                    </Grid>
-                                                    <Grid item xs sx={{ wordWrap: 'break-word', textAlign: 'right' }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
-                                                            {option.name}
-                                                        </Typography>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, justifyContent: 'flex-end' }}>
-                                                            {option.address && (
+                                        renderOption={(props, option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <Box component="li" {...props} sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
+                                                    <Grid container alignItems="center" sx={{ flexDirection: 'row-reverse' }}>
+                                                        <Grid item sx={{ display: 'flex', width: 44, ml: 2 }}>
+                                                            <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
+                                                                <User size={18} />
+                                                            </Box>
+                                                        </Grid>
+                                                        <Grid item xs sx={{ wordWrap: 'break-word', textAlign: 'right' }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
+                                                                {option.name}
+                                                            </Typography>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, justifyContent: 'flex-end' }}>
+                                                                {option.address && (
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                        <Typography variant="caption" color="textSecondary">
+                                                                            {option.address}
+                                                                        </Typography>
+                                                                        <MapPin size={12} className="text-zinc-400" />
+                                                                    </Box>
+                                                                )}
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                                     <Typography variant="caption" color="textSecondary">
-                                                                        {option.address}
+                                                                        {option.phone}
                                                                     </Typography>
-                                                                    <MapPin size={12} className="text-zinc-400" />
+                                                                    <Phone size={12} className="text-zinc-400" />
                                                                 </Box>
-                                                            )}
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                <Typography variant="caption" color="textSecondary">
-                                                                    {option.phone}
-                                                                </Typography>
-                                                                <Phone size={12} className="text-zinc-400" />
                                                             </Box>
-                                                        </Box>
+                                                        </Grid>
                                                     </Grid>
-                                                </Grid>
-                                            </Box>
-                                        )}
+                                                </Box>
+                                            );
+                                        }}
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
