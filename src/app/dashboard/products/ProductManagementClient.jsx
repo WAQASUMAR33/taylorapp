@@ -294,9 +294,9 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
-                                        options={localCategories}
+                                        options={localCategories || []}
                                         getOptionLabel={(option) => option.name || ""}
-                                        value={localCategories.find(c => c.id === formData.categoryId) || null}
+                                        value={(localCategories || []).find(c => c.id === formData.categoryId) || null}
                                         onChange={(event, newValue) => {
                                             const syntheticEvent = {
                                                 target: {

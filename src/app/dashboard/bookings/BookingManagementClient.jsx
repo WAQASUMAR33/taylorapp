@@ -164,11 +164,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
 
     // Filter employees by role
-    const tailors = employees.filter(e => e.role === "Tailor");
-    const cutters = employees.filter(e => e.role === "Cutter");
+    const tailors = (employees || []).filter(e => e.role === "Tailor");
+    const cutters = (employees || []).filter(e => e.role === "Cutter");
 
     const handleCustomerChange = (customerId) => {
-        const customer = customers.find(c => c.id === parseInt(customerId));
+        const customer = (customers || []).find(c => c.id === parseInt(customerId));
         if (customer) {
             setFormData(prev => ({
                 ...prev,
@@ -182,7 +182,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     };
 
     const handleProductChange = (index, productId) => {
-        const product = products.find(p => p.id === parseInt(productId));
+        const product = (products || []).find(p => p.id === parseInt(productId));
         if (product) {
             const newItems = [...cartItems];
 
@@ -568,9 +568,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کسٹمر منتخب کریں</Typography>
                                                     </Box>
                                                     <Autocomplete
-                                                        options={customers}
+                                                        options={customers || []}
                                                         getOptionLabel={(option) => option.name || ""}
-                                                        value={customers.find(c => c.id === formData.customerId) || null}
+                                                        value={(customers || []).find(c => c.id === formData.customerId) || null}
                                                         onChange={(event, newValue) => {
                                                             handleCustomerChange(newValue ? newValue.id : "");
                                                         }}
@@ -691,9 +691,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                             <TableCell>
                                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                                                     <Autocomplete
-                                                                        options={products}
+                                                                        options={products || []}
                                                                         getOptionLabel={(option) => option.name || ""}
-                                                                        value={products.find(p => p.id === item.productId) || null}
+                                                                        value={(products || []).find(p => p.id === item.productId) || null}
                                                                         onChange={(event, newValue) => {
                                                                             handleProductChange(index, newValue ? newValue.id : "");
                                                                         }}
@@ -1170,9 +1170,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Grid item xs={12} md={6}>
                                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Tailor</Typography>
                                             <Autocomplete
-                                                options={tailors}
+                                                options={tailors || []}
                                                 getOptionLabel={(option) => option.name || ""}
-                                                value={tailors.find(t => t.id === formData.tailorId) || null}
+                                                value={(tailors || []).find(t => t.id === formData.tailorId) || null}
                                                 onChange={(event, newValue) => {
                                                     setFormData({ ...formData, tailorId: newValue ? newValue.id : "" });
                                                 }}
@@ -1200,9 +1200,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Grid item xs={12} md={6}>
                                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cutter</Typography>
                                             <Autocomplete
-                                                options={cutters}
+                                                options={cutters || []}
                                                 getOptionLabel={(option) => option.name || ""}
-                                                value={cutters.find(c => c.id === formData.cutterId) || null}
+                                                value={(cutters || []).find(c => c.id === formData.cutterId) || null}
                                                 onChange={(event, newValue) => {
                                                     setFormData({ ...formData, cutterId: newValue ? newValue.id : "" });
                                                 }}

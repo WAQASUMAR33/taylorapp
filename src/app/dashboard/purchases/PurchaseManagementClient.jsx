@@ -312,9 +312,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سپلائر کا انتخاب کریں</Typography>
                                 </Box>
                                 <Autocomplete
-                                    options={suppliers}
+                                    options={suppliers || []}
                                     getOptionLabel={(option) => option.name || ""}
-                                    value={suppliers.find(s => s.id === formData.supplierId) || null}
+                                    value={(suppliers || []).find(s => s.id === formData.supplierId) || null}
                                     onChange={(_, newValue) => {
                                         setFormData(prev => ({ ...prev, supplierId: newValue ? newValue.id : "" }));
                                     }}
@@ -435,9 +435,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                 </TableCell>
                                                 <TableCell align="right">
                                                     <Autocomplete
-                                                        options={products}
+                                                        options={products || []}
                                                         getOptionLabel={(option) => option.name || ""}
-                                                        value={products.find(p => p.id === item.productId) || null}
+                                                        value={(products || []).find(p => p.id === item.productId) || null}
                                                         onChange={(_, newValue) => handleItemChange(index, 'productId', newValue ? newValue.id : "")}
                                                         renderInput={(params) => (
                                                             <TextField
