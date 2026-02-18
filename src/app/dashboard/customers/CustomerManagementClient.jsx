@@ -42,9 +42,7 @@ import {
     Plus,
     X as XIcon,
     User,
-    Users,
-    Mail,
-    Hash
+    Users
 } from "lucide-react";
 import { Autocomplete } from "@mui/material";
 
@@ -69,9 +67,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         name: "",
         fatherName: "",
         phone: "",
-        email: "",
         address: "",
-        code: "",
         accountCategoryId: categories.length > 0 ? categories[0].id : null,
         notes: "",
         balance: 0
@@ -229,8 +225,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const filteredCustomers = customers.filter(customer => {
         const matchesSearch =
             customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.phone?.includes(searchQuery) ||
-            customer.code?.toLowerCase().includes(searchQuery.toLowerCase());
+            customer.phone?.includes(searchQuery);
 
         const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
 
@@ -238,9 +233,22 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     });
 
     // Calculate stats for summary cards
-    const categoryStats = categories.map(cat => ({
+    const customerCategories = categories.filter(cat =>
+        !cat.name.toLowerCase().includes("cutter") &&
+        !cat.name.toLowerCase().includes("supplier")
+    );
+
+    const filteredInitialCustomers = customers.filter(c => {
+        const cat = categories.find(cat => cat.id === c.accountCategoryId);
+        return !cat || (
+            !cat.name.toLowerCase().includes("cutter") &&
+            !cat.name.toLowerCase().includes("supplier")
+        );
+    });
+
+    const categoryStats = customerCategories.map(cat => ({
         ...cat,
-        count: customers.filter(c => c.accountCategoryId === cat.id).length
+        count: filteredInitialCustomers.filter(c => c.accountCategoryId === cat.id).length
     }));
 
     return (
@@ -277,22 +285,18 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Full name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">مکمل نام</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
-                                    placeholder="e.g. John Doe"
+                                    dir="rtl"
+                                    placeholder="نام درج کریں"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -300,26 +304,24 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Father Name</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ولدیت</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="fatherName"
-                                    placeholder="e.g. Robert Doe"
+                                    required
+                                    dir="rtl"
+                                    placeholder="والد کا نام درج کریں"
                                     value={formData.fatherName || ""}
                                     onChange={handleInputChange}
                                     variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Users size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             bgcolor: 'white',
@@ -327,16 +329,20 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Phone number</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="phone"
-                                    placeholder="111-222-3333"
+                                    required
+                                    placeholder="03001234567"
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -362,64 +368,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     }}
                                 />
                             </Grid>
+
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Email Address</Typography>
-                                <TextField
-                                    fullWidth
-                                    name="email"
-                                    placeholder="e.g. john@example.com"
-                                    value={formData.email || ""}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Mail size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Customer Code (Optional)</Typography>
-                                <TextField
-                                    fullWidth
-                                    name="code"
-                                    placeholder="e.g. CUST-001"
-                                    value={formData.code}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Hash size={18} color="#9ca3af" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>
-                                    {formData.id ? 'Current Balance' : 'Opening Balance'}
-                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">اوپننگ بیلنس</Typography>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     name="balance"
@@ -447,7 +400,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Account Category</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">اکاؤنٹ کیٹگری</Typography>
+                                </Box>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
@@ -467,7 +422,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                             <TextField
                                                 {...params}
                                                 variant="outlined"
-                                                placeholder="Select category"
+                                                dir="rtl"
+                                                placeholder="کیٹگری منتخب کریں"
                                                 sx={{
                                                     minWidth: '300px',
                                                     '& .MuiOutlinedInput-root': {
@@ -476,7 +432,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                         '& fieldset': { borderColor: '#e5e7eb' },
                                                         '&:hover fieldset': { borderColor: '#8b5cf6' },
                                                         '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                    }
+                                                    },
+                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                                 }}
                                             />
                                         )}
@@ -497,17 +454,16 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 </Box>
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Address
-                                    </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">پتا</Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="address"
-                                    placeholder="e.g. 123 Street, City"
+                                    placeholder="مکمل پتا درج کریں"
                                     multiline
                                     rows={4}
+                                    dir="rtl"
                                     value={formData.address}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -518,22 +474,22 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
-                                        Notes
-                                    </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">نوٹس</Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="notes"
-                                    placeholder="e.g. Any special instructions..."
+                                    placeholder="اضافی معلومات..."
                                     multiline
                                     rows={4}
+                                    dir="rtl"
                                     value={formData.notes}
                                     onChange={handleInputChange}
                                     variant="outlined"
@@ -544,7 +500,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                             '& fieldset': { borderColor: '#e5e7eb' },
                                             '&:hover fieldset': { borderColor: '#8b5cf6' },
                                             '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
+                                        },
+                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
                                     }}
                                 />
                             </Grid>
@@ -565,14 +522,14 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             }}>
                                 <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>Total Customers</Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{customers.length}</Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{filteredInitialCustomers.length}</Typography>
                                     <Avatar sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6' }}>
                                         <Users size={20} />
                                     </Avatar>
                                 </Box>
                             </Card>
                         </Grid>
-                        {categoryStats.slice(0, 3).map((stat, idx) => (
+                        {categoryStats.map((stat, idx) => (
                             <Grid item xs={12} md={3} key={stat.id}>
                                 <Card sx={{
                                     p: 2.5,
@@ -585,8 +542,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{stat.count}</Typography>
                                         <Avatar sx={{
-                                            bgcolor: idx === 0 ? '#ecfdf5' : (idx === 1 ? '#eff6ff' : '#fff7ed'),
-                                            color: idx === 0 ? '#10b981' : (idx === 1 ? '#3b82f6' : '#f59e0b')
+                                            bgcolor: idx % 3 === 0 ? '#ecfdf5' : (idx % 3 === 1 ? '#eff6ff' : '#fff7ed'),
+                                            color: idx % 3 === 0 ? '#10b981' : (idx % 3 === 1 ? '#3b82f6' : '#f59e0b')
                                         }}>
                                             <User size={20} />
                                         </Avatar>
@@ -607,10 +564,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     }}>
                         <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
                             <TextField
-                                placeholder="Search customers by name, phone or code..."
+                                placeholder="Search customers..."
                                 variant="outlined"
                                 size="small"
-                                sx={{ width: 400, bgcolor: 'white' }}
+                                sx={{ minWidth: 300, bgcolor: 'white' }}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 InputProps={{
@@ -622,7 +579,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 }}
                             />
                             <Autocomplete
-                                options={categories}
+                                options={customerCategories}
                                 getOptionLabel={(option) => option.name}
                                 value={filterCategory}
                                 onChange={(e, newValue) => setFilterCategory(newValue)}
@@ -631,7 +588,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                         {...params}
                                         label="Filter by Category"
                                         size="small"
-                                        sx={{ width: 250, bgcolor: 'white' }}
+                                        sx={{ minWidth: 300, bgcolor: 'white' }}
                                     />
                                 )}
                                 sx={{ borderRadius: 2 }}
@@ -663,17 +620,28 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         <Table sx={{ minWidth: 650 }}>
                             <TableHead sx={{ bgcolor: '#f9fafb' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, width: '25%' }}>Customer Info</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, width: '12%' }}>Code</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, width: '15%' }}>Current Balance</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, width: '25%' }}>Contact Details</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, width: '23%' }}>Address</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, width: '15%' }} align="right">Actions</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '30%' }}>Customer Name</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '20%' }}>Current Balance</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '20%' }}>Phone Number</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '20%' }}>Address</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '10%' }} align="right">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {filteredCustomers.length > 0 ? (
-                                    filteredCustomers.map((customer) => (
+                                {filteredCustomers.filter(c => {
+                                    const cat = categories.find(cat => cat.id === c.accountCategoryId);
+                                    return !cat || (
+                                        !cat.name.toLowerCase().includes("cutter") &&
+                                        !cat.name.toLowerCase().includes("supplier")
+                                    );
+                                }).length > 0 ? (
+                                    filteredCustomers.filter(c => {
+                                        const cat = categories.find(cat => cat.id === c.accountCategoryId);
+                                        return !cat || (
+                                            !cat.name.toLowerCase().includes("cutter") &&
+                                            !cat.name.toLowerCase().includes("supplier")
+                                        );
+                                    }).map((customer) => (
                                         <TableRow
                                             key={customer.id}
                                             sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
@@ -692,6 +660,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                             {customer.name}
                                                         </Typography>
+                                                        {customer.fatherName && (
+                                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                                                S/O: {customer.fatherName}
+                                                            </Typography>
+                                                        )}
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                                                             <Chip
                                                                 label={customer.accountCategory?.name || 'N/A'}
@@ -707,11 +680,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                         </Box>
                                                     </Box>
                                                 </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151' }}>
-                                                    {customer.code || 'N/A'}
-                                                </Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Tooltip title="View Ledger">
@@ -731,11 +699,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Phone size={14} className="text-zinc-400" />
-                                                        <Typography variant="body2">{customer.phone || 'No phone'}</Typography>
-                                                    </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Phone size={14} className="text-zinc-400" />
+                                                    <Typography variant="body2">{customer.phone || 'No phone'}</Typography>
                                                 </Box>
                                             </TableCell>
                                             <TableCell>
@@ -745,10 +711,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
                                                         display: '-webkit-box',
-                                                        WebkitLineClamp: 2,
+                                                        WebkitLineClamp: 1,
                                                         WebkitBoxOrient: 'vertical'
                                                     }}>
-                                                        {customer.address || 'No address provided'}
+                                                        {customer.address || 'No address'}
                                                     </Typography>
                                                 </Box>
                                             </TableCell>
