@@ -24,7 +24,11 @@ import {
     Alert,
     Snackbar,
     MenuItem,
-    Chip
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from "@mui/material";
 import {
     Edit,
@@ -35,6 +39,7 @@ import {
     MapPin,
     Ruler,
     Save,
+    Plus,
     X as XIcon,
     User,
     Users,
@@ -45,8 +50,14 @@ import { Autocomplete } from "@mui/material";
 
 export default function CustomerManagementClient({ initialCustomers, accountCategories }) {
     const [customers, setCustomers] = useState(initialCustomers);
+    const [categories, setCategories] = useState(accountCategories);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState(null);
+
+    // Quick Add Category State
+    const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
+    const [newCatName, setNewCatName] = useState("");
+    const [newCatLoading, setNewCatLoading] = useState(false);
 
     // UI States
     const [showForm, setShowForm] = useState(false);
@@ -61,7 +72,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         email: "",
         address: "",
         code: "",
-        accountCategoryId: accountCategories.length > 0 ? accountCategories[0].id : null,
+        accountCategoryId: categories.length > 0 ? categories[0].id : null,
         notes: "",
         balance: 0
     });
@@ -73,7 +84,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             phone: "",
             address: "",
             code: "",
-            accountCategoryId: accountCategories.length > 0 ? accountCategories[0].id : null,
+            accountCategoryId: categories.length > 0 ? categories[0].id : null,
             notes: "",
             balance: 0
         });
@@ -145,6 +156,34 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
+    const handleQuickAddCategory = async () => {
+        if (!newCatName.trim()) return;
+        setNewCatLoading(true);
+        try {
+            const response = await fetch("/api/account-categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newCatName }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Failed to add category");
+            }
+
+            const savedCat = await response.json();
+            setCategories(prev => [...prev, savedCat].sort((a, b) => a.name.localeCompare(b.name)));
+            setFormData(prev => ({ ...prev, accountCategoryId: savedCat.id }));
+            setSuccessMessage("Category added successfully!");
+            setQuickAddCatOpen(false);
+            setNewCatName("");
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setNewCatLoading(false);
+        }
+    };
+
     const handleEdit = (customer) => {
         setFormData({
             id: customer.id,
@@ -153,7 +192,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             phone: customer.phone || "",
             address: customer.address || "",
             code: customer.code || "",
-            accountCategoryId: customer.accountCategoryId || (accountCategories.length > 0 ? accountCategories[0].id : null),
+            accountCategoryId: customer.accountCategoryId || (categories.length > 0 ? categories[0].id : null),
             notes: customer.notes || "",
             balance: customer.balance || 0
         });
@@ -199,7 +238,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     });
 
     // Calculate stats for summary cards
-    const categoryStats = accountCategories.map(cat => ({
+    const categoryStats = categories.map(cat => ({
         ...cat,
         count: customers.filter(c => c.accountCategoryId === cat.id).length
     }));
@@ -409,34 +448,49 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Account Category</Typography>
-                                <Autocomplete
-                                    options={accountCategories}
-                                    getOptionLabel={(option) => option.name || ""}
-                                    value={accountCategories.find(c => c.id === formData.accountCategoryId) || null}
-                                    onChange={(event, newValue) => {
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            accountCategoryId: newValue ? newValue.id : null
-                                        }));
-                                    }}
-                                    sx={{ width: 300 }}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            variant="outlined"
-                                            placeholder="Select category"
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Autocomplete
+                                        fullWidth
+                                        options={categories}
+                                        getOptionLabel={(option) => option.name || ""}
+                                        value={categories.find(c => c.id === formData.accountCategoryId) || null}
+                                        onChange={(event, newValue) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                accountCategoryId: newValue ? newValue.id : null
+                                            }));
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                variant="outlined"
+                                                placeholder="Select category"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        bgcolor: 'white',
+                                                        borderRadius: '10px',
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                    <Tooltip title="Add New Category">
+                                        <IconButton
+                                            onClick={() => setQuickAddCatOpen(true)}
                                             sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                }
+                                                bgcolor: '#8b5cf6',
+                                                color: 'white',
+                                                borderRadius: '10px',
+                                                '&:hover': { bgcolor: '#7c3aed' }
                                             }}
-                                        />
-                                    )}
-                                />
+                                        >
+                                            <Plus size={20} />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Box>
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
@@ -577,7 +631,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         }}
                     />
                     <Autocomplete
-                        options={accountCategories}
+                        options={categories}
                         getOptionLabel={(option) => option.name}
                         value={filterCategory}
                         onChange={(e, newValue) => setFilterCategory(newValue)}
@@ -743,7 +797,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                                     <Typography color="textSecondary">No customers found matching your search.</Typography>
                                 </TableCell>
                             </TableRow>
@@ -751,6 +805,45 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Quick Add Category Dialog */}
+            <Dialog
+                open={quickAddCatOpen}
+                onClose={() => setQuickAddCatOpen(false)}
+                PaperProps={{
+                    sx: { borderRadius: 3, width: '100%', maxWidth: '400px' }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    New Account Category
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151' }}>
+                        Category Name
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="e.g. Wholesaler, VIP, etc."
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        autoFocus
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2, bgcolor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
+                    <Button onClick={() => setQuickAddCatOpen(false)} sx={{ color: '#6b7280' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleQuickAddCategory}
+                        disabled={!newCatName.trim() || newCatLoading}
+                        sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
+                    >
+                        {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Create Category"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Success Notification */}
             <Snackbar

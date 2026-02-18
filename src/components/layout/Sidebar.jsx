@@ -25,7 +25,6 @@ import { signOut, useSession } from "next-auth/react";
 const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Account Management", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Account Categories", href: "/dashboard/account-categories", icon: Tag, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Measurements", href: "/dashboard/measurements", icon: Ruler, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Employees", href: "/dashboard/employees", icon: UserRound, roles: ["ADMIN", "MANAGER"] },

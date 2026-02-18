@@ -26,6 +26,12 @@ export default async function CustomersPage() {
         updatedAt: customer.updatedAt.toISOString(),
     }));
 
+    const serializedCategories = accountCategories.map(cat => ({
+        ...cat,
+        createdAt: cat.createdAt.toISOString(),
+        updatedAt: cat.updatedAt.toISOString(),
+    }));
+
     return (
         <div>
             <div style={{ paddingTop: '24px', paddingBottom: '16px', backgroundColor: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
@@ -37,7 +43,7 @@ export default async function CustomersPage() {
 
             <CustomerManagementClient
                 initialCustomers={serializedCustomers}
-                accountCategories={accountCategories}
+                accountCategories={serializedCategories}
             />
         </div>
     );

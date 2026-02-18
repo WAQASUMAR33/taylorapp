@@ -7,6 +7,7 @@ export async function POST(req) {
         const { invoiceNumber, supplierId, supplier, purchaseDate, items, payments, totalAmount } = body;
 
         // Start a transaction to ensure everything happens atomically
+        // Start a transaction to ensure everything happens atomically
         const result = await prisma.$transaction(async (tx) => {
             // 1. Create the purchase record
             const purchase = await tx.purchase.create({
@@ -41,37 +42,42 @@ export async function POST(req) {
                 }
             });
 
-            // 2. Update stock and movements
-            for (const item of items) {
+            // 2. Update stock and movements in parallel
+            await Promise.all(items.map(async (item) => {
+                const pId = parseInt(item.productId);
+                const qty = parseInt(item.quantity) || 1;
+                const uCost = parseFloat(item.unitCost) || 0;
+
                 await tx.product.update({
-                    where: { id: parseInt(item.productId) },
+                    where: { id: pId },
                     data: {
-                        quantity: { increment: parseInt(item.quantity) },
-                        costPrice: parseFloat(item.unitCost)
+                        quantity: { increment: qty },
+                        costPrice: uCost
                     }
                 });
 
                 await tx.stockmovement.create({
                     data: {
-                        productId: parseInt(item.productId),
+                        productId: pId,
                         type: 'IN',
-                        quantity: parseInt(item.quantity),
-                        unitCost: parseFloat(item.unitCost),
+                        quantity: qty,
+                        unitCost: uCost,
                         notes: `Purchase Invoice: ${invoiceNumber}`
                     }
                 });
-            }
+            }));
 
             // 3. LEDGER GENERATION
             if (supplierId) {
                 const sId = parseInt(supplierId);
+                const tAmt = parseFloat(totalAmount) || 0;
 
                 // A. Record the full purchase liability (Credit Supplier)
                 await tx.ledgerentry.create({
                     data: {
                         customerId: sId,
                         type: 'CREDIT',
-                        amount: parseFloat(totalAmount),
+                        amount: tAmt,
                         description: `Purchase Invoice: ${invoiceNumber} (Total Amount)`,
                         purchaseId: purchase.id,
                         entryDate: new Date(purchaseDate)
@@ -82,69 +88,69 @@ export async function POST(req) {
                 await tx.customer.update({
                     where: { id: sId },
                     data: {
-                        balance: { decrement: parseFloat(totalAmount) }
+                        balance: { decrement: tAmt }
                     }
                 });
 
-                // B. Record each payment (Debit Supplier - reducing liability)
-                for (const payment of payments) {
-                    const payAmt = parseFloat(payment.amount);
-                    if (payAmt > 0) {
-                        await tx.ledgerentry.create({
+                // B. Record each payment in parallel
+                const validPayments = payments.filter(p => parseFloat(p.amount) > 0);
+                await Promise.all(validPayments.map(async (payment) => {
+                    const payAmt = parseFloat(payment.amount) || 0;
+
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: sId,
+                            type: 'DEBIT',
+                            amount: payAmt,
+                            description: `Payment for Inv #${invoiceNumber} via ${payment.method}`,
+                            purchaseId: purchase.id,
+                            entryDate: new Date(purchaseDate)
+                        }
+                    });
+
+                    // Update supplier balance - Debit increases balance
+                    await tx.customer.update({
+                        where: { id: sId },
+                        data: {
+                            balance: { increment: payAmt }
+                        }
+                    });
+
+                    // C. Update Bank Balance if method is BANK
+                    if (payment.method === "BANK" && payment.bankId) {
+                        await tx.bank.update({
+                            where: { id: parseInt(payment.bankId) },
                             data: {
-                                customerId: sId,
-                                type: 'DEBIT',
-                                amount: payAmt,
-                                description: `Payment for Inv #${invoiceNumber} via ${payment.method}`,
-                                purchaseId: purchase.id,
-                                entryDate: new Date(purchaseDate)
+                                balance: { decrement: payAmt }
                             }
                         });
+                    }
 
-                        // Update supplier balance - Debit increases balance
-                        await tx.customer.update({
-                            where: { id: sId },
-                            data: {
-                                balance: { increment: payAmt }
-                            }
-                        });
-
-                        // C. Update Bank Balance if method is BANK
-                        if (payment.method === "BANK" && payment.bankId) {
-                            await tx.bank.update({
-                                where: { id: parseInt(payment.bankId) },
+                    // SYNC TO CASH ACCOUNT if method is CASH
+                    if (payment.method === "CASH") {
+                        const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                        if (cashAccount) {
+                            await tx.ledgerentry.create({
                                 data: {
-                                    balance: { decrement: payAmt }
+                                    customerId: cashAccount.id,
+                                    type: 'CREDIT', // Cash out
+                                    amount: payAmt,
+                                    description: `Payment for Purchase Inv #${invoiceNumber} (Supplier: ${supplier})`,
                                 }
                             });
-                        }
-
-                        // SYNC TO CASH ACCOUNT if method is CASH
-                        if (payment.method === "CASH") {
-                            const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
-                            if (cashAccount) {
-                                await tx.ledgerentry.create({
-                                    data: {
-                                        customerId: cashAccount.id,
-                                        type: 'CREDIT', // Cash out
-                                        amount: payAmt,
-                                        description: `Payment for Purchase Inv #${invoiceNumber} (Supplier: ${supplier})`,
-                                    }
-                                });
-                                await tx.customer.update({
-                                    where: { id: cashAccount.id },
-                                    data: { balance: { decrement: payAmt } }
-                                });
-                            }
+                            await tx.customer.update({
+                                where: { id: cashAccount.id },
+                                data: { balance: { decrement: payAmt } }
+                            });
                         }
                     }
-                }
+                }));
             }
 
             return purchase;
         }, {
-            maxWait: 5000,
-            timeout: 20000
+            maxWait: 10000,
+            timeout: 60000
         });
 
         return NextResponse.json(result, { status: 201 });
