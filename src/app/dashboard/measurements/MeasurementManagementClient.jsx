@@ -97,7 +97,7 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
     const [measurements, setMeasurements] = useState(initialMeasurements);
     const [searchQuery, setSearchQuery] = useState("");
     const [modalTab, setModalTab] = useState(0); // 0 for Shalwar Qameez, 1 for Wskot
-    const [language, setLanguage] = useState("en");
+    const [language, setLanguage] = useState("ur");
 
     // UI States
     const [open, setOpen] = useState(false);
@@ -630,10 +630,19 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
 
                         <Grid container spacing={3} sx={{ mb: 2 }}>
                             <Grid item xs={12} md={6}>
-                                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>{t('selectCustomer')}</Typography>
+                                <Typography variant="body2" sx={{
+                                    mb: 1,
+                                    fontWeight: 600,
+                                    color: '#374151',
+                                    fontSize: '0.875rem',
+                                    textAlign: language === 'ur' ? 'right' : 'left'
+                                }}>
+                                    {t('selectCustomer')}
+                                </Typography>
                                 <Autocomplete
                                     fullWidth
                                     size="small"
+                                    sx={{ minWidth: 400 }}
                                     options={customers}
                                     getOptionLabel={(option) => `${option.name} (${option.phone})`}
                                     value={customers.find(c => c.id === formData.customerId) || null}
@@ -705,7 +714,15 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                             </Grid>
                             {formData.customerId && (
                                 <Grid item xs={12} md={3}>
-                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>{t('unit')}</Typography>
+                                    <Typography variant="body2" sx={{
+                                        mb: 1,
+                                        fontWeight: 600,
+                                        color: '#374151',
+                                        fontSize: '0.875rem',
+                                        textAlign: language === 'ur' ? 'right' : 'left'
+                                    }}>
+                                        {t('unit')}
+                                    </Typography>
                                     <TextField
                                         fullWidth
                                         select
@@ -789,7 +806,15 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                                 { name: 'hip_around', label: 'hip_around' },
                                             ].map((field) => (
                                                 <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                    <Typography variant="caption" sx={{ mb: 0.5, fontWeight: 600, color: '#4b5563', display: 'block' }}>{t(field.label)}</Typography>
+                                                    <Typography variant="caption" sx={{
+                                                        mb: 0.5,
+                                                        fontWeight: 600,
+                                                        color: '#4b5563',
+                                                        display: 'block',
+                                                        textAlign: language === 'ur' ? 'right' : 'left'
+                                                    }}>
+                                                        {t(field.label)}
+                                                    </Typography>
                                                     <TextField
                                                         fullWidth
                                                         size="small"
@@ -835,7 +860,15 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                                 { name: 'shalwar_gheera', label: 'shalwar_gheera' },
                                             ].map((field) => (
                                                 <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                    <Typography variant="caption" sx={{ mb: 0.5, fontWeight: 600, color: '#4b5563', display: 'block' }}>{t(field.label)}</Typography>
+                                                    <Typography variant="caption" sx={{
+                                                        mb: 0.5,
+                                                        fontWeight: 600,
+                                                        color: '#4b5563',
+                                                        display: 'block',
+                                                        textAlign: language === 'ur' ? 'right' : 'left'
+                                                    }}>
+                                                        {t(field.label)}
+                                                    </Typography>
                                                     <TextField
                                                         fullWidth
                                                         size="small"
@@ -878,7 +911,15 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                                 { name: 'wskot_hip', label: 'wskot_hip' },
                                             ].map((field) => (
                                                 <Grid item xs={6} sm={4} md={3} key={field.name}>
-                                                    <Typography variant="caption" sx={{ mb: 0.5, fontWeight: 600, color: '#4b5563', display: 'block' }}>{t(field.label)}</Typography>
+                                                    <Typography variant="caption" sx={{
+                                                        mb: 0.5,
+                                                        fontWeight: 600,
+                                                        color: '#4b5563',
+                                                        display: 'block',
+                                                        textAlign: language === 'ur' ? 'right' : 'left'
+                                                    }}>
+                                                        {t(field.label)}
+                                                    </Typography>
                                                     <TextField
                                                         fullWidth
                                                         size="small"
@@ -907,8 +948,23 @@ export default function MeasurementManagementClient({ initialMeasurements, custo
                                 )}
 
                                 <Box sx={{ mt: 3 }}>
-                                    <Box sx={{ mb: 1.5, display: 'inline-flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }}>
+                                    <Box sx={{
+                                        mb: 1.5,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        borderLeft: language === 'ur' ? 'none' : '4px solid #8b5cf6',
+                                        borderRight: language === 'ur' ? '4px solid #8b5cf6' : 'none',
+                                        pl: language === 'ur' ? 0 : 1.5,
+                                        pr: language === 'ur' ? 1.5 : 0
+                                    }}>
+                                        <Typography variant="body2" sx={{
+                                            fontWeight: 700,
+                                            color: '#1f2937',
+                                            fontSize: '0.95rem',
+                                            letterSpacing: '0.01em',
+                                            textAlign: language === 'ur' ? 'right' : 'left'
+                                        }}>
                                             {t('additionalNotes')}
                                         </Typography>
                                     </Box>
