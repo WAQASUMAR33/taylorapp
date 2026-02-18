@@ -243,11 +243,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         count: customers.filter(c => c.accountCategoryId === cat.id).length
     }));
 
-    if (showForm) {
-        return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    return (
+        <Box sx={{ width: '100%', minHeight: '100vh', p: 3, bgcolor: showForm ? '#f9fafb' : 'transparent' }}>
+            {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError("")}>{error}</Alert>}
 
+            {showForm ? (
                 <Card sx={{ mb: 2 }}>
                     <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -451,7 +451,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Autocomplete
                                         fullWidth
-                                        options={categories}
+                                        options={categories.filter(cat =>
+                                            !cat.name.toLowerCase().includes("supplier") &&
+                                            !cat.name.toLowerCase().includes("cutter")
+                                        )}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={categories.find(c => c.id === formData.accountCategoryId) || null}
                                         onChange={(event, newValue) => {
@@ -466,6 +469,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                 variant="outlined"
                                                 placeholder="Select category"
                                                 sx={{
+                                                    minWidth: '300px',
                                                     '& .MuiOutlinedInput-root': {
                                                         bgcolor: 'white',
                                                         borderRadius: '10px',
@@ -547,264 +551,253 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
                     </Box>
                 </Card>
-            </Box>
-        );
-    }
-
-    return (
-        <Box sx={{ width: '100%', p: 3 }}>
-            {error && (
-                <Alert
-                    severity="error"
-                    sx={{ mb: 2, borderRadius: 2 }}
-                    onClose={() => setError("")}
-                >
-                    {error}
-                </Alert>
-            )}
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} md={3}>
-                    <Card sx={{
-                        p: 2.5,
-                        borderRadius: 3,
-                        bgcolor: 'white',
-                        border: '1px solid #e5e7eb',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                    }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>Total Customers</Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{customers.length}</Typography>
-                            <Avatar sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6' }}>
-                                <Users size={20} />
-                            </Avatar>
-                        </Box>
-                    </Card>
-                </Grid>
-                {categoryStats.slice(0, 3).map((stat, idx) => (
-                    <Grid item xs={12} md={3} key={stat.id}>
-                        <Card sx={{
-                            p: 2.5,
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            border: '1px solid #e5e7eb',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                        }}>
-                            <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>{stat.name}</Typography>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{stat.count}</Typography>
-                                <Avatar sx={{
-                                    bgcolor: idx === 0 ? '#ecfdf5' : (idx === 1 ? '#eff6ff' : '#fff7ed'),
-                                    color: idx === 0 ? '#10b981' : (idx === 1 ? '#3b82f6' : '#f59e0b')
+            ) : (
+                <>
+                    {/* Summary Cards */}
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={3}>
+                            <Card sx={{
+                                p: 2.5,
+                                borderRadius: 3,
+                                bgcolor: 'white',
+                                border: '1px solid #e5e7eb',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                            }}>
+                                <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>Total Customers</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{customers.length}</Typography>
+                                    <Avatar sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6' }}>
+                                        <Users size={20} />
+                                    </Avatar>
+                                </Box>
+                            </Card>
+                        </Grid>
+                        {categoryStats.slice(0, 3).map((stat, idx) => (
+                            <Grid item xs={12} md={3} key={stat.id}>
+                                <Card sx={{
+                                    p: 2.5,
+                                    borderRadius: 3,
+                                    bgcolor: 'white',
+                                    border: '1px solid #e5e7eb',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                                 }}>
-                                    <User size={20} />
-                                </Avatar>
-                            </Box>
-                        </Card>
+                                    <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1 }}>{stat.name}</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{stat.count}</Typography>
+                                        <Avatar sx={{
+                                            bgcolor: idx === 0 ? '#ecfdf5' : (idx === 1 ? '#eff6ff' : '#fff7ed'),
+                                            color: idx === 0 ? '#10b981' : (idx === 1 ? '#3b82f6' : '#f59e0b')
+                                        }}>
+                                            <User size={20} />
+                                        </Avatar>
+                                    </Box>
+                                </Card>
+                            </Grid>
+                        ))}
                     </Grid>
-                ))}
-            </Grid>
 
-            {/* Action Bar */}
-            <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-                gap: 2,
-                flexWrap: 'wrap'
-            }}>
-                <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
-                    <TextField
-                        placeholder="Search customers by name, phone or code..."
-                        variant="outlined"
-                        size="small"
-                        sx={{ width: 400, bgcolor: 'white' }}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Search size={18} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <Autocomplete
-                        options={categories}
-                        getOptionLabel={(option) => option.name}
-                        value={filterCategory}
-                        onChange={(e, newValue) => setFilterCategory(newValue)}
-                        renderInput={(params) => (
+                    {/* Action Bar */}
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 3,
+                        gap: 2,
+                        flexWrap: 'wrap'
+                    }}>
+                        <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
                             <TextField
-                                {...params}
-                                label="Filter by Category"
+                                placeholder="Search customers by name, phone or code..."
+                                variant="outlined"
                                 size="small"
-                                sx={{ width: 250, bgcolor: 'white' }}
+                                sx={{ width: 400, bgcolor: 'white' }}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Search size={18} />
+                                        </InputAdornment>
+                                    ),
+                                }}
                             />
-                        )}
-                        sx={{ borderRadius: 2 }}
-                    />
-                </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<UserPlus size={18} />}
-                    onClick={handleOpen}
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6', // Matching header color
-                        '&:hover': { bgcolor: '#7c3aed' }
-                    }}
-                >
-                    Add New Customer
-                </Button>
-            </Box>
+                            <Autocomplete
+                                options={categories}
+                                getOptionLabel={(option) => option.name}
+                                value={filterCategory}
+                                onChange={(e, newValue) => setFilterCategory(newValue)}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Filter by Category"
+                                        size="small"
+                                        sx={{ width: 250, bgcolor: 'white' }}
+                                    />
+                                )}
+                                sx={{ borderRadius: 2 }}
+                            />
+                        </Box>
+                        <Button
+                            variant="contained"
+                            startIcon={<UserPlus size={18} />}
+                            onClick={handleOpen}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                px: 3,
+                                py: 1,
+                                bgcolor: '#8b5cf6', // Matching header color
+                                '&:hover': { bgcolor: '#7c3aed' }
+                            }}
+                        >
+                            Add New Customer
+                        </Button>
+                    </Box>
 
-            {/* Customers Table */}
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600, width: '25%' }}>Customer Info</TableCell>
-                            <TableCell sx={{ fontWeight: 600, width: '12%' }}>Code</TableCell>
-                            <TableCell sx={{ fontWeight: 600, width: '15%' }}>Current Balance</TableCell>
-                            <TableCell sx={{ fontWeight: 600, width: '25%' }}>Contact Details</TableCell>
-                            <TableCell sx={{ fontWeight: 600, width: '23%' }}>Address</TableCell>
-                            <TableCell sx={{ fontWeight: 600, width: '15%' }} align="right">Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredCustomers.length > 0 ? (
-                            filteredCustomers.map((customer) => (
-                                <TableRow
-                                    key={customer.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Avatar sx={{
-                                                bgcolor: '#8b5cf6',
-                                                width: 40,
-                                                height: 40,
-                                                fontWeight: 600
-                                            }}>
-                                                {customer.name.charAt(0)}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {customer.name}
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                                    <Chip
-                                                        label={customer.accountCategory?.name || 'N/A'}
-                                                        size="small"
-                                                        sx={{
-                                                            height: 20,
-                                                            fontSize: '0.65rem',
-                                                            fontWeight: 600,
-                                                            bgcolor: '#f3f4f6',
-                                                            color: '#374151'
-                                                        }}
-                                                    />
-                                                </Box>
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151' }}>
-                                            {customer.code || 'N/A'}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Tooltip title="View Ledger">
-                                            <Typography
-                                                variant="body2"
-                                                component={Link}
-                                                href={`/dashboard/ledger?customerId=${customer.id}`}
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    color: customer.balance > 0 ? '#ef4444' : (customer.balance < 0 ? '#22c55e' : '#374151'),
-                                                    textDecoration: 'none',
-                                                    '&:hover': { textDecoration: 'underline' }
-                                                }}
-                                            >
-                                                Rs. {parseFloat(customer.balance || 0).toFixed(2)}
-                                            </Typography>
-                                        </Tooltip>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Phone size={14} className="text-zinc-400" />
-                                                <Typography variant="body2">{customer.phone || 'No phone'}</Typography>
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <MapPin size={14} className="text-zinc-400 shrink-0" />
-                                            <Typography variant="body2" sx={{
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical'
-                                            }}>
-                                                {customer.address || 'No address provided'}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <Tooltip title="Measurements">
-                                                <IconButton
-                                                    size="small"
-                                                    color="info"
-                                                    component={Link}
-                                                    href={`/dashboard/measurements?customerId=${customer.id}`}
-                                                >
-                                                    <Ruler size={18} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Edit Profile">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() => handleEdit(customer)}
-                                                >
-                                                    <Edit size={18} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete Customer">
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDelete(customer.id)}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </TableCell>
+                    {/* Customers Table */}
+                    <TableContainer component={Paper} elevation={0} sx={{
+                        borderRadius: 3,
+                        border: '1px solid #e5e7eb',
+                        overflow: 'hidden'
+                    }}>
+                        <Table sx={{ minWidth: 650 }}>
+                            <TableHead sx={{ bgcolor: '#f9fafb' }}>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 600, width: '25%' }}>Customer Info</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '12%' }}>Code</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '15%' }}>Current Balance</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '25%' }}>Contact Details</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '23%' }}>Address</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, width: '15%' }} align="right">Actions</TableCell>
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No customers found matching your search.</Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {filteredCustomers.length > 0 ? (
+                                    filteredCustomers.map((customer) => (
+                                        <TableRow
+                                            key={customer.id}
+                                            sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                        >
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Avatar sx={{
+                                                        bgcolor: '#8b5cf6',
+                                                        width: 40,
+                                                        height: 40,
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {customer.name.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                            {customer.name}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                                            <Chip
+                                                                label={customer.accountCategory?.name || 'N/A'}
+                                                                size="small"
+                                                                sx={{
+                                                                    height: 20,
+                                                                    fontSize: '0.65rem',
+                                                                    fontWeight: 600,
+                                                                    bgcolor: '#f3f4f6',
+                                                                    color: '#374151'
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#374151' }}>
+                                                    {customer.code || 'N/A'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Tooltip title="View Ledger">
+                                                    <Typography
+                                                        variant="body2"
+                                                        component={Link}
+                                                        href={`/dashboard/ledger?customerId=${customer.id}`}
+                                                        sx={{
+                                                            fontWeight: 700,
+                                                            color: customer.balance > 0 ? '#ef4444' : (customer.balance < 0 ? '#22c55e' : '#374151'),
+                                                            textDecoration: 'none',
+                                                            '&:hover': { textDecoration: 'underline' }
+                                                        }}
+                                                    >
+                                                        Rs. {parseFloat(customer.balance || 0).toFixed(2)}
+                                                    </Typography>
+                                                </Tooltip>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Phone size={14} className="text-zinc-400" />
+                                                        <Typography variant="body2">{customer.phone || 'No phone'}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <MapPin size={14} className="text-zinc-400 shrink-0" />
+                                                    <Typography variant="body2" sx={{
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical'
+                                                    }}>
+                                                        {customer.address || 'No address provided'}
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                                    <Tooltip title="Measurements">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="info"
+                                                            component={Link}
+                                                            href={`/dashboard/measurements?customerId=${customer.id}`}
+                                                        >
+                                                            <Ruler size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Edit Profile">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={() => handleEdit(customer)}
+                                                        >
+                                                            <Edit size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Delete Customer">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={() => handleDelete(customer.id)}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                            <Typography color="textSecondary">No customers found matching your search.</Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            )}
 
             {/* Quick Add Category Dialog */}
             <Dialog
