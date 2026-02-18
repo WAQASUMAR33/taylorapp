@@ -24,7 +24,8 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions
+    DialogActions,
+    Autocomplete
 } from "@mui/material";
 import {
     Edit,
@@ -395,20 +396,28 @@ export default function MaterialManagementClient({ initialMaterials }) {
                     <Grid container spacing={3} sx={{ mt: 0.5 }}>
                         <Grid item xs={12}>
                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>Select Material</Typography>
-                            <TextField
+                            <Autocomplete
                                 fullWidth
-                                select
                                 size="small"
-                                value={stockFormData.materialId}
-                                onChange={(e) => setStockFormData({ ...stockFormData, materialId: e.target.value })}
-                                SelectProps={{ native: true }}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
-                            >
-                                <option value="">Select a material...</option>
-                                {materials.map(m => (
-                                    <option key={m.id} value={m.id}>{m.title}</option>
-                                ))}
-                            </TextField>
+                                options={materials}
+                                getOptionLabel={(option) => option.title}
+                                value={materials.find(m => m.id === parseInt(stockFormData.materialId)) || null}
+                                onChange={(e, newValue) => {
+                                    setStockFormData({ ...stockFormData, materialId: newValue ? newValue.id.toString() : "" });
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        placeholder="Search and select material..."
+                                        required
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '10px'
+                                            }
+                                        }}
+                                    />
+                                )}
+                            />
                         </Grid>
 
                         {stockFormData.materialId && (
