@@ -21,9 +21,9 @@ export default async function EmployeesPage() {
     return (
         <div>
             <div style={{ paddingTop: '24px', paddingBottom: '16px', backgroundColor: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{ paddingLeft: '24px', paddingRight: '24px' }}>
-                    <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Employee Management</h1>
-                    <p className="text-zinc-500 mt-1">Manage your tailoring staff, roles, and payroll information.</p>
+                <div style={{ paddingLeft: '24px', paddingRight: '24px' }} dir="rtl">
+                    <h1 className="text-3xl font-bold text-zinc-900 tracking-tight font-urdu">ملازمین کی مینجمنٹ</h1>
+                    <p className="text-zinc-500 mt-1 font-urdu">اپنے سلائی اسٹاف، کردار اور تنخواہ کی معلومات کا انتظام کریں۔</p>
                 </div>
             </div>
 

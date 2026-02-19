@@ -218,15 +218,16 @@ export default function MaterialManagementClient({ initialMaterials }) {
         <Box sx={{ width: '100%', p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="Search materials..."
+                    placeholder="میٹیرئیل تلاش کریں..."
                     variant="outlined"
                     size="small"
                     sx={{ width: 450, bgcolor: 'white' }}
+                    dir="rtl"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
+                        endAdornment: (
+                            <InputAdornment position="end">
                                 <Search size={18} />
                             </InputAdornment>
                         ),
@@ -243,10 +244,13 @@ export default function MaterialManagementClient({ initialMaterials }) {
                             px: 3,
                             py: 1,
                             bgcolor: '#8b5cf6',
-                            '&:hover': { bgcolor: '#7c3aed' }
+                            '&:hover': { bgcolor: '#7c3aed' },
+                            gap: 1,
+                            '& .MuiButton-startIcon': { margin: 0 }
                         }}
+                        className="font-urdu"
                     >
-                        Add New Material
+                        نیا مٹیریل شامل کریں
                     </Button>
                     <Button
                         variant="contained"
@@ -258,10 +262,13 @@ export default function MaterialManagementClient({ initialMaterials }) {
                             px: 3,
                             py: 1,
                             bgcolor: '#f59e0b',
-                            '&:hover': { bgcolor: '#d97706' }
+                            '&:hover': { bgcolor: '#d97706' },
+                            gap: 1,
+                            '& .MuiButton-startIcon': { margin: 0 }
                         }}
+                        className="font-urdu"
                     >
-                        Add Stock
+                        سٹاک شامل کریں
                     </Button>
                 </Box>
             </Box>
@@ -274,36 +281,36 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Material Details</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Quantity</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Updated Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مٹیریل کی تفصیل</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مقدار</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">قیمت</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">اپ ڈیٹ کی تاریخ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عمل</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredMaterials.map((material) => (
                             <TableRow key={material.id} sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <TableCell align="right" dir="rtl">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row' }}>
                                         <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
                                             <Package size={20} />
                                         </Box>
-                                        <Box>
+                                        <Box sx={{ textAlign: 'right' }}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{material.title}</Typography>
                                             <Typography variant="caption" color="textSecondary">ID: #{material.id}</Typography>
                                         </Box>
                                     </Box>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell align="right">
                                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                                         {material.quantity}
                                     </Typography>
                                 </TableCell>
-                                <TableCell sx={{ fontWeight: 600 }}>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">
                                     Rs. {parseFloat(material.price).toFixed(2)}
                                 </TableCell>
-                                <TableCell sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+                                <TableCell sx={{ color: 'text.secondary', fontSize: '0.875rem' }} align="right">
                                     {new Date(material.updatedAt).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell align="right">
@@ -326,56 +333,56 @@ export default function MaterialManagementClient({ initialMaterials }) {
             </TableContainer>
 
             {/* View Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Package size={20} color="#8b5cf6" />
-                    Material Details
+            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth dir="rtl">
+                <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#8b5cf6', color: 'white', mb: 2 }} className="font-urdu">
+                    <Package size={20} />
+                    مٹیریل کی تفصیل
                 </DialogTitle>
                 <DialogContent>
                     {selectedMaterial && (
                         <Box sx={{ mt: 1 }}>
                             <Grid container spacing={2}>
                                 <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary">Title</Typography>
+                                    <Typography variant="caption" color="textSecondary" className="font-urdu">نام</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedMaterial.title}</Typography>
                                 </Grid>
                                 <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary">Current Stock</Typography>
+                                    <Typography variant="caption" color="textSecondary" className="font-urdu">موجودہ سٹاک</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedMaterial.quantity}</Typography>
                                 </Grid>
                                 <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary">Unit Price</Typography>
+                                    <Typography variant="caption" color="textSecondary" className="font-urdu">یونٹ کی قیمت</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 700 }}>Rs. {parseFloat(selectedMaterial.price).toFixed(2)}</Typography>
                                 </Grid>
                                 <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary">Total Value</Typography>
+                                    <Typography variant="caption" color="textSecondary" className="font-urdu">کل مالیت</Typography>
                                     <Typography variant="body1" sx={{ fontWeight: 700 }}>Rs. {(selectedMaterial.quantity * selectedMaterial.price).toFixed(2)}</Typography>
                                 </Grid>
                             </Grid>
 
-                            <Typography variant="subtitle2" sx={{ mt: 4, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mt: 4, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
                                 <History size={16} />
-                                Stock History
+                                سٹاک ہسٹری
                             </Typography>
                             <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: '#f8fafc' }}>
                                         <TableRow>
-                                            <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Qty</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ٹائپ</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مقدار</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {selectedMaterial.movements?.map((m) => (
                                             <TableRow key={m.id}>
-                                                <TableCell>
+                                                <TableCell align="right">
                                                     <Typography variant="body2" sx={{ color: m.type === 'IN' ? 'success.main' : 'error.main', fontWeight: 600 }}>
-                                                        {m.type}
+                                                        {m.type === 'IN' ? 'آمد' : 'اخراج'}
                                                     </Typography>
                                                 </TableCell>
-                                                <TableCell>{m.quantity}</TableCell>
-                                                <TableCell>{new Date(m.movedAt).toLocaleDateString()}</TableCell>
+                                                <TableCell align="right">{m.quantity}</TableCell>
+                                                <TableCell align="right">{new Date(m.movedAt).toLocaleDateString()}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -385,7 +392,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setViewOpen(false)}>Close</Button>
+                    <Button onClick={() => setViewOpen(false)} className="font-urdu">بند کریں</Button>
                 </DialogActions>
             </Dialog>
 

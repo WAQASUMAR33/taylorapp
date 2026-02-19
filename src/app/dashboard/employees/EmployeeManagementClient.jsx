@@ -425,18 +425,20 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3,
-                gap: 2
+                gap: 2,
+                flexDirection: 'row-reverse'
             }}>
                 <TextField
-                    placeholder="Search employees by name or role..."
+                    placeholder="ملازم کا نام یا عہدہ تلاش کریں..."
                     variant="outlined"
                     size="small"
                     sx={{ width: 450, bgcolor: 'white' }}
+                    dir="rtl"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
+                        endAdornment: (
+                            <InputAdornment position="end">
                                 <Search size={18} />
                             </InputAdornment>
                         ),
@@ -452,10 +454,13 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                         px: 3,
                         py: 1,
                         bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
+                        '&:hover': { bgcolor: '#7c3aed' },
+                        gap: 1,
+                        '& .MuiButton-startIcon': { margin: 0 }
                     }}
+                    className="font-urdu"
                 >
-                    Add Employee
+                    نیا ملازم شامل کریں
                 </Button>
             </Box>
 
@@ -468,12 +473,12 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Employee Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Salary</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ملازم کا نام</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عہدہ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تنخواہ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">سٹیٹس</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">رابطہ</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عمل</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -483,8 +488,8 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                     key={emp.id}
                                     sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
                                 >
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <TableCell align="right" dir="rtl">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row' }}>
                                             <Avatar sx={{
                                                 bgcolor: '#f5f3ff',
                                                 color: '#8b5cf6',
@@ -492,56 +497,56 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                             }}>
                                                 {emp.name.charAt(0)}
                                             </Avatar>
-                                            <Box>
+                                            <Box sx={{ textAlign: 'right' }}>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                     {emp.name}
                                                 </Typography>
-                                                <Typography variant="caption" color="textSecondary">
-                                                    Father: {emp.fatherName || 'N/A'}
+                                                <Typography variant="caption" color="textSecondary" className="font-urdu">
+                                                    والد: {emp.fatherName || 'دستیاب نہیں'}
                                                 </Typography>
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                            <Typography variant="body2" className="font-urdu">{emp.role === 'Tailor' ? 'درزی' : 'کٹر'}</Typography>
                                             <Briefcase size={14} className="text-zinc-400" />
-                                            <Typography variant="body2">{emp.role}</Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell align="right">
                                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
                                             Rs. {parseFloat(emp.salary).toLocaleString()}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                            <Typography variant="body2" className="font-urdu">
+                                                {emp.isActive ? 'ایکٹیو' : 'ان ایکٹیو'}
+                                            </Typography>
                                             <Box sx={{
                                                 width: 8,
                                                 height: 8,
                                                 borderRadius: '50%',
                                                 bgcolor: emp.isActive ? '#10b981' : '#ef4444'
                                             }} />
-                                            <Typography variant="body2">
-                                                {emp.isActive ? 'Active' : 'Inactive'}
-                                            </Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell align="right">
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                                                <Typography variant="caption">{emp.phone || 'نمبر نہیں ہے'}</Typography>
                                                 <Phone size={14} className="text-zinc-400" />
-                                                <Typography variant="caption">{emp.phone || 'No phone'}</Typography>
                                             </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <MapPin size={14} className="text-zinc-400" />
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
                                                 <Typography variant="caption" sx={{
                                                     maxWidth: 150,
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
                                                     whiteSpace: 'nowrap'
                                                 }}>
-                                                    {emp.address || 'No address'}
+                                                    {emp.address || 'پتہ نہیں ہے'}
                                                 </Typography>
+                                                <MapPin size={14} className="text-zinc-400" />
                                             </Box>
                                         </Box>
                                     </TableCell>
@@ -560,7 +565,7 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No employees found.</Typography>
+                                    <Typography color="textSecondary" className="font-urdu">کوئی ملازم نہیں ملا۔</Typography>
                                 </TableCell>
                             </TableRow>
                         )}
