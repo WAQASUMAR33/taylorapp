@@ -409,6 +409,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 fullWidth
                                 size="small"
                                 options={materials}
+                                sx={{ minWidth: 300 }}
                                 getOptionLabel={(option) => option.title || ""}
                                 value={materials.find(m => m.id === parseInt(stockFormData.materialId)) || null}
                                 onChange={(e, newValue) => {
