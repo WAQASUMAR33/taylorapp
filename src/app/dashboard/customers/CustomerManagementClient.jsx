@@ -24,12 +24,12 @@ import {
     Alert,
     Snackbar,
     MenuItem,
-    Chip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions
+    Chip
 } from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import {
     Edit,
     Trash2,

@@ -15,10 +15,6 @@ import {
     Typography,
     TextField,
     InputAdornment,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Card,
     Grid,
     CircularProgress,
@@ -28,6 +24,10 @@ import {
     Chip,
     Autocomplete
 } from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import {
     Edit,
     Trash2,

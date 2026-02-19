@@ -23,10 +23,6 @@ import {
     Card,
     Divider,
     InputAdornment,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Tooltip,
     Autocomplete,
     Radio,
@@ -36,6 +32,10 @@ import {
     Checkbox,
     GlobalStyles
 } from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import {
     Trash2,
     Plus,
