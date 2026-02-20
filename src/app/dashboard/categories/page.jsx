@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import CategoryManagementClient from "./CategoryManagementClient";
-import Layout from "../layout"; // Assuming it inherits from dashboard layout if needed, or just use typography
+import { Container, Box, Typography } from "@mui/material";
 
 export const metadata = {
     title: "Category Management | TailorFlow",
@@ -27,17 +27,34 @@ async function getCategories() {
 export default async function CategoryPage() {
     const categories = await getCategories();
 
-    // Serialize Decimal or other complex types if any (DateTime is fine for JSON)
+    // Serialize
     const serializedCategories = JSON.parse(JSON.stringify(categories));
 
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-zinc-900">Category Management</h1>
-                <p className="text-zinc-500 mt-1">Organize your products and materials into structured categories.</p>
-            </div>
+        <Container maxWidth="xl" disableGutters>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box>
+                    <Typography variant="h4" fontWeight="bold" color="text.primary">
+                        Category Management
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Organize your products and materials into structured categories.
+                    </Typography>
+                </Box>
+            </Box>
 
-            <CategoryManagementClient initialCategories={serializedCategories} />
-        </div>
+            <Box sx={{ px: 3 }}>
+                <CategoryManagementClient initialCategories={serializedCategories} />
+            </Box>
+        </Container>
     );
 }

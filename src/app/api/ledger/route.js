@@ -59,8 +59,10 @@ export async function POST(req) {
             );
         }
 
-        const result = await prisma.$transaction(async (tx) => {
-            // 1. Create the ledger entry
+        // Run only the two atomic writes inside the transaction.
+        // Avoid any `include` inside tx — nested queries cause P2028 timeout.
+        const { id: newEntryId } = await prisma.$transaction(async (tx) => {
+            // 1. Create the ledger entry (no include)
             const ledgerEntry = await tx.ledgerentry.create({
                 data: {
                     customerId: parseInt(customerId),
@@ -69,29 +71,29 @@ export async function POST(req) {
                     description,
                     purchaseId: purchaseId ? parseInt(purchaseId) : null,
                 },
-                include: {
-                    customer: true,
-                    purchase: true,
-                },
             });
 
-            // 2. Update Customer Balance
+            // 2. Update customer balance
             const balanceAdjustment = type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount);
             await tx.customer.update({
                 where: { id: parseInt(customerId) },
-                data: {
-                    balance: { increment: balanceAdjustment }
-                }
+                data: { balance: { increment: balanceAdjustment } },
             });
 
             return ledgerEntry;
+        });
+
+        // Fetch the full entry with relations OUTSIDE the transaction (safe, no timeout risk)
+        const result = await prisma.ledgerentry.findUnique({
+            where: { id: newEntryId },
+            include: { customer: true, purchase: true },
         });
 
         return NextResponse.json(result, { status: 201 });
     } catch (error) {
         console.error("Failed to create ledger entry:", error);
         return NextResponse.json(
-            { error: "Internal Server Error" },
+            { error: error.message || "Internal Server Error" },
             { status: 500 }
         );
     }

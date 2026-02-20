@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import EmployeeManagementClient from "./EmployeeManagementClient";
+import { Box, Typography } from "@mui/material";
 
 export const metadata = {
     title: "Employee Management - TailorFlow",
@@ -19,15 +20,30 @@ export default async function EmployeesPage() {
     }));
 
     return (
-        <div>
-            <div style={{ paddingTop: '24px', paddingBottom: '16px', backgroundColor: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{ paddingLeft: '24px', paddingRight: '24px' }} dir="rtl">
-                    <h1 className="text-3xl font-bold text-zinc-900 tracking-tight font-urdu">ملازمین کی مینجمنٹ</h1>
-                    <p className="text-zinc-500 mt-1 font-urdu">اپنے سلائی اسٹاف، کردار اور تنخواہ کی معلومات کا انتظام کریں۔</p>
-                </div>
-            </div>
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box>
+                    <Typography variant="h4" fontWeight="bold" color="text.primary">
+                        Employee Management
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Manage your stitching staff, roles, and salary information.
+                    </Typography>
+                </Box>
+            </Box>
 
-            <EmployeeManagementClient initialEmployees={serializedEmployees} />
-        </div>
+            <Box sx={{ px: 3 }}>
+                <EmployeeManagementClient initialEmployees={serializedEmployees} />
+            </Box>
+        </Box>
     );
 }

@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import CustomerManagementClient from "./CustomerManagementClient";
+import { Box, Typography } from "@mui/material";
+import { Users } from "lucide-react";
 
 export const metadata = {
     title: "Customer Management - TailorFlow",
@@ -33,18 +35,44 @@ export default async function CustomersPage() {
     }));
 
     return (
-        <div>
-            <div style={{ paddingTop: '24px', paddingBottom: '16px', backgroundColor: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{ paddingLeft: '24px', paddingRight: '24px' }}>
-                    <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Customer Management</h1>
-                    <p className="text-zinc-500 mt-1">Manage your customer database and records.</p>
-                </div>
-            </div>
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                        p: 1.5,
+                        bgcolor: 'primary.light',
+                        borderRadius: 3,
+                        color: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <Users size={28} />
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h4" fontWeight="bold" color="text.primary">
+                            Customer Management
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                            Manage your customer database and records.
+                        </Typography>
+                    </Box>
+                </Box>
+            </Box>
 
             <CustomerManagementClient
                 initialCustomers={serializedCustomers}
                 accountCategories={serializedCategories}
             />
-        </div>
+        </Box>
     );
 }

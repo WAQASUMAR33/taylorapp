@@ -30,8 +30,7 @@ import {
     X,
     Tag,
     Layers,
-    Save,
-    FileText
+    Save
 } from "lucide-react";
 
 export default function CategoryManagementClient({ initialCategories }) {
@@ -154,33 +153,33 @@ export default function CategoryManagementClient({ initialCategories }) {
 
     if (showForm) {
         return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
+            <Box sx={{ width: '100%', bgcolor: 'background.default', minHeight: '100vh', p: 3 }}>
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                            {editMode ? "کیٹیگری تبدیل کریں" : "نئی کیٹیگری"}
+                    <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                            {editMode ? "Edit Category" : "New Category"}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="contained"
+                                startIcon={<X size={18} />}
+                                onClick={handleClose}
+                                color="error"
+                                sx={{ bgcolor: 'error.main', '&:hover': { bgcolor: 'error.dark' } }}
+                            >
+                                Cancel
+                            </Button>
                             <Button
                                 variant="contained"
                                 startIcon={<Save size={18} />}
                                 onClick={handleSubmit}
                                 disabled={loading}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                                className="font-urdu"
+                                color="success"
+                                sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<X size={18} />}
-                                onClick={handleClose}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                                className="font-urdu"
-                            >
-                                کینسل
+                                {loading ? <CircularProgress size={20} color="inherit" /> : "Save"}
                             </Button>
                         </Box>
                     </Box>
@@ -188,43 +187,38 @@ export default function CategoryManagementClient({ initialCategories }) {
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">نام</Typography>
+                                <Box sx={{ mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Name</Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="name"
                                     required
-                                    dir="rtl"
-                                    placeholder="نام درج کریں"
+                                    placeholder="Enter name"
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     size="small"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            bgcolor: 'background.paper',
+                                            borderRadius: 2,
+                                            '& fieldset': { borderColor: 'divider' },
+                                        }
                                     }}
                                 />
                             </Grid>
                             <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">
-                                        تفصیل
+                                <Box sx={{ mb: 1.5 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                        Description
                                     </Typography>
                                 </Box>
                                 <TextField
                                     fullWidth
                                     name="description"
                                     required
-                                    dir="rtl"
-                                    placeholder="تفصیل درج کریں"
+                                    placeholder="Enter description"
                                     multiline
                                     rows={3}
                                     value={formData.description}
@@ -232,13 +226,10 @@ export default function CategoryManagementClient({ initialCategories }) {
                                     variant="outlined"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
+                                            bgcolor: 'background.paper',
+                                            borderRadius: 2,
+                                            '& fieldset': { borderColor: 'divider' },
+                                        }
                                     }}
                                 />
                             </Grid>
@@ -263,7 +254,7 @@ export default function CategoryManagementClient({ initialCategories }) {
                     placeholder="Search categories..."
                     variant="outlined"
                     size="small"
-                    sx={{ width: 450, bgcolor: 'white' }}
+                    sx={{ width: 450, bgcolor: 'background.paper' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
@@ -283,8 +274,8 @@ export default function CategoryManagementClient({ initialCategories }) {
                         textTransform: 'none',
                         px: 3,
                         py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
+                        bgcolor: 'primary.main',
+                        '&:hover': { bgcolor: 'primary.dark' }
                     }}
                 >
                     Add Category
@@ -294,11 +285,12 @@ export default function CategoryManagementClient({ initialCategories }) {
             {/* Categories Table */}
             <TableContainer component={Paper} elevation={0} sx={{
                 borderRadius: 3,
-                border: '1px solid #e5e7eb',
+                border: 1,
+                borderColor: 'divider',
                 overflow: 'hidden'
             }}>
                 <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
+                    <TableHead sx={{ bgcolor: 'action.hover' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600, minWidth: 250 }}>Category Name</TableCell>
                             <TableCell sx={{ fontWeight: 600, minWidth: 350 }}>Description</TableCell>
@@ -311,15 +303,15 @@ export default function CategoryManagementClient({ initialCategories }) {
                             filteredCategories.map((cat) => (
                                 <TableRow
                                     key={cat.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
+                                    sx={{ '&:hover': { bgcolor: 'action.hover' }, transition: 'background-color 0.2s' }}
                                 >
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Box sx={{
                                                 p: 1,
-                                                bgcolor: '#f5f3ff',
+                                                bgcolor: 'primary.light',
                                                 borderRadius: 2,
-                                                color: '#8b5cf6'
+                                                color: 'primary.main'
                                             }}>
                                                 <Tag size={20} />
                                             </Box>
@@ -329,7 +321,7 @@ export default function CategoryManagementClient({ initialCategories }) {
                                         </Box>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="body2" color="textSecondary" sx={{
+                                        <Typography variant="body2" color="text.secondary" sx={{
                                             display: '-webkit-box',
                                             WebkitLineClamp: 2,
                                             WebkitBoxOrient: 'vertical',
@@ -340,7 +332,7 @@ export default function CategoryManagementClient({ initialCategories }) {
                                     </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Layers size={14} className="text-zinc-400" />
+                                            <Layers size={14} color="#9ca3af" />
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                                 {cat._count?.products || 0}
                                             </Typography>
@@ -368,7 +360,7 @@ export default function CategoryManagementClient({ initialCategories }) {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No categories found.</Typography>
+                                    <Typography color="text.secondary">No categories found.</Typography>
                                 </TableCell>
                             </TableRow>
                         )}

@@ -2,6 +2,25 @@
 
 import { useState } from "react";
 import {
+    Box,
+    Button,
+    IconButton,
+    Typography,
+    TextField,
+    InputAdornment,
+    Card,
+    Grid,
+    CircularProgress,
+    Alert,
+    Snackbar,
+    Autocomplete,
+    Avatar,
+    Chip,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     Table,
     TableBody,
     TableCell,
@@ -9,24 +28,8 @@ import {
     TableHead,
     TableRow,
     Paper,
-    Button,
-    IconButton,
-    Box,
-    Typography,
-    TextField,
-    InputAdornment,
-    Tooltip,
-    Card,
-    Grid,
-    CircularProgress,
-    Alert,
-    Snackbar,
-    Autocomplete
+    Divider,
 } from "@mui/material";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
 import {
     Edit,
     Trash2,
@@ -35,17 +38,15 @@ import {
     Save,
     X as XIcon,
     Package,
-    ChevronUp,
-    ChevronDown,
+    History,
     Eye,
-    History
 } from "lucide-react";
 
 export default function MaterialManagementClient({ initialMaterials }) {
     const [materials, setMaterials] = useState(initialMaterials);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // UI States
+    // Dialog states
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -54,48 +55,44 @@ export default function MaterialManagementClient({ initialMaterials }) {
     const [stockDialogOpen, setStockDialogOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    const [formData, setFormData] = useState({
-        title: "",
-        quantity: "",
-        price: ""
-    });
+    const [formData, setFormData] = useState({ title: "", quantity: "", price: "" });
 
-    const [stockFormData, setStockFormData] = useState({
-        materialId: "",
-        addQuantity: ""
-    });
+    const [stockFormData, setStockFormData] = useState({ materialId: "", addQuantity: "" });
+
+    /* ── helpers ──────────────────────────────────────── */
 
     const resetForm = () => {
         setFormData({ title: "", quantity: "", price: "" });
         setError("");
     };
 
-    const resetStockForm = () => {
-        setStockFormData({ materialId: "", addQuantity: "" });
-    };
+    const resetStockForm = () => setStockFormData({ materialId: "", addQuantity: "" });
 
-    const handleOpen = () => {
-        resetForm();
-        setShowForm(true);
-    };
+    const currentMaterial = materials.find(
+        (m) => m.id === parseInt(stockFormData.materialId)
+    );
 
-    const handleClose = () => {
-        setShowForm(false);
-        resetForm();
-    };
+    const totalQty = (
+        parseFloat(currentMaterial?.quantity || 0) +
+        parseFloat(stockFormData.addQuantity || 0)
+    ).toFixed(2);
+
+    /* ── handlers ─────────────────────────────────────── */
+
+    const handleOpen = () => { resetForm(); setShowForm(true); };
+
+    const handleClose = () => { if (!loading) { setShowForm(false); resetForm(); } };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         setLoading(true);
         setError("");
-
         try {
-            const isEditing = formData.id;
+            const isEditing = !!formData.id;
             const url = isEditing ? `/api/materials/${formData.id}` : "/api/materials";
             const method = isEditing ? "PUT" : "POST";
 
@@ -107,21 +104,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} material`);
+                throw new Error(data.error || `Failed to ${isEditing ? "update" : "create"} material`);
             }
 
-            const savedMaterial = await response.json();
-
-            if (isEditing) {
-                setMaterials(prev => prev.map(m => m.id === savedMaterial.id ? savedMaterial : m));
-                setSuccessMessage("Material updated successfully!");
-            } else {
-                setMaterials(prev => [savedMaterial, ...prev]);
-                setSuccessMessage("Material added successfully!");
-            }
-
-            setShowForm(false);
-            resetForm();
+            const saved = await response.json();
+            setMaterials((prev) =>
+                isEditing ? prev.map((m) => (m.id === saved.id ? saved : m)) : [saved, ...prev]
+            );
+            setSuccessMessage(`Material ${isEditing ? "updated" : "added"} successfully!`);
+            handleClose();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -134,27 +125,21 @@ export default function MaterialManagementClient({ initialMaterials }) {
             id: material.id,
             title: material.title,
             quantity: material.quantity,
-            price: material.price
+            price: material.price,
         });
         setShowForm(true);
     };
 
     const handleDelete = async (id) => {
         if (!confirm("Are you sure you want to delete this material?")) return;
-
         try {
-            const response = await fetch(`/api/materials/${id}`, { method: "DELETE" });
-            if (!response.ok) throw new Error("Failed to delete material");
-
-            setMaterials(prev => prev.filter(m => m.id !== id));
+            const res = await fetch(`/api/materials/${id}`, { method: "DELETE" });
+            if (!res.ok) throw new Error("Failed to delete material");
+            setMaterials((prev) => prev.filter((m) => m.id !== id));
             setSuccessMessage("Material deleted successfully!");
         } catch (err) {
             setError(err.message);
         }
-    };
-
-    const handleManualQuantity = async (material, value) => {
-        // Removed inline quantity editing
     };
 
     const handleStockSubmit = async () => {
@@ -162,32 +147,28 @@ export default function MaterialManagementClient({ initialMaterials }) {
             setError("Please fill all fields");
             return;
         }
-
         setLoading(true);
         setError("");
-
         try {
-            const material = materials.find(m => m.id === parseInt(stockFormData.materialId));
-            if (!material) throw new Error("Material not found");
+            if (!currentMaterial) throw new Error("Material not found");
+            const newQty = parseFloat(currentMaterial.quantity) + parseFloat(stockFormData.addQuantity);
 
-            const newQty = parseFloat(material.quantity) + parseFloat(stockFormData.addQuantity);
-
-            const response = await fetch(`/api/materials/${stockFormData.materialId}`, {
+            const res = await fetch(`/api/materials/${stockFormData.materialId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     quantity: newQty,
-                    adjustmentNotes: `Stock addition on ${new Date().toLocaleDateString()}`
+                    adjustmentNotes: `Stock addition on ${new Date().toLocaleDateString()}`,
                 }),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
+            if (!res.ok) {
+                const errorData = await res.json();
                 throw new Error(errorData.error || "Stock update failed");
             }
 
-            const updated = await response.json();
-            setMaterials(prev => prev.map(m => m.id === updated.id ? updated : m));
+            const updated = await res.json();
+            setMaterials((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
             setSuccessMessage("Stock updated successfully!");
             setStockDialogOpen(false);
             resetStockForm();
@@ -200,382 +181,500 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
     const handleView = async (id) => {
         try {
-            const response = await fetch(`/api/materials/${id}`);
-            const data = await response.json();
+            const res = await fetch(`/api/materials/${id}`);
+            const data = await res.json();
             setSelectedMaterial(data);
             setViewOpen(true);
-        } catch (err) {
+        } catch {
             setError("Failed to load details");
         }
     };
 
-    const filteredMaterials = materials.filter(m =>
+    const filteredMaterials = materials.filter((m) =>
         m.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // List view is now the only view
+    /* ── render ──────────────────────────────────────── */
+
     return (
-        <Box sx={{ width: '100%', p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
+        <Box sx={{ width: "100%", p: 3 }}>
+
+            {/* ── Action bar ─────────────────────────────── */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="میٹیرئیل تلاش کریں..."
+                    placeholder="Search materials…"
                     variant="outlined"
                     size="small"
-                    sx={{ width: 450, bgcolor: 'white' }}
-                    dir="rtl"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    sx={{ width: 360 }}
                     InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
+                        startAdornment: (
+                            <InputAdornment position="start">
                                 <Search size={18} />
                             </InputAdornment>
                         ),
                     }}
                 />
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 1.5 }}>
                     <Button
                         variant="contained"
                         startIcon={<Plus size={18} />}
                         onClick={handleOpen}
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            px: 3,
-                            py: 1,
-                            bgcolor: '#8b5cf6',
-                            '&:hover': { bgcolor: '#7c3aed' },
-                            gap: 1,
-                            '& .MuiButton-startIcon': { margin: 0 }
-                        }}
-                        className="font-urdu"
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
-                        نیا مٹیریل شامل کریں
+                        Add Material
                     </Button>
                     <Button
                         variant="contained"
+                        color="warning"
                         startIcon={<History size={18} />}
                         onClick={() => setStockDialogOpen(true)}
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            px: 3,
-                            py: 1,
-                            bgcolor: '#f59e0b',
-                            '&:hover': { bgcolor: '#d97706' },
-                            gap: 1,
-                            '& .MuiButton-startIcon': { margin: 0 }
-                        }}
-                        className="font-urdu"
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
-                        سٹاک شامل کریں
+                        Add Stock
                     </Button>
                 </Box>
             </Box>
 
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مٹیریل کی تفصیل</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مقدار</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">قیمت</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">اپ ڈیٹ کی تاریخ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عمل</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredMaterials.map((material) => (
-                            <TableRow key={material.id} sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}>
-                                <TableCell align="right" dir="rtl">
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row' }}>
-                                        <Box sx={{ p: 1, bgcolor: '#f5f3ff', borderRadius: 2, color: '#8b5cf6' }}>
-                                            <Package size={20} />
-                                        </Box>
-                                        <Box sx={{ textAlign: 'right' }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{material.title}</Typography>
-                                            <Typography variant="caption" color="textSecondary">ID: #{material.id}</Typography>
-                                        </Box>
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                        {material.quantity}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 600 }} align="right">
-                                    Rs. {parseFloat(material.price).toFixed(2)}
-                                </TableCell>
-                                <TableCell sx={{ color: 'text.secondary', fontSize: '0.875rem' }} align="right">
-                                    {new Date(material.updatedAt).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                        <IconButton size="small" color="primary" onClick={() => handleView(material.id)}>
-                                            <Eye size={18} />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => handleEdit(material)}>
-                                            <Edit size={18} />
-                                        </IconButton>
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(material.id)}>
-                                            <Trash2 size={18} />
-                                        </IconButton>
-                                    </Box>
-                                </TableCell>
+            {/* ── Materials Table ─────────────────────────── */}
+            <Card
+                elevation={0}
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}
+            >
+                <TableContainer>
+                    <Table sx={{ minWidth: 650 }}>
+                        <TableHead>
+                            <TableRow sx={{ bgcolor: "action.hover" }}>
+                                <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Unit Price</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Total Value</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Last Updated</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            {/* View Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth dir="rtl">
-                <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#8b5cf6', color: 'white', mb: 2 }} className="font-urdu">
-                    <Package size={20} />
-                    مٹیریل کی تفصیل
-                </DialogTitle>
-                <DialogContent>
-                    {selectedMaterial && (
-                        <Box sx={{ mt: 1 }}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary" className="font-urdu">نام</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedMaterial.title}</Typography>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary" className="font-urdu">موجودہ سٹاک</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedMaterial.quantity}</Typography>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary" className="font-urdu">یونٹ کی قیمت</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 700 }}>Rs. {parseFloat(selectedMaterial.price).toFixed(2)}</Typography>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Typography variant="caption" color="textSecondary" className="font-urdu">کل مالیت</Typography>
-                                    <Typography variant="body1" sx={{ fontWeight: 700 }}>Rs. {(selectedMaterial.quantity * selectedMaterial.price).toFixed(2)}</Typography>
-                                </Grid>
-                            </Grid>
-
-                            <Typography variant="subtitle2" sx={{ mt: 4, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
-                                <History size={16} />
-                                سٹاک ہسٹری
-                            </Typography>
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                    <TableHead sx={{ bgcolor: '#f8fafc' }}>
-                                        <TableRow>
-                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ٹائپ</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">مقدار</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {selectedMaterial.movements?.map((m) => (
-                                            <TableRow key={m.id}>
-                                                <TableCell align="right">
-                                                    <Typography variant="body2" sx={{ color: m.type === 'IN' ? 'success.main' : 'error.main', fontWeight: 600 }}>
-                                                        {m.type === 'IN' ? 'آمد' : 'اخراج'}
+                        </TableHead>
+                        <TableBody>
+                            {filteredMaterials.length > 0 ? (
+                                filteredMaterials.map((material) => (
+                                    <TableRow
+                                        key={material.id}
+                                        sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
+                                    >
+                                        <TableCell>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                <Avatar
+                                                    variant="rounded"
+                                                    sx={(t) => ({
+                                                        width: 36,
+                                                        height: 36,
+                                                        bgcolor: t.palette.primary.light,
+                                                        color: t.palette.primary.main,
+                                                        borderRadius: 1.5,
+                                                    })}
+                                                >
+                                                    <Package size={18} />
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="subtitle2" fontWeight={600}>
+                                                        {material.title}
                                                     </Typography>
-                                                </TableCell>
-                                                <TableCell align="right">{m.quantity}</TableCell>
-                                                <TableCell align="right">{new Date(m.movedAt).toLocaleDateString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        ID #{material.id}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={`${material.quantity} units`}
+                                                size="small"
+                                                color={material.quantity <= 5 ? "error" : "default"}
+                                                variant={material.quantity <= 5 ? "filled" : "outlined"}
+                                                sx={{ borderRadius: 1, fontWeight: 600 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={500}>
+                                                Rs. {parseFloat(material.price).toLocaleString()}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={700} color="success.main">
+                                                Rs. {(material.quantity * material.price).toLocaleString()}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {new Date(material.updatedAt).toLocaleDateString()}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                                                <Tooltip title="View Details">
+                                                    <IconButton size="small" color="info" onClick={() => handleView(material.id)}>
+                                                        <Eye size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Edit Material">
+                                                    <IconButton size="small" color="primary" onClick={() => handleEdit(material)}>
+                                                        <Edit size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete Material">
+                                                    <IconButton size="small" color="error" onClick={() => handleDelete(material.id)}>
+                                                        <Trash2 size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                        <Package size={40} color="#d1d5db" />
+                                        <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+                                            No materials found.
+                                        </Typography>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Card>
+
+            {/* ── Add / Edit Material Dialog ──────────────── */}
+            <Dialog
+                open={showForm}
+                onClose={handleClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    {formData.id ? "Edit Material" : "Add New Material"}
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
+                    {error && (
+                        <Alert
+                            severity="error"
+                            variant="filled"
+                            onClose={() => setError("")}
+                            sx={{ mb: 2.5, borderRadius: 2 }}
+                        >
+                            {error}
+                        </Alert>
                     )}
+
+                    {/* All 3 fields on one row — each xs=4 for equal sizing */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Material Name"
+                                name="title"
+                                required
+                                placeholder="e.g. Cotton Fabric"
+                                value={formData.title}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Initial Quantity"
+                                name="quantity"
+                                required
+                                type="number"
+                                placeholder="e.g. 100"
+                                value={formData.quantity}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Unit Price (Rs.)"
+                                name="price"
+                                required
+                                type="number"
+                                placeholder="e.g. 250"
+                                value={formData.price}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setViewOpen(false)} className="font-urdu">بند کریں</Button>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={loading}
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        startIcon={loading ? null : <Save size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        {loading
+                            ? <CircularProgress size={20} color="inherit" />
+                            : formData.id ? "Update Material" : "Save Material"
+                        }
+                    </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Add Stock Dialog */}
-            <Dialog open={stockDialogOpen} onClose={() => setStockDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#f59e0b', color: 'white', mb: 2 }} className="font-urdu">سٹاک اپ ڈیٹ کریں</DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={3} sx={{ mt: 0.5 }}>
+            {/* ── Add Stock Dialog ────────────────────────── */}
+            <Dialog
+                open={stockDialogOpen}
+                onClose={() => { setStockDialogOpen(false); resetStockForm(); setError(""); }}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    Add Stock
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
+                    {error && (
+                        <Alert
+                            severity="error"
+                            variant="filled"
+                            onClose={() => setError("")}
+                            sx={{ mb: 2.5, borderRadius: 2 }}
+                        >
+                            {error}
+                        </Alert>
+                    )}
+
+                    <Grid container spacing={2}>
+                        {/* Material selector — full width row */}
                         <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">مٹیریل منتخب کریں</Typography>
-                            </Box>
                             <Autocomplete
-                                fullWidth
                                 size="small"
                                 options={materials}
-                                sx={{ minWidth: 300 }}
                                 getOptionLabel={(option) => option.title || ""}
-                                value={materials.find(m => m.id === parseInt(stockFormData.materialId)) || null}
-                                onChange={(e, newValue) => {
-                                    setStockFormData({ ...stockFormData, materialId: newValue ? newValue.id.toString() : "" });
-                                }}
+                                value={currentMaterial || null}
+                                onChange={(_, newValue) =>
+                                    setStockFormData({ ...stockFormData, materialId: newValue ? newValue.id.toString() : "" })
+                                }
+                                sx={{ minWidth: 300 }}
+                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        dir="rtl"
-                                        placeholder="تلاش کریں..."
+                                        label="Select Material"
                                         required
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: '10px'
-                                            },
-                                            '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                        }}
+                                        variant="outlined"
                                     />
                                 )}
                             />
                         </Grid>
 
+                        {/* 3 quantity fields — only shown once a material is selected */}
                         {stockFormData.materialId && (
                             <>
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">پہلے والی مقدار</Typography>
-                                    </Box>
+                                <Grid item xs={4}>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        disabled
-                                        dir="rtl"
-                                        value={materials.find(m => m.id === parseInt(stockFormData.materialId))?.quantity || 0}
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
+                                        label="Current Quantity"
+                                        value={currentMaterial?.quantity ?? 0}
+                                        variant="filled"
+                                        InputProps={{ readOnly: true }}
                                     />
                                 </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">نئی مقدار شامل کریں</Typography>
-                                    </Box>
+                                <Grid item xs={4}>
                                     <TextField
                                         fullWidth
                                         size="small"
+                                        label="Add Quantity"
                                         type="number"
                                         required
-                                        dir="rtl"
+                                        placeholder="e.g. 50"
                                         value={stockFormData.addQuantity}
-                                        onChange={(e) => setStockFormData({ ...stockFormData, addQuantity: e.target.value })}
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
+                                        onChange={(e) =>
+                                            setStockFormData({ ...stockFormData, addQuantity: e.target.value })
+                                        }
+                                        variant="outlined"
                                     />
                                 </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">کل مقدار</Typography>
-                                    </Box>
+                                <Grid item xs={4}>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        disabled
-                                        dir="rtl"
-                                        value={
-                                            (parseFloat(materials.find(m => m.id === parseInt(stockFormData.materialId))?.quantity || 0) +
-                                                parseFloat(stockFormData.addQuantity || 0)).toFixed(2)
-                                        }
-                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#f0fdf4' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
+                                        label="New Total"
+                                        value={totalQty}
+                                        variant="filled"
+                                        InputProps={{ readOnly: true }}
+                                        sx={{
+                                            "& .MuiFilledInput-root": {
+                                                bgcolor: "success.light",
+                                                color: "success.dark",
+                                                fontWeight: 700,
+                                            },
+                                        }}
                                     />
                                 </Grid>
                             </>
                         )}
                     </Grid>
-                    {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
                 </DialogContent>
-                <DialogActions sx={{ p: 2, gap: 1, flexDirection: 'row-reverse' }}>
-                    <Button
-                        onClick={handleStockSubmit}
-                        variant="contained"
-                        disabled={loading || !stockFormData.materialId || !stockFormData.addQuantity}
-                        sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
-                        className="font-urdu"
-                    >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "اپ ڈیٹ کریں"}
-                    </Button>
-                    <Button onClick={() => setStockDialogOpen(false)} color="inherit" className="font-urdu">کینسل</Button>
-                </DialogActions>
-            </Dialog>
 
-            {/* Add/Edit Material Dialog */}
-            <Dialog open={showForm} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#8b5cf6', color: 'white', mb: 2 }} className="font-urdu">
-                    {formData.id ? 'مٹیریل تبدیل کریں' : 'نیا مٹیریل شامل کریں'}
-                </DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={3} sx={{ mt: 0.5 }}>
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">نام</Typography>
-                            </Box>
-                            <TextField
-                                fullWidth
-                                name="title"
-                                required
-                                dir="rtl"
-                                placeholder="نام درج کریں"
-                                value={formData.title}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">ابتدائی مقدار</Typography>
-                            </Box>
-                            <TextField
-                                fullWidth
-                                name="quantity"
-                                required
-                                dir="rtl"
-                                type="number"
-                                value={formData.quantity}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }} className="font-urdu">قیمت فی یونٹ</Typography>
-                            </Box>
-                            <TextField
-                                fullWidth
-                                name="price"
-                                required
-                                dir="rtl"
-                                type="number"
-                                value={formData.price}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' }, '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
-                            />
-                        </Grid>
-                    </Grid>
-                    {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-                </DialogContent>
-                <DialogActions sx={{ p: 2, gap: 1, flexDirection: 'row-reverse' }}>
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     <Button
-                        onClick={handleSubmit}
-                        variant="contained"
+                        onClick={() => { setStockDialogOpen(false); resetStockForm(); setError(""); }}
+                        variant="outlined"
+                        color="inherit"
                         disabled={loading}
-                        sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                        className="font-urdu"
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
                     >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
+                        Cancel
                     </Button>
-                    <Button onClick={handleClose} color="inherit" className="font-urdu">کینسل</Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={handleStockSubmit}
+                        disabled={loading || !stockFormData.materialId || !stockFormData.addQuantity}
+                        startIcon={loading ? null : <History size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : "Update Stock"}
+                    </Button>
                 </DialogActions>
             </Dialog>
 
+            {/* ── View Details Dialog ─────────────────────── */}
+            <Dialog
+                open={viewOpen}
+                onClose={() => setViewOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Package size={20} />
+                        Material Details
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "20px !important" }}>
+                    {selectedMaterial && (
+                        <Grid container spacing={2}>
+                            {[
+                                { label: "Name", value: selectedMaterial.title },
+                                { label: "Current Stock", value: `${selectedMaterial.quantity} units` },
+                                { label: "Unit Price", value: `Rs. ${parseFloat(selectedMaterial.price).toLocaleString()}` },
+                                {
+                                    label: "Total Value",
+                                    value: `Rs. ${(selectedMaterial.quantity * selectedMaterial.price).toLocaleString()}`,
+                                },
+                            ].map(({ label, value }) => (
+                                <Grid item xs={6} key={label}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                        {label}
+                                    </Typography>
+                                    <Typography variant="body1" fontWeight={700}>
+                                        {value}
+                                    </Typography>
+                                </Grid>
+                            ))}
+
+                            {selectedMaterial.movements?.length > 0 && (
+                                <Grid item xs={12}>
+                                    <Divider sx={{ my: 1 }} />
+                                    <Typography
+                                        variant="subtitle2"
+                                        fontWeight={700}
+                                        sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
+                                    >
+                                        <History size={16} />
+                                        Stock History
+                                    </Typography>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                                        <Table size="small">
+                                            <TableHead sx={{ bgcolor: "action.hover" }}>
+                                                <TableRow>
+                                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600 }} align="right">Qty</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600 }} align="right">Type</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {selectedMaterial.movements.map((mv) => (
+                                                    <TableRow key={mv.id}>
+                                                        <TableCell>
+                                                            {new Date(mv.movedAt).toLocaleDateString()}
+                                                        </TableCell>
+                                                        <TableCell align="right">{mv.quantity}</TableCell>
+                                                        <TableCell align="right">
+                                                            <Chip
+                                                                label={mv.type}
+                                                                size="small"
+                                                                color={mv.type === "IN" ? "success" : "error"}
+                                                                variant="filled"
+                                                                sx={{ borderRadius: 1, fontWeight: 700, minWidth: 44 }}
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Grid>
+                            )}
+                        </Grid>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider" }}>
+                    <Button
+                        onClick={() => setViewOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Success Snackbar ────────────────────────── */}
             <Snackbar
                 open={!!successMessage}
                 autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%', borderRadius: 2 }}>
+                <Alert
+                    onClose={() => setSuccessMessage("")}
+                    severity="success"
+                    variant="filled"
+                    sx={{ width: "100%", borderRadius: 2 }}
+                >
                     {successMessage}
                 </Alert>
             </Snackbar>

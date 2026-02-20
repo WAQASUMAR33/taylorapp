@@ -11,6 +11,7 @@ import {
     Paper,
     Button,
     IconButton,
+    Avatar,
     Box,
     Typography,
     TextField,
@@ -230,6 +231,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setCartItems(newItems);
     };
 
+    const calculateItemTotal = (item) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const price = parseFloat(item.unitPrice) || 0;
+        const disc = parseFloat(item.discount) || 0;
+        return (qty * price) - disc;
+    };
+
     const handleAddRow = () => {
         const lastItem = cartItems[cartItems.length - 1];
         const newId = cartItems.length > 0 ? Math.max(...cartItems.map(i => i.id)) + 1 : 1;
@@ -443,1099 +451,532 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         return statusObj?.color || "#6b7280";
     };
 
-    if (showForm) {
-        return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    // --- replaced full-page form with Dialog below ---
+    const FIELD_SX = {
+        '& .MuiOutlinedInput-root': {
+            bgcolor: 'white',
+            borderRadius: 2,
+            '& fieldset': { borderColor: '#e5e7eb' },
+            '&:hover fieldset': { borderColor: '#8b5cf6' },
+            '&.Mui-focused fieldset': { borderColor: '#8b5cf6', borderWidth: 2 },
+        }
+    };
+    const DISABLED_SX = { '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: 2 } };
 
-                <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">سیل آرڈر / بکنگ</Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<Save size={18} />}
-                                onClick={handleSubmit}
-                                disabled={loading}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                            >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<XIcon size={18} />}
-                                onClick={() => setShowForm(false)}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                            >
-                                کینسل
-                            </Button>
-                        </Box>
+    const formDialog = (
+        <Dialog
+            open={showForm}
+            onClose={() => !loading && setShowForm(false)}
+            maxWidth="xl"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 3, maxHeight: '95vh' } }}
+        >
+            <DialogTitle sx={{
+                fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pt: 2.5, pb: 2,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%)'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{ p: 1, bgcolor: '#8b5cf6', borderRadius: 1.5, display: 'flex' }}>
+                        <ShoppingCart size={18} color="white" />
                     </Box>
+                    <Typography variant="h6" fontWeight={700}>Sales Order / Booking</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => setShowForm(false)} disabled={loading}
+                        sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
+                    <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
+                        sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
+                        {loading ? <CircularProgress size={18} color="inherit" /> : 'Save Booking'}
+                    </Button>
+                </Box>
+            </DialogTitle>
+            <DialogContent sx={{ p: 3 }}>
+                {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
-                    <Box sx={{ p: 3 }}>
-                        <Grid container spacing={2}>
-                            {/* Left Section */}
-                            <Grid item xs={12} md={6}>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={6}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سیریل نمبر</Typography>
-                                        </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            value="Auto Generated"
-                                            disabled
-                                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: '10px' } }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">تاریخ</Typography>
-                                        </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            type="date"
-                                            name="bookingDate"
-                                            required
-                                            value={formData.bookingDate}
-                                            onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start"><Calendar size={18} color="#9ca3af" /></InputAdornment>,
-                                            }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">آرڈر ریفرنس</Typography>
-                                        </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            value="Auto"
-                                            disabled
-                                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: '10px' } }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ڈیلیوری کی تاریخ</Typography>
-                                        </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            type="date"
-                                            name="deliveryDate"
-                                            required
-                                            value={formData.deliveryDate}
-                                            onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start"><Calendar size={18} color="#9ca3af" /></InputAdornment>,
-                                            }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                }
-                                            }}
-                                        />
-                                    </Grid>
+                <Box>
+                    {/* ── Row 1: 4 equal header fields ── */}
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={6} md={3}>
+                            <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                            <TextField fullWidth size="small" label="Booking Date" type="date" name="bookingDate" required
+                                value={formData.bookingDate}
+                                onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
+                                InputLabelProps={{ shrink: true }}
+                                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
+                                sx={FIELD_SX} />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                            <TextField fullWidth size="small" label="Order Reference" value="Auto" disabled sx={DISABLED_SX} />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                            <TextField fullWidth size="small" label="Delivery Date" type="date" name="deliveryDate" required
+                                value={formData.deliveryDate}
+                                onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+                                InputLabelProps={{ shrink: true }}
+                                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
+                                sx={FIELD_SX} />
+                        </Grid>
+                    </Grid>
 
-                                    {/* Right Section - Customer Info */}
-                                    <Grid item xs={12} md={6}>
-                                        <Card variant="outlined" sx={{ p: 2, bgcolor: '#ffffff', height: '100%', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, borderRight: '4px solid #8b5cf6', pr: 1.5 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }} className="font-urdu">
-                                                    کسٹمر کی معلومات
-                                                </Typography>
-                                            </Box>
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={12}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کسٹمر منتخب کریں</Typography>
-                                                    </Box>
-                                                    <Autocomplete
-                                                        options={customers || []}
-                                                        getOptionLabel={(option) => option.name || ""}
-                                                        value={(customers || []).find(c => c.id === formData.customerId) || null}
-                                                        onChange={(event, newValue) => {
-                                                            handleCustomerChange(newValue ? newValue.id : "");
-                                                        }}
-                                                        renderInput={(params) => (
-                                                            <TextField
-                                                                {...params}
-                                                                placeholder="نام، فون، یا پتے سے تلاش کریں..."
-                                                                size="small"
-                                                                fullWidth
-                                                                required
-                                                                dir="rtl"
-                                                                InputProps={{
-                                                                    ...params.InputProps,
-                                                                    startAdornment: (
-                                                                        <>
-                                                                            <InputAdornment position="start">
-                                                                                <User size={18} color="#9ca3af" />
-                                                                            </InputAdornment>
-                                                                            {params.InputProps.startAdornment}
-                                                                        </>
-                                                                    ),
-                                                                    style: { textAlign: 'right' }
-                                                                }}
-                                                                sx={{
-                                                                    width: '100%',
-                                                                    minWidth: 300,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        bgcolor: 'white',
-                                                                        borderRadius: '10px',
-                                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                    }
-                                                                }}
-                                                            />
-                                                        )}
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={6}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">نام</Typography>
-                                                    </Box>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={formData.customerName}
-                                                        disabled
-                                                        placeholder="e.g. John Doe"
-                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f9fafb', borderRadius: '10px' } }}
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
-                                                    </Box>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={formData.customerPhone}
-                                                        disabled
-                                                        placeholder="e.g. +92 300 1234567"
-                                                        InputProps={{
-                                                            startAdornment: (
-                                                                <InputAdornment position="start">
-                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                        <Typography sx={{ fontSize: '1.2rem' }}>🇵🇰</Typography>
-                                                                        <Typography sx={{ fontWeight: 600, color: '#374151', ml: 0.5 }}>+92</Typography>
-                                                                        <Box sx={{ width: '1px', height: '20px', bgcolor: '#e5e7eb', ml: 1 }} />
-                                                                    </Box>
-                                                                </InputAdornment>
-                                                            ),
-                                                        }}
-                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f9fafb', borderRadius: '10px' } }}
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">پتہ</Typography>
-                                                    </Box>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={formData.customerAddress}
-                                                        disabled
-                                                        multiline
-                                                        rows={2}
-                                                        placeholder="e.g. House #123, Street #4, Sector..."
-                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#f9fafb', borderRadius: '10px' } }}
-                                                    />
-                                                </Grid>
-                                            </Grid>
-                                        </Card>
-                                    </Grid>
+                    {/* ── Customer Information Card (full-width) ── */}
+                    <Card variant="outlined" sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb', overflow: 'visible' }}>
+                        <Box sx={{ px: 2.5, pt: 2, pb: 0.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6' }}>
+                            <User size={16} color="#8b5cf6" />
+                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Customer Information</Typography>
+                        </Box>
+                        <Box sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                                {/* Customer autocomplete — full width */}
+                                <Grid item xs={12}>
+                                    <Autocomplete
+                                        options={customers || []}
+                                        getOptionLabel={(option) => option.name || ""}
+                                        value={(customers || []).find(c => c.id === formData.customerId) || null}
+                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Select Customer"
+                                                size="small"
+                                                fullWidth
+                                                required
+                                                InputProps={{
+                                                    ...params.InputProps,
+                                                    startAdornment: (
+                                                        <><InputAdornment position="start"><User size={16} color="#9ca3af" /></InputAdornment>{params.InputProps.startAdornment}</>
+                                                    ),
+                                                }}
+                                                sx={{ minWidth: 300, ...FIELD_SX }}
+                                            />
+                                        )}
+                                    />
                                 </Grid>
-
-                                {/* Stitching section removed as it's now per-item */}
-
-                                {/* Product Grid */}
-                                <Box sx={{ mt: 3 }}>
-                                    <TableContainer component={Paper} variant="outlined">
-                                        <Table size="small">
-                                            <TableHead sx={{ bgcolor: '#e5e7eb' }}>
-                                                <TableRow>
-                                                    <TableCell sx={{ fontWeight: 600, width: 50 }} align="right">#</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">پروڈکٹ</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600, width: 100 }} align="right" className="font-urdu">تعداد</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600, width: 150 }} align="right" className="font-urdu">ریٹ</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600, width: 120 }} align="right" className="font-urdu">ڈسکاؤنٹ</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600, width: 150 }} align="right" className="font-urdu">کل رقم</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600, width: 50 }} align="right"></TableCell>
-                                                </TableRow>
-                                            </TableHead>
-                                            <TableBody>
-                                                {cartItems.map((item, index) => (
-                                                    <React.Fragment key={index}>
-                                                        <TableRow sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s', '& td, & th': { borderBottom: item.bookingType === 'STITCHING' && !item.isCollapsed ? 'none' : undefined } }}>
-                                                            <TableCell>{index + 1}</TableCell>
-                                                            <TableCell>
-                                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                                    <Autocomplete
-                                                                        options={products || []}
-                                                                        getOptionLabel={(option) => option.name || ""}
-                                                                        value={(products || []).find(p => p.id === item.productId) || null}
-                                                                        onChange={(event, newValue) => {
-                                                                            handleProductChange(index, newValue ? newValue.id : "");
-                                                                        }}
-                                                                        sx={{ flexGrow: 1 }}
-                                                                        renderInput={(params) => (
-                                                                            <TextField
-                                                                                {...params}
-                                                                                placeholder="پروڈکٹ منتخب کریں"
-                                                                                size="small"
-                                                                                required
-                                                                                fullWidth
-                                                                                dir="rtl"
-                                                                                sx={{
-                                                                                    minWidth: 300,
-                                                                                    '& .MuiOutlinedInput-root': {
-                                                                                        bgcolor: 'white',
-                                                                                        borderRadius: '8px',
-                                                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                                    },
-                                                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                    />
-                                                                    {/* Category selection is now automated based on product selection */}
-                                                                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexDirection: 'row-reverse' }}>
-                                                                        <Chip
-                                                                            size="small"
-                                                                            label={item.bookingType === 'STITCHING' ? 'سوٹ (سلائی درکار ہے)' : 'سلا ہوا (ریڈی میڈ)'}
-                                                                            variant="outlined"
-                                                                            sx={{
-                                                                                fontSize: '0.7rem',
-                                                                                height: 20,
-                                                                                color: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#6b7280',
-                                                                                borderColor: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#e5e7eb',
-                                                                                bgcolor: item.bookingType === 'STITCHING' ? '#f5f3ff' : '#f9fafb'
-                                                                            }}
-                                                                            className="font-urdu"
-                                                                        />
-                                                                    </Box>
-                                                                </Box>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <TextField
-                                                                    size="small"
-                                                                    required
-                                                                    value={item.quantity}
-                                                                    onFocus={(e) => e.target.select()}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                            handleQuantityChange(index, val);
-                                                                        }
-                                                                    }}
-                                                                    sx={{ width: '80px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                />
-                                                            </TableCell>
-                                                            {/* Unit cell removed */}
-                                                            <TableCell>
-                                                                <TextField
-                                                                    size="small"
-                                                                    required
-                                                                    value={item.unitPrice} // Changed from salePrice to unitPrice
-                                                                    onFocus={(e) => e.target.select()}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                            const newItems = [...cartItems];
-                                                                            newItems[index].unitPrice = val;
-                                                                            newItems[index].totalPrice = calculateItemTotal(newItems[index]);
-                                                                            setCartItems(newItems);
-                                                                        }
-                                                                    }}
-                                                                    sx={{ width: '120px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <TextField
-                                                                    size="small"
-                                                                    value={item.discount}
-                                                                    onFocus={(e) => e.target.select()}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                                            const newItems = [...cartItems];
-                                                                            newItems[index].discount = val;
-                                                                            newItems[index].totalPrice = calculateItemTotal(newItems[index]);
-                                                                            setCartItems(newItems);
-                                                                        }
-                                                                    }}
-                                                                    sx={{ width: '100px', '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' } }}
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                                    {(parseFloat(item.totalPrice) || 0).toFixed(2)}
-                                                                </Typography>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleRemoveRow(index)}
-                                                                    disabled={cartItems.length === 1}
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </IconButton>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        {item.bookingType === 'STITCHING' && (
-                                                            <TableRow>
-                                                                <TableCell colSpan={7} sx={{ pb: 3, pt: 0, borderBottom: '1px solid rgba(224, 224, 224, 1)' }}>
-                                                                    {item.isCollapsed ? (
-                                                                        <Box sx={{ mt: 1.5, p: 2, borderRadius: '8px', border: '1px solid #e5e7eb', bgcolor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                            <Typography variant="body2" color="textSecondary">
-                                                                                <strong>Stitching Details Saved</strong> for {item.productName || "Product"}
-                                                                            </Typography>
-                                                                            <Button
-                                                                                size="small"
-                                                                                onClick={() => {
-                                                                                    const newItems = [...cartItems];
-                                                                                    newItems[index].isCollapsed = false;
-                                                                                    setCartItems(newItems);
-                                                                                }}
-                                                                                sx={{ color: '#8b5cf6' }}
-                                                                                className="font-urdu"
-                                                                            >
-                                                                                تبدیلی کریں
-                                                                            </Button>
-                                                                        </Box>
-                                                                    ) : (
-                                                                        <Box sx={{ mt: 1.5, p: 2, borderRadius: '8px', border: '1px solid #8b5cf6', bgcolor: '#f5f3ff', minWidth: '100%' }}>
-                                                                            {index > 0 && previousStitchingDetails && (
-                                                                                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                                                                    <Button
-                                                                                        size="small"
-                                                                                        variant="outlined"
-                                                                                        onClick={() => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index] = {
-                                                                                                ...newItems[index],
-                                                                                                ...previousStitchingDetails
-                                                                                            };
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        sx={{ borderColor: '#8b5cf6', color: '#8b5cf6', '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' } }}
-                                                                                    >
-                                                                                        Use Previous Details
-                                                                                    </Button>
-                                                                                </Box>
-                                                                            )}
-                                                                            <Grid container spacing={2}>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>کف</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "single", label: "سنگل" },
-                                                                                            { value: "double folding", label: "ڈبل فولڈنگ" },
-                                                                                            { value: "open sleeve", label: "کھلی آستین" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "single", label: "سنگل" },
-                                                                                            { value: "double folding", label: "ڈبل فولڈنگ" },
-                                                                                            { value: "open sleeve", label: "کھلی آستین" }
-                                                                                        ].find(o => o.value === item.cuffType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].cuffType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="کف منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>پائنچہ</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "jaali", label: "جالی والا" },
-                                                                                            { value: "karhaai", label: "کڑھائی والا" },
-                                                                                            { value: "jaali_karhaai", label: "جالی بمعہ کڑھائی" },
-                                                                                            { value: "saada", label: "سادہ" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "jaali", label: "جالی والا" },
-                                                                                            { value: "karhaai", label: "کڑھائی والا" },
-                                                                                            { value: "jaali_karhaai", label: "جالی بمعہ کڑھائی" },
-                                                                                            { value: "saada", label: "سادہ" }
-                                                                                        ].find(o => o.value === item.pohnchaType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].pohnchaType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="پائنچہ منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>گھیرا</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "seedha", label: "سیدھا" },
-                                                                                            { value: "gol", label: "گول" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "seedha", label: "سیدھا" },
-                                                                                            { value: "gol", label: "گول" }
-                                                                                        ].find(o => o.value === item.gheraType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].gheraType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="گھیرا منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>گالہ</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "ban", label: "بین" },
-                                                                                            { value: "collar", label: "کالر" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "ban", label: "بین" },
-                                                                                            { value: "collar", label: "کالر" }
-                                                                                        ].find(o => o.value === item.galaType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].galaType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="گالہ منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                {item.galaType && (
-                                                                                    <Grid item xs={12} sm={4}>
-                                                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                            <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>سائز</Typography>
-                                                                                        </Box>
-                                                                                        <Autocomplete
-                                                                                            options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
-                                                                                            value={item.galaSize || null}
-                                                                                            onChange={(_, newValue) => {
-                                                                                                const newItems = [...cartItems];
-                                                                                                newItems[index].galaSize = newValue || "";
-                                                                                                setCartItems(newItems);
-                                                                                            }}
-                                                                                            renderInput={(params) => (
-                                                                                                <TextField
-                                                                                                    {...params}
-                                                                                                    placeholder="سائز"
-                                                                                                    size="small"
-                                                                                                    required
-                                                                                                    sx={{
-                                                                                                        width: '300px',
-                                                                                                        '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                    }}
-                                                                                                />
-                                                                                            )}
-                                                                                        />
-                                                                                    </Grid>
-                                                                                )}
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>جیب</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "single", label: "سنگل" },
-                                                                                            { value: "double", label: "ڈبل" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "single", label: "سنگل" },
-                                                                                            { value: "double", label: "ڈبل" }
-                                                                                        ].find(o => o.value === item.pocketType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].pocketType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="جیب منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-                                                                                        <Typography variant="caption" className="font-urdu" sx={{ fontWeight: 700, color: '#6d28d9' }}>شلوار کی قسم</Typography>
-                                                                                    </Box>
-                                                                                    <Autocomplete
-                                                                                        options={[
-                                                                                            { value: "pajama", label: "پاجامہ" },
-                                                                                            { value: "shalwar", label: "شلوار" },
-                                                                                            { value: "trouser", label: "ٹراؤزر" }
-                                                                                        ]}
-                                                                                        getOptionLabel={(option) => option.label || ""}
-                                                                                        value={[
-                                                                                            { value: "pajama", label: "پاجامہ" },
-                                                                                            { value: "shalwar", label: "شلوار" },
-                                                                                            { value: "trouser", label: "ٹراؤزر" }
-                                                                                        ].find(o => o.value === item.shalwarType) || null}
-                                                                                        onChange={(_, newValue) => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].shalwarType = newValue ? newValue.value : "";
-                                                                                            setCartItems(newItems);
-                                                                                        }}
-                                                                                        renderInput={(params) => (
-                                                                                            <TextField
-                                                                                                {...params}
-                                                                                                placeholder="شلوار کی قسم منتخب کریں"
-                                                                                                size="small"
-                                                                                                required
-                                                                                                sx={{
-                                                                                                    width: '300px',
-                                                                                                    '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: '6px' }
-                                                                                                }}
-                                                                                            />
-                                                                                        )}
-                                                                                    />
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sm={4}>
-                                                                                    <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'flex-end', pb: 0.5 }}>
-                                                                                        <FormControlLabel
-                                                                                            control={
-                                                                                                <Checkbox
-                                                                                                    size="small"
-                                                                                                    checked={item.hasShalwarPocket}
-                                                                                                    onChange={(e) => {
-                                                                                                        const newItems = [...cartItems];
-                                                                                                        newItems[index].hasShalwarPocket = e.target.checked;
-                                                                                                        setCartItems(newItems);
-                                                                                                    }}
-                                                                                                />
-                                                                                            }
-                                                                                            label={<Typography variant="caption" className="font-urdu" sx={{ fontWeight: 600 }}>شلوار جیب</Typography>}
-                                                                                            sx={{ m: 0 }}
-                                                                                        />
-                                                                                        <FormControlLabel
-                                                                                            control={
-                                                                                                <Checkbox
-                                                                                                    size="small"
-                                                                                                    checked={item.hasFrontPockets}
-                                                                                                    onChange={(e) => {
-                                                                                                        const newItems = [...cartItems];
-                                                                                                        newItems[index].hasFrontPockets = e.target.checked;
-                                                                                                        setCartItems(newItems);
-                                                                                                    }}
-                                                                                                />
-                                                                                            }
-                                                                                            label={<Typography variant="caption" className="font-urdu" sx={{ fontWeight: 600 }}>سامنے والی جیبیں</Typography>}
-                                                                                            sx={{ m: 0 }}
-                                                                                        />
-                                                                                    </Box>
-                                                                                </Grid>
-                                                                                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                                                                                    <Button
-                                                                                        variant="contained"
-                                                                                        size="small"
-                                                                                        startIcon={<Save size={16} />}
-                                                                                        onClick={() => {
-                                                                                            const newItems = [...cartItems];
-                                                                                            newItems[index].isCollapsed = true;
-                                                                                            setCartItems(newItems);
-
-                                                                                            // Save as previous details for future suggestions
-                                                                                            setPreviousStitchingDetails({
-                                                                                                cuffType: newItems[index].cuffType,
-                                                                                                pohnchaType: newItems[index].pohnchaType,
-                                                                                                gheraType: newItems[index].gheraType,
-                                                                                                galaType: newItems[index].galaType,
-                                                                                                galaSize: newItems[index].galaSize,
-                                                                                                pocketType: newItems[index].pocketType,
-                                                                                                shalwarType: newItems[index].shalwarType,
-                                                                                                hasShalwarPocket: newItems[index].hasShalwarPocket,
-                                                                                                hasFrontPockets: newItems[index].hasFrontPockets
-                                                                                            });
-                                                                                        }}
-                                                                                        sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
-                                                                                        className="font-urdu"
-                                                                                    >
-                                                                                        تفصیلات محفوظ کریں
-                                                                                    </Button>
-                                                                                </Grid>
-                                                                            </Grid>
-                                                                        </Box>
-                                                                    )}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        )}
-                                                    </React.Fragment>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </TableContainer>
-                                    <Button
-                                        startIcon={<Plus size={16} />}
-                                        onClick={handleAddRow}
-                                        sx={{ mt: 1 }}
-                                        size="small"
-                                        className="font-urdu"
-                                    >
-                                        نیا کالم شامل کریں
-                                    </Button>
-
-                                    <Grid container spacing={2} sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Tailor</Typography>
-                                            <Autocomplete
-                                                options={tailors || []}
-                                                getOptionLabel={(option) => option.name || ""}
-                                                value={(tailors || []).find(t => t.id === formData.tailorId) || null}
-                                                onChange={(event, newValue) => {
-                                                    setFormData({ ...formData, tailorId: newValue ? newValue.id : "" });
-                                                }}
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="درزی منتخب کریں"
-                                                        size="small"
-                                                        fullWidth
-                                                        required
-                                                        sx={{
-                                                            minWidth: 300,
-                                                            '& .MuiOutlinedInput-root': {
-                                                                bgcolor: 'white',
-                                                                borderRadius: '10px',
-                                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Cutter</Typography>
-                                            <Autocomplete
-                                                options={cutters || []}
-                                                getOptionLabel={(option) => option.name || ""}
-                                                value={(cutters || []).find(c => c.id === formData.cutterId) || null}
-                                                onChange={(event, newValue) => {
-                                                    setFormData({ ...formData, cutterId: newValue ? newValue.id : "" });
-                                                }}
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="کٹر منتخب کریں"
-                                                        size="small"
-                                                        fullWidth
-                                                        required
-                                                        sx={{
-                                                            minWidth: 300,
-                                                            '& .MuiOutlinedInput-root': {
-                                                                bgcolor: 'white',
-                                                                borderRadius: '10px',
-                                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                                '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-                                            />
-                                        </Grid>
-                                    </Grid>
-                                </Box>
-
-                                {/* Totals Section */}
-                                <Grid container spacing={2} sx={{ mt: 2 }}>
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, borderRight: '4px solid #8b5cf6', pr: 1.5 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem', letterSpacing: '0.01em' }} className="font-urdu">
-                                                ریمارکس / نوٹ
-                                            </Typography>
-                                        </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            name="notes"
-                                            required
-                                            placeholder="..."
-                                            multiline
-                                            rows={3}
-                                            dir="rtl"
-                                            value={formData.notes}
-                                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '12px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                },
-                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                            }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4' }}>
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={6}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }} className="font-urdu">کل رقم:</Typography>
-                                                </Grid>
-                                                <Grid item xs={6}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, textAlign: 'right' }}>
-                                                        Rs. {totalAmount.toFixed(2)}
-                                                    </Typography>
-                                                </Grid>
-                                                <Grid item xs={6}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ایڈوانس رقم</Typography>
-                                                    </Box>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        required
-                                                        placeholder="0.00"
-                                                        value={formData.advanceAmount}
-                                                        onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
-                                                        InputProps={{
-                                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                                        }}
-                                                        sx={{
-                                                            '& .MuiOutlinedInput-root': {
-                                                                bgcolor: 'white',
-                                                                borderRadius: '10px',
-                                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                                '&:hover fieldset': { borderColor: '#3b82f6' },
-                                                                '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                                                            }
-                                                        }}
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={6}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">بقایا رقم</Typography>
-                                                    </Box>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={balanceAmount.toFixed(2)}
-                                                        disabled
-                                                        InputProps={{
-                                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                                        }}
-                                                        sx={{
-                                                            '& .MuiOutlinedInput-root': {
-                                                                bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4',
-                                                                borderRadius: '10px',
-                                                                border: balanceAmount > 0 ? '2px solid #ef4444' : '1px solid #e5e7eb',
-                                                                '& .MuiInputBase-input': {
-                                                                    fontWeight: 800,
-                                                                    fontSize: '1.1rem',
-                                                                    color: balanceAmount > 0 ? '#b91c1c' : '#059669',
-                                                                    textAlign: 'center'
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </Grid>
-                                            </Grid>
-                                        </Card>
-                                    </Grid>
+                                {/* Name */}
+                                <Grid item xs={12} sm={4}>
+                                    <TextField fullWidth size="small" label="Name" value={formData.customerName}
+                                        disabled placeholder="Auto-filled" sx={DISABLED_SX} />
+                                </Grid>
+                                {/* Phone */}
+                                <Grid item xs={12} sm={4}>
+                                    <TextField fullWidth size="small" label="Phone Number" value={formData.customerPhone}
+                                        disabled placeholder="+92 300 1234567"
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Typography sx={{ fontSize: '0.9rem', lineHeight: 1 }}>🇵🇰</Typography>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={DISABLED_SX} />
+                                </Grid>
+                                {/* Address */}
+                                <Grid item xs={12} sm={4}>
+                                    <TextField fullWidth size="small" label="Address" value={formData.customerAddress}
+                                        disabled placeholder="Auto-filled" sx={DISABLED_SX} />
                                 </Grid>
                             </Grid>
-                        </Grid>
+                        </Box>
+                    </Card>
+
+                    {/* ── Items Table ── */}
+                    <Box sx={{ mb: 2 }}>
+                        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Order Items</Typography>
+                        </Box>
+                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow sx={{ bgcolor: '#f3f4f6' }}>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 90 }}>Qty</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Rate</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Discount</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 100 }}>Total</TableCell>
+                                        <TableCell sx={{ width: 40 }} />
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {cartItems.map((item, index) => (
+                                        <React.Fragment key={index}>
+                                            <TableRow sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', '& td, & th': { borderBottom: item.bookingType === 'STITCHING' && !item.isCollapsed ? 'none' : undefined } }}>
+                                                <TableCell sx={{ color: '#6b7280', fontWeight: 600 }}>{index + 1}</TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                        <Autocomplete
+                                                            options={products || []}
+                                                            getOptionLabel={(option) => option.name || ""}
+                                                            value={(products || []).find(p => p.id === item.productId) || null}
+                                                            onChange={(event, newValue) => { handleProductChange(index, newValue ? newValue.id : ""); }}
+                                                            sx={{ flexGrow: 1 }}
+                                                            renderInput={(params) => (
+                                                                <TextField {...params} label="Select Product" size="small" required fullWidth sx={FIELD_SX} />
+                                                            )}
+                                                        />
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Chip size="small"
+                                                                label={item.bookingType === 'STITCHING' ? 'Suit (Stitching)' : 'Stitched (Readymade)'}
+                                                                variant="outlined"
+                                                                sx={{ fontSize: '0.68rem', height: 18, color: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#6b7280', borderColor: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#e5e7eb', bgcolor: item.bookingType === 'STITCHING' ? '#f5f3ff' : '#f9fafb' }}
+                                                            />
+                                                        </Box>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField size="small" required value={item.quantity} onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { handleQuantityChange(index, val); } }}
+                                                        sx={{ width: '80px', ...FIELD_SX }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField size="small" required value={item.unitPrice} onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { const ni = [...cartItems]; ni[index].unitPrice = val; ni[index].totalPrice = calculateItemTotal(ni[index]); setCartItems(ni); } }}
+                                                        sx={{ width: '100px', ...FIELD_SX }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField size="small" value={item.discount} onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { const ni = [...cartItems]; ni[index].discount = val; ni[index].totalPrice = calculateItemTotal(ni[index]); setCartItems(ni); } }}
+                                                        sx={{ width: '90px', ...FIELD_SX }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }}>
+                                                        {(parseFloat(item.totalPrice) || 0).toFixed(0)}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Tooltip title="Remove item">
+                                                        <span>
+                                                            <IconButton size="small" color="error" onClick={() => handleRemoveRow(index)} disabled={cartItems.length === 1}>
+                                                                <Trash2 size={15} />
+                                                            </IconButton>
+                                                        </span>
+                                                    </Tooltip>
+                                                </TableCell>
+                                            </TableRow>
+                                            {item.bookingType === 'STITCHING' && (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} sx={{ pb: 3, pt: 0, borderBottom: '1px solid rgba(224, 224, 224, 1)' }}>
+                                                        {item.isCollapsed ? (
+                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #e5e7eb', bgcolor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <Typography variant="body2" color="textSecondary"><strong>Stitching Details Saved</strong> for {item.productName || "Product"}</Typography>
+                                                                <Button size="small" onClick={() => { const ni = [...cartItems]; ni[index].isCollapsed = false; setCartItems(ni); }} sx={{ color: '#8b5cf6', textTransform: 'none' }}>Edit</Button>
+                                                            </Box>
+                                                        ) : (
+                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #8b5cf6', bgcolor: '#f5f3ff' }}>
+                                                                {index > 0 && previousStitchingDetails && (
+                                                                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                                                                        <Button size="small" variant="outlined"
+                                                                            onClick={() => { const ni = [...cartItems]; ni[index] = { ...ni[index], ...previousStitchingDetails }; setCartItems(ni); }}
+                                                                            sx={{ borderColor: '#8b5cf6', color: '#8b5cf6', textTransform: 'none', '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' } }}>
+                                                                            Use Previous Details
+                                                                        </Button>
+                                                                    </Box>
+                                                                )}
+                                                                <Grid container spacing={2}>
+                                                                    {[
+                                                                        { label: 'Cuff', field: 'cuffType', opts: [{ value: 'single', label: 'Single' }, { value: 'double folding', label: 'Double Folding' }, { value: 'open sleeve', label: 'Open Sleeve' }] },
+                                                                        { label: 'Bottom (Pohncha)', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'With Net (Jaali)' }, { value: 'karhaai', label: 'Embroidered' }, { value: 'jaali_karhaai', label: 'Net w/ Embroidery' }, { value: 'saada', label: 'Simple' }] },
+                                                                        { label: 'Daman (Ghera)', field: 'gheraType', opts: [{ value: 'seedha', label: 'Straight' }, { value: 'gol', label: 'Round' }] },
+                                                                        { label: 'Neck (Gala)', field: 'galaType', opts: [{ value: 'ban', label: 'Ban' }, { value: 'collar', label: 'Collar' }] },
+                                                                        { label: 'Pocket', field: 'pocketType', opts: [{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }] },
+                                                                        { label: 'Shalwar Type', field: 'shalwarType', opts: [{ value: 'pajama', label: 'Pajama' }, { value: 'shalwar', label: 'Shalwar' }, { value: 'trouser', label: 'Trouser' }] },
+                                                                    ].map(({ label, field, opts }) => (
+                                                                        <Grid item xs={12} sm={4} key={field}>
+                                                                            <Autocomplete
+                                                                                options={opts}
+                                                                                getOptionLabel={(o) => o.label || ""}
+                                                                                value={opts.find(o => o.value === item[field]) || null}
+                                                                                onChange={(_, nv) => { const ni = [...cartItems]; ni[index][field] = nv ? nv.value : ""; setCartItems(ni); }}
+                                                                                renderInput={(params) => (
+                                                                                    <TextField {...params} label={label} size="small" required
+                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                                                                                )}
+                                                                            />
+                                                                        </Grid>
+                                                                    ))}
+                                                                    {item.galaType && (
+                                                                        <Grid item xs={12} sm={4}>
+                                                                            <Autocomplete
+                                                                                options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
+                                                                                value={item.galaSize || null}
+                                                                                onChange={(_, nv) => { const ni = [...cartItems]; ni[index].galaSize = nv || ""; setCartItems(ni); }}
+                                                                                renderInput={(params) => (
+                                                                                    <TextField {...params} label="Neck Size" size="small" required
+                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                                                                                )}
+                                                                            />
+                                                                        </Grid>
+                                                                    )}
+                                                                    <Grid item xs={12} sm={4}>
+                                                                        <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'center' }}>
+                                                                            <FormControlLabel control={<Checkbox size="small" checked={item.hasShalwarPocket} onChange={(e) => { const ni = [...cartItems]; ni[index].hasShalwarPocket = e.target.checked; setCartItems(ni); }} />}
+                                                                                label={<Typography variant="caption" fontWeight={600}>Shalwar Pocket</Typography>} sx={{ m: 0 }} />
+                                                                            <FormControlLabel control={<Checkbox size="small" checked={item.hasFrontPockets} onChange={(e) => { const ni = [...cartItems]; ni[index].hasFrontPockets = e.target.checked; setCartItems(ni); }} />}
+                                                                                label={<Typography variant="caption" fontWeight={600}>Front Pockets</Typography>} sx={{ m: 0 }} />
+                                                                        </Box>
+                                                                    </Grid>
+                                                                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                        <Button variant="contained" size="small" startIcon={<Save size={14} />}
+                                                                            onClick={() => {
+                                                                                const ni = [...cartItems];
+                                                                                ni[index].isCollapsed = true;
+                                                                                setCartItems(ni);
+                                                                                setPreviousStitchingDetails({ cuffType: ni[index].cuffType, pohnchaType: ni[index].pohnchaType, gheraType: ni[index].gheraType, galaType: ni[index].galaType, galaSize: ni[index].galaSize, pocketType: ni[index].pocketType, shalwarType: ni[index].shalwarType, hasShalwarPocket: ni[index].hasShalwarPocket, hasFrontPockets: ni[index].hasFrontPockets });
+                                                                            }}
+                                                                            sx={{ bgcolor: '#8b5cf6', textTransform: 'none', '&:hover': { bgcolor: '#7c3aed' } }}>
+                                                                            Save Details
+                                                                        </Button>
+                                                                    </Grid>
+                                                                </Grid>
+                                                            </Box>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                        <Button startIcon={<Plus size={15} />} onClick={handleAddRow} size="small"
+                            sx={{ mt: 1, textTransform: 'none', color: '#8b5cf6', fontWeight: 600 }}>
+                            Add New Item
+                        </Button>
                     </Box>
-                </Card>
-            </Box>
-        );
-    }
+
+                    {/* ── Tailor & Cutter ── */}
+                    <Card variant="outlined" sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb' }}>
+                        <Box sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6}>
+                                    <Autocomplete
+                                        options={tailors || []}
+                                        getOptionLabel={(option) => option.name || ""}
+                                        value={(tailors || []).find(t => t.id === formData.tailorId) || null}
+                                        onChange={(event, newValue) => { setFormData({ ...formData, tailorId: newValue ? newValue.id : "" }); }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="Tailor" size="small" fullWidth sx={FIELD_SX} />
+                                        )}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Autocomplete
+                                        options={cutters || []}
+                                        getOptionLabel={(option) => option.name || ""}
+                                        value={(cutters || []).find(c => c.id === formData.cutterId) || null}
+                                        onChange={(event, newValue) => { setFormData({ ...formData, cutterId: newValue ? newValue.id : "" }); }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="Cutter" size="small" fullWidth sx={FIELD_SX} />
+                                        )}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Card>
+
+                    {/* ── Notes + Totals ── */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                            <TextField fullWidth size="small" label="Remarks / Notes" name="notes"
+                                multiline rows={4} value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                sx={FIELD_SX} />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2 }}>
+                                {/* Total row */}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid #d1fae5' }}>
+                                    <Typography variant="body2" fontWeight={600} color="text.secondary">Total Amount</Typography>
+                                    <Typography variant="h6" fontWeight={800} color="#059669">Rs.&nbsp;{totalAmount.toFixed(0)}</Typography>
+                                </Box>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <TextField fullWidth size="small" label="Advance Amount" required
+                                            value={formData.advanceAmount}
+                                            onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
+                                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                            sx={FIELD_SX} />
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
+                                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4', borderRadius: 2, '& .MuiInputBase-input': { fontWeight: 800, color: balanceAmount > 0 ? '#b91c1c' : '#059669', textAlign: 'center' } } }} />
+                                    </Grid>
+                                </Grid>
+                            </Card>
+                        </Grid>
+                    </Grid>
+                </Box>
+            </DialogContent>
+        </Dialog>
+    );
+    // --- end formDialog ---
 
     return (
-        <Box sx={{ width: '100%' }}>
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'row-reverse',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-                gap: 2
-            }}>
+        <Box sx={{ width: '100%', p: 3 }}>
+            {formDialog}
+
+            {/* ── Page Header ── */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                        p: 1.5, borderRadius: 2,
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(139,92,246,0.35)'
+                    }}>
+                        <ShoppingCart size={22} color="white" />
+                    </Box>
+                    <Box>
+                        <Typography variant="h5" fontWeight={700} sx={{ color: '#1e293b', lineHeight: 1.2 }}>Bookings</Typography>
+                        <Typography variant="body2" color="text.secondary">Manage all sales orders and bookings</Typography>
+                    </Box>
+                </Box>
+                <Chip
+                    label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
+                    sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
+                />
+            </Box>
+
+            {/* ── Action Bar ── */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="کسٹمر یا بکنگ نمبر سے تلاش کریں..."
+                    placeholder="Search by customer or booking number…"
                     variant="outlined"
                     size="small"
-                    dir="rtl"
-                    sx={{
-                        width: '100%',
-                        maxWidth: 450,
-                        minWidth: 300,
-                        bgcolor: 'white',
-                        '& .MuiOutlinedInput-root': {
-                            bgcolor: 'white',
-                            borderRadius: '10px',
-                            '& fieldset': { borderColor: '#e5e7eb' },
-                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                        }
-                    }}
+                    sx={{ minWidth: 320, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
-                        ),
-                        style: { textAlign: 'right' }
-                    }}
+                    InputProps={{ startAdornment: (<InputAdornment position="start"><Search size={18} /></InputAdornment>) }}
                 />
                 <Button
                     variant="contained"
                     startIcon={<Plus size={18} />}
                     onClick={() => setShowForm(true)}
                     sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
+                        borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                        boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
+                        '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
                     }}
-                    className="font-urdu"
                 >
-                    نئی بکنگ درج کریں
+                    New Booking
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
+            <TableContainer component={Card} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                 <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشن</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">رقم</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ڈیلیوری</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">اسٹیٹس</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">کسٹمر</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">بکنگ نمبر</TableCell>
+                    <TableHead>
+                        <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Booking No</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Delivery</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredBookings.length > 0 ? (
                             filteredBookings.map((booking) => (
-                                <TableRow
-                                    key={booking.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <Tooltip title="View Details">
-                                                <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => handleViewBooking(booking)}>
-                                                    <Eye size={18} />
-                                                </IconButton>
-                                            </Tooltip>
-
-                                            <Tooltip title="Print Details">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() => handlePrintClick(booking)}
-                                                >
-                                                    <Printer size={18} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <IconButton size="small" color="error" onClick={() => handleDelete(booking.id)}>
-                                                <Trash2 size={18} />
-                                            </IconButton>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ textAlign: 'right' }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                Rs. {parseFloat(booking.totalAmount).toFixed(2)}
-                                            </Typography>
-                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }} className="font-urdu">
-                                                ایڈوانس: Rs. {parseFloat(booking.advanceAmount).toFixed(2)}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 500 }} className="font-urdu">
-                                                باقی: Rs. {parseFloat(booking.remainingAmount).toFixed(2)}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2">
-                                            {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString() : '-'}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <TextField
-                                            select
-                                            size="small"
-                                            dir="rtl"
-                                            value={booking.status}
-                                            onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
-                                            sx={{
-                                                minWidth: 150,
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: getStatusColor(booking.status) + '20',
-                                                    color: getStatusColor(booking.status),
-                                                    fontWeight: 600,
-                                                    fontSize: '0.75rem'
-                                                },
-                                                '& .MuiSelect-select': { textAlign: 'right' }
-                                            }}
-                                        >
-                                            {BOOKING_STATUSES.map((status) => (
-                                                <MenuItem key={status.value} value={status.value} dir="rtl">
-                                                    {status.label}
-                                                </MenuItem>
-                                            ))}
-                                        </TextField>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-end' }}>
-                                            <Typography variant="caption" className="font-urdu">
-                                                بکنگ: {new Date(booking.bookingDate).toLocaleDateString()}
-                                            </Typography>
-                                            {booking.returnDate && (
-                                                <Typography variant="caption" color="primary" className="font-urdu">
-                                                    واپسی: {new Date(booking.returnDate).toLocaleDateString()}
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                            <Box sx={{
-                                                p: 1,
-                                                bgcolor: '#f5f3ff',
-                                                borderRadius: 2,
-                                                color: '#8b5cf6'
-                                            }}>
-                                                <User size={20} />
-                                            </Box>
-                                            <Box sx={{ textAlign: 'right' }}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {booking.customer?.name}
-                                                </Typography>
-                                                <Typography variant="caption" color="textSecondary">
-                                                    {booking.customer?.phone}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#8b5cf6' }}>
+                                <TableRow key={booking.id} sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s' }}>
+                                    {/* Booking No */}
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>
                                             #{booking.bookingNumber}
                                         </Typography>
                                         <Chip
-                                            label={booking.bookingType}
+                                            label={booking.bookingType === 'SUIT' ? 'Readymade' : 'Stitching'}
                                             size="small"
                                             sx={{
-                                                mt: 0.5,
-                                                height: 18,
-                                                fontSize: '0.65rem',
+                                                mt: 0.5, height: 18, fontSize: '0.65rem', borderRadius: 1,
                                                 bgcolor: booking.bookingType === 'SUIT' ? '#dbeafe' : '#fef3c7',
                                                 color: booking.bookingType === 'SUIT' ? '#1e40af' : '#92400e'
                                             }}
                                         />
+                                    </TableCell>
+                                    {/* Customer */}
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Avatar variant="rounded" sx={{
+                                                width: 34, height: 34, fontSize: '0.85rem', fontWeight: 700,
+                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                                                color: 'white', borderRadius: 1.5,
+                                            }}>
+                                                {(booking.customer?.name || '?')[0].toUpperCase()}
+                                            </Avatar>
+                                            <Box>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
+                                    {/* Date */}
+                                    <TableCell>
+                                        <Typography variant="body2">{new Date(booking.bookingDate).toLocaleDateString()}</Typography>
+                                        {booking.returnDate && (
+                                            <Typography variant="caption" color="primary" sx={{ display: 'block' }}>Return: {new Date(booking.returnDate).toLocaleDateString()}</Typography>
+                                        )}
+                                    </TableCell>
+                                    {/* Status */}
+                                    <TableCell>
+                                        <TextField
+                                            select size="small" value={booking.status}
+                                            onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
+                                            sx={{
+                                                minWidth: 155,
+                                                '& .MuiOutlinedInput-root': {
+                                                    bgcolor: getStatusColor(booking.status) + '18',
+                                                    borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
+                                                    color: getStatusColor(booking.status),
+                                                    '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                                }
+                                            }}
+                                        >
+                                            {BOOKING_STATUSES.map((s) => (
+                                                <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
+                                            ))}
+                                        </TextField>
+                                    </TableCell>
+                                    {/* Delivery */}
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString() : '—'}
+                                        </Typography>
+                                    </TableCell>
+                                    {/* Amount */}
+                                    <TableCell align="right">
+                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>Rs.&nbsp;{parseFloat(booking.totalAmount).toFixed(0)}</Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{parseFloat(booking.advanceAmount).toFixed(0)}</Typography>
+                                        <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{parseFloat(booking.remainingAmount).toFixed(0)}</Typography>
+                                    </TableCell>
+                                    {/* Actions */}
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                                            <Tooltip title="View Details">
+                                                <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => handleViewBooking(booking)}><Eye size={17} /></IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Print">
+                                                <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete Booking">
+                                                <IconButton size="small" color="error" onClick={() => handleDelete(booking.id)}><Trash2 size={17} /></IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No bookings found.</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                                        <ShoppingCart size={40} style={{ opacity: 0.25 }} />
+                                        <Typography color="text.secondary" fontWeight={500}>No bookings found.</Typography>
+                                        <Typography variant="caption" color="text.disabled">Try adjusting your search or create a new booking.</Typography>
+                                    </Box>
                                 </TableCell>
                             </TableRow>
                         )}
@@ -1543,27 +984,20 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 </Table>
             </TableContainer>
 
-            {/* View Details Dialog */}
-            <Dialog open={printDialogOpen} onClose={() => setPrintDialogOpen(false)} maxWidth="xs" fullWidth>
-                <DialogTitle>Select Print Option</DialogTitle>
-                <DialogContent>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            startIcon={<BookText />}
+            {/* Print type picker dialog */}
+            <Dialog open={printDialogOpen} onClose={() => setPrintDialogOpen(false)} maxWidth="xs" fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>Select Print Option</DialogTitle>
+                <DialogContent sx={{ pt: '20px !important' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Button variant="outlined" size="large" startIcon={<BookText />}
                             onClick={() => handlePrintConfirm('BILL')}
-                            sx={{ justifyContent: 'flex-start', py: 2 }}
-                        >
+                            sx={{ justifyContent: 'flex-start', py: 1.5, borderRadius: 2, textTransform: 'none' }}>
                             Print Bill / Invoice
                         </Button>
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            startIcon={<Ruler />}
+                        <Button variant="outlined" size="large" startIcon={<Ruler />}
                             onClick={() => handlePrintConfirm('STITCHING')}
-                            sx={{ justifyContent: 'flex-start', py: 2 }}
-                        >
+                            sx={{ justifyContent: 'flex-start', py: 1.5, borderRadius: 2, textTransform: 'none' }}>
                             Print Stitching Details
                         </Button>
                     </Box>
@@ -1620,30 +1054,30 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 </Grid>
                                 <Grid item xs={12} md={6}>
                                     <Card variant="outlined" sx={{ p: 2 }}>
-                                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">کٹر کی تفصیلات</Typography>
+                                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>Cutter Details</Typography>
                                         {selectedBooking.cutter ? (
                                             <Box>
-                                                <Typography variant="body2"><strong>نام:</strong> {selectedBooking.cutter.name}</Typography>
-                                                <Typography variant="body2" color="textSecondary"><strong>عہدہ:</strong> {selectedBooking.cutter.role}</Typography>
+                                                <Typography variant="body2"><strong>Name:</strong> {selectedBooking.cutter.name}</Typography>
+                                                <Typography variant="body2" color="textSecondary"><strong>Role:</strong> {selectedBooking.cutter.role}</Typography>
                                             </Box>
                                         ) : (
-                                            <Typography variant="body2" color="textSecondary">کٹر منتخب نہیں ہے</Typography>
+                                            <Typography variant="body2" color="textSecondary">No Cutter Selected</Typography>
                                         )}
                                     </Card>
                                 </Grid>
                             </Grid>
 
-                            <Divider sx={{ my: 3 }}><Typography className="font-urdu">مصنوعات / آئٹمز</Typography></Divider>
+                            <Divider sx={{ my: 3 }}><Typography>Products / Items</Typography></Divider>
                             <TableContainer component={Paper} variant="outlined">
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                                         <TableRow>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">پروڈکٹ</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">تعداد</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">قیمت</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">ڈسکاؤنٹ</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">قیمت بعد از رعایت</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }} className="font-urdu">کل قیمت</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Product</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Qty</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Price</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Disc</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Net Price</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -1667,13 +1101,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         <TableRow>
                                                             <TableCell colSpan={6} sx={{ bgcolor: '#f8fafc', py: 1 }}>
                                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, justifyContent: 'flex-start' }}>
-                                                                    {item.cuffType && <Typography variant="caption"><strong>کف:</strong> {item.cuffType}</Typography>}
-                                                                    {item.pohnchaType && <Typography variant="caption"><strong>پائنچہ:</strong> {item.pohnchaType}</Typography>}
-                                                                    {item.galaType && <Typography variant="caption"><strong>گالہ:</strong> {item.galaType === 'ban' ? 'بین' : 'کالر'} ({item.galaSize})</Typography>}
-                                                                    {item.gheraType && <Typography variant="caption"><strong>گھیرا:</strong> {item.gheraType === 'seedha' ? 'سیدھا' : 'گول'}</Typography>}
-                                                                    {item.shalwarType && <Typography variant="caption"><strong>شلوار:</strong> {item.shalwarType}</Typography>}
-                                                                    <Typography variant="caption"><strong>شلوار جیب:</strong> {item.hasShalwarPocket ? 'جی ہاں' : 'نہیں'}</Typography>
-                                                                    <Typography variant="caption"><strong>سامنے والی جیبیں:</strong> {item.hasFrontPockets ? 'جی ہاں' : 'نہیں'}</Typography>
+                                                                    {item.cuffType && <Typography variant="caption"><strong>Cuff:</strong> {item.cuffType}</Typography>}
+                                                                    {item.pohnchaType && <Typography variant="caption"><strong>Bottom:</strong> {item.pohnchaType}</Typography>}
+                                                                    {item.galaType && <Typography variant="caption"><strong>Neck:</strong> {item.galaType === 'ban' ? 'Ban' : 'Collar'} ({item.galaSize})</Typography>}
+                                                                    {item.gheraType && <Typography variant="caption"><strong>Daman:</strong> {item.gheraType === 'seedha' ? 'Straight' : 'Round'}</Typography>}
+                                                                    {item.shalwarType && <Typography variant="caption"><strong>Shalwar:</strong> {item.shalwarType}</Typography>}
+                                                                    <Typography variant="caption"><strong>Shalwar Pocket:</strong> {item.hasShalwarPocket ? 'Yes' : 'No'}</Typography>
+                                                                    <Typography variant="caption"><strong>Front Pockets:</strong> {item.hasFrontPockets ? 'Yes' : 'No'}</Typography>
                                                                 </Box>
                                                             </TableCell>
                                                         </TableRow>
@@ -1688,15 +1122,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 2 }}>
                                 <Box sx={{ width: 250 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">کل رقم:</Typography>
+                                        <Typography variant="body2">Total Amount:</Typography>
                                         <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(selectedBooking.totalAmount).toFixed(2)}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">ایڈوانس:</Typography>
+                                        <Typography variant="body2">Advance:</Typography>
                                         <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(selectedBooking.advanceAmount).toFixed(2)}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">باقی رقم:</Typography>
+                                        <Typography variant="body2">Remaining:</Typography>
                                         <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(selectedBooking.remainingAmount).toFixed(2)}</Typography>
                                     </Box>
                                 </Box>
@@ -1705,16 +1139,18 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setViewOpen(false)} variant="outlined" sx={{ color: '#8b5cf6', borderColor: '#8b5cf6' }} className="font-urdu">بند کریں</Button>
+                    <Button onClick={() => setViewOpen(false)} variant="outlined" sx={{ color: '#8b5cf6', borderColor: '#8b5cf6' }}>Close</Button>
                 </DialogActions>
             </Dialog>
 
             <Snackbar
                 open={!!error || !!successMessage}
                 autoHideDuration={6000}
-                onClose={() => { setError(""); setSuccessMessage(""); }}
+                onClose={() => { setError(''); setSuccessMessage(''); }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity={error ? "error" : "success"}>
+                <Alert severity={error ? 'error' : 'success'} variant="filled" sx={{ borderRadius: 2 }}
+                    onClose={() => { setError(''); setSuccessMessage(''); }}>
                     {error || successMessage}
                 </Alert>
             </Snackbar>
@@ -1739,23 +1175,23 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 >
                     {printType === 'BILL' ? (
                         // --- BILL / INVOICE LAYOUT ---
-                        <Box dir="rtl">
+                        <Box>
                             <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h4" fontWeight="bold">ٹیلر ایپ</Typography>
-                                <Typography variant="body2" className="font-urdu">بکنگ انوائس</Typography>
+                                <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
+                                <Typography variant="body2">Booking Invoice</Typography>
                             </Box>
 
                             <Grid container spacing={2} sx={{ mb: 4 }}>
                                 <Grid item xs={6}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className="font-urdu">گاہک کی معلومات</Typography>
+                                    <Typography variant="subtitle2" fontWeight="bold">Customer Info</Typography>
                                     <Typography variant="body2">{printBooking.customer?.name}</Typography>
                                     <Typography variant="body2">{printBooking.customer?.phone}</Typography>
                                 </Grid>
                                 <Grid item xs={6} sx={{ textAlign: 'left' }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className="font-urdu">بکنگ کی معلومات</Typography>
-                                    <Typography variant="body2">نمبر: {printBooking.bookingNumber}</Typography>
-                                    <Typography variant="body2">تاریخ: {new Date(printBooking.bookingDate).toLocaleDateString()}</Typography>
-                                    <Typography variant="body2">ڈیلیوری: {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
+                                    <Typography variant="subtitle2" fontWeight="bold">Booking Info</Typography>
+                                    <Typography variant="body2">No: {printBooking.bookingNumber}</Typography>
+                                    <Typography variant="body2">Date: {new Date(printBooking.bookingDate).toLocaleDateString()}</Typography>
+                                    <Typography variant="body2">Delivery: {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
                                 </Grid>
                             </Grid>
 
@@ -1763,10 +1199,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                            <TableCell align="right" className="font-urdu"><strong>پروڈکٹ</strong></TableCell>
-                                            <TableCell align="right" className="font-urdu"><strong>تعداد</strong></TableCell>
-                                            <TableCell align="right" className="font-urdu"><strong>قیمت</strong></TableCell>
-                                            <TableCell align="right" className="font-urdu"><strong>کل</strong></TableCell>
+                                            <TableCell align="right"><strong>Product</strong></TableCell>
+                                            <TableCell align="right"><strong>Qty</strong></TableCell>
+                                            <TableCell align="right"><strong>Price</strong></TableCell>
+                                            <TableCell align="right"><strong>Total</strong></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -1787,27 +1223,26 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
                                 <Box sx={{ width: 250 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">کل رقم:</Typography>
+                                        <Typography variant="body2">Total Amount:</Typography>
                                         <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(printBooking.totalAmount).toFixed(2)}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">ایڈوانس:</Typography>
+                                        <Typography variant="body2">Advance:</Typography>
                                         <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(printBooking.advanceAmount).toFixed(2)}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
-                                        <Typography variant="body2" className="font-urdu">باقی رقم:</Typography>
+                                        <Typography variant="body2">Remaining:</Typography>
                                         <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(printBooking.remainingAmount).toFixed(2)}</Typography>
                                     </Box>
                                 </Box>
                             </Box>
 
                             <Box sx={{ mt: 8, textAlign: 'center', borderTop: '1px dashed #ccc', pt: 2 }}>
-                                <Typography variant="caption" className="font-urdu">ہمارے ساتھ کاروبار کرنے کا شکریہ!</Typography>
+                                <Typography variant="caption">Thank you for your business!</Typography>
                             </Box>
                         </Box>
                     ) : (
                         <Box
-                            dir="rtl"
                             sx={{
                                 fontFamily: 'Arial, sans-serif',
                                 p: 1,
@@ -1821,31 +1256,31 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         >
                             <Box sx={{ textAlign: 'center', mb: 2 }}>
                                 <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                <Typography variant="subtitle1" fontWeight="bold">سلائی آرڈر (Booking #{printBooking.bookingNumber})</Typography>
+                                <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{printBooking.bookingNumber})</Typography>
                             </Box>
 
                             <Box sx={{ mb: 2, pb: 1 }}>
                                 <Grid container spacing={1}>
                                     <Grid item xs={12}>
-                                        <Typography variant="body1"><strong>نام کسٹمر:</strong> {printBooking.customer?.name || ''}</Typography>
+                                        <Typography variant="body1"><strong>Customer:</strong> {printBooking.customer?.name || ''}</Typography>
                                     </Grid>
                                     <Grid item xs={12} sx={{ minHeight: '3em' }}>
-                                        <Typography variant="body1"><strong>پتہ:</strong> {printBooking.customer?.address || ''}</Typography>
+                                        <Typography variant="body1"><strong>Address:</strong> {printBooking.customer?.address || ''}</Typography>
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <Typography variant="body1"><strong>فون نمبر:</strong> {printBooking.customer?.phone || ''}</Typography>
+                                        <Typography variant="body1"><strong>Phone:</strong> {printBooking.customer?.phone || ''}</Typography>
                                     </Grid>
                                 </Grid>
                             </Box>
 
                             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>تاریخ بکنگ:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString() : ''}</Typography>
-                                <Typography variant="body1"><strong>تاریخ حوالگی:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : ''}</Typography>
+                                <Typography variant="body1"><strong>Date:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString() : ''}</Typography>
+                                <Typography variant="body1"><strong>Delivery:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : ''}</Typography>
                             </Box>
 
                             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>کٹر:</strong> {employees?.find(e => e.id === printBooking.cutterId)?.name || ''}</Typography>
-                                <Typography variant="body1"><strong>کیریگر (درزی):</strong> {employees?.find(e => e.id === printBooking.tailorId)?.name || ''}</Typography>
+                                <Typography variant="body1"><strong>Cutter:</strong> {employees?.find(e => e.id === printBooking.cutterId)?.name || ''}</Typography>
+                                <Typography variant="body1"><strong>Tailor:</strong> {employees?.find(e => e.id === printBooking.tailorId)?.name || ''}</Typography>
                             </Box>
 
                             {/* MERGED MEASUREMENTS AND STITCHING DETAILS TABLE */}
@@ -1853,8 +1288,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <Table size="small" sx={{ border: '1px solid #000' }}>
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: '#f3f4f6' }}>
-                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>تفصیل (Detail)</TableCell>
-                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>پیمائش / سلائی (Measurement / Stitching)</TableCell>
+                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Detail</TableCell>
+                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Measurement / Stitching</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -1864,7 +1299,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 {printBooking.items.length > 1 && (
                                                     <TableRow>
                                                         <TableCell colSpan={2} sx={{ border: '1px solid #000', fontWeight: 'bold', bgcolor: '#f9fafb', textAlign: 'center' }}>
-                                                            {item.product?.name} (تعداد: {item.quantity})
+                                                            {item.product?.name} (Qty: {item.quantity})
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
@@ -1873,51 +1308,51 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 {true && (
                                                     <>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>لمبائی (Length)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.qameez_lambai || ''}</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Length</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.qameez_lambai || ''}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>تیرا (Shoulder)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.teera || ''}</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Shoulder</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.teera || ''}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>بازو (Sleeve) / کف</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Sleeve / Cuff</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>
                                                                 {customerMeasurements?.bazoo || ''}
-                                                                {item.cuffType ? ` (${item.cuffType === 'single' ? 'سنگل' : item.cuffType === 'double folding' ? 'ڈبل' : item.cuffType === 'open sleeve' ? 'کھلی آستین' : item.cuffType})` : ''}
+                                                                {item.cuffType ? ` (${item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double' : item.cuffType === 'open sleeve' ? 'Open Sleeve' : item.cuffType})` : ''}
                                                             </TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>گلہ (Neck) / گالہ</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Neck / Collar</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>
                                                                 {customerMeasurements?.galaa || ''}
-                                                                {item.galaType ? ` (${item.galaType === 'ban' ? 'بین' : 'کالر'}${item.galaSize ? ` : ${item.galaSize}` : ''})` : ''}
+                                                                {item.galaType ? ` (${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` : ${item.galaSize}` : ''})` : ''}
                                                             </TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>چھاتی (Chest)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.chaati || ''}</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Chest</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.chaati || ''}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>کمر (Waist)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.kamar_around || ''}</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Waist</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.kamar_around || ''}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>گھیرا (Daman)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Daman</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>
                                                                 {customerMeasurements?.gheera || ''}
-                                                                {item.gheraType ? ` (${item.gheraType === 'seedha' ? 'سیدھا' : 'گول'})` : ''}
+                                                                {item.gheraType ? ` (${item.gheraType === 'seedha' ? 'Straight' : 'Round'})` : ''}
                                                             </TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار لمبائی (Shalwar Length)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{customerMeasurements?.shalwar_lambai || ''}</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Shalwar Length</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.shalwar_lambai || ''}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>پائنچہ (Bottom)</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>Bottom</TableCell>
+                                                            <TableCell sx={{ border: '1px solid #000' }}>
                                                                 {customerMeasurements?.puhncha || ''}
-                                                                {item.pohnchaType ? ` (${item.pohnchaType === 'saada' ? 'سادہ' : item.pohnchaType === 'jaali' ? 'جالی والا' : item.pohnchaType === 'karhaai' ? 'کڑھائی والا' : 'جالی بمعہ کڑھائی'})` : ''}
+                                                                {item.pohnchaType ? ` (${item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net' : item.pohnchaType === 'karhaai' ? 'Embroided' : 'Net + Embroided'})` : ''}
                                                             </TableCell>
                                                         </TableRow>
                                                     </>
@@ -1925,20 +1360,20 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                                                 {/* Stitching Only Details */}
                                                 <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>جیب (Pocket)</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.pocketType === 'single' ? 'سنگل' : (item.pocketType === 'double' ? 'ڈبل' : '')}</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>Pocket</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.pocketType === 'single' ? 'Single' : (item.pocketType === 'double' ? 'Double' : '')}</TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>سامنے والی جیب (Front Pocket)</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.hasFrontPockets ? 'جی ہاں (Yes)' : ''}</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>Front Pocket</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.hasFrontPockets ? 'Yes' : ''}</TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار جیب (Shalwar Pocket)</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.hasShalwarPocket ? 'جی ہاں (Yes)' : ''}</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>Shalwar Pocket</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.hasShalwarPocket ? 'Yes' : ''}</TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>شلوار کی قسم (Shalwar Type)</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{item.shalwarType === 'pajama' ? 'پاجامہ' : (item.shalwarType === 'shalwar' ? 'شلوار' : '')}</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>Shalwar Type</TableCell>
+                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.shalwarType === 'pajama' ? 'Pajama' : (item.shalwarType === 'shalwar' ? 'Shalwar' : '')}</TableCell>
                                                 </TableRow>
                                             </React.Fragment>
                                         ))}
@@ -1948,7 +1383,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                             {/* NOTE SECTION */}
                             <Box sx={{ mb: 3 }}>
-                                <Typography variant="body1"><strong>نوٹ (Note):</strong></Typography>
+                                <Typography variant="body1"><strong>Note:</strong></Typography>
                                 <Typography variant="body2" sx={{ p: 1, border: '1px dashed #000', borderRadius: 1, minHeight: '60px' }}>
                                     {printBooking.notes || ''}
                                 </Typography>

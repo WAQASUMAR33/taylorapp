@@ -2,77 +2,34 @@
 
 import { useState } from "react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Button,
-    IconButton,
-    Avatar,
-    Box,
-    Typography,
-    TextField,
-    InputAdornment,
-    Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Grid,
-    CircularProgress,
-    Alert,
-    Snackbar,
-    MenuItem,
-    Switch,
-    FormControlLabel,
-    Autocomplete,
-    Card
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Paper, Button, IconButton, Avatar, Box, Typography, TextField,
+    InputAdornment, Grid, CircularProgress, Alert, Snackbar, Switch,
+    FormControlLabel, Autocomplete, Dialog, DialogTitle, DialogContent,
+    DialogActions, Chip, Tooltip, Stack,
 } from "@mui/material";
 import {
-    Briefcase,
-    X as XIcon,
-    User,
-    Users,
-    Hash,
-    Plus,
-    Search,
-    Trash2,
-    Edit,
-    Phone,
-    MapPin,
-    Save,
-    UserPlus
+    Briefcase, X as XIcon, Search, Trash2, Edit,
+    Phone, MapPin, Save, UserPlus, Users,
 } from "lucide-react";
 
-const employeeRoles = [
-    "Tailor",
-    "Cutter"
-];
+const EMPLOYEE_ROLES = ["Tailor", "Cutter"];
+
+const EMPTY_FORM = {
+    name: "", fatherName: "", role: "", phone: "",
+    address: "", salary: "", isActive: true,
+};
 
 export default function EmployeeManagementClient({ initialEmployees }) {
     const [employees, setEmployees] = useState(initialEmployees);
     const [searchQuery, setSearchQuery] = useState("");
-
-    // UI States
-    const [showForm, setShowForm] = useState(false);
+    const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedEmpId, setSelectedEmpId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-
-    const [formData, setFormData] = useState({
-        name: "",
-        fatherName: "",
-        role: "",
-        phone: "",
-        address: "",
-        salary: "",
-        isActive: true
-    });
+    const [formData, setFormData] = useState(EMPTY_FORM);
 
     const handleOpen = (emp = null) => {
         if (emp) {
@@ -85,46 +42,28 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                 phone: emp.phone || "",
                 address: emp.address || "",
                 salary: emp.salary || "",
-                isActive: emp.isActive ?? true
+                isActive: emp.isActive ?? true,
             });
         } else {
             setEditMode(false);
             setSelectedEmpId(null);
-            setFormData({
-                name: "",
-                fatherName: "",
-                role: "",
-                phone: "",
-                address: "",
-                salary: "",
-                isActive: true
-            });
+            setFormData(EMPTY_FORM);
         }
         setError("");
-        setShowForm(true);
+        setOpen(true);
     };
 
-    const handleClose = () => {
-        if (!loading) {
-            setShowForm(false);
-            setEditMode(false);
-            setSelectedEmpId(null);
-        }
-    };
+    const handleClose = () => { if (!loading) setOpen(false); };
 
     const handleInputChange = (e) => {
         const { name, value, checked, type } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
+        setFormData(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
     };
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
         setError("");
-
         try {
             const method = editMode ? "PUT" : "POST";
             const payload = editMode ? { ...formData, id: selectedEmpId } : formData;
@@ -137,26 +76,20 @@ export default function EmployeeManagementClient({ initialEmployees }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || `Failed to ${editMode ? 'update' : 'create'} employee`);
+                throw new Error(data.error || `Failed to ${editMode ? "update" : "create"} employee`);
             }
 
             const savedEmp = await response.json();
-
-            // Serialize for local state
-            const serializedEmp = {
-                ...savedEmp,
-                salary: savedEmp.salary ? savedEmp.salary.toString() : "0"
-            };
+            const serialized = { ...savedEmp, salary: savedEmp.salary ? savedEmp.salary.toString() : "0" };
 
             if (editMode) {
-                setEmployees(prev => prev.map(e => e.id === selectedEmpId ? serializedEmp : e));
+                setEmployees(prev => prev.map(e => e.id === selectedEmpId ? serialized : e));
                 setSuccessMessage("Employee updated successfully!");
             } else {
-                setEmployees(prev => [serializedEmp, ...prev]);
+                setEmployees(prev => [serialized, ...prev]);
                 setSuccessMessage("Employee added successfully!");
             }
-
-            setShowForm(false);
+            setOpen(false);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -166,17 +99,12 @@ export default function EmployeeManagementClient({ initialEmployees }) {
 
     const handleDelete = async (id) => {
         if (!confirm("Are you sure you want to delete this employee?")) return;
-
         try {
-            const response = await fetch(`/api/employees?id=${id}`, {
-                method: "DELETE",
-            });
-
+            const response = await fetch(`/api/employees?id=${id}`, { method: "DELETE" });
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.error || "Failed to delete employee");
             }
-
             setEmployees(prev => prev.filter(e => e.id !== id));
             setSuccessMessage("Employee deleted successfully!");
         } catch (err) {
@@ -185,387 +113,135 @@ export default function EmployeeManagementClient({ initialEmployees }) {
     };
 
     const filteredEmployees = (employees || []).filter(emp => {
-        const query = (searchQuery || "").toLowerCase();
-        return (emp.name || "").toLowerCase().includes(query) ||
-            (emp.role || "").toLowerCase().includes(query);
+        const q = (searchQuery || "").toLowerCase();
+        return (emp.name || "").toLowerCase().includes(q) ||
+            (emp.role || "").toLowerCase().includes(q);
     });
 
-    if (showForm) {
-        return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-                <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                            {editMode ? "ملازم کی معلومات تبدیل کریں" : "نیا ملازم شامل کریں"}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<Save size={18} />}
-                                onClick={handleSubmit}
-                                disabled={loading}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                            >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<XIcon size={18} />}
-                                onClick={handleClose}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                            >
-                                کینسل
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    <Box sx={{ p: 3 }}>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">مکمل نام</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="name"
-                                    required
-                                    dir="rtl"
-                                    placeholder="نام درج کریں"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">والد کا نام</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="fatherName"
-                                    required
-                                    dir="rtl"
-                                    placeholder="والد کا نام درج کریں"
-                                    value={formData.fatherName}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">عہدہ</Typography>
-                                </Box>
-                                <Autocomplete
-                                    options={employeeRoles}
-                                    value={formData.role || null}
-                                    onChange={(e, newValue) => setFormData(prev => ({ ...prev, role: newValue || '' }))}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            required
-                                            dir="rtl"
-                                            placeholder="عہدہ منتخب کریں"
-                                            variant="outlined"
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                },
-                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                            }}
-                                        />
-                                    )}
-                                    sx={{ minWidth: 300 }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="phone"
-                                    required
-                                    dir="rtl"
-                                    placeholder="فون نمبر درج کریں"
-                                    value={formData.phone}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">تنخواہ (ماہانہ)</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="salary"
-                                    required
-                                    type="number"
-                                    dir="rtl"
-                                    placeholder="تنخواہ درج کریں"
-                                    value={formData.salary}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سٹیٹس</Typography>
-                                </Box>
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'flex-end',
-                                    p: 1.5,
-                                    bgcolor: 'white',
-                                    borderRadius: '10px',
-                                    border: '1px solid #e5e7eb',
-                                    height: '56px'
-                                }}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={formData.isActive}
-                                                onChange={handleInputChange}
-                                                name="isActive"
-                                                color="primary"
-                                            />
-                                        }
-                                        label={formData.isActive ? "ایکٹیو" : "ان ایکٹیو"}
-                                        labelPlacement="start"
-                                        sx={{ mr: 1, '& .MuiFormControlLabel-label': { fontWeight: 500, color: '#374151' } }}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }} className="font-urdu">گھر کا پتہ</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="address"
-                                    required
-                                    dir="rtl"
-                                    placeholder="پتہ درج کریں"
-                                    multiline
-                                    rows={4}
-                                    value={formData.address}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Card>
-            </Box>
-        );
-    }
-
     return (
-        <Box sx={{ width: '100%', p: 3 }}>
-            {/* Action Bar */}
-            <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-                gap: 2,
-                flexDirection: 'row-reverse'
-            }}>
+        <Box sx={{ width: "100%", p: 3 }}>
+
+            {/* ── Action Bar ──────────────────────────────────── */}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} sx={{ mb: 3 }}>
                 <TextField
-                    placeholder="ملازم کا نام یا عہدہ تلاش کریں..."
+                    placeholder="Search by name or role..."
                     variant="outlined"
                     size="small"
-                    sx={{ width: 450, bgcolor: 'white' }}
-                    dir="rtl"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <Search size={18} />
-                            </InputAdornment>
+                        startAdornment: (
+                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
                         ),
                     }}
+                    sx={{ minWidth: 300, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
                 <Button
                     variant="contained"
                     startIcon={<UserPlus size={18} />}
                     onClick={() => handleOpen()}
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' },
-                        gap: 1,
-                        '& .MuiButton-startIcon': { margin: 0 }
-                    }}
-                    className="font-urdu"
+                    sx={{ borderRadius: 2, textTransform: "none", px: 3, py: 1, whiteSpace: "nowrap" }}
                 >
-                    نیا ملازم شامل کریں
+                    Add New Employee
                 </Button>
-            </Box>
+            </Stack>
 
-            {/* Employees Table */}
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
+            {/* ── Employees Table ─────────────────────────────── */}
+            <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
+                <Table>
+                    <TableHead sx={{ bgcolor: "action.hover" }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ملازم کا نام</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عہدہ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تنخواہ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">سٹیٹس</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">رابطہ</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">عمل</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Employee</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Contact</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Salary</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="center">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredEmployees.length > 0 ? (
                             filteredEmployees.map((emp) => (
-                                <TableRow
-                                    key={emp.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell align="right" dir="rtl">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row' }}>
-                                            <Avatar sx={{
-                                                bgcolor: '#f5f3ff',
-                                                color: '#8b5cf6',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                {emp.name.charAt(0)}
+                                <TableRow key={emp.id} hover sx={{ transition: "background-color 0.15s" }}>
+
+                                    {/* Employee name + father name */}
+                                    <TableCell>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                            <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36, fontSize: "0.85rem", fontWeight: 700 }}>
+                                                {(emp.name || "?").charAt(0).toUpperCase()}
                                             </Avatar>
-                                            <Box sx={{ textAlign: 'right' }}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {emp.name}
-                                                </Typography>
-                                                <Typography variant="caption" color="textSecondary" className="font-urdu">
-                                                    والد: {emp.fatherName || 'دستیاب نہیں'}
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={600}>{emp.name}</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Father: {emp.fatherName || "N/A"}
                                                 </Typography>
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                            <Typography variant="body2" className="font-urdu">{emp.role === 'Tailor' ? 'درزی' : 'کٹر'}</Typography>
-                                            <Briefcase size={14} className="text-zinc-400" />
+
+                                    {/* Role */}
+                                    <TableCell>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                            <Briefcase size={14} color="#9ca3af" />
+                                            <Typography variant="body2">{emp.role}</Typography>
                                         </Box>
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#059669' }}>
-                                            Rs. {parseFloat(emp.salary).toLocaleString()}
+
+                                    {/* Contact */}
+                                    <TableCell>
+                                        <Stack spacing={0.5}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                <Phone size={13} color="#9ca3af" />
+                                                <Typography variant="caption">{emp.phone || "No Number"}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                <MapPin size={13} color="#9ca3af" />
+                                                <Typography variant="caption" sx={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {emp.address || "No Address"}
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
+                                    </TableCell>
+
+                                    {/* Salary */}
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={600} color="success.main">
+                                            Rs. {parseFloat(emp.salary || 0).toLocaleString()}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                            <Typography variant="body2" className="font-urdu">
-                                                {emp.isActive ? 'ایکٹیو' : 'ان ایکٹیو'}
-                                            </Typography>
-                                            <Box sx={{
-                                                width: 8,
-                                                height: 8,
-                                                borderRadius: '50%',
-                                                bgcolor: emp.isActive ? '#10b981' : '#ef4444'
-                                            }} />
-                                        </Box>
+
+                                    {/* Status chip */}
+                                    <TableCell>
+                                        <Chip
+                                            label={emp.isActive ? "Active" : "Inactive"}
+                                            size="small"
+                                            color={emp.isActive ? "success" : "default"}
+                                            variant="outlined"
+                                        />
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                                <Typography variant="caption">{emp.phone || 'نمبر نہیں ہے'}</Typography>
-                                                <Phone size={14} className="text-zinc-400" />
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                                <Typography variant="caption" sx={{
-                                                    maxWidth: 150,
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    {emp.address || 'پتہ نہیں ہے'}
-                                                </Typography>
-                                                <MapPin size={14} className="text-zinc-400" />
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <IconButton size="small" color="primary" onClick={() => handleOpen(emp)}>
-                                                <Edit size={18} />
-                                            </IconButton>
-                                            <IconButton size="small" color="error" onClick={() => handleDelete(emp.id)}>
-                                                <Trash2 size={18} />
-                                            </IconButton>
-                                        </Box>
+
+                                    {/* Actions */}
+                                    <TableCell align="center">
+                                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                                            <Tooltip title="Edit">
+                                                <IconButton size="small" color="primary" onClick={() => handleOpen(emp)}>
+                                                    <Edit size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete">
+                                                <IconButton size="small" color="error" onClick={() => handleDelete(emp.id)}>
+                                                    <Trash2 size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Stack>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary" className="font-urdu">کوئی ملازم نہیں ملا۔</Typography>
+                                    <Users size={40} color="#d1d5db" />
+                                    <Typography color="text.secondary" sx={{ mt: 1 }}>No employees found.</Typography>
                                 </TableCell>
                             </TableRow>
                         )}
@@ -573,14 +249,201 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                 </Table>
             </TableContainer>
 
-            {/* Success Notification */}
+            {/* ── Add / Edit Employee Dialog ───────────────────── */}
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    {editMode ? "Edit Employee Details" : "Add New Employee"}
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: '24px !important', pb: 3 }}>
+                    {error && (
+                        <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    <Grid container spacing={2}>
+
+                        {/* Row 1: Name | Father's Name | Role */}
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Full Name"
+                                name="name"
+                                required
+                                placeholder="Enter full name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Father's Name"
+                                name="fatherName"
+                                placeholder="Enter father's name"
+                                value={formData.fatherName}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                            <Autocomplete
+                                fullWidth
+                                size="small"
+                                options={EMPLOYEE_ROLES}
+                                value={formData.role || null}
+                                onChange={(_, newValue) =>
+                                    setFormData(prev => ({ ...prev, role: newValue || "" }))
+                                }
+                                componentsProps={{
+                                    paper: { sx: { minWidth: 300 } }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Role" required placeholder="Select role" variant="outlined" />
+                                )}
+                            />
+                        </Grid>
+
+                        {/* Row 2: Phone | Salary | Status */}
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Phone Number"
+                                name="phone"
+                                placeholder="03xx-xxxxxxx"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Phone size={16} color="#9ca3af" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Monthly Salary"
+                                name="salary"
+                                type="number"
+                                required
+                                placeholder="0"
+                                value={formData.salary}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                }}
+                            />
+                        </Grid>
+
+                        <Grid item xs={4}>
+                            <Box
+                                sx={{
+                                    height: '40px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                    px: 1.5,
+                                }}
+                            >
+                                <FormControlLabel
+                                    sx={{ m: 0, gap: 1 }}
+                                    control={
+                                        <Switch
+                                            checked={formData.isActive}
+                                            onChange={handleInputChange}
+                                            name="isActive"
+                                            color="success"
+                                            size="small"
+                                        />
+                                    }
+                                    label={
+                                        <Typography variant="body2" fontWeight={600}>
+                                            {formData.isActive ? "Active" : "Inactive"}
+                                        </Typography>
+                                    }
+                                />
+                            </Box>
+                        </Grid>
+
+                        {/* Row 3: Home Address — full width */}
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Home Address"
+                                name="address"
+                                placeholder="Enter full address"
+                                multiline
+                                rows={2}
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                                            <MapPin size={16} color="#9ca3af" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Grid>
+
+                    </Grid>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={loading}
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        startIcon={loading ? null : <Save size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : editMode ? "Update Employee" : "Save Employee"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Success Snackbar ──────────────────────────────── */}
             <Snackbar
                 open={!!successMessage}
                 autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%', borderRadius: 2 }}>
+                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: "100%", borderRadius: 2 }}>
                     {successMessage}
                 </Alert>
             </Snackbar>

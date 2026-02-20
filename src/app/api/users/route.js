@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { fullName, username, email, phone, role, password } = body;
+        const { fullName, username, email, phone, role, password, permissions } = body;
 
         if (!fullName || !username || !password) {
             return NextResponse.json(
@@ -24,13 +24,12 @@ export async function POST(req) {
                 phone,
                 role: role || 'STAFF',
                 passwordHash: hashedPassword,
-                isActive: true
+                isActive: true,
+                permissions: permissions || null,
             },
         });
 
-        // Don't return the password hash
         const { passwordHash, ...userWithoutPassword } = user;
-
         return NextResponse.json(userWithoutPassword, { status: 201 });
     } catch (error) {
         console.error("Failed to create user:", error);
@@ -40,23 +39,17 @@ export async function POST(req) {
                 { status: 400 }
             );
         }
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, fullName, username, email, phone, role, password, isActive } = body;
+        const { id, fullName, username, email, phone, role, password, isActive, permissions } = body;
 
         if (!id) {
-            return NextResponse.json(
-                { error: "User ID is required" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "User ID is required" }, { status: 400 });
         }
 
         const updateData = {
@@ -65,8 +58,12 @@ export async function PUT(req) {
             email,
             phone,
             role,
-            isActive: isActive !== undefined ? isActive : true
+            isActive: isActive !== undefined ? isActive : true,
         };
+
+        if (permissions !== undefined) {
+            updateData.permissions = permissions;
+        }
 
         if (password && password.trim() !== "") {
             updateData.passwordHash = await bcrypt.hash(password, 10);
@@ -87,10 +84,7 @@ export async function PUT(req) {
                 { status: 400 }
             );
         }
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
@@ -100,23 +94,14 @@ export async function DELETE(req) {
         const id = searchParams.get("id");
 
         if (!id) {
-            return NextResponse.json(
-                { error: "User ID is required" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "User ID is required" }, { status: 400 });
         }
 
-        await prisma.user.delete({
-            where: { id: parseInt(id) },
-        });
-
+        await prisma.user.delete({ where: { id: parseInt(id) } });
         return NextResponse.json({ message: "User deleted successfully" });
     } catch (error) {
         console.error("Failed to delete user:", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
@@ -131,16 +116,14 @@ export async function GET() {
                 phone: true,
                 role: true,
                 isActive: true,
+                permissions: true,
                 createdAt: true,
-                updatedAt: true
+                updatedAt: true,
             },
             orderBy: { createdAt: "desc" },
         });
         return NextResponse.json(users);
     } catch (error) {
-        return NextResponse.json(
-            { error: "Failed to fetch users" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 }

@@ -19,32 +19,37 @@ import {
     InputAdornment,
     Tooltip,
     Card,
+    CardContent,
     Grid,
     CircularProgress,
     Alert,
     Snackbar,
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Autocomplete,
+    Divider,
+    Stack,
+    FormControl,
+    InputLabel,
+    Select,
     MenuItem,
-    Chip
 } from "@mui/material";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
 import {
     Edit,
     Trash2,
     Search,
-    UserPlus,
     Phone,
     MapPin,
     Ruler,
-    Save,
     Plus,
-    X as XIcon,
     User,
-    Users
+    Users,
+    BookText,
+    Tag,
 } from "lucide-react";
-import { Autocomplete } from "@mui/material";
 
 export default function CustomerManagementClient({ initialCustomers, accountCategories }) {
     const [customers, setCustomers] = useState(initialCustomers);
@@ -57,7 +62,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [newCatName, setNewCatName] = useState("");
     const [newCatLoading, setNewCatLoading] = useState(false);
 
-    // UI States
+    // Form Dialog State
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -70,7 +75,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         address: "",
         accountCategoryId: categories.length > 0 ? categories[0].id : null,
         notes: "",
-        balance: 0
+        balance: 0,
     });
 
     const resetForm = () => {
@@ -82,9 +87,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             code: "",
             accountCategoryId: categories.length > 0 ? categories[0].id : null,
             notes: "",
-            balance: 0
+            balance: 0,
         });
         setError("");
+        setLoading(false);
     };
 
     const handleOpen = () => {
@@ -102,12 +108,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         if (name === "phone") {
-            // Only allow numerical values
             if (value === "" || /^[0-9]+$/.test(value)) {
-                setFormData(prev => ({ ...prev, [name]: value }));
+                setFormData((prev) => ({ ...prev, [name]: value }));
             }
         } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+            setFormData((prev) => ({ ...prev, [name]: value }));
         }
     };
 
@@ -129,17 +134,21 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} customer`);
+                throw new Error(data.error || `Failed to ${isEditing ? "update" : "create"} customer`);
             }
 
             const savedCustomer = await response.json();
+            const updatedCategory = categories.find((c) => c.id === savedCustomer.accountCategoryId);
+            const customerWithRelations = {
+                ...savedCustomer,
+                accountCategory: updatedCategory || savedCustomer.accountCategory,
+            };
 
-            // Update local state
             if (isEditing) {
-                setCustomers(prev => prev.map(c => c.id === savedCustomer.id ? savedCustomer : c));
+                setCustomers((prev) => prev.map((c) => (c.id === savedCustomer.id ? customerWithRelations : c)));
                 setSuccessMessage("Customer updated successfully!");
             } else {
-                setCustomers(prev => [savedCustomer, ...prev]);
+                setCustomers((prev) => [customerWithRelations, ...prev]);
                 setSuccessMessage("Customer added successfully!");
             }
 
@@ -168,8 +177,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             }
 
             const savedCat = await response.json();
-            setCategories(prev => [...prev, savedCat].sort((a, b) => a.name.localeCompare(b.name)));
-            setFormData(prev => ({ ...prev, accountCategoryId: savedCat.id }));
+            setCategories((prev) => [...prev, savedCat].sort((a, b) => a.name.localeCompare(b.name)));
+            setFormData((prev) => ({ ...prev, accountCategoryId: savedCat.id }));
             setSuccessMessage("Category added successfully!");
             setQuickAddCatOpen(false);
             setNewCatName("");
@@ -190,647 +199,598 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             code: customer.code || "",
             accountCategoryId: customer.accountCategoryId || (categories.length > 0 ? categories[0].id : null),
             notes: customer.notes || "",
-            balance: customer.balance || 0
+            balance: customer.balance || 0,
         });
         setShowForm(true);
     };
 
     const handleDelete = async (customerId) => {
         if (!confirm("Are you sure you want to delete this customer?")) return;
-        setError(""); // Clear previous errors
+        setError("");
 
         try {
-            const response = await fetch(`/api/customers/${customerId}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(`/api/customers/${customerId}`, { method: "DELETE" });
 
             if (!response.ok) {
                 const data = await response.json();
                 if (response.status === 404) {
-                    // Customer already gone, remove from UI
-                    setCustomers(prev => prev.filter(c => c.id !== customerId));
+                    setCustomers((prev) => prev.filter((c) => c.id !== customerId));
                     setSuccessMessage("Customer was already deleted.");
                     return;
                 }
                 throw new Error(data.error || "Failed to delete customer");
             }
 
-            setCustomers(prev => prev.filter(c => c.id !== customerId));
+            setCustomers((prev) => prev.filter((c) => c.id !== customerId));
             setSuccessMessage("Customer deleted successfully!");
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const filteredCustomers = (customers || []).filter(customer => {
+    const filteredCustomers = (customers || []).filter((customer) => {
         const query = (searchQuery || "").toLowerCase();
         const matchesSearch =
             (customer.name || "").toLowerCase().includes(query) ||
             (customer.phone || "").includes(searchQuery || "");
-
         const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
-
         return matchesSearch && matchesCategory;
     });
 
-    // Calculate stats for summary cards
-    const customerCategories = (categories || []).filter(cat =>
-        !(cat.name || "").toLowerCase().includes("cutter") &&
-        !(cat.name || "").toLowerCase().includes("tailor")
-    );
-
-    const filteredInitialCustomers = (customers || []).filter(c => {
-        const cat = (categories || []).find(cat => cat.id === c.accountCategoryId);
-        return !cat || (
+    const customerCategories = (categories || []).filter(
+        (cat) =>
             !(cat.name || "").toLowerCase().includes("cutter") &&
             !(cat.name || "").toLowerCase().includes("tailor")
+    );
+
+    const filteredInitialCustomers = (customers || []).filter((c) => {
+        const cat = (categories || []).find((cat) => cat.id === c.accountCategoryId);
+        return (
+            !cat ||
+            (!(cat.name || "").toLowerCase().includes("cutter") &&
+                !(cat.name || "").toLowerCase().includes("tailor"))
         );
     });
 
-    const categoryStats = customerCategories.map(cat => ({
+    const categoryStats = customerCategories.map((cat) => ({
         ...cat,
-        count: filteredInitialCustomers.filter(c => c.accountCategoryId === cat.id).length
+        count: filteredInitialCustomers.filter((c) => c.accountCategoryId === cat.id).length,
     }));
 
+    const statColors = [
+        { bg: "primary.light", color: "primary.main" },
+        { bg: "success.light", color: "success.main" },
+        { bg: "info.light", color: "info.main" },
+        { bg: "warning.light", color: "warning.main" },
+        { bg: "secondary.light", color: "secondary.main" },
+    ];
+
     return (
-        <Box sx={{ width: '100%', minHeight: '100vh', p: 3, bgcolor: showForm ? '#f9fafb' : 'transparent' }}>
-            {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError("")}>{error}</Alert>}
+        <Box sx={{ width: "100%", p: 3 }}>
 
-            {showForm ? (
-                <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row-reverse' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                            {formData.id ? 'کسٹمر کی معلومات تبدیل کریں' : 'نیا کسٹمر شامل کریں'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<Save size={18} />}
-                                onClick={handleSubmit}
-                                disabled={loading}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+            {/* ── Summary Cards ─────────────────────────────── */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                {/* Total Customers */}
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card
+                        elevation={0}
+                        sx={{
+                            borderRadius: 3,
+                            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                            color: "white",
+                            boxShadow: "0 4px 20px rgba(37,99,235,0.25)",
+                        }}
+                    >
+                        <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600, opacity: 0.85, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                Total Customers
+                            </Typography>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                                <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                                    {filteredInitialCustomers.length}
+                                </Typography>
+                                <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 1, borderRadius: 2 }}>
+                                    <Users size={22} color="white" />
+                                </Box>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Category Stats */}
+                {categoryStats.map((stat, idx) => {
+                    const c = statColors[idx % statColors.length];
+                    return (
+                        <Grid item xs={12} sm={6} md={3} key={stat.id}>
+                            <Card
+                                elevation={0}
+                                sx={{
+                                    borderRadius: 3,
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    height: "100%",
+                                    transition: "transform 0.2s, box-shadow 0.2s",
+                                    "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 20px rgba(0,0,0,0.08)" },
+                                }}
                             >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<XIcon size={18} />}
-                                onClick={handleClose}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                            >
-                                کینسل
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    <Box sx={{ p: 3 }}>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">مکمل نام</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="name"
-                                    required
-                                    dir="rtl"
-                                    placeholder="نام درج کریں"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">ولدیت</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="fatherName"
-                                    dir="rtl"
-                                    placeholder="والد کا نام درج کریں"
-                                    value={formData.fatherName || ""}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">فون نمبر</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="phone"
-                                    placeholder="03001234567"
-                                    value={formData.phone}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-                                                    <Typography sx={{ fontSize: '1.2rem' }}>🇵🇰</Typography>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }}>+92</Typography>
-                                                    <Box sx={{ ml: 1, mr: 1, height: '20px', width: '1px', bgcolor: '#e5e7eb' }} />
-                                                </Box>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">اوپننگ بیلنس</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="balance"
-                                    type="number"
-                                    required
-                                    placeholder="0.00"
-                                    value={formData.balance}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }}>Rs.</Typography>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">اکاؤنٹ کیٹگری</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Autocomplete
-                                        fullWidth
-                                        options={categories.filter(cat =>
-                                            !cat.name.toLowerCase().includes("cutter") &&
-                                            !cat.name.toLowerCase().includes("tailor")
-                                        )}
-                                        getOptionLabel={(option) => option.name || ""}
-                                        value={categories.find(c => c.id === formData.accountCategoryId) || null}
-                                        onChange={(event, newValue) => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                accountCategoryId: newValue ? newValue.id : null
-                                            }));
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                variant="outlined"
-                                                dir="rtl"
-                                                placeholder="کیٹگری منتخب کریں"
-                                                sx={{
-                                                    minWidth: '300px',
-                                                    '& .MuiOutlinedInput-root': {
-                                                        bgcolor: 'white',
-                                                        borderRadius: '10px',
-                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                    },
-                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                }}
-                                            />
-                                        )}
-                                    />
-                                    <Tooltip title="Add New Category">
-                                        <IconButton
-                                            onClick={() => setQuickAddCatOpen(true)}
-                                            sx={{
-                                                bgcolor: '#8b5cf6',
-                                                color: 'white',
-                                                borderRadius: '10px',
-                                                '&:hover': { bgcolor: '#7c3aed' }
-                                            }}
-                                        >
-                                            <Plus size={20} />
-                                        </IconButton>
-                                    </Tooltip>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">پتا</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="address"
-                                    required
-                                    placeholder="مکمل پتا درج کریں"
-                                    multiline
-                                    rows={4}
-                                    dir="rtl"
-                                    value={formData.address}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">نوٹس</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    name="notes"
-                                    required
-                                    placeholder="اضافی معلومات..."
-                                    multiline
-                                    rows={4}
-                                    dir="rtl"
-                                    value={formData.notes}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Card>
-            ) : (
-                <>
-                    {/* Summary Cards */}
-                    <Grid container spacing={3} sx={{ mb: 4 }}>
-                        <Grid item xs={12} md={3}>
-                            <Card sx={{
-                                p: 2.5,
-                                borderRadius: 3,
-                                bgcolor: 'white',
-                                border: '1px solid #e5e7eb',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                            }}>
-                                <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1, textAlign: 'right' }} className="font-urdu">کل کسٹمرز</Typography>
-                                <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{filteredInitialCustomers.length}</Typography>
-                                    <Avatar sx={{ bgcolor: '#f5f3ff', color: '#8b5cf6' }}>
-                                        <Users size={20} />
-                                    </Avatar>
-                                </Box>
+                                <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                        {stat.name}
+                                    </Typography>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                                        <Typography variant="h4" sx={{ fontWeight: 800, color: "text.primary" }}>
+                                            {stat.count}
+                                        </Typography>
+                                        <Box sx={{ bgcolor: c.bg, color: c.color, p: 1, borderRadius: 2 }}>
+                                            <User size={20} />
+                                        </Box>
+                                    </Box>
+                                </CardContent>
                             </Card>
                         </Grid>
-                        {categoryStats.map((stat, idx) => (
-                            <Grid item xs={12} md={3} key={stat.id}>
-                                <Card sx={{
-                                    p: 2.5,
-                                    borderRadius: 3,
-                                    bgcolor: 'white',
-                                    border: '1px solid #e5e7eb',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                                }}>
-                                    <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, mb: 1, textAlign: 'right' }} className="font-urdu">{stat.name}</Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{stat.count}</Typography>
-                                        <Avatar sx={{
-                                            bgcolor: idx % 3 === 0 ? '#ecfdf5' : (idx % 3 === 1 ? '#eff6ff' : '#fff7ed'),
-                                            color: idx % 3 === 0 ? '#10b981' : (idx % 3 === 1 ? '#3b82f6' : '#f59e0b')
-                                        }}>
-                                            <User size={20} />
-                                        </Avatar>
-                                    </Box>
-                                </Card>
-                            </Grid>
-                        ))}
-                    </Grid>
+                    );
+                })}
+            </Grid>
 
-                    {/* Action Bar */}
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'row-reverse',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        mb: 3,
-                        gap: 2,
-                        flexWrap: 'wrap'
-                    }}>
-                        <Box sx={{ display: 'flex', gap: 2, flex: 1, flexDirection: 'row-reverse' }}>
+            {/* ── Action Bar ────────────────────────────────── */}
+            <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                alignItems={{ xs: "stretch", sm: "center" }}
+                justifyContent="space-between"
+                sx={{ mb: 3 }}
+            >
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ flex: 1 }}>
+                    <TextField
+                        placeholder="Search customer..."
+                        variant="outlined"
+                        size="small"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Search size={18} />
+                                </InputAdornment>
+                            ),
+                        }}
+                        sx={{ minWidth: 300, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    />
+                    <Autocomplete
+                        options={customerCategories}
+                        getOptionLabel={(option) => option.name || ""}
+                        value={filterCategory}
+                        onChange={(e, newValue) => setFilterCategory(newValue)}
+                        sx={{ minWidth: 300 }}
+                        ListboxProps={{ style: { minWidth: 300 } }}
+                        renderInput={(params) => (
                             <TextField
-                                placeholder="کسٹمر تلاش کریں..."
-                                variant="outlined"
+                                {...params}
+                                placeholder="Filter by Category"
                                 size="small"
-                                dir="rtl"
-                                sx={{ minWidth: 300, bgcolor: 'white' }}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <Search size={18} />
-                                        </InputAdornment>
-                                    ),
-                                    style: { textAlign: 'right' }
-                                }}
+                                sx={{ bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                             />
-                            <Autocomplete
-                                options={customerCategories}
-                                getOptionLabel={(option) => option.name || ""}
-                                value={filterCategory}
-                                onChange={(e, newValue) => setFilterCategory(newValue)}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        placeholder="کیٹگری کے لحاظ سے فلٹر کریں"
-                                        size="small"
-                                        dir="rtl"
-                                        sx={{ minWidth: 300, bgcolor: 'white' }}
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            style: { textAlign: 'right' }
-                                        }}
-                                    />
-                                )}
-                                sx={{ borderRadius: 2 }}
-                            />
-                        </Box>
+                        )}
+                    />
+                </Stack>
+                <Button
+                    variant="contained"
+                    startIcon={<Plus size={18} />}
+                    onClick={handleOpen}
+                    sx={{ borderRadius: 2, textTransform: "none", px: 3, py: 1, whiteSpace: "nowrap" }}
+                >
+                    Add New Customer
+                </Button>
+            </Stack>
+
+            {/* ── Customers Table ───────────────────────────── */}
+            <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}
+            >
+                <Table>
+                    <TableHead sx={{ bgcolor: "action.hover" }}>
+                        <TableRow>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Customer</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Balance</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Phone</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Address</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }} align="center">Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filteredCustomers.length > 0 ? (
+                            filteredCustomers.map((customer) => (
+                                <TableRow
+                                    key={customer.id}
+                                    hover
+                                    sx={{ transition: "background-color 0.15s" }}
+                                >
+                                    {/* Customer Name */}
+                                    <TableCell>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                            <Avatar
+                                                sx={{
+                                                    bgcolor: "primary.main",
+                                                    width: 38,
+                                                    height: 38,
+                                                    fontSize: "0.9rem",
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {customer.name.charAt(0).toUpperCase()}
+                                            </Avatar>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={600}>
+                                                    {customer.name}
+                                                </Typography>
+                                                {customer.fatherName && (
+                                                    <Typography variant="caption" color="text.secondary" display="block">
+                                                        S/O: {customer.fatherName}
+                                                    </Typography>
+                                                )}
+                                                <Chip
+                                                    label={customer.accountCategory?.name || "N/A"}
+                                                    size="small"
+                                                    sx={{ height: 18, fontSize: "0.65rem", mt: 0.3 }}
+                                                />
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
+
+                                    {/* Balance */}
+                                    <TableCell>
+                                        <Tooltip title="View Ledger">
+                                            <Box
+                                                component={Link}
+                                                href={`/dashboard/ledger?customerId=${customer.id}`}
+                                                sx={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 0.5 }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    fontWeight={700}
+                                                    sx={{
+                                                        color:
+                                                            customer.balance > 0
+                                                                ? "success.main"
+                                                                : customer.balance < 0
+                                                                    ? "error.main"
+                                                                    : "text.primary",
+                                                    }}
+                                                >
+                                                    Rs. {Math.abs(parseFloat(customer.balance || 0)).toFixed(2)}
+                                                    {parseFloat(customer.balance || 0) > 0
+                                                        ? " (Cr)"
+                                                        : parseFloat(customer.balance || 0) < 0
+                                                            ? " (Dr)"
+                                                            : ""}
+                                                </Typography>
+                                                <BookText size={14} color="#9ca3af" />
+                                            </Box>
+                                        </Tooltip>
+                                    </TableCell>
+
+                                    {/* Phone */}
+                                    <TableCell>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                            <Phone size={14} color="#9ca3af" />
+                                            <Typography variant="body2">{customer.phone || "—"}</Typography>
+                                        </Box>
+                                    </TableCell>
+
+                                    {/* Address */}
+                                    <TableCell>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                            <MapPin size={14} color="#9ca3af" />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 1,
+                                                    WebkitBoxOrient: "vertical",
+                                                    maxWidth: 220,
+                                                }}
+                                            >
+                                                {customer.address || "—"}
+                                            </Typography>
+                                        </Box>
+                                    </TableCell>
+
+                                    {/* Actions */}
+                                    <TableCell align="center">
+                                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                                            <Tooltip title="Measurements">
+                                                <IconButton
+                                                    size="small"
+                                                    color="info"
+                                                    component={Link}
+                                                    href={`/dashboard/measurements?customerId=${customer.id}`}
+                                                >
+                                                    <Ruler size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Edit">
+                                                <IconButton size="small" color="primary" onClick={() => handleEdit(customer)}>
+                                                    <Edit size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete">
+                                                <IconButton size="small" color="error" onClick={() => handleDelete(customer.id)}>
+                                                    <Trash2 size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Stack>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                                    <Users size={40} color="#d1d5db" />
+                                    <Typography color="text.secondary" sx={{ mt: 1 }}>
+                                        No customers found.
+                                    </Typography>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            {/* ── Add / Edit Customer Dialog ────────────────── */}
+            <Dialog
+                open={showForm}
+                onClose={handleClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    {formData.id ? "Edit Customer" : "Add New Customer"}
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: 2.5 }}>
+                    {error && (
+                        <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* Top action row — Add Category button sits here, top-right */}
+                    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
                         <Button
-                            variant="contained"
-                            startIcon={<Plus size={18} />}
-                            onClick={handleOpen}
-                            sx={{
-                                borderRadius: 2,
-                                textTransform: 'none',
-                                px: 3,
-                                py: 1,
-                                bgcolor: '#8b5cf6',
-                                '&:hover': { bgcolor: '#7c3aed' }
-                            }}
-                            className="font-urdu"
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Plus size={15} />}
+                            onClick={() => setQuickAddCatOpen(true)}
+                            sx={{ borderRadius: 2, textTransform: "none", fontSize: "0.8rem" }}
                         >
-                            نیا کسٹمر شامل کریں
+                            Add Category
                         </Button>
                     </Box>
 
-                    {/* Customers Table */}
-                    <TableContainer component={Paper} elevation={0} sx={{
-                        borderRadius: 3,
-                        border: '1px solid #e5e7eb',
-                        overflow: 'hidden'
-                    }}>
-                        <Table sx={{ minWidth: 650 }}>
-                            <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                                <TableRow>
-                                    <TableCell align="right" sx={{ fontWeight: 600, width: '10%' }} className="font-urdu">ایکشن</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, width: '20%' }} className="font-urdu">پتا</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, width: '20%' }} className="font-urdu">فون نمبر</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, width: '20%' }} className="font-urdu">بقیہ رقم</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, width: '30%' }} className="font-urdu">کسٹمر کا نام</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredCustomers.filter(c => {
-                                    const cat = categories.find(cat => cat.id === c.accountCategoryId);
-                                    return !cat || (
+                    {/* 3 fields per row — all size="small", minWidth 300 */}
+                    <Grid container spacing={2}>
+                        {/* Full Name */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Full Name"
+                                name="name"
+                                required
+                                placeholder="Enter full name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                            />
+                        </Grid>
+
+                        {/* Father Name */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Father Name"
+                                name="fatherName"
+                                placeholder="Enter father's name"
+                                value={formData.fatherName || ""}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                            />
+                        </Grid>
+
+                        {/* Phone */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Phone Number"
+                                name="phone"
+                                placeholder="03001234567"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                <Typography sx={{ fontSize: "0.95rem", lineHeight: 1 }}>🇵🇰</Typography>
+                                                <Typography variant="body2" fontWeight={600}>+92</Typography>
+                                                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 16 }} />
+                                            </Box>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Grid>
+
+                        {/* Opening Balance */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Opening Balance"
+                                name="balance"
+                                type="number"
+                                required
+                                placeholder="0.00"
+                                value={formData.balance}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Typography variant="body2" fontWeight={600}>Rs.</Typography>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Grid>
+
+                        {/* Account Category */}
+                        <Grid item xs={12} md={4}>
+                            <Autocomplete
+                                fullWidth
+                                size="small"
+                                options={categories.filter(
+                                    (cat) =>
                                         !cat.name.toLowerCase().includes("cutter") &&
                                         !cat.name.toLowerCase().includes("tailor")
-                                    );
-                                }).length > 0 ? (
-                                    filteredCustomers.filter(c => {
-                                        const cat = categories.find(cat => cat.id === c.accountCategoryId);
-                                        return !cat || (
-                                            !cat.name.toLowerCase().includes("cutter") &&
-                                            !cat.name.toLowerCase().includes("tailor")
-                                        );
-                                    }).map((customer) => (
-                                        <TableRow
-                                            key={customer.id}
-                                            sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                        >
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                                    <Tooltip title="پیمائشیں">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="info"
-                                                            component={Link}
-                                                            href={`/dashboard/measurements?customerId=${customer.id}`}
-                                                        >
-                                                            <Ruler size={18} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="ترمیم کریں">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="primary"
-                                                            onClick={() => handleEdit(customer)}
-                                                        >
-                                                            <Edit size={18} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="حذف کریں">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => handleDelete(customer.id)}
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                                    <Typography variant="body2" sx={{
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 1,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        textAlign: 'right'
-                                                    }}>
-                                                        {customer.address || 'پتہ درج نہیں ہے'}
-                                                    </Typography>
-                                                    <MapPin size={14} className="text-zinc-400 shrink-0" />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                                                    <Typography variant="body2">{customer.phone || 'فون نمبر نہیں ہے'}</Typography>
-                                                    <Phone size={14} className="text-zinc-400" />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="لیجر دیکھیں">
-                                                    <Typography
-                                                        variant="body2"
-                                                        component={Link}
-                                                        href={`/dashboard/ledger?customerId=${customer.id}`}
-                                                        sx={{
-                                                            fontWeight: 700,
-                                                            color: customer.balance > 0 ? '#ef4444' : (customer.balance < 0 ? '#22c55e' : '#374151'),
-                                                            textDecoration: 'none',
-                                                            '&:hover': { textDecoration: 'underline' }
-                                                        }}
-                                                    >
-                                                        Rs. {parseFloat(customer.balance || 0).toFixed(2)}
-                                                    </Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                                    <Avatar sx={{
-                                                        bgcolor: '#8b5cf6',
-                                                        width: 40,
-                                                        height: 40,
-                                                        fontWeight: 600
-                                                    }}>
-                                                        {customer.name.charAt(0)}
-                                                    </Avatar>
-                                                    <Box sx={{ textAlign: 'right' }}>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                            {customer.name}
-                                                        </Typography>
-                                                        {customer.fatherName && (
-                                                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }} className="font-urdu">
-                                                                ولدیت: {customer.fatherName}
-                                                            </Typography>
-                                                        )}
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, justifyContent: 'flex-end' }}>
-                                                            <Chip
-                                                                label={customer.accountCategory?.name || 'N/A'}
-                                                                size="small"
-                                                                sx={{
-                                                                    height: 20,
-                                                                    fontSize: '0.65rem',
-                                                                    fontWeight: 600,
-                                                                    bgcolor: '#f3f4f6',
-                                                                    color: '#374151'
-                                                                }}
-                                                            />
-                                                        </Box>
-                                                    </Box>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                            <Typography color="textSecondary" className="font-urdu">آپ کی تلاش کے مطابق کوئی کسٹمر نہیں ملا۔</Typography>
-                                        </TableCell>
-                                    </TableRow>
                                 )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </>
-            )
-            }
+                                getOptionLabel={(option) => option.name || ""}
+                                value={categories.find((c) => c.id === formData.accountCategoryId) || null}
+                                onChange={(event, newValue) => {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        accountCategoryId: newValue ? newValue.id : null,
+                                    }));
+                                }}
+                                sx={{ minWidth: 300 }}
+                                ListboxProps={{ style: { minWidth: 300 } }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Account Category"
+                                        variant="outlined"
+                                        placeholder="Select category"
+                                    />
+                                )}
+                            />
+                        </Grid>
 
-            {/* Quick Add Category Dialog */}
+                        {/* Address */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Address"
+                                name="address"
+                                placeholder="Enter full address"
+                                multiline
+                                rows={3}
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                            />
+                        </Grid>
+
+                        {/* Notes */}
+                        <Grid item xs={12} md={4}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Notes"
+                                name="notes"
+                                placeholder="Additional information..."
+                                multiline
+                                rows={3}
+                                value={formData.notes}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                sx={{ minWidth: 300 }}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button onClick={handleClose} variant="outlined" color="inherit" disabled={loading} sx={{ borderRadius: 2, textTransform: "none" }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading || !formData.name?.trim()}
+                        sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : formData.id ? "Update Customer" : "Save Customer"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Quick Add Category Dialog ─────────────────── */}
             <Dialog
                 open={quickAddCatOpen}
                 onClose={() => setQuickAddCatOpen(false)}
-                PaperProps={{
-                    sx: { borderRadius: 3, width: '100%', maxWidth: '400px' }
-                }}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
             >
-                <DialogTitle sx={{ fontWeight: 700, bgcolor: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'right' }} className="font-urdu">
-                    نئی اکاؤنٹ کیٹیگری
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider" }}>
+                    New Account Category
                 </DialogTitle>
-                <DialogContent sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#374151', textAlign: 'right' }} className="font-urdu">
-                        کیٹیگری کا نام
-                    </Typography>
+                <DialogContent sx={{ pt: 3 }}>
                     <TextField
                         fullWidth
-                        size="small"
-                        placeholder="مثلاً ہول سیلر، وی آئی پی وغیرہ"
+                        label="Category Name"
+                        placeholder="e.g. Wholesaler, VIP"
                         value={newCatName}
                         onChange={(e) => setNewCatName(e.target.value)}
                         autoFocus
-                        dir="rtl"
-                        sx={{ '& .MuiOutlinedInput-input': { textAlign: 'right' } }}
+                        variant="outlined"
+                        onKeyDown={(e) => { if (e.key === "Enter") handleQuickAddCategory(); }}
                     />
                 </DialogContent>
-                <DialogActions sx={{ p: 2, bgcolor: '#f9fafb', borderTop: '1px solid #e5e7eb', justifyContent: 'space-between' }}>
-                    <Button onClick={() => setQuickAddCatOpen(false)} sx={{ color: '#6b7280' }} className="font-urdu">
-                        کینسل
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={() => setQuickAddCatOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
                     </Button>
                     <Button
                         variant="contained"
                         onClick={handleQuickAddCategory}
                         disabled={!newCatName.trim() || newCatLoading}
-                        sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
-                        className="font-urdu"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
                     >
-                        {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "کیٹیگری بنائیں"}
+                        {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Create Category"}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Success Notification */}
+            {/* ── Success Snackbar ──────────────────────────── */}
             <Snackbar
                 open={!!successMessage}
                 autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%', borderRadius: 2 }}>
+                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: "100%", borderRadius: 2 }}>
                     {successMessage}
                 </Alert>
             </Snackbar>
-        </Box >
+        </Box>
     );
 }

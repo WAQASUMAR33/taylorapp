@@ -1,6 +1,18 @@
+
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Search, Users, Scissors, Package } from "lucide-react";
+import {
+    Container,
+    Box,
+    Typography,
+    Grid,
+    Card,
+    CardContent,
+    Chip,
+    Stack,
+    Divider
+} from "@mui/material";
 
 export const metadata = {
     title: "Search Results - TailorFlow",
@@ -11,10 +23,12 @@ export default async function SearchPage({ searchParams }) {
 
     if (!query) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-zinc-500">
-                <Search size={48} className="mb-4 opacity-20" />
-                <p>Enter a search term to find customers, bookings, or products.</p>
-            </div>
+            <Container maxWidth="lg" sx={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Search size={48} color="#9ca3af" style={{ marginBottom: 16, opacity: 0.5 }} />
+                <Typography variant="h6" color="text.secondary">
+                    Enter a search term to find customers, bookings, or products.
+                </Typography>
+            </Container>
         );
     }
 
@@ -54,93 +68,187 @@ export default async function SearchPage({ searchParams }) {
     const hasResults = customers.length > 0 || bookings.length > 0 || products.length > 0;
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold text-zinc-900">Search Results</h1>
-                <p className="text-zinc-500 mt-1">Showing results for "{query}"</p>
-            </div>
+        <Container maxWidth="xl" disableGutters sx={{ px: 3, py: 4 }}>
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h4" fontWeight="bold" color="text.primary">
+                    Search Results
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                    Showing results for &quot;{query}&quot;
+                </Typography>
+            </Box>
 
             {!hasResults && (
-                <div className="p-12 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
-                    <p className="text-zinc-500">No matching records found.</p>
-                </div>
+                <Box sx={{
+                    p: 6,
+                    textAlign: 'center',
+                    bgcolor: 'background.default',
+                    borderRadius: 3,
+                    border: '1px dashed',
+                    borderColor: 'divider'
+                }}>
+                    <Typography color="text.secondary">No matching records found.</Typography>
+                </Box>
             )}
 
-            {customers.length > 0 && (
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Users className="text-blue-600" size={20} />
-                        <h2 className="text-xl font-semibold text-zinc-900">Customers</h2>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {customers.map(c => (
-                            <Link href="/dashboard/customers" key={c.id} className="block p-4 bg-white rounded-xl border border-zinc-200 hover:border-blue-500 transition-colors shadow-sm">
-                                <h3 className="font-semibold text-zinc-900">{c.name}</h3>
-                                {c.phone && <p className="text-sm text-zinc-500">{c.phone}</p>}
-                                {c.email && <p className="text-xs text-zinc-400 mt-1">{c.email}</p>}
-                            </Link>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {bookings.length > 0 && (
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Scissors className="text-purple-600" size={20} />
-                        <h2 className="text-xl font-semibold text-zinc-900">Bookings</h2>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {bookings.map(b => (
-                            <div key={b.id} className="p-4 bg-white rounded-xl border border-zinc-200 shadow-sm relative overflow-hidden">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-semibold text-zinc-900">{b.bookingNumber}</h3>
-                                        <p className="text-sm text-zinc-600 mt-1">Customer: {b.customer.name}</p>
-                                    </div>
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${b.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                        b.status === 'READY' ? 'bg-emerald-100 text-emerald-700' :
-                                            'bg-zinc-100 text-zinc-700'
-                                        }`}>
-                                        {b.status}
-                                    </span>
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-zinc-100 flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400">
-                                        {new Date(b.bookingDate).toLocaleDateString()}
-                                    </span>
-                                    <Link href="/dashboard/bookings" className="text-sm font-medium text-blue-600 hover:underline">
-                                        View Details
+            <Stack spacing={4}>
+                {customers.length > 0 && (
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Box sx={{ p: 1, bgcolor: 'primary.light', borderRadius: 1.5, color: 'primary.main', display: 'flex' }}>
+                                <Users size={20} />
+                            </Box>
+                            <Typography variant="h6" fontWeight="bold">Customers</Typography>
+                        </Box>
+                        <Grid container spacing={2}>
+                            {customers.map(c => (
+                                <Grid item xs={12} md={6} lg={4} key={c.id}>
+                                    <Link href="/dashboard/customers" style={{ textDecoration: 'none' }}>
+                                        <Card sx={{
+                                            height: '100%',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: 3,
+                                                borderColor: 'primary.main'
+                                            },
+                                            border: 1,
+                                            borderColor: 'divider'
+                                        }} elevation={0}>
+                                            <CardContent>
+                                                <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                                                    {c.name}
+                                                </Typography>
+                                                {c.phone && (
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {c.phone}
+                                                    </Typography>
+                                                )}
+                                                {c.email && (
+                                                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
+                                                        {c.email}
+                                                    </Typography>
+                                                )}
+                                            </CardContent>
+                                        </Card>
                                     </Link>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                )}
 
-            {products.length > 0 && (
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Package className="text-orange-600" size={20} />
-                        <h2 className="text-xl font-semibold text-zinc-900">Products</h2>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {products.map(p => (
-                            <Link href="/dashboard/products" key={p.id} className="block p-4 bg-white rounded-xl border border-zinc-200 hover:border-blue-500 transition-colors shadow-sm">
-                                <div className="flex justify-between">
-                                    <h3 className="font-semibold text-zinc-900">{p.name}</h3>
-                                    <span className="text-xs font-mono bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600">{p.sku}</span>
-                                </div>
-                                <div className="mt-2 flex justify-between items-end">
-                                    <span className="text-sm text-zinc-500">Stock: {p.quantity}</span>
-                                    {/* Cost/Price are Decimals, convert safely if needed, though mostly relying on page content here */}
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                </section>
-            )}
-        </div>
+                {bookings.length > 0 && (
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Box sx={{ p: 1, bgcolor: 'secondary.light', borderRadius: 1.5, color: 'secondary.main', display: 'flex' }}>
+                                <Scissors size={20} />
+                            </Box>
+                            <Typography variant="h6" fontWeight="bold">Bookings</Typography>
+                        </Box>
+                        <Grid container spacing={2}>
+                            {bookings.map(b => (
+                                <Grid item xs={12} md={6} lg={4} key={b.id}>
+                                    <Card sx={{
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        height: '100%',
+                                        position: 'relative',
+                                        overflow: 'visible'
+                                    }} elevation={0}>
+                                        <CardContent>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                <Box>
+                                                    <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                                                        {b.bookingNumber}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Customer: {b.customer.name}
+                                                    </Typography>
+                                                </Box>
+                                                <Chip
+                                                    label={b.status}
+                                                    size="small"
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: b.status === 'PENDING' ? 'warning.light' :
+                                                            b.status === 'READY' ? 'success.light' :
+                                                                'action.selected',
+                                                        color: b.status === 'PENDING' ? 'warning.dark' :
+                                                            b.status === 'READY' ? 'success.dark' :
+                                                                'text.secondary'
+                                                    }}
+                                                />
+                                            </Box>
+                                            <Divider sx={{ my: 1.5 }} />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="caption" color="text.disabled">
+                                                    {new Date(b.bookingDate).toLocaleDateString()}
+                                                </Typography>
+                                                <Link href="/dashboard/bookings" style={{ textDecoration: 'none' }}>
+                                                    <Typography variant="body2" color="primary" fontWeight="500" sx={{ '&:hover': { textDecoration: 'underline' } }}>
+                                                        View Details
+                                                    </Typography>
+                                                </Link>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                )}
+
+                {products.length > 0 && (
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Box sx={{ p: 1, bgcolor: 'warning.light', borderRadius: 1.5, color: 'warning.dark', display: 'flex' }}>
+                                <Package size={20} />
+                            </Box>
+                            <Typography variant="h6" fontWeight="bold">Products</Typography>
+                        </Box>
+                        <Grid container spacing={2}>
+                            {products.map(p => (
+                                <Grid item xs={12} md={6} lg={4} key={p.id}>
+                                    <Link href="/dashboard/products" style={{ textDecoration: 'none' }}>
+                                        <Card sx={{
+                                            border: 1,
+                                            borderColor: 'divider',
+                                            height: '100%',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: 3,
+                                                borderColor: 'primary.main'
+                                            }
+                                        }} elevation={0}>
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                    <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                                                        {p.name}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={p.sku}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ fontFamily: 'monospace', borderRadius: 1, height: 24 }}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Stock: {p.quantity}
+                                                    </Typography>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                )}
+            </Stack>
+        </Container>
     );
 }

@@ -3,7 +3,25 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Scissors, Lock, User, Loader2 } from "lucide-react";
+import { Scissors } from "lucide-react";
+import {
+    Box,
+    Paper,
+    Typography,
+    TextField,
+    Button,
+    InputAdornment,
+    IconButton,
+    Alert,
+    CircularProgress,
+    Divider,
+    Avatar,
+} from "@mui/material";
+import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
+import LoginIcon from "@mui/icons-material/Login";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -11,6 +29,7 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -25,7 +44,7 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Invalid username or password");
+                setError("Invalid username or password. Please try again.");
             } else {
                 router.push("/dashboard");
             }
@@ -37,74 +56,167 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4">
-            <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-2xl border border-zinc-100">
-                <div className="flex flex-col items-center">
-                    <div className="h-16 w-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 mb-6">
-                        <Scissors className="h-8 w-8 text-white transition-transform hover:scale-110" />
-                    </div>
-                    <h2 className="text-3xl font-bold tracking-tight text-zinc-900">
-                        Welcome Back
-                    </h2>
-                    <p className="mt-2 text-sm text-zinc-600">
-                        Sign in to your tailor management dashboard
-                    </p>
-                </div>
+        <Box
+            sx={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "background.default",
+                px: 2,
+            }}
+        >
+            <Paper
+                elevation={3}
+                sx={{
+                    width: "100%",
+                    maxWidth: 420,
+                    borderRadius: 3,
+                    overflow: "hidden",
+                }}
+            >
+                {/* Header band */}
+                <Box
+                    sx={{
+                        bgcolor: "primary.main",
+                        px: 4,
+                        py: 4,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 1.5,
+                    }}
+                >
+                    <Avatar
+                        sx={{
+                            width: 56,
+                            height: 56,
+                            bgcolor: "primary.dark",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                        }}
+                    >
+                        <Scissors size={28} />
+                    </Avatar>
+                    <Box sx={{ textAlign: "center" }}>
+                        <Typography variant="h5" fontWeight={700} color="primary.contrastText">
+                            TailorFlow
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: "primary.contrastText", opacity: 0.8, mt: 0.5 }}>
+                            Tailor Management System
+                        </Typography>
+                    </Box>
+                </Box>
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                {/* Form body */}
+                <Box
+                    component="form"
+                    onSubmit={handleSubmit}
+                    sx={{ px: 4, py: 4 }}
+                    noValidate
+                >
+                    <Typography variant="h6" fontWeight={600} color="text.primary" gutterBottom>
+                        Sign In
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Enter your credentials to access the dashboard.
+                    </Typography>
+
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-lg flex items-center gap-2">
-                            <span className="block h-1.5 w-1.5 rounded-full bg-red-600" />
+                        <Alert
+                            severity="error"
+                            variant="filled"
+                            sx={{ mb: 3, borderRadius: 2 }}
+                            onClose={() => setError("")}
+                        >
                             {error}
-                        </div>
+                        </Alert>
                     )}
 
-                    <div className="space-y-4">
-                        <div className="relative group">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
-                            <input
-                                id="username"
-                                type="text"
-                                placeholder="Username"
-                                required
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-3 border border-zinc-300 rounded-xl bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-zinc-400"
-                            />
-                        </div>
-                        <div className="relative group">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
-                            <input
-                                id="password"
-                                type="password"
-                                placeholder="Password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-3 border border-zinc-300 rounded-xl bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-zinc-400"
-                            />
-                        </div>
-                    </div>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                        <TextField
+                            id="username"
+                            label="Username"
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                            required
+                            autoComplete="username"
+                            autoFocus
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <AccountCircleOutlinedIcon fontSize="small" color="action" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
 
-                    <button
+                        <TextField
+                            id="password"
+                            label="Password"
+                            variant="outlined"
+                            size="small"
+                            type={showPassword ? "text" : "password"}
+                            fullWidth
+                            required
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <LockOutlinedIcon fontSize="small" color="action" />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            edge="end"
+                                            size="small"
+                                        >
+                                            {showPassword ? (
+                                                <VisibilityOffOutlinedIcon fontSize="small" />
+                                            ) : (
+                                                <VisibilityOutlinedIcon fontSize="small" />
+                                            )}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Box>
+
+                    <Button
+                        id="login-submit-btn"
                         type="submit"
-                        disabled={loading}
-                        className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30"
+                        fullWidth
+                        variant="contained"
+                        size="large"
+                        disabled={loading || !username.trim() || !password.trim()}
+                        startIcon={loading ? null : <LoginIcon />}
+                        sx={{
+                            mt: 3,
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: "1rem",
+                            py: 1.25,
+                        }}
                     >
-                        {loading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                            "Sign In"
-                        )}
-                    </button>
-                </form>
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Sign In"}
+                    </Button>
 
-                <div className="pt-4 text-center border-t border-zinc-100">
-                    <p className="text-xs text-zinc-500">
-                        Tailor Management System &copy; {new Date().getFullYear()}
-                    </p>
-                </div>
-            </div>
-        </div>
+                    <Divider sx={{ my: 3 }} />
+
+                    <Typography variant="caption" color="text.disabled" align="center" display="block">
+                        &copy; {new Date().getFullYear()} TailorFlow &mdash; All rights reserved.
+                    </Typography>
+                </Box>
+            </Paper>
+        </Box>
     );
 }

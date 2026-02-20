@@ -3,11 +3,22 @@
 import { Bell, Search, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+    Toolbar,
+    TextField,
+    InputAdornment,
+    IconButton,
+    Badge,
+    Typography,
+    Box,
+    Avatar,
+    useTheme
+} from "@mui/material";
 
 export default function Header() {
     const { data: session } = useSession();
-
     const router = useRouter();
+    const theme = useTheme();
 
     const handleSearch = (e) => {
         if (e.key === "Enter") {
@@ -19,45 +30,74 @@ export default function Header() {
     };
 
     return (
-        <header className="h-16 border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-4 flex-1">
-                <div className="max-w-md w-full relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Search everything..."
-                        className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-zinc-900 placeholder-zinc-400"
-                        onKeyDown={handleSearch}
-                    />
-                </div>
-            </div>
+        <Box
+            sx={{
+                height: 64,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 3,
+                gap: 2,
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                backdropFilter: 'blur(12px)',
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            }}
+        >
+            {/* Search */}
+            <Box sx={{ flexGrow: 1, maxWidth: 420 }}>
+                <TextField
+                    fullWidth
+                    placeholder="Search everything..."
+                    variant="outlined"
+                    size="small"
+                    onKeyDown={handleSearch}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Search size={18} color={theme.palette.text.secondary} />
+                            </InputAdornment>
+                        ),
+                        sx: {
+                            borderRadius: 3,
+                            backgroundColor: theme.palette.action.hover,
+                            '& fieldset': { border: 'none' },
+                            '&:hover': { backgroundColor: theme.palette.action.selected },
+                        }
+                    }}
+                />
+            </Box>
 
-            <div className="flex items-center gap-4">
-                <button className="relative p-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
-                </button>
+            {/* Right side */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <IconButton size="medium" color="inherit">
+                    <Badge badgeContent={0} color="error" variant="dot">
+                        <Bell size={22} />
+                    </Badge>
+                </IconButton>
 
-                <div className="h-8 w-px bg-zinc-200" />
+                {/* Divider */}
+                <Box sx={{ width: 1, height: 28, bgcolor: 'divider' }} />
 
-                <div className="flex items-center gap-3 pl-2 cursor-pointer group">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-sm font-semibold text-zinc-900 leading-none">
-                            {session?.user?.name}
-                        </p>
-                        <p className="text-[10px] uppercase font-bold text-zinc-500 mt-1 tracking-wider">
-                            {session?.user?.role}
-                        </p>
-                    </div>
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center border-2 border-white shadow-lg group-hover:scale-105 transition-all overflow-hidden">
-                        {session?.user?.image ? (
-                            <img src={session.user.image} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                            <User className="h-5 w-5 text-white" />
-                        )}
-                    </div>
-                </div>
-            </div>
-        </header>
+                {/* User info */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}>
+                    <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                        <Typography variant="subtitle2" fontWeight={700} lineHeight={1.2}>
+                            {session?.user?.name || "User"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            {session?.user?.role || "Role"}
+                        </Typography>
+                    </Box>
+                    <Avatar
+                        src={session?.user?.image}
+                        alt={session?.user?.name}
+                        sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: '0.875rem' }}
+                    >
+                        <User size={18} />
+                    </Avatar>
+                </Box>
+            </Box>
+        </Box>
     );
 }

@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import BookingManagementClient from "./BookingManagementClient";
-import { Box } from "@mui/material";
+import { Box, Container, Typography, Paper } from "@mui/material";
 import { Calendar } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -88,14 +88,24 @@ export default async function BookingsPage() {
     const employees = await getEmployees();
 
     return (
-        <div className="space-y-6">
-            <Box sx={{ mb: 4, px: 3, pt: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{
                         p: 1.5,
-                        bgcolor: '#f5f3ff',
-                        borderRadius: 3,
-                        color: '#8b5cf6',
+                        bgcolor: 'primary.lighter', // Assuming you have this or use literal color
+                        backgroundColor: '#eff6ff', // Fallback/Specific color
+                        borderRadius: 2,
+                        color: 'primary.main',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
@@ -103,8 +113,12 @@ export default async function BookingsPage() {
                         <Calendar size={28} />
                     </Box>
                     <Box>
-                        <h1 className="text-3xl font-bold text-zinc-900">Booking Management</h1>
-                        <p className="text-zinc-500 mt-1">Create bookings with product billing and team assignment.</p>
+                        <Typography variant="h4" fontWeight="bold" color="text.primary">
+                            Booking Management
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                            Create bookings with product billing and team assignment.
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
@@ -117,6 +131,6 @@ export default async function BookingsPage() {
                     employees={employees}
                 />
             </Box>
-        </div>
+        </Box>
     );
 }

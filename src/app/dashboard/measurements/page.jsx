@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import MeasurementManagementClient from "./MeasurementManagementClient";
-import { Box, Typography } from "@mui/material";
+import { Container, Box, Typography } from "@mui/material";
 import { Ruler } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -57,14 +57,23 @@ export default async function MeasurementPage() {
     const customers = await getCustomers();
 
     return (
-        <div className="p-6 space-y-6">
-            <Box sx={{ mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{
                         p: 1.5,
-                        bgcolor: '#f5f3ff',
+                        bgcolor: 'primary.light',
                         borderRadius: 3,
-                        color: '#8b5cf6',
+                        color: 'primary.main',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
@@ -72,13 +81,19 @@ export default async function MeasurementPage() {
                         <Ruler size={28} />
                     </Box>
                     <Box>
-                        <h1 className="text-3xl font-bold text-zinc-900">Measurement Management</h1>
-                        <p className="text-zinc-500 mt-1">Record and manage custom measurements for Shalwar Qameez and Waistcoats.</p>
+                        <Typography variant="h4" fontWeight="bold" color="text.primary">
+                            Measurement Management
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                            Record and manage custom measurements for Shalwar Qameez and Waistcoats.
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
 
-            <MeasurementManagementClient initialMeasurements={measurements} customers={customers} />
-        </div>
+            <Box sx={{ px: 3 }}>
+                <MeasurementManagementClient initialMeasurements={measurements} customers={customers} />
+            </Box>
+        </Box>
     );
 }

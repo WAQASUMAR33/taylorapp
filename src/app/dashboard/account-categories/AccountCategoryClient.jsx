@@ -8,7 +8,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
     Button,
     IconButton,
     Box,
@@ -19,10 +18,17 @@ import {
     Snackbar,
     Chip,
     Card,
+    Avatar,
     InputAdornment,
-    CircularProgress
+    CircularProgress,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Divider,
 } from "@mui/material";
-import { Search, Plus, Edit, Trash2, Users, Tag, Save, X as XIcon } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Users } from "lucide-react";
 
 export default function AccountCategoryClient({ initialCategories }) {
     const [categories, setCategories] = useState(initialCategories);
@@ -34,14 +40,12 @@ export default function AccountCategoryClient({ initialCategories }) {
     const [successMessage, setSuccessMessage] = useState("");
     const [categoryName, setCategoryName] = useState("");
 
+    /* ── handlers ───────────────────────────────────── */
+
     const handleOpen = (category = null) => {
-        if (category) {
-            setEditingCategory(category);
-            setCategoryName(category.name);
-        } else {
-            setEditingCategory(null);
-            setCategoryName("");
-        }
+        setEditingCategory(category);
+        setCategoryName(category ? category.name : "");
+        setError("");
         setShowForm(true);
     };
 
@@ -49,39 +53,35 @@ export default function AccountCategoryClient({ initialCategories }) {
         setShowForm(false);
         setEditingCategory(null);
         setCategoryName("");
+        setError("");
     };
 
     const handleSubmit = async () => {
         setLoading(true);
         setError("");
-
         try {
-            const url = "/api/account-categories";
             const method = editingCategory ? "PUT" : "POST";
             const payload = editingCategory
                 ? { id: editingCategory.id, name: categoryName }
                 : { name: categoryName };
 
-            const response = await fetch(url, {
+            const res = await fetch("/api/account-categories", {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
-            if (!response.ok) {
-                const data = await response.json();
+            if (!res.ok) {
+                const data = await res.json();
                 throw new Error(data.error || "Failed to save category");
             }
 
-            // Refresh categories
             const refreshRes = await fetch("/api/account-categories");
             const refreshed = await refreshRes.json();
             setCategories(refreshed);
 
-            setSuccessMessage(editingCategory ? "Category updated successfully!" : "Category created successfully!");
-            setShowForm(false);
-            setEditingCategory(null);
-            setCategoryName("");
+            setSuccessMessage(editingCategory ? "Category updated!" : "Category created!");
+            handleClose();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -91,22 +91,16 @@ export default function AccountCategoryClient({ initialCategories }) {
 
     const handleDelete = async (id, customerCount) => {
         if (customerCount > 0) {
-            setError(`Cannot delete this category. ${customerCount} customer(s) are using it.`);
+            setError(`Cannot delete — ${customerCount} account(s) are using this category.`);
             return;
         }
-
         if (!confirm("Are you sure you want to delete this category?")) return;
-
         try {
-            const response = await fetch(`/api/account-categories?id=${id}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
+            const res = await fetch(`/api/account-categories?id=${id}`, { method: "DELETE" });
+            if (!res.ok) {
+                const data = await res.json();
                 throw new Error(data.error || "Failed to delete");
             }
-
             setCategories(prev => prev.filter(c => c.id !== id));
             setSuccessMessage("Category deleted successfully!");
         } catch (err) {
@@ -114,135 +108,82 @@ export default function AccountCategoryClient({ initialCategories }) {
         }
     };
 
-    const filteredCategories = (categories || []).filter(cat => {
-        const query = (searchQuery || "").toLowerCase();
-        return (cat.name || "").toLowerCase().includes(query);
-    });
+    /* ── derived ──────────────────────────────────── */
 
-    const totalCustomers = categories.reduce((sum, cat) => sum + (cat._count?.customers || 0), 0);
+    const filtered = (categories || []).filter(cat =>
+        (cat.name || "").toLowerCase().includes((searchQuery || "").toLowerCase())
+    );
+    const totalCustomers = categories.reduce((s, c) => s + (c._count?.customers || 0), 0);
 
-    if (showForm) {
-        return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-                <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                            {editingCategory ? 'کیٹگری تبدیل کریں' : 'نئی کیٹگری'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<Save size={18} />}
-                                onClick={handleSubmit}
-                                disabled={loading || !categoryName.trim()}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                                className="font-urdu"
-                            >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<XIcon size={18} />}
-                                onClick={handleClose}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                                className="font-urdu"
-                            >
-                                کینسل
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    <Box sx={{ p: 3 }}>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">کیٹگری کا نام</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    placeholder="نام درج کریں"
-                                    required
-                                    dir="rtl"
-                                    value={categoryName}
-                                    onChange={(e) => setCategoryName(e.target.value)}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Card>
-            </Box>
-        );
-    }
+    /* ── render ──────────────────────────────────── */
 
     return (
-        <Box sx={{ width: '100%', p: 3 }}>
-            {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
+        <Box sx={{ width: "100%", p: 3 }}>
 
-            {/* Statistics */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            {error && (
+                <Alert severity="error" variant="filled" onClose={() => setError("")} sx={{ mb: 2.5, borderRadius: 2 }}>
+                    {error}
+                </Alert>
+            )}
+
+            {/* ── Stats Cards ──────────────────────────── */}
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 3, bgcolor: '#f5f3ff', border: '2px solid #8b5cf620' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, bgcolor: '#8b5cf620', borderRadius: 2, color: '#8b5cf6' }}>
-                                <Tag size={24} />
-                            </Box>
+                    <Card sx={{
+                        p: 3,
+                        background: "linear-gradient(135deg, #818cf8 0%, #6366f1 100%)",
+                        color: "white",
+                        borderRadius: 3,
+                        boxShadow: "0 10px 40px rgba(99,102,241,0.3)",
+                    }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 700, color: '#8b5cf6' }}>
-                                    {categories.length}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary">
+                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
                                     Total Categories
                                 </Typography>
+                                <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
+                                    {categories.length}
+                                </Typography>
                             </Box>
+                            <Tags size={36} style={{ opacity: 0.8 }} />
                         </Box>
                     </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 3, bgcolor: '#dbeafe', border: '2px solid #3b82f620' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, bgcolor: '#3b82f620', borderRadius: 2, color: '#3b82f6' }}>
-                                <Users size={24} />
-                            </Box>
+                    <Card sx={{
+                        p: 3,
+                        background: "linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)",
+                        color: "white",
+                        borderRadius: 3,
+                        boxShadow: "0 10px 40px rgba(14,165,233,0.3)",
+                    }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 700, color: '#3b82f6' }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                    Total Accounts
+                                </Typography>
+                                <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
                                     {totalCustomers}
                                 </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                    Total Customers
-                                </Typography>
                             </Box>
+                            <Users size={36} style={{ opacity: 0.8 }} />
                         </Box>
                     </Card>
                 </Grid>
             </Grid>
 
-            {/* Actions */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
+            {/* ── Action Bar ────────────────────────────── */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="Search categories..."
+                    placeholder="Search categories…"
                     variant="outlined"
                     size="small"
-                    sx={{ width: 450, bgcolor: 'white' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    sx={{ minWidth: 300 }}
                     InputProps={{
                         startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
+                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
                         ),
                     }}
                 />
@@ -250,107 +191,175 @@ export default function AccountCategoryClient({ initialCategories }) {
                     variant="contained"
                     startIcon={<Plus size={18} />}
                     onClick={() => handleOpen()}
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
-                    }}
+                    sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                 >
                     Add Category
                 </Button>
             </Box>
 
-            {/* Categories Table */}
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Category Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Customers</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+            {/* ── Categories Table ───────────────────────── */}
+            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}>
+                <Table sx={{ minWidth: 500 }}>
+                    <TableHead>
+                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                            <TableCell sx={{ fontWeight: 700 }}>Category Name</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Accounts</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredCategories.length > 0 ? (
-                            filteredCategories.map((category) => (
-                                <TableRow
-                                    key={category.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Tag size={16} className="text-purple-600" />
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {category.name}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={category._count?.customers || 0}
-                                            size="small"
-                                            sx={{
-                                                bgcolor: '#f5f3ff',
-                                                color: '#8b5cf6',
-                                                fontWeight: 600
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={category.isActive ? "Active" : "Inactive"}
-                                            size="small"
-                                            sx={{
-                                                bgcolor: category.isActive ? '#d1fae5' : '#fee2e2',
-                                                color: category.isActive ? '#065f46' : '#991b1b',
-                                                fontWeight: 600
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={() => handleOpen(category)}
-                                        >
-                                            <Edit size={18} />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={() => handleDelete(category.id, category._count?.customers || 0)}
-                                        >
-                                            <Trash2 size={18} />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                        {filtered.length > 0 ? (
+                            filtered.map((category) => {
+                                const count = category._count?.customers || 0;
+                                return (
+                                    <TableRow
+                                        key={category.id}
+                                        sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
+                                    >
+                                        <TableCell>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                <Avatar
+                                                    variant="rounded"
+                                                    sx={(t) => ({
+                                                        width: 32, height: 32, fontSize: "0.8rem", fontWeight: 700,
+                                                        bgcolor: t.palette.primary.light,
+                                                        color: t.palette.primary.main,
+                                                        borderRadius: 1,
+                                                    })}
+                                                >
+                                                    {(category.name || "?")[0].toUpperCase()}
+                                                </Avatar>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {category.name}
+                                                </Typography>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                icon={<Users size={13} />}
+                                                label={count}
+                                                size="small"
+                                                color="primary"
+                                                variant="outlined"
+                                                sx={{ borderRadius: 1, fontWeight: 600 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={category.isActive !== false ? "Active" : "Inactive"}
+                                                size="small"
+                                                color={category.isActive !== false ? "success" : "default"}
+                                                variant="filled"
+                                                sx={{ borderRadius: 1, fontWeight: 600 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                                                <Tooltip title="Edit Category">
+                                                    <IconButton size="small" color="primary" onClick={() => handleOpen(category)}>
+                                                        <Edit size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title={count > 0 ? "Cannot delete — accounts exist" : "Delete Category"}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={() => handleDelete(category.id, count)}
+                                                            disabled={count > 0}
+                                                        >
+                                                            <Trash2 size={17} />
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary">No categories found.</Typography>
+                                    <Tags size={40} color="#d1d5db" />
+                                    <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+                                        No categories found.
+                                    </Typography>
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
-            </TableContainer>
+            </Card>
 
+            {/* ── Add / Edit Dialog ──────────────────────── */}
+            <Dialog
+                open={showForm}
+                onClose={handleClose}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    {editingCategory ? "Edit Category" : "New Category"}
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
+                    {error && (
+                        <Alert severity="error" variant="filled" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="Category Name"
+                        placeholder="e.g. Customer, Supplier…"
+                        required
+                        autoFocus
+                        value={categoryName}
+                        onChange={(e) => setCategoryName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && categoryName.trim()) handleSubmit(); }}
+                        variant="outlined"
+                    />
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={loading}
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading || !categoryName.trim()}
+                        startIcon={loading ? null : <Save size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : (editingCategory ? "Update" : "Save")}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Success Snackbar ────────────────────────── */}
             <Snackbar
                 open={!!successMessage}
                 autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%', borderRadius: 2 }}>
+                <Alert
+                    onClose={() => setSuccessMessage("")}
+                    severity="success"
+                    variant="filled"
+                    sx={{ width: "100%", borderRadius: 2 }}
+                >
                     {successMessage}
                 </Alert>
             </Snackbar>

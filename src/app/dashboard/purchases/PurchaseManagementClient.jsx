@@ -1,17 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
+    Box,
     Button,
     IconButton,
-    Box,
     Typography,
     TextField,
     InputAdornment,
@@ -20,201 +13,142 @@ import {
     CircularProgress,
     Alert,
     Snackbar,
-    MenuItem,
     Autocomplete,
-    Divider
+    Chip,
+    Avatar,
+    Tooltip,
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
 } from "@mui/material";
 import {
-    Edit,
     Trash2,
     Search,
     Plus,
     X as XIcon,
-    ShoppingCart,
-    Calendar,
-    FileText,
-    CreditCard,
     Save,
-    DollarSign,
-    Package
+    ShoppingCart,
+    CreditCard,
 } from "lucide-react";
 
-export default function PurchaseManagementClient({ initialPurchases, suppliers, products }) {
+const PAYMENT_METHODS = [
+    { value: "CASH", label: "Cash" },
+    { value: "BANK_TRANSFER", label: "Bank Transfer" },
+    { value: "CHEQUE", label: "Cheque" },
+    { value: "ONLINE", label: "Online" },
+];
+
+export default function PurchaseManagementClient({ initialPurchases, suppliers, products, banks }) {
     const [purchases, setPurchases] = useState(initialPurchases);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // UI States
-    const [showForm, setShowForm] = useState(false);
+    const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
-    // Form State
     const [formData, setFormData] = useState({
         supplierId: "",
         invoiceNumber: "",
-        purchaseDate: new Date().toISOString().split('T')[0],
+        purchaseDate: new Date().toISOString().split("T")[0],
         notes: "",
         items: [],
-        payments: []
+        payments: [],
     });
+
+    /* ── helpers ──────────────────────────────────────── */
 
     const resetForm = () => {
         setFormData({
             supplierId: "",
             invoiceNumber: `INV-${Date.now()}`,
-            purchaseDate: new Date().toISOString().split('T')[0],
+            purchaseDate: new Date().toISOString().split("T")[0],
             notes: "",
             items: [],
-            payments: []
+            payments: [],
         });
         setError("");
     };
 
-    const handleOpen = () => {
-        resetForm();
-        setShowForm(true);
-    };
+    const calcItemTotal = (item) => (parseFloat(item.quantity) || 0) * (parseFloat(item.costPrice) || 0);
+    const calcGrandTotal = () => formData.items.reduce((s, i) => s + calcItemTotal(i), 0);
+    const calcTotalPaid = () => formData.payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    const calcBalance = () => calcGrandTotal() - calcTotalPaid();
 
-    const handleClose = () => {
-        if (!loading) {
-            setShowForm(false);
-            resetForm();
-        }
-    };
+    /* ── handlers ─────────────────────────────────────── */
 
-    // --- Calculation Helpers ---
-    const calculateItemTotal = (item) => {
-        const qty = parseFloat(item.quantity) || 0;
-        const cost = parseFloat(item.costPrice) || 0;
-        return qty * cost;
-    };
+    const handleOpen = () => { resetForm(); setOpen(true); };
+    const handleClose = () => { if (!loading) { setOpen(false); resetForm(); } };
 
-    const calculateGrandTotal = () => {
-        return formData.items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-    };
-
-    const calculateTotalPaid = () => {
-        return formData.payments.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
-    };
-
-    const calculateBalance = () => {
-        return calculateGrandTotal() - calculateTotalPaid();
-    };
-
-    // --- Dynamic Form Handlers ---
-
-    // 1. Items
-    const handleAddItem = () => {
-        setFormData(prev => ({
-            ...prev,
-            items: [
-                ...prev.items,
-                { productId: "", quantity: 1, costPrice: 0, unitPrice: 0 }
-            ]
-        }));
-    };
-
-    const handleRemoveItem = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index)
-        }));
-    };
-
+    // Items
+    const handleAddItem = () => setFormData(p => ({ ...p, items: [...p.items, { productId: "", quantity: 1, costPrice: 0 }] }));
+    const handleRemoveItem = (i) => setFormData(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }));
     const handleItemChange = (index, field, value) => {
         setFormData(prev => {
-            const newItems = [...prev.items];
-            newItems[index] = { ...newItems[index], [field]: value };
-
-            // If product selected, auto-fill prices
-            if (field === 'productId') {
-                const product = products.find(p => p.id === value);
-                if (product) {
-                    newItems[index].costPrice = product.costPrice;
-                    newItems[index].unitPrice = product.unitPrice;
-                }
+            const items = [...prev.items];
+            items[index] = { ...items[index], [field]: value };
+            if (field === "productId") {
+                const prod = (products || []).find(p => p.id === value);
+                if (prod) { items[index].costPrice = prod.costPrice; items[index].unitPrice = prod.unitPrice; }
             }
-
-            return { ...prev, items: newItems };
+            return { ...prev, items };
         });
     };
 
-    // 2. Payments
-    const handleAddPayment = () => {
-        setFormData(prev => ({
-            ...prev,
-            payments: [
-                ...prev.payments,
-                { amount: 0, method: "CASH", date: new Date().toISOString().split('T')[0], notes: "" }
-            ]
-        }));
-    };
-
-    const handleRemovePayment = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            payments: prev.payments.filter((_, i) => i !== index)
-        }));
-    };
-
+    // Payments
+    const handleAddPayment = () => setFormData(p => ({ ...p, payments: [...p.payments, { amount: "", method: "CASH", date: new Date().toISOString().split("T")[0], notes: "" }] }));
+    const handleRemovePayment = (i) => setFormData(p => ({ ...p, payments: p.payments.filter((_, idx) => idx !== i) }));
     const handlePaymentChange = (index, field, value) => {
         setFormData(prev => {
-            const newPayments = [...prev.payments];
-            newPayments[index] = { ...newPayments[index], [field]: value };
-            return { ...prev, payments: newPayments };
+            const payments = [...prev.payments];
+            payments[index] = { ...payments[index], [field]: value };
+            return { ...prev, payments };
         });
     };
 
-    // --- Submit ---
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
+        if (!formData.supplierId) { setError("Please select a supplier."); return; }
+        if (formData.items.length === 0) { setError("Please add at least one item."); return; }
+
         setLoading(true);
         setError("");
-
-        if (!formData.supplierId) {
-            setError("براہ کرم سپلائر کا انتخاب کریں۔");
-            setLoading(false);
-            return;
-        }
-        if (formData.items.length === 0) {
-            setError("براہ کرم کم از کم ایک آئٹم شامل کریں۔");
-            setLoading(false);
-            return;
-        }
-
         try {
             const payload = {
                 ...formData,
-                totalAmount: calculateGrandTotal().toString(),
+                totalAmount: calcGrandTotal().toString(),
                 items: formData.items.map(item => ({
                     productId: parseInt(item.productId),
                     quantity: parseInt(item.quantity),
                     unitCost: parseFloat(item.costPrice).toString(),
-                    totalCost: (parseInt(item.quantity) * parseFloat(item.costPrice)).toString()
+                    totalCost: (parseInt(item.quantity) * parseFloat(item.costPrice)).toString(),
                 })),
-                payments: formData.payments.map(payment => ({
-                    ...payment,
-                    amount: payment.amount.toString()
-                }))
+                payments: formData.payments.map(p => ({ ...p, amount: p.amount.toString() })),
             };
 
-            const response = await fetch("/api/purchases", {
+            const res = await fetch("/api/purchases", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
-            if (!response.ok) {
-                const data = await response.json();
+            if (!res.ok) {
+                const data = await res.json();
                 throw new Error(data.error || "Failed to create purchase");
             }
 
-            const savedPurchase = await response.json();
-            setPurchases(prev => [savedPurchase, ...prev]);
-            setSuccessMessage("خریداری کی انٹری کامیابی سے محفوظ ہو گئی!");
-            setShowForm(false);
-            resetForm();
+            const saved = await res.json();
+            setPurchases(prev => [saved, ...prev]);
+            setSuccessMessage("Purchase saved successfully!");
+            handleClose();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -222,24 +156,14 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
         }
     };
 
-    const handleDelete = async (purchaseId) => {
-        if (!confirm("Are you sure you want to delete this purchase? This will revert stock and balances. This action CANNOT be undone.")) return;
-
+    const handleDelete = async (id) => {
+        if (!confirm("Delete this purchase? This will revert stock and balances. Cannot be undone.")) return;
         setLoading(true);
-        setError("");
-
         try {
-            const response = await fetch(`/api/purchases/${purchaseId}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to delete purchase");
-            }
-
-            setPurchases(prev => prev.filter(p => p.id !== purchaseId));
-            setSuccessMessage("Purchase and associated records reverted successfully!");
+            const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed to delete"); }
+            setPurchases(prev => prev.filter(p => p.id !== id));
+            setSuccessMessage("Purchase deleted successfully!");
         } catch (err) {
             setError(err.message);
         } finally {
@@ -247,547 +171,456 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
         }
     };
 
-    // Filter Logic
-    const filteredPurchases = (purchases || []).filter(p => {
-        const query = (searchQuery || "").toLowerCase();
-        return (p.invoiceNumber || "").toLowerCase().includes(query) ||
-            (p.supplier?.name || "").toLowerCase().includes(query);
+    const filtered = (purchases || []).filter(p => {
+        const q = searchQuery.toLowerCase();
+        return (p.invoiceNumber || "").toLowerCase().includes(q) ||
+            (p.supplier?.name || "").toLowerCase().includes(q);
     });
 
-    if (showForm) {
-        return (
-            <Box sx={{ width: '100%', bgcolor: '#f9fafb', minHeight: '100vh', p: 3 }}>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-                <Card sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, bgcolor: '#8b5cf6', color: 'white', display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }} className="font-urdu">
-                            خریداری کی انٹری
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<Save size={18} />}
-                                onClick={handleSubmit}
-                                disabled={loading}
-                                sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                                className="font-urdu"
-                            >
-                                {loading ? <CircularProgress size={20} color="inherit" /> : "محفوظ کریں"}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<XIcon size={18} />}
-                                onClick={handleClose}
-                                sx={{ bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}
-                                className="font-urdu"
-                            >
-                                کینسل
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    <Box sx={{ p: 3 }}>
-                        {/* Header Details */}
-                        <Grid container spacing={3} sx={{ mb: 4, flexDirection: 'row-reverse' }}>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">انوائس نمبر</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    value={formData.invoiceNumber}
-                                    disabled
-                                    dir="rtl"
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: '10px' },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">سپلائر کا انتخاب کریں</Typography>
-                                </Box>
-                                <Autocomplete
-                                    options={suppliers || []}
-                                    getOptionLabel={(option) => option.name || ""}
-                                    value={(suppliers || []).find(s => s.id === formData.supplierId) || null}
-                                    onChange={(_, newValue) => {
-                                        setFormData(prev => ({ ...prev, supplierId: newValue ? newValue.id : "" }));
-                                    }}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            placeholder="سپلائر تلاش کریں"
-                                            required
-                                            size="small"
-                                            dir="rtl"
-                                            variant="outlined"
-                                            sx={{
-                                                minWidth: 300,
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'white',
-                                                    borderRadius: '10px',
-                                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                                    '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                },
-                                                '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }} className="font-urdu">خریداری کی تاریخ</Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    type="date"
-                                    required
-                                    value={formData.purchaseDate}
-                                    onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                                    dir="rtl"
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '10px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-
-                        <Divider sx={{ my: 3 }} />
-
-                        {/* Items Section */}
-                        <Box sx={{ mb: 4 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
-                                    خریداری کی اشیاء
-                                </Typography>
-                                <Button
-                                    startIcon={<Plus size={16} />}
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={handleAddItem}
-                                    className="font-urdu"
-                                >
-                                    آئٹم شامل کریں
-                                </Button>
-                            </Box>
-
-                            <TableContainer component={Paper} variant="outlined">
-                                <Table size="small">
-                                    <TableHead sx={{ bgcolor: '#f3f4f6' }}>
-                                        <TableRow>
-                                            <TableCell width="10%"></TableCell>
-                                            <TableCell width="20%" align="right" className="font-urdu">کل قیمت</TableCell>
-                                            <TableCell width="20%" align="right" className="font-urdu">قیمتِ خرید</TableCell>
-                                            <TableCell width="15%" align="right" className="font-urdu">تعداد</TableCell>
-                                            <TableCell width="35%" align="right" className="font-urdu">پروڈکٹ</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {formData.items.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>
-                                                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
-                                                        <Trash2 size={16} />
-                                                    </IconButton>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Typography fontWeight="bold">
-                                                        Rs. {calculateItemTotal(item).toLocaleString()}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <TextField
-                                                        type="number"
-                                                        value={item.costPrice}
-                                                        onChange={(e) => handleItemChange(index, 'costPrice', e.target.value)}
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <TextField
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Autocomplete
-                                                        options={products || []}
-                                                        getOptionLabel={(option) => option.name || ""}
-                                                        value={(products || []).find(p => p.id === item.productId) || null}
-                                                        onChange={(_, newValue) => handleItemChange(index, 'productId', newValue ? newValue.id : "")}
-                                                        renderInput={(params) => (
-                                                            <TextField
-                                                                {...params}
-                                                                placeholder="پروڈکٹ کا انتخاب کریں"
-                                                                variant="outlined"
-                                                                size="small"
-                                                                dir="rtl"
-                                                                sx={{
-                                                                    minWidth: 300,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        bgcolor: 'white',
-                                                                        borderRadius: '8px',
-                                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                                        '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                                                        '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                                                    },
-                                                                    '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                                                }}
-                                                            />
-                                                        )}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {formData.items.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }} className="font-urdu">
-                                                    کوئی آئٹم شامل نہیں کیا گیا۔
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                        <TableRow sx={{ bgcolor: '#fafafa' }}>
-                                            <TableCell colSpan={1}></TableCell>
-                                            <TableCell colSpan={2} align="right" sx={{ fontWeight: 'bold', color: '#8b5cf6', fontSize: '1.1rem' }}>
-                                                Rs. {calculateGrandTotal().toLocaleString()}
-                                            </TableCell>
-                                            <TableCell colSpan={2} align="right" sx={{ fontWeight: 'bold' }} className="font-urdu">کل رقم:</TableCell>
-                                        </TableRow>
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-
-                        <Divider sx={{ my: 3 }} />
-
-                        {/* Payments Section */}
-                        <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }} className="font-urdu">
-                                    ادائیگیاں
-                                </Typography>
-                                <Button
-                                    startIcon={<Plus size={16} />}
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={handleAddPayment}
-                                    className="font-urdu"
-                                >
-                                    ادائیگی شامل کریں
-                                </Button>
-                            </Box>
-
-                            <TableContainer component={Paper} variant="outlined">
-                                <Table size="small">
-                                    <TableHead sx={{ bgcolor: '#f3f4f6' }}>
-                                        <TableRow>
-                                            <TableCell width="10%"></TableCell>
-                                            <TableCell width="15%" align="right" className="font-urdu">نوٹس</TableCell>
-                                            <TableCell width="25%" align="right" className="font-urdu">تاریخ</TableCell>
-                                            <TableCell width="25%" align="right" className="font-urdu">طریقہ کار</TableCell>
-                                            <TableCell width="25%" align="right" className="font-urdu">رقم</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {formData.payments.map((payment, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>
-                                                    <IconButton size="small" color="error" onClick={() => handleRemovePayment(index)}>
-                                                        <Trash2 size={16} />
-                                                    </IconButton>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <TextField
-                                                        value={payment.notes}
-                                                        onChange={(e) => handlePaymentChange(index, 'notes', e.target.value)}
-                                                        placeholder="اختیاری"
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <TextField
-                                                        type="date"
-                                                        value={payment.date}
-                                                        onChange={(e) => handlePaymentChange(index, 'date', e.target.value)}
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Autocomplete
-                                                        options={[
-                                                            { value: "CASH", label: "نقد (Cash)" },
-                                                            { value: "BANK_TRANSFER", label: "بینک ٹرانسفر (Bank Transfer)" },
-                                                            { value: "CHEQUE", label: "چیک (Cheque)" },
-                                                            { value: "ONLINE", label: "آن لائن (Online)" }
-                                                        ]}
-                                                        getOptionLabel={(option) => option.label || ""}
-                                                        value={[
-                                                            { value: "CASH", label: "نقد (Cash)" },
-                                                            { value: "BANK_TRANSFER", label: "بینک ٹرانسفر (Bank Transfer)" },
-                                                            { value: "CHEQUE", label: "چیک (Cheque)" },
-                                                            { value: "ONLINE", label: "آن لائن (Online)" }
-                                                        ].find(m => m.value === payment.method) || null}
-                                                        onChange={(_, newValue) => handlePaymentChange(index, 'method', newValue ? newValue.value : "")}
-                                                        renderInput={(params) => (
-                                                            <TextField
-                                                                {...params}
-                                                                placeholder="طریقہ کار منتخب کریں"
-                                                                variant="standard"
-                                                                size="small"
-                                                                dir="rtl"
-                                                                fullWidth
-                                                                required
-                                                                sx={{
-                                                                    minWidth: 300,
-                                                                    '& .MuiInput-input': { textAlign: 'right' }
-                                                                }}
-                                                            />
-                                                        )}
-                                                    />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <TextField
-                                                        type="number"
-                                                        value={payment.amount}
-                                                        onChange={(e) => handlePaymentChange(index, 'amount', e.target.value)}
-                                                        variant="standard"
-                                                        dir="rtl"
-                                                        fullWidth
-                                                        sx={{ '& .MuiInput-input': { textAlign: 'right' } }}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {formData.payments.length > 0 && (
-                                            <TableRow sx={{ bgcolor: '#fafafa' }}>
-                                                <TableCell colSpan={5}>
-                                                    <Box sx={{ display: 'flex', gap: 4, flexDirection: 'row-reverse', px: 2 }}>
-                                                        <Typography variant="body2" className="font-urdu">کل ادا شدہ: <b>Rs. {calculateTotalPaid().toLocaleString()}</b></Typography>
-                                                        <Typography variant="body2" color="error" className="font-urdu">بقیہ رقم: <b>Rs. {calculateBalance().toLocaleString()}</b></Typography>
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-
-                        <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={12}>
-                                <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem' }} className="font-urdu">
-                                        اضافی نوٹس
-                                    </Typography>
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    placeholder="تفصیل یا خصوصی ہدایات یہاں درج کریں..."
-                                    multiline
-                                    rows={3}
-                                    value={formData.notes}
-                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    dir="rtl"
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: 'white',
-                                            borderRadius: '12px',
-                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                                        },
-                                        '& .MuiOutlinedInput-input': { textAlign: 'right' }
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Card>
-            </Box>
-        );
-    }
+    /* ── render ──────────────────────────────────────── */
 
     return (
-        <Box sx={{ width: '100%', p: 3 }}>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            {/* Action Bar */}
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'row-reverse',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-                gap: 2
-            }}>
+        <Box sx={{ width: "100%", p: 3 }}>
+
+            {/* ── Action bar ─────────────────────────────── */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="خریداری تلاش کریں..."
+                    placeholder="Search by invoice or supplier…"
                     variant="outlined"
                     size="small"
-                    dir="rtl"
-                    sx={{
-                        width: '100%',
-                        maxWidth: 450,
-                        minWidth: 300,
-                        bgcolor: 'white',
-                        '& .MuiOutlinedInput-root': {
-                            bgcolor: 'white',
-                            borderRadius: '10px',
-                            '& fieldset': { borderColor: '#e5e7eb' },
-                            '&:hover fieldset': { borderColor: '#8b5cf6' },
-                            '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
-                        }
-                    }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    sx={{ width: 360 }}
                     InputProps={{
                         startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
+                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
                         ),
-                        style: { textAlign: 'right' }
                     }}
                 />
                 <Button
                     variant="contained"
                     startIcon={<Plus size={18} />}
                     onClick={handleOpen}
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                        py: 1,
-                        bgcolor: '#8b5cf6',
-                        '&:hover': { bgcolor: '#7c3aed' }
-                    }}
-                    className="font-urdu"
+                    sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                 >
-                    نئی خریداری
+                    New Purchase
                 </Button>
             </Box>
 
-            {/* Purchases Table */}
-            <TableContainer component={Paper} elevation={0} sx={{
-                borderRadius: 3,
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-            }}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">ایکشن</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">اسٹیٹس</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">کل رقم</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">سپلائر</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">انوائس #</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right" className="font-urdu">تاریخ</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredPurchases.length > 0 ? (
-                            filteredPurchases.map((purchase) => (
-                                <TableRow
-                                    key={purchase.id}
-                                    sx={{ '&:hover': { bgcolor: '#f3f4f6' }, transition: 'background-color 0.2s' }}
-                                >
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={() => handleDelete(purchase.id)}
-                                            disabled={loading}
+            {/* ── Purchases Table ─────────────────────────── */}
+            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}>
+                <TableContainer>
+                    <Table sx={{ minWidth: 650 }}>
+                        <TableHead>
+                            <TableRow sx={{ bgcolor: "action.hover" }}>
+                                <TableCell sx={{ fontWeight: 700 }}>Invoice #</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Supplier</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Total Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {filtered.length > 0 ? (
+                                filtered.map((purchase) => {
+                                    const isPaid = parseFloat(purchase.paidAmount) >= parseFloat(purchase.totalAmount);
+                                    return (
+                                        <TableRow
+                                            key={purchase.id}
+                                            sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
                                         >
-                                            <Trash2 size={18} />
-                                        </IconButton>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{
-                                            px: 1.5,
-                                            py: 0.5,
-                                            bgcolor: purchase.paidAmount >= purchase.totalAmount ? '#dcfce7' : '#fee2e2',
-                                            color: purchase.paidAmount >= purchase.totalAmount ? '#166534' : '#991b1b',
-                                            borderRadius: 1,
-                                            display: 'inline-block',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 600
-                                        }} className="font-urdu">
-                                            {purchase.paidAmount >= purchase.totalAmount ? 'مکمل ادا شدہ' : 'جزوی ادائیگی'}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2" fontWeight="bold">
-                                            Rs. {parseFloat(purchase.totalAmount).toLocaleString()}
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 600 }}>
+                                                    {purchase.invoiceNumber}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {new Date(purchase.purchaseDate).toLocaleDateString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                    <Avatar
+                                                        variant="rounded"
+                                                        sx={(t) => ({
+                                                            width: 30, height: 30, fontSize: "0.75rem", fontWeight: 700,
+                                                            bgcolor: t.palette.primary.light, color: t.palette.primary.main, borderRadius: 1,
+                                                        })}
+                                                    >
+                                                        {(purchase.supplierRel?.name || purchase.supplier || "?")[0].toUpperCase()}
+                                                    </Avatar>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {purchase.supplierRel?.name || purchase.supplier}
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={700} color="text.primary">
+                                                    Rs. {parseFloat(purchase.totalAmount).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={isPaid ? "Paid" : "Partial"}
+                                                    size="small"
+                                                    color={isPaid ? "success" : "warning"}
+                                                    variant="filled"
+                                                    sx={{ borderRadius: 1, fontWeight: 600 }}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Tooltip title="Delete Purchase">
+                                                    <IconButton size="small" color="error" onClick={() => handleDelete(purchase.id)} disabled={loading}>
+                                                        <Trash2 size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                        <ShoppingCart size={40} color="#d1d5db" />
+                                        <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+                                            No purchases found.
                                         </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2">
-                                            {purchase.supplierRel?.name || purchase.supplier}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                            {purchase.invoiceNumber}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="body2">
-                                                {new Date(purchase.purchaseDate).toLocaleDateString()}
-                                            </Typography>
-                                        </Box>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                    <Typography color="textSecondary" className="font-urdu">کوئی خریداری نہیں ملی۔</Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Card>
 
-            {/* Success Notification */}
+            {/* ── New Purchase Dialog ─────────────────────── */}
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    New Purchase Entry
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
+                    {error && (
+                        <Alert severity="error" variant="filled" onClose={() => setError("")} sx={{ mb: 2.5, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* ── Row 1: Invoice | Supplier | Date ── */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth size="small"
+                                label="Invoice Number"
+                                value={formData.invoiceNumber}
+                                variant="filled"
+                                InputProps={{ readOnly: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <Autocomplete
+                                size="small"
+                                options={suppliers || []}
+                                getOptionLabel={(o) => o.name || ""}
+                                value={(suppliers || []).find(s => s.id === formData.supplierId) || null}
+                                onChange={(_, v) => setFormData(p => ({ ...p, supplierId: v ? v.id : "" }))}
+                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                sx={{ minWidth: 300 }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Supplier" required variant="outlined" />
+                                )}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth size="small"
+                                label="Purchase Date"
+                                type="date"
+                                required
+                                value={formData.purchaseDate}
+                                onChange={(e) => setFormData(p => ({ ...p, purchaseDate: e.target.value }))}
+                                variant="outlined"
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                    </Grid>
+
+                    <Divider sx={{ mb: 3 }} />
+
+                    {/* ── Items Section ── */}
+                    <Box sx={{ mb: 3 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                            <Typography variant="subtitle1" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <ShoppingCart size={18} /> Purchase Items
+                            </Typography>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<Plus size={15} />}
+                                onClick={handleAddItem}
+                                sx={{ borderRadius: 2, textTransform: "none" }}
+                            >
+                                Add Item
+                            </Button>
+                        </Box>
+
+                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "action.hover" }}>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 600, width: "40%" }}>Product</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "15%" }}>Qty</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "20%" }}>Cost Price</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "20%" }}>Total</TableCell>
+                                        <TableCell sx={{ width: "5%" }} />
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {formData.items.map((item, idx) => (
+                                        <TableRow key={idx}>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <Autocomplete
+                                                    size="small"
+                                                    options={products || []}
+                                                    getOptionLabel={(o) => o.name || ""}
+                                                    value={(products || []).find(p => p.id === item.productId) || null}
+                                                    onChange={(_, v) => handleItemChange(idx, "productId", v ? v.id : "")}
+                                                    componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                                    sx={{ minWidth: 260 }}
+                                                    renderInput={(params) => (
+                                                        <TextField {...params} label="Product" variant="outlined" />
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    type="number"
+                                                    label="Qty"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                                                    variant="outlined"
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    type="number"
+                                                    label="Cost (Rs.)"
+                                                    value={item.costPrice}
+                                                    onChange={(e) => handleItemChange(idx, "costPrice", e.target.value)}
+                                                    variant="outlined"
+                                                    InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <Typography variant="body2" fontWeight={700} color="primary.main">
+                                                    Rs. {calcItemTotal(item).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <Tooltip title="Remove">
+                                                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(idx)}>
+                                                        <Trash2 size={15} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {formData.items.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                                No items added yet. Click "Add Item" to begin.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {/* Grand Total row */}
+                                    {formData.items.length > 0 && (
+                                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                                            <TableCell colSpan={3} sx={{ fontWeight: 700 }}>Grand Total</TableCell>
+                                            <TableCell colSpan={2} sx={{ fontWeight: 700, color: "primary.main", fontSize: "1rem" }}>
+                                                Rs. {calcGrandTotal().toLocaleString()}
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+
+                    <Divider sx={{ mb: 3 }} />
+
+                    {/* ── Payments Section ── */}
+                    <Box sx={{ mb: 3 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                            <Typography variant="subtitle1" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <CreditCard size={18} /> Payments
+                            </Typography>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                                startIcon={<Plus size={15} />}
+                                onClick={handleAddPayment}
+                                sx={{ borderRadius: 2, textTransform: "none" }}
+                            >
+                                Add Payment
+                            </Button>
+                        </Box>
+
+                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "action.hover" }}>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 600, width: "22%" }}>Amount</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "25%" }}>Method</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "22%" }}>Date</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, width: "25%" }}>Notes</TableCell>
+                                        <TableCell sx={{ width: "6%" }} />
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {formData.payments.map((payment, idx) => (
+                                        <TableRow key={idx}>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    type="number"
+                                                    label="Amount"
+                                                    value={payment.amount}
+                                                    onChange={(e) => handlePaymentChange(idx, "amount", e.target.value)}
+                                                    variant="outlined"
+                                                    InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <Autocomplete
+                                                    size="small"
+                                                    options={PAYMENT_METHODS}
+                                                    getOptionLabel={(o) => o.label}
+                                                    value={PAYMENT_METHODS.find(m => m.value === payment.method) || null}
+                                                    onChange={(_, v) => handlePaymentChange(idx, "method", v ? v.value : "")}
+                                                    componentsProps={{ paper: { sx: { minWidth: 200 } } }}
+                                                    sx={{ minWidth: 160 }}
+                                                    renderInput={(params) => (
+                                                        <TextField {...params} label="Method" variant="outlined" />
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    type="date"
+                                                    label="Date"
+                                                    value={payment.date}
+                                                    onChange={(e) => handlePaymentChange(idx, "date", e.target.value)}
+                                                    variant="outlined"
+                                                    InputLabelProps={{ shrink: true }}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <TextField
+                                                    fullWidth size="small"
+                                                    label="Notes"
+                                                    value={payment.notes}
+                                                    onChange={(e) => handlePaymentChange(idx, "notes", e.target.value)}
+                                                    placeholder="Optional"
+                                                    variant="outlined"
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ py: 1 }}>
+                                                <Tooltip title="Remove">
+                                                    <IconButton size="small" color="error" onClick={() => handleRemovePayment(idx)}>
+                                                        <Trash2 size={15} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {formData.payments.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                                No payments added. Unpaid purchases will be tracked as credit.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {/* Summary row */}
+                                    {formData.payments.length > 0 && (
+                                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                                            <TableCell colSpan={5}>
+                                                <Box sx={{ display: "flex", gap: 4, px: 1 }}>
+                                                    <Typography variant="body2">
+                                                        Total Paid: <b>Rs. {calcTotalPaid().toLocaleString()}</b>
+                                                    </Typography>
+                                                    <Typography variant="body2" color={calcBalance() > 0 ? "error.main" : "success.main"}>
+                                                        Balance: <b>Rs. {calcBalance().toLocaleString()}</b>
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+
+                    {/* ── Notes ── */}
+                    <TextField
+                        fullWidth size="small"
+                        label="Additional Notes"
+                        multiline
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
+                        variant="outlined"
+                        placeholder="Optional remarks or special instructions…"
+                    />
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={loading}
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        startIcon={loading ? null : <Save size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : "Save Purchase"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Success Snackbar ────────────────────────── */}
             <Snackbar
                 open={!!successMessage}
                 autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%', borderRadius: 2 }}>
+                <Alert
+                    onClose={() => setSuccessMessage("")}
+                    severity="success"
+                    variant="filled"
+                    sx={{ width: "100%", borderRadius: 2 }}
+                >
                     {successMessage}
                 </Alert>
             </Snackbar>

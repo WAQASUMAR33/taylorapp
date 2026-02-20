@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
 import LedgerManagementClient from "./LedgerManagementClient";
+import { Container, Box, Typography } from "@mui/material";
+import { BookText } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +61,43 @@ export default async function LedgerPage() {
     }));
 
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <LedgerManagementClient initialEntries={serializedEntries} customers={serializedCustomers} />
-        </Suspense>
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{
+                py: 3,
+                px: 3,
+                mb: 3,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                        p: 1.5,
+                        bgcolor: 'primary.light',
+                        borderRadius: 3,
+                        color: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <BookText size={28} />
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h4" fontWeight="bold" color="text.primary">
+                            Ledger
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                            Business accounts and transaction records.
+                        </Typography>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Suspense fallback={<div>Loading...</div>}>
+                <LedgerManagementClient initialEntries={serializedEntries} customers={serializedCustomers} />
+            </Suspense>
+        </Box>
     );
 }
