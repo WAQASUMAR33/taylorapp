@@ -63,6 +63,7 @@ function MeasureField({ field, formData, onChange }) {
                 fullWidth
                 size="small"
                 type="number"
+                required
                 label={
                     <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem", direction: "rtl" }}>
                         {field.label}
@@ -346,20 +347,47 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
 
                                         {/* Actions */}
                                         <TableCell align="center">
-                                            <Stack direction="row" spacing={0.5} justifyContent="center">
+                                            <Stack direction="row" spacing={1} justifyContent="center">
                                                 <Tooltip title="Print">
-                                                    <IconButton size="small" color="primary" onClick={() => handlePrint(m)}>
-                                                        <Printer size={17} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handlePrint(m)}
+                                                        sx={{
+                                                            color: "info.main",
+                                                            bgcolor: "transparent",
+                                                            transition: "all 0.2s",
+                                                            "&:hover": { bgcolor: "info.main", color: "white" }
+                                                        }}
+                                                    >
+                                                        <Printer size={16} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Edit">
-                                                    <IconButton size="small" color="primary" onClick={() => handleOpen(m)}>
-                                                        <Edit size={17} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpen(m)}
+                                                        sx={{
+                                                            color: "primary.main",
+                                                            bgcolor: "transparent",
+                                                            transition: "all 0.2s",
+                                                            "&:hover": { bgcolor: "primary.main", color: "white" }
+                                                        }}
+                                                    >
+                                                        <Edit size={16} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Delete">
-                                                    <IconButton size="small" color="error" onClick={() => handleDelete(m.id)}>
-                                                        <Trash2 size={17} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDelete(m.id)}
+                                                        sx={{
+                                                            color: "error.main",
+                                                            bgcolor: "transparent",
+                                                            transition: "all 0.2s",
+                                                            "&:hover": { bgcolor: "error.main", color: "white" }
+                                                        }}
+                                                    >
+                                                        <Trash2 size={16} />
                                                     </IconButton>
                                                 </Tooltip>
                                             </Stack>

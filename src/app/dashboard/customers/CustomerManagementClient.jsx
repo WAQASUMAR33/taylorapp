@@ -709,7 +709,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     {/* Redesigned Grid: Labels above fields, minimalist style */}
                     <Grid container spacing={4}>
                         {/* Full Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Full Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
@@ -721,6 +721,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 onChange={handleInputChange}
                                 variant="outlined"
                                 sx={{
+                                    minWidth: 400,
                                     "& .MuiOutlinedInput-root": {
                                         borderRadius: 2,
                                         bgcolor: "rgba(0,0,0,0.015)",
@@ -732,7 +733,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Father Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Father Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
@@ -744,6 +745,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 onChange={handleInputChange}
                                 variant="outlined"
                                 sx={{
+                                    minWidth: 400,
                                     "& .MuiOutlinedInput-root": {
                                         borderRadius: 2,
                                         bgcolor: "rgba(0,0,0,0.015)",
@@ -755,7 +757,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Phone Number */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Phone Number <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
@@ -780,6 +782,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     ),
                                 }}
                                 sx={{
+                                    minWidth: 400,
                                     "& .MuiOutlinedInput-root": {
                                         borderRadius: 2,
                                         bgcolor: "rgba(0,0,0,0.015)",
@@ -791,7 +794,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Opening Balance */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
                                 Opening Balance *
                             </Typography>
@@ -811,6 +814,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     ),
                                 }}
                                 sx={{
+                                    minWidth: 400,
                                     "& .MuiOutlinedInput-root": {
                                         borderRadius: 2,
                                         bgcolor: "rgba(0,0,0,0.015)",
@@ -822,7 +826,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Account Category */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
                                 Account Category
                             </Typography>
@@ -840,6 +844,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                         placeholder="Select category"
                                         variant="outlined"
                                         sx={{
+                                            minWidth: 400,
                                             "& .MuiOutlinedInput-root": {
                                                 borderRadius: 2,
                                                 bgcolor: "rgba(0,0,0,0.015)",
@@ -853,7 +858,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Address */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Address <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
@@ -867,6 +872,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 rows={2}
                                 variant="outlined"
                                 sx={{
+                                    minWidth: 400,
                                     "& .MuiOutlinedInput-root": {
                                         borderRadius: 2,
                                         bgcolor: "rgba(0,0,0,0.015)",
@@ -879,27 +885,35 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
 
                         {/* Notes */}
                         <Grid item xs={12}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
-                                Notes
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                placeholder="Additional details..."
-                                name="notes"
-                                value={formData.notes}
-                                onChange={handleInputChange}
-                                multiline
-                                rows={2}
-                                variant="outlined"
-                                sx={{
-                                    "& .MuiOutlinedInput-root": {
-                                        borderRadius: 2,
-                                        bgcolor: "rgba(0,0,0,0.015)",
-                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
-                                        "&:hover fieldset": { borderColor: "primary.main" },
-                                    }
-                                }}
-                            />
+                            <Box sx={{
+                                bgcolor: "rgba(37, 99, 235, 0.03)",
+                                p: 2,
+                                borderRadius: 3,
+                                border: "1px dashed",
+                                borderColor: "primary.light"
+                            }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "primary.main" }}>
+                                    Additional Notes & Special Instructions
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Enter any additional details or customer preferences here..."
+                                    name="notes"
+                                    value={formData.notes}
+                                    onChange={handleInputChange}
+                                    multiline
+                                    rows={3}
+                                    variant="outlined"
+                                    sx={{
+                                        "& .MuiOutlinedInput-root": {
+                                            borderRadius: 2,
+                                            bgcolor: "white",
+                                            "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                            "&:hover fieldset": { borderColor: "primary.main" },
+                                        }
+                                    }}
+                                />
+                            </Box>
                         </Grid>
                     </Grid>
                 </DialogContent>
