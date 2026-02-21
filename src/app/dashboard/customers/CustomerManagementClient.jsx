@@ -268,158 +268,152 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     return (
         <Box sx={{ width: "100%", p: 3 }}>
 
-            {/* ── Summary Cards ─────────────────────────────── */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                {/* Total Customers Card */}
-                <Grid item xs={12} md={4}>
-                    <Card
-                        elevation={0}
-                        sx={{
-                            borderRadius: 4,
-                            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                            color: "white",
-                            boxShadow: "0 10px 30px rgba(37,99,235,0.2)",
-                            position: "relative",
-                            overflow: "hidden",
-                        }}
-                    >
-                        <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <Box>
-                                    <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
-                                        <Users size={20} color="#ffffff" strokeWidth={2.5} />
-                                    </Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
-                                        Total Customers
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ opacity: 0.8, mb: 1 }}>
-                                        {filteredCustomers.length} Active Records
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ position: "relative", display: "inline-flex", mt: 1 }}>
-                                    <CircularProgress
-                                        variant="determinate"
-                                        value={100}
-                                        size={70}
-                                        thickness={4}
-                                        sx={{ color: "rgba(255,255,255,0.2)" }}
-                                    />
-                                    <CircularProgress
-                                        variant="determinate"
-                                        value={75} // Visual representation
-                                        size={70}
-                                        thickness={4}
-                                        sx={{
-                                            color: "white",
-                                            position: "absolute",
-                                            left: 0,
-                                            [`& .MuiCircularProgress-circle`]: { strokeLinecap: "round" },
-                                        }}
-                                    />
-                                    <Box
-                                        sx={{
-                                            top: 0,
-                                            left: 0,
-                                            bottom: 0,
-                                            right: 0,
-                                            position: "absolute",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                        }}
-                                    >
-                                        <Typography variant="caption" component="div" sx={{ fontWeight: 700, color: "white" }}>
-                                            75%
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+            {/* ── Summary + Quick Access Row ───────────────────── */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 4, flexWrap: "wrap" }}>
 
-            {/* ── Quick Access Section ────────────────────────── */}
-            <Box sx={{ mb: 5 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: "text.primary", letterSpacing: -0.5 }}>
-                    Quick Access
-                </Typography>
-                <Grid container spacing={3}>
+                {/* Quick Access Icons */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", flex: 1 }}>
                     {categoryStats.map((stat, idx) => {
                         const c = statColors[idx % statColors.length];
                         return (
-                            <Grid item key={stat.id}>
-                                <Stack
-                                    spacing={1.5}
-                                    alignItems="center"
-                                    onClick={() => setFilterCategory(stat)}
-                                    sx={{
-                                        cursor: "pointer",
-                                        "&:hover .icon-box": {
-                                            transform: "translateY(-4px)",
-                                            boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-                                        },
-                                        width: 90,
-                                    }}
-                                >
-                                    <Box
-                                        className="icon-box"
-                                        sx={{
-                                            width: 60,
-                                            height: 60,
-                                            bgcolor: "white",
-                                            borderRadius: 2.5,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-                                            border: "1px solid",
-                                            borderColor: "divider",
-                                            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                                            color: c.color,
-                                        }}
-                                    >
-                                        <User size={stat.id === filterCategory?.id ? 30 : 24} strokeWidth={2.5} />
-                                    </Box>
-                                    <Box sx={{ textAlign: "center" }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
-                                            {stat.name}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>
-                                            {stat.count} items
-                                        </Typography>
-                                    </Box>
-                                </Stack>
-                            </Grid>
-                        );
-                    })}
-                    <Grid item>
-                        <Stack spacing={1.5} alignItems="center" onClick={() => setQuickAddCatOpen(true)} sx={{ cursor: "pointer", width: 90 }}>
-                            <Box
+                            <Stack
+                                key={stat.id}
+                                spacing={1}
+                                alignItems="center"
+                                onClick={() => setFilterCategory(stat)}
                                 sx={{
-                                    width: 60,
-                                    height: 60,
-                                    bgcolor: "white",
-                                    borderRadius: 2.5,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px dashed",
-                                    borderColor: "divider",
-                                    transition: "all 0.2s",
-                                    color: "text.secondary",
-                                    "&:hover": { bgcolor: "action.hover", borderColor: "primary.main", color: "primary.main" }
+                                    cursor: "pointer",
+                                    "&:hover .icon-box": {
+                                        transform: "translateY(-4px)",
+                                        boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                                    },
+                                    width: 80,
                                 }}
                             >
-                                <Plus size={24} />
+                                <Box
+                                    className="icon-box"
+                                    sx={{
+                                        width: 52,
+                                        height: 52,
+                                        bgcolor: "white",
+                                        borderRadius: 2.5,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+                                        border: "1px solid",
+                                        borderColor: stat.id === filterCategory?.id ? c.color : "divider",
+                                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        color: c.color,
+                                    }}
+                                >
+                                    <User size={stat.id === filterCategory?.id ? 26 : 22} strokeWidth={2.5} />
+                                </Box>
+                                <Box sx={{ textAlign: "center" }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                                        {stat.name}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>
+                                        {stat.count} items
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        );
+                    })}
+                    {/* Add category button */}
+                    <Stack spacing={1} alignItems="center" onClick={() => setQuickAddCatOpen(true)} sx={{ cursor: "pointer", width: 80 }}>
+                        <Box
+                            sx={{
+                                width: 52,
+                                height: 52,
+                                bgcolor: "white",
+                                borderRadius: 2.5,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1px dashed",
+                                borderColor: "divider",
+                                transition: "all 0.2s",
+                                color: "text.secondary",
+                                "&:hover": { bgcolor: "action.hover", borderColor: "primary.main", color: "primary.main" }
+                            }}
+                        >
+                            <Plus size={22} />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", fontSize: "0.78rem" }}>
+                            Add
+                        </Typography>
+                    </Stack>
+                </Box>
+
+                {/* Total Customers Card */}
+                <Card
+                    elevation={0}
+                    sx={{
+                        borderRadius: 4,
+                        background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                        color: "white",
+                        boxShadow: "0 10px 30px rgba(37,99,235,0.2)",
+                        position: "relative",
+                        overflow: "hidden",
+                        minWidth: 240,
+                    }}
+                >
+                    <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <Box>
+                                <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
+                                    <Users size={20} color="#ffffff" strokeWidth={2.5} />
+                                </Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
+                                    Total Customers
+                                </Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.8, mb: 1 }}>
+                                    {filteredCustomers.length} Active Records
+                                </Typography>
                             </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", fontSize: "0.85rem" }}>
-                                Add
-                            </Typography>
-                        </Stack>
-                    </Grid>
-                </Grid>
+                            <Box sx={{ position: "relative", display: "inline-flex", mt: 1 }}>
+                                <CircularProgress
+                                    variant="determinate"
+                                    value={100}
+                                    size={70}
+                                    thickness={4}
+                                    sx={{ color: "rgba(255,255,255,0.2)" }}
+                                />
+                                <CircularProgress
+                                    variant="determinate"
+                                    value={75}
+                                    size={70}
+                                    thickness={4}
+                                    sx={{
+                                        color: "white",
+                                        position: "absolute",
+                                        left: 0,
+                                        [`& .MuiCircularProgress-circle`]: { strokeLinecap: "round" },
+                                    }}
+                                />
+                                <Box
+                                    sx={{
+                                        top: 0,
+                                        left: 0,
+                                        bottom: 0,
+                                        right: 0,
+                                        position: "absolute",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}
+                                >
+                                    <Typography variant="caption" component="div" sx={{ fontWeight: 700, color: "white" }}>
+                                        75%
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </CardContent>
+                </Card>
             </Box>
+
 
 
             {/* ── Action Bar ────────────────────────────────── */}
