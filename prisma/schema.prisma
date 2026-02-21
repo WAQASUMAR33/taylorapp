@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id           Int       @id @default(autoincrement())
+  fullName     String
+  username     String    @unique(map: "User_username_key")
+  email        String?   @unique(map: "User_email_key")
+  phone        String?
+  role         user_role @default(STAFF)
+  passwordHash String
+  isActive     Boolean   @default(true)
+  permissions  Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+
+model accountCategory {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  customers customer[]
+
+  @@map("accountcategory")
+}
+
+model customer {
+  id                Int              @id @default(autoincrement())
+  code              String?          @unique(map: "Customer_code_key")
+  name              String
+  phone             String?
+  email             String?
+  address           String?
+  accountCategoryId Int?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  fatherName        String?
+  balance           Decimal          @default(0.00) @db.Decimal(10, 2)
+  bill              bill[]
+  bookings          booking[]
+  accountCategory   accountCategory? @relation(fields: [accountCategoryId], references: [id])
+  ledgerEntries     ledgerentry[]
+  measurements      measurement[]
+  orders            order[]
+  purchases         purchase[]       @relation("SupplierPurchases")
+
+  @@index([accountCategoryId], map: "customer_accountCategoryId_fkey")
+}
+
+model bank {
+  id            Int                @id @default(autoincrement())
+  name          String
+  accountNumber String?
+  branch        String?
+  balance       Decimal            @default(0.00) @db.Decimal(10, 2)
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  payments      purchase_payment[]
+}
+
+model employee {
+  id              Int       @id @default(autoincrement())
+  name            String
+  role            String
+  phone           String?
+  address         String?
+  salary          Decimal   @db.Decimal(10, 2)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  fatherName      String?
+  cutterBookings  booking[] @relation("BookingCutter")
+  tailorBookings  booking[] @relation("BookingTailor")
+  stitchingOrders order[]
+}
+
+model measurement {
+  id             Int      @id @default(autoincrement())
+  customerId     Int
+  takenAt        DateTime @default(now())
+  unit           String   @default("in")
+  qameez_lambai  Decimal? @db.Decimal(6, 2)
+  bazoo          Decimal? @db.Decimal(6, 2)
+  teera          Decimal? @db.Decimal(6, 2)
+  galaa          Decimal? @db.Decimal(6, 2)
+  chaati         Decimal? @db.Decimal(6, 2)
+  gheera         Decimal? @db.Decimal(6, 2)
+  kaf            Decimal? @db.Decimal(6, 2)
+  shalwar_lambai Decimal? @db.Decimal(6, 2)
+  puhncha        Decimal? @db.Decimal(6, 2)
+  shalwar_gheera Decimal? @db.Decimal(6, 2)
+  chaati_around  Decimal? @db.Decimal(6, 2)
+  kamar_around   Decimal? @db.Decimal(6, 2)
+  hip_around     Decimal? @db.Decimal(6, 2)
+  kandha         Decimal? @db.Decimal(6, 2)
+  wskot_lambai   Decimal? @db.Decimal(6, 2)
+  wskot_teera    Decimal? @db.Decimal(6, 2)
+  wskot_gala     Decimal? @db.Decimal(6, 2)
+  wskot_chaati   Decimal? @db.Decimal(6, 2)
+  wskot_kamar    Decimal? @db.Decimal(6, 2)
+  wskot_hip      Decimal? @db.Decimal(6, 2)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  customer       customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId], map: "Measurement_customerId_fkey")
+}
+
+model category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique(map: "Category_name_key")
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    product[]
+}
+
+model product {
+  id            Int             @id @default(autoincrement())
+  sku           String          @unique(map: "Product_sku_key")
+  name          String
+  description   String?
+  categoryId    Int?
+  quantity      Int             @default(0)
+  costPrice     Decimal?        @db.Decimal(10, 2)
+  unitPrice     Decimal?        @db.Decimal(10, 2)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  cuttingCost   Decimal?        @db.Decimal(10, 2)
+  materialCost  Decimal?        @db.Decimal(10, 2)
+  stitchingCost Decimal?        @db.Decimal(10, 2)
+  bookingItems  booking_item[]
+  category      category?       @relation(fields: [categoryId], references: [id])
+  purchaseItems purchase_item[]
+
+  @@index([categoryId], map: "Product_categoryId_fkey")
+}
+
+model purchase {
+  id            Int                @id @default(autoincrement())
+  invoiceNumber String             @unique
+  supplierId    Int?
+  supplier      String
+  totalAmount   Decimal            @db.Decimal(10, 2)
+  purchaseDate  DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  ledgerEntries ledgerentry[]
+  supplierRel   customer?          @relation("SupplierPurchases", fields: [supplierId], references: [id])
+  items         purchase_item[]
+  payments      purchase_payment[]
+
+  @@index([supplierId], map: "purchase_supplierId_fkey")
+}
+
+model purchase_item {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  productId  Int
+  quantity   Int
+  unitCost   Decimal  @db.Decimal(10, 2)
+  totalCost  Decimal  @db.Decimal(10, 2)
+  product    product  @relation(fields: [productId], references: [id])
+  purchase   purchase @relation(fields: [purchaseId], references: [id])
+
+  @@index([productId], map: "purchase_item_productId_fkey")
+  @@index([purchaseId], map: "purchase_item_purchaseId_fkey")
+}
+
+model purchase_payment {
+  id          Int      @id @default(autoincrement())
+  purchaseId  Int
+  amount      Decimal  @db.Decimal(10, 2)
+  method      String
+  bankId      Int?
+  paymentDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+  bank        bank?    @relation(fields: [bankId], references: [id])
+  purchase    purchase @relation(fields: [purchaseId], references: [id])
+
+  @@index([bankId], map: "purchase_payment_bankId_fkey")
+  @@index([purchaseId], map: "purchase_payment_purchaseId_fkey")
+}
+
+model order {
+  id           Int          @id @default(autoincrement())
+  orderNumber  String       @unique
+  customerId   Int
+  employeeId   Int?
+  bookingDate  DateTime     @default(now())
+  deliveryDate DateTime?
+  status       order_status @default(PENDING)
+  totalAmount  Decimal      @db.Decimal(10, 2)
+  advancePaid  Decimal      @default(0.00) @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  customer     customer     @relation(fields: [customerId], references: [id])
+  assignedTo   employee?    @relation(fields: [employeeId], references: [id])
+
+  @@index([customerId], map: "Order_customerId_fkey")
+  @@index([employeeId], map: "order_employeeId_fkey")
+}
+
+model bill {
+  id         Int         @id @default(autoincrement())
+  customerId Int
+  billNumber String      @unique(map: "Bill_billNumber_key")
+  status     bill_status @default(DRAFT)
+  issuedAt   DateTime    @default(now())
+  dueAt      DateTime?
+  paidAt     DateTime?
+  subtotal   Decimal     @db.Decimal(10, 2)
+  discount   Decimal     @default(0.00) @db.Decimal(10, 2)
+  tax        Decimal     @default(0.00) @db.Decimal(10, 2)
+  total      Decimal     @db.Decimal(10, 2)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  customer   customer    @relation(fields: [customerId], references: [id])
+
+  @@index([customerId], map: "Bill_customerId_fkey")
+}
+
+model ledgerentry {
+  id          Int              @id @default(autoincrement())
+  customerId  Int
+  type        ledgerentry_type
+  amount      Decimal          @db.Decimal(10, 2)
+  description String?
+  entryDate   DateTime         @default(now())
+  purchaseId  Int?
+  bookingId   Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  customer    customer         @relation(fields: [customerId], references: [id])
+  purchase    purchase?        @relation(fields: [purchaseId], references: [id])
+  booking     booking?         @relation(fields: [bookingId], references: [id])
+
+  @@index([customerId], map: "LedgerEntry_customerId_fkey")
+  @@index([purchaseId], map: "ledgerentry_purchaseId_fkey")
+  @@index([bookingId], map: "ledgerentry_bookingId_fkey")
+}
+
+model stockmovement {
+  id        Int                @id @default(autoincrement())
+  productId Int
+  userId    Int?
+  type      stockmovement_type
+  quantity  Int
+  unitCost  Decimal?           @db.Decimal(10, 2)
+  notes     String?
+  movedAt   DateTime           @default(now())
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([productId], map: "StockMovement_productId_fkey")
+  @@index([userId], map: "StockMovement_userId_fkey")
+}
+
+model booking {
+  id              Int            @id @default(autoincrement())
+  bookingNumber   String         @unique
+  customerId      Int
+  bookingType     booking_type
+  bookingDate     DateTime       @default(now())
+  returnDate      DateTime?
+  deliveryDate    DateTime?
+  trialDate       DateTime?
+  tailorId        Int?
+  cutterId        Int?
+  status          booking_status @default(PENDING)
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  advanceAmount   Decimal        @default(0.00) @db.Decimal(10, 2)
+  remainingAmount  Decimal        @db.Decimal(10, 2)
+  notes            String?
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  customer        customer       @relation(fields: [customerId], references: [id])
+  cutter          employee?      @relation("BookingCutter", fields: [cutterId], references: [id])
+  tailor          employee?      @relation("BookingTailor", fields: [tailorId], references: [id])
+  items           booking_item[]
+  ledgerEntries   ledgerentry[]
+
+  @@index([customerId], map: "Booking_customerId_fkey")
+  @@index([tailorId], map: "Booking_tailorId_fkey")
+  @@index([cutterId], map: "Booking_cutterId_fkey")
+}
+
+model booking_item {
+  id            Int      @id @default(autoincrement())
+  bookingId     Int
+  productId     Int
+  quantity      Int
+  unitPrice     Decimal  @db.Decimal(10, 2)
+  totalPrice    Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  costPrice     Decimal? @db.Decimal(10, 2)
+  cuttingCost   Decimal? @db.Decimal(10, 2)
+  discount      Decimal  @default(0.00) @db.Decimal(10, 2)
+  materialCost  Decimal? @db.Decimal(10, 2)
+  stitchingCost Decimal? @db.Decimal(10, 2)
+
+  // Stitching Details
+  cuffType         String?
+  pohnchaType      String?
+  gheraType        String?
+  galaType         String?
+  galaSize         String?
+  pocketType       String?
+  shalwarType      String?
+  hasShalwarPocket Boolean?       @default(false)
+  hasFrontPockets  Boolean?       @default(false)
+
+  booking       booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  product       product  @relation(fields: [productId], references: [id])
+
+  @@index([bookingId], map: "BookingItem_bookingId_fkey")
+  @@index([productId], map: "BookingItem_productId_fkey")
+}
+
+model material {
+  id               Int                @id @default(autoincrement())
+  title            String
+  quantity         Decimal            @default(0.00) @db.Decimal(10, 2)
+  price            Decimal            @default(0.00) @db.Decimal(10, 2)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  materialmovement materialmovement[]
+}
+
+model materialmovement {
+  id         Int                   @id @default(autoincrement())
+  materialId Int
+  type       materialmovement_type
+  quantity   Decimal               @db.Decimal(10, 2)
+  notes      String?
+  movedAt    DateTime              @default(now())
+  createdAt  DateTime              @default(now())
+  material   material              @relation(fields: [materialId], references: [id], map: "materialMovement_materialId_fkey")
+
+  @@index([materialId], map: "MaterialMovement_materialId_fkey")
+}
+
+enum order_status {
+  PENDING
+  PROCESSING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum ledgerentry_type {
+  DEBIT
+  CREDIT
+}
+
+enum bill_status {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+enum stockmovement_type {
+  IN
+  OUT
+}
+
+enum user_role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum booking_type {
+  STITCHING
+  SUIT
+}
+
+enum booking_status {
+  PENDING
+  MEASUREMENT_TAKEN
+  CUTTING
+  STITCHING
+  TRIAL
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum materialmovement_type {
+  IN
+  OUT
+}
