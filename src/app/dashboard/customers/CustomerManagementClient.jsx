@@ -258,11 +258,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     }));
 
     const statColors = [
-        { bg: "primary.light", color: "primary.main" },
-        { bg: "success.light", color: "success.main" },
-        { bg: "info.light", color: "info.main" },
-        { bg: "warning.light", color: "warning.main" },
-        { bg: "secondary.light", color: "secondary.main" },
+        { bg: "#3b82f6", color: "#3b82f6" },
+        { bg: "#10b981", color: "#10b981" },
+        { bg: "#0ea5e9", color: "#0ea5e9" },
+        { bg: "#f59e0b", color: "#f59e0b" },
+        { bg: "#8b5cf6", color: "#8b5cf6" },
     ];
 
     return (
@@ -564,7 +564,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     fontSize: "0.75rem",
                                                     fontWeight: 700,
                                                     bgcolor: colorSet.bg,
-                                                    color: colorSet.color,
+                                                    color: "white", // Improved contrast
                                                     border: "none",
                                                 }}
                                             />
@@ -612,21 +612,36 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     size="small"
                                                     component={Link}
                                                     href={`/dashboard/measurements?customerId=${customer.id}`}
-                                                    sx={{ color: "info.main", bgcolor: "transparent", "&:hover": { bgcolor: "info.light" } }}
+                                                    sx={{
+                                                        color: "info.main",
+                                                        bgcolor: "transparent",
+                                                        transition: "all 0.2s",
+                                                        "&:hover": { bgcolor: "info.main", color: "white" }
+                                                    }}
                                                 >
                                                     <Ruler size={14} />
                                                 </IconButton>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleEdit(customer)}
-                                                    sx={{ color: "primary.main", bgcolor: "transparent", "&:hover": { bgcolor: "primary.light" } }}
+                                                    sx={{
+                                                        color: "primary.main",
+                                                        bgcolor: "transparent",
+                                                        transition: "all 0.2s",
+                                                        "&:hover": { bgcolor: "primary.main", color: "white" }
+                                                    }}
                                                 >
                                                     <Edit size={14} />
                                                 </IconButton>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleDelete(customer.id)}
-                                                    sx={{ color: "error.main", bgcolor: "transparent", "&:hover": { bgcolor: "error.light" } }}
+                                                    sx={{
+                                                        color: "error.main",
+                                                        bgcolor: "transparent",
+                                                        transition: "all 0.2s",
+                                                        "&:hover": { bgcolor: "error.main", color: "white" }
+                                                    }}
                                                 >
                                                     <Trash2 size={14} />
                                                 </IconButton>
@@ -683,151 +698,199 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Button>
                     </Box>
 
-                    {/* 3 fields per row — all size="small", minWidth 300 */}
-                    <Grid container spacing={2}>
+                    {/* Redesigned Grid: Labels above fields, minimalist style */}
+                    <Grid container spacing={4}>
                         {/* Full Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                                Full Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Full Name"
+                                placeholder="e.g. Ali Khan"
                                 name="name"
-                                required
-                                placeholder="Enter full name"
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
+                                }}
                             />
                         </Grid>
 
                         {/* Father Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                                Father Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Father Name"
+                                placeholder="e.g. Ahmad Khan"
                                 name="fatherName"
-                                placeholder="Enter father's name"
-                                value={formData.fatherName || ""}
+                                value={formData.fatherName}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
+                                }}
                             />
                         </Grid>
 
-                        {/* Phone */}
-                        <Grid item xs={12} md={4}>
+                        {/* Phone Number */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                                Phone Number <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Phone Number"
-                                name="phone"
                                 placeholder="03001234567"
+                                name="phone"
                                 value={formData.phone}
-                                onChange={handleInputChange}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                    setFormData(prev => ({ ...prev, phone: val }));
+                                }}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                <Typography sx={{ fontSize: "0.95rem", lineHeight: 1 }}>🇵🇰</Typography>
-                                                <Typography variant="body2" fontWeight={600}>+92</Typography>
-                                                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 16 }} />
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, pr: 1, borderRight: "1px solid rgba(0,0,0,0.1)", mr: 1 }}>
+                                                <Typography sx={{ fontSize: "0.8rem" }}>PK</Typography>
+                                                <Typography variant="body2" fontWeight={700}>+92</Typography>
                                             </Box>
                                         </InputAdornment>
                                     ),
+                                }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
                                 }}
                             />
                         </Grid>
 
                         {/* Opening Balance */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                                Opening Balance *
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Opening Balance"
-                                name="balance"
                                 type="number"
-                                required
-                                placeholder="0.00"
+                                placeholder="0"
+                                name="balance"
                                 value={formData.balance}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Typography variant="body2" fontWeight={600}>Rs.</Typography>
+                                            <Typography variant="body2" fontWeight={700} sx={{ mr: 1 }}>Rs.</Typography>
                                         </InputAdornment>
                                     ),
+                                }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
                                 }}
                             />
                         </Grid>
 
                         {/* Account Category */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                                Account Category
+                            </Typography>
                             <Autocomplete
                                 fullWidth
-                                size="small"
-                                options={categories.filter(
-                                    (cat) =>
-                                        !cat.name.toLowerCase().includes("cutter") &&
-                                        !cat.name.toLowerCase().includes("tailor")
-                                )}
+                                options={categories.filter(c => !c.name.toLowerCase().includes("cutter") && !c.name.toLowerCase().includes("tailor"))}
                                 getOptionLabel={(option) => option.name || ""}
                                 value={categories.find((c) => c.id === formData.accountCategoryId) || null}
                                 onChange={(event, newValue) => {
-                                    setFormData((prev) => ({
-                                        ...prev,
-                                        accountCategoryId: newValue ? newValue.id : null,
-                                    }));
+                                    setFormData((prev) => ({ ...prev, accountCategoryId: newValue ? newValue.id : null }));
                                 }}
-                                sx={{ minWidth: 300 }}
-                                ListboxProps={{ style: { minWidth: 300 } }}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Account Category"
-                                        variant="outlined"
                                         placeholder="Select category"
+                                        variant="outlined"
+                                        sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                                borderRadius: 2,
+                                                bgcolor: "rgba(0,0,0,0.015)",
+                                                "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                                "&:hover fieldset": { borderColor: "primary.main" },
+                                            }
+                                        }}
                                     />
                                 )}
                             />
                         </Grid>
 
                         {/* Address */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                                Address <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Address"
-                                name="address"
                                 placeholder="Enter full address"
-                                multiline
-                                rows={3}
+                                name="address"
                                 value={formData.address}
                                 onChange={handleInputChange}
+                                multiline
+                                rows={2}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
+                                }}
                             />
                         </Grid>
 
                         {/* Notes */}
-                        <Grid item xs={12} md={4}>
+                        <Grid item xs={12}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                                Notes
+                            </Typography>
                             <TextField
                                 fullWidth
-                                size="small"
-                                label="Notes"
+                                placeholder="Additional details..."
                                 name="notes"
-                                placeholder="Additional information..."
-                                multiline
-                                rows={3}
                                 value={formData.notes}
                                 onChange={handleInputChange}
+                                multiline
+                                rows={2}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(0,0,0,0.015)",
+                                        "& fieldset": { border: "1px solid rgba(0,0,0,0.08)" },
+                                        "&:hover fieldset": { borderColor: "primary.main" },
+                                    }
+                                }}
                             />
                         </Grid>
                     </Grid>
@@ -840,7 +903,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     <Button
                         variant="contained"
                         onClick={handleSubmit}
-                        disabled={loading || !formData.name?.trim()}
+                        disabled={loading || !formData.name?.trim() || !formData.fatherName?.trim() || !formData.phone?.trim() || !formData.address?.trim()}
                         sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
                     >
                         {loading ? <CircularProgress size={20} color="inherit" /> : formData.id ? "Update Customer" : "Save Customer"}
@@ -859,8 +922,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 <DialogTitle sx={{ fontWeight: 800, bgcolor: "rgba(0,0,0,0.02)", borderBottom: "1px solid", borderColor: "divider" }}>
                     New Account Category
                 </DialogTitle>
-                <DialogContent sx={{ pt: 8 }}> {/* Further increased padding-top to fix overlap */}
-                    <Box sx={{ mt: 1 }}>
+                <DialogContent sx={{ pt: 10 }}> {/* Increased padding-top for even more space */}
+                    <Box sx={{ mt: 2 }}>
                         <TextField
                             fullWidth
                             label="Category Name"
