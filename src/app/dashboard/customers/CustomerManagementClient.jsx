@@ -271,6 +271,73 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             {/* ── Summary + Quick Access Row ───────────────────── */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 4, flexWrap: "wrap" }}>
 
+                {/* Total Customers Card */}
+                <Card
+                    elevation={0}
+                    sx={{
+                        borderRadius: 4,
+                        background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                        color: "white",
+                        boxShadow: "0 10px 30px rgba(37,99,235,0.2)",
+                        position: "relative",
+                        overflow: "hidden",
+                        minWidth: 240,
+                    }}
+                >
+                    <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <Box>
+                                <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
+                                    <Users size={20} color="#ffffff" strokeWidth={2.5} />
+                                </Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
+                                    Total Customers
+                                </Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.8, mb: 1 }}>
+                                    {filteredCustomers.length} Active Records
+                                </Typography>
+                            </Box>
+                            <Box sx={{ position: "relative", display: "inline-flex", mt: 1 }}>
+                                <CircularProgress
+                                    variant="determinate"
+                                    value={100}
+                                    size={70}
+                                    thickness={4}
+                                    sx={{ color: "rgba(255,255,255,0.2)" }}
+                                />
+                                <CircularProgress
+                                    variant="determinate"
+                                    value={75}
+                                    size={70}
+                                    thickness={4}
+                                    sx={{
+                                        color: "white",
+                                        position: "absolute",
+                                        left: 0,
+                                        [`& .MuiCircularProgress-circle`]: { strokeLinecap: "round" },
+                                    }}
+                                />
+                                <Box
+                                    sx={{
+                                        top: 0,
+                                        left: 0,
+                                        bottom: 0,
+                                        right: 0,
+                                        position: "absolute",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}
+                                >
+                                    <Typography variant="caption" component="div" sx={{ fontWeight: 700, color: "white" }}>
+                                        75%
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </CardContent>
+                </Card>
+
                 {/* Quick Access Icons */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", flex: 1 }}>
                     {categoryStats.map((stat, idx) => {
@@ -345,73 +412,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Typography>
                     </Stack>
                 </Box>
-
-                {/* Total Customers Card */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        borderRadius: 4,
-                        background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                        color: "white",
-                        boxShadow: "0 10px 30px rgba(37,99,235,0.2)",
-                        position: "relative",
-                        overflow: "hidden",
-                        minWidth: 240,
-                    }}
-                >
-                    <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                            <Box>
-                                <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
-                                    <Users size={20} color="#ffffff" strokeWidth={2.5} />
-                                </Box>
-                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
-                                    Total Customers
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.8, mb: 1 }}>
-                                    {filteredCustomers.length} Active Records
-                                </Typography>
-                            </Box>
-                            <Box sx={{ position: "relative", display: "inline-flex", mt: 1 }}>
-                                <CircularProgress
-                                    variant="determinate"
-                                    value={100}
-                                    size={70}
-                                    thickness={4}
-                                    sx={{ color: "rgba(255,255,255,0.2)" }}
-                                />
-                                <CircularProgress
-                                    variant="determinate"
-                                    value={75}
-                                    size={70}
-                                    thickness={4}
-                                    sx={{
-                                        color: "white",
-                                        position: "absolute",
-                                        left: 0,
-                                        [`& .MuiCircularProgress-circle`]: { strokeLinecap: "round" },
-                                    }}
-                                />
-                                <Box
-                                    sx={{
-                                        top: 0,
-                                        left: 0,
-                                        bottom: 0,
-                                        right: 0,
-                                        position: "absolute",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                    }}
-                                >
-                                    <Typography variant="caption" component="div" sx={{ fontWeight: 700, color: "white" }}>
-                                        75%
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Box>
-                    </CardContent>
-                </Card>
             </Box>
 
 
