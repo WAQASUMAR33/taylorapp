@@ -448,198 +448,179 @@ export default function ProductManagementClient({ initialProducts, categories })
                         </Alert>
                     )}
 
-                    <Grid container spacing={2}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
 
                         {/* Row 1: Category (+) | Product Name | Sale Price */}
-                        <Grid item xs={5}>
-                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                                <Autocomplete
-                                    size="small"
-                                    options={localCategories || []}
-                                    getOptionLabel={(option) => option.name || ""}
-                                    value={selectedCategory}
-                                    onChange={(_, newValue) => {
-                                        handleInputChange({
-                                            target: { name: "categoryId", value: newValue ? newValue.id : "" },
-                                        });
-                                    }}
-                                    componentsProps={{ paper: { sx: { minWidth: 300 } } }}
-                                    sx={{ minWidth: 300, flexShrink: 0 }}
-                                    renderInput={(params) => (
-                                        <TextField {...params} label="Category" variant="outlined" />
-                                    )}
-                                />
-                                <Tooltip title="New Category">
-                                    <IconButton
-                                        onClick={() => setQuickAddCatOpen(true)}
-                                        size="small"
-                                        sx={(t) => ({
-                                            bgcolor: t.palette.primary.light,
-                                            color: t.palette.primary.main,
-                                            borderRadius: 1.5,
-                                            flexShrink: 0,
-                                            "&:hover": { bgcolor: t.palette.primary.main, color: "#fff" },
-                                        })}
-                                    >
-                                        <Plus size={18} />
-                                    </IconButton>
-                                </Tooltip>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={3.5}>
-                            <TextField
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center", minWidth: 300, flex: "1 1 300px" }}>
+                            <Autocomplete
                                 fullWidth
                                 size="small"
-                                label="Product Name"
-                                name="name"
-                                required
-                                placeholder="e.g. Cotton Shirt"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
-                        </Grid>
-
-                        <Grid item xs={3.5}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Sale Price (Rs.)"
-                                name="unitPrice"
-                                type="number"
-                                required
-                                placeholder="e.g. 4500"
-                                value={formData.unitPrice}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                options={localCategories || []}
+                                getOptionLabel={(option) => option.name || ""}
+                                value={selectedCategory}
+                                onChange={(_, newValue) => {
+                                    handleInputChange({
+                                        target: { name: "categoryId", value: newValue ? newValue.id : "" },
+                                    });
                                 }}
+                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Category" variant="outlined" />
+                                )}
                             />
-                        </Grid>
+                            <Tooltip title="New Category">
+                                <IconButton
+                                    onClick={() => setQuickAddCatOpen(true)}
+                                    size="small"
+                                    sx={{
+                                        bgcolor: "primary.main",
+                                        color: "white",
+                                        borderRadius: 1.5,
+                                        flexShrink: 0,
+                                        width: 40,
+                                        height: 40,
+                                        "&:hover": { bgcolor: "primary.dark" },
+                                    }}
+                                >
+                                    <Plus size={20} />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Product Name"
+                            name="name"
+                            required
+                            placeholder="e.g. Cotton Shirt"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                        />
+
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Sale Price (Rs.)"
+                            name="unitPrice"
+                            type="number"
+                            required
+                            placeholder="e.g. 4500"
+                            value={formData.unitPrice}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                            }}
+                        />
 
                         {/* Row 2: Cost fields — changes based on suit */}
                         {isSuit() ? (
                             <>
-                                <Grid item xs={3}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Cutting Cost (Rs.)"
-                                        name="cuttingCost"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 500"
-                                        value={formData.cuttingCost}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid item xs={3}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Stitching Cost (Rs.)"
-                                        name="stitchingCost"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 1500"
-                                        value={formData.stitchingCost}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid item xs={3}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Material Cost (Rs.)"
-                                        name="materialCost"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 1000"
-                                        value={formData.materialCost}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid item xs={3}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Total Cost (Calculated)"
-                                        name="costPrice"
-                                        type="number"
-                                        value={formData.costPrice}
-                                        variant="filled"
-                                        InputProps={{ readOnly: true }}
-                                    />
-                                </Grid>
-                            </>
-                        ) : (
-                            <Grid item xs={4}>
                                 <TextField
-                                    fullWidth
+                                    sx={{ minWidth: 300, flex: "1 1 300px" }}
                                     size="small"
-                                    label="Cost Price (Rs.)"
-                                    name="costPrice"
+                                    label="Cutting Cost (Rs.)"
+                                    name="cuttingCost"
                                     type="number"
                                     required
-                                    placeholder="e.g. 3000"
-                                    value={formData.costPrice}
+                                    placeholder="e.g. 500"
+                                    value={formData.cuttingCost}
                                     onChange={handleInputChange}
                                     variant="outlined"
                                     InputProps={{
                                         startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
                                     }}
                                 />
-                            </Grid>
+                                <TextField
+                                    sx={{ minWidth: 300, flex: "1 1 300px" }}
+                                    size="small"
+                                    label="Stitching Cost (Rs.)"
+                                    name="stitchingCost"
+                                    type="number"
+                                    required
+                                    placeholder="e.g. 1500"
+                                    value={formData.stitchingCost}
+                                    onChange={handleInputChange}
+                                    variant="outlined"
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                    }}
+                                />
+                                <TextField
+                                    sx={{ minWidth: 300, flex: "1 1 300px" }}
+                                    size="small"
+                                    label="Material Cost (Rs.)"
+                                    name="materialCost"
+                                    type="number"
+                                    required
+                                    placeholder="e.g. 1000"
+                                    value={formData.materialCost}
+                                    onChange={handleInputChange}
+                                    variant="outlined"
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                    }}
+                                />
+                                <TextField
+                                    sx={{ minWidth: 300, flex: "1 1 300px" }}
+                                    size="small"
+                                    label="Total Cost (Calculated)"
+                                    name="costPrice"
+                                    type="number"
+                                    value={formData.costPrice}
+                                    variant="filled"
+                                    InputProps={{ readOnly: true }}
+                                />
+                            </>
+                        ) : (
+                            <TextField
+                                sx={{ minWidth: 300, flex: "1 1 300px" }}
+                                size="small"
+                                label="Cost Price (Rs.)"
+                                name="costPrice"
+                                type="number"
+                                required
+                                placeholder="e.g. 3000"
+                                value={formData.costPrice}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                }}
+                            />
                         )}
 
                         {/* Quantity */}
-                        <Grid item xs={isSuit() ? 12 : 4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Initial Quantity"
-                                name="quantity"
-                                type="number"
-                                required
-                                placeholder="e.g. 10"
-                                value={formData.quantity}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Initial Quantity"
+                            name="quantity"
+                            type="number"
+                            required
+                            placeholder="e.g. 10"
+                            value={formData.quantity}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                        />
 
                         {/* Description — full width */}
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Description"
-                                name="description"
-                                placeholder="e.g. High quality cotton fabric with premium stitching…"
-                                multiline
-                                rows={3}
-                                value={formData.description}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                sx={{ minWidth: 600 }}
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 400, flex: "1 1 100%" }}
+                            size="small"
+                            label="Description"
+                            name="description"
+                            placeholder="e.g. High quality cotton fabric with premium stitching…"
+                            multiline
+                            rows={3}
+                            value={formData.description}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                        />
 
-                    </Grid>
+                    </Box>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
