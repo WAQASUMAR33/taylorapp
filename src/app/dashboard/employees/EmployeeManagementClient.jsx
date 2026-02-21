@@ -166,16 +166,11 @@ export default function EmployeeManagementClient({ initialEmployees }) {
 
                                     {/* Employee name + father name */}
                                     <TableCell>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                            <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36, fontSize: "0.85rem", fontWeight: 700 }}>
-                                                {(emp.name || "?").charAt(0).toUpperCase()}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="subtitle2" fontWeight={600}>{emp.name}</Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Father: {emp.fatherName || "N/A"}
-                                                </Typography>
-                                            </Box>
+                                        <Box>
+                                            <Typography variant="subtitle2" fontWeight={600}>{emp.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Father: {emp.fatherName || "N/A"}
+                                            </Typography>
                                         </Box>
                                     </TableCell>
 
@@ -224,13 +219,15 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                                     <TableCell align="center">
                                         <Stack direction="row" spacing={0.5} justifyContent="center">
                                             <Tooltip title="Edit">
-                                                <IconButton size="small" color="primary" onClick={() => handleOpen(emp)}>
-                                                    <Edit size={17} />
+                                                <IconButton size="small" onClick={() => handleOpen(emp)}
+                                                    sx={{ bgcolor: '#3b82f6', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: '#2563eb' } }}>
+                                                    <Edit size={15} />
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete">
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(emp.id)}>
-                                                    <Trash2 size={17} />
+                                                <IconButton size="small" onClick={() => handleDelete(emp.id)}
+                                                    sx={{ bgcolor: '#ef4444', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: '#dc2626' } }}>
+                                                    <Trash2 size={15} />
                                                 </IconButton>
                                             </Tooltip>
                                         </Stack>

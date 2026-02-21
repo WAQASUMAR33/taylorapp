@@ -316,14 +316,9 @@ export default function AnalyticsClient({ employees }) {
                                                     {new Date(b.bookingDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                        <Avatar sx={{ width: 24, height: 24, fontSize: "0.65rem", bgcolor: "#ede9fe", color: "#7c3aed", fontWeight: 700 }}>
-                                                            {b.customer?.name?.[0]?.toUpperCase()}
-                                                        </Avatar>
-                                                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 110 }}>
-                                                            {b.customer?.name}
-                                                        </Typography>
-                                                    </Box>
+                                                    <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 110 }}>
+                                                        {b.customer?.name}
+                                                    </Typography>
                                                 </TableCell>
                                                 <TableCell sx={{ fontSize: "0.78rem", color: "#374151" }}>{b.tailor?.name || "—"}</TableCell>
                                                 <TableCell sx={{ fontSize: "0.78rem", color: "#374151" }}>{b.cutter?.name || "—"}</TableCell>

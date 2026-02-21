@@ -40,7 +40,28 @@ import {
     Package,
     Tag,
     Save,
+    Layers,
 } from "lucide-react";
+
+const CATEGORY_COLORS = [
+    { bg: "#ede9fe", color: "#7c3aed" },
+    { bg: "#dbeafe", color: "#2563eb" },
+    { bg: "#d1fae5", color: "#059669" },
+    { bg: "#fef3c7", color: "#d97706" },
+    { bg: "#fee2e2", color: "#dc2626" },
+    { bg: "#fce7f3", color: "#db2777" },
+    { bg: "#e0e7ff", color: "#4338ca" },
+    { bg: "#ccfbf1", color: "#0d9488" },
+    { bg: "#fef9c3", color: "#ca8a04" },
+    { bg: "#f3e8ff", color: "#9333ea" },
+];
+
+function getCategoryColor(catName) {
+    if (!catName) return { bg: "#f3f4f6", color: "#6b7280" };
+    let hash = 0;
+    for (let i = 0; i < catName.length; i++) hash = catName.charCodeAt(i) + ((hash << 5) - hash);
+    return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
+}
 
 export default function ProductManagementClient({ initialProducts, categories }) {
     const [products, setProducts] = useState(initialProducts);
@@ -228,8 +249,44 @@ export default function ProductManagementClient({ initialProducts, categories })
 
     /* ── render ──────────────────────────────────────── */
 
+    // Category counts for summary cards
+    const categoryCounts = {};
+    (products || []).forEach(p => {
+        const catName = p.category?.name || "Uncategorized";
+        categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
+    });
+    const categoryEntries = Object.entries(categoryCounts);
+
     return (
         <Box sx={{ width: "100%", p: 3 }}>
+
+            {/* ── Category Summary Cards ────────────────── */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                {categoryEntries.map(([name, count]) => {
+                    const cc = getCategoryColor(name);
+                    return (
+                        <Card key={name} elevation={0}
+                            sx={{
+                                border: "1px solid", borderColor: cc.bg,
+                                borderRadius: 2.5, px: 2, py: 1.2,
+                                bgcolor: cc.bg, minWidth: 120,
+                                display: "flex", alignItems: "center", gap: 1.5,
+                            }}>
+                            <Box sx={{ p: 0.75, bgcolor: cc.color, borderRadius: 1.5, display: "flex" }}>
+                                <Layers size={14} color="white" />
+                            </Box>
+                            <Box>
+                                <Typography variant="caption" fontWeight={700} sx={{ color: cc.color, textTransform: "uppercase", fontSize: "0.6rem", letterSpacing: "0.04em" }}>
+                                    {name}
+                                </Typography>
+                                <Typography variant="subtitle2" fontWeight={800} sx={{ color: cc.color, lineHeight: 1.1 }}>
+                                    {count} {count === 1 ? "product" : "products"}
+                                </Typography>
+                            </Box>
+                        </Card>
+                    );
+                })}
+            </Box>
 
             {/* ── Action bar ─────────────────────────────── */}
             <Box
@@ -291,37 +348,27 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
                                     >
                                         <TableCell>
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                <Avatar
-                                                    variant="rounded"
-                                                    sx={(t) => ({
-                                                        width: 36,
-                                                        height: 36,
-                                                        bgcolor: t.palette.primary.light,
-                                                        color: t.palette.primary.main,
-                                                        borderRadius: 1.5,
-                                                    })}
-                                                >
-                                                    <Package size={18} />
-                                                </Avatar>
-                                                <Box>
-                                                    <Typography variant="subtitle2" fontWeight={600}>
-                                                        {prod.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {prod.description || "No description"}
-                                                    </Typography>
-                                                </Box>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={600}>
+                                                    {prod.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {prod.description || "No description"}
+                                                </Typography>
                                             </Box>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip
-                                                icon={<Tag size={12} />}
-                                                label={prod.category?.name || "Uncategorized"}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{ borderRadius: 1, fontWeight: 500 }}
-                                            />
+                                            {(() => {
+                                                const catName = prod.category?.name || "Uncategorized";
+                                                const cc = getCategoryColor(catName);
+                                                return (
+                                                    <Chip
+                                                        label={catName}
+                                                        size="small"
+                                                        sx={{ borderRadius: 1, fontWeight: 600, bgcolor: cc.bg, color: cc.color, border: "none" }}
+                                                    />
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell>
                                             <Chip
@@ -345,13 +392,15 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         <TableCell align="right">
                                             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
                                                 <Tooltip title="Edit Product">
-                                                    <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
-                                                        <Edit size={17} />
+                                                    <IconButton size="small" onClick={() => handleEdit(prod)}
+                                                        sx={{ bgcolor: '#3b82f6', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: '#2563eb' } }}>
+                                                        <Edit size={15} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Delete Product">
-                                                    <IconButton size="small" color="error" onClick={() => handleDelete(prod.id)}>
-                                                        <Trash2 size={17} />
+                                                    <IconButton size="small" onClick={() => handleDelete(prod.id)}
+                                                        sx={{ bgcolor: '#ef4444', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: '#dc2626' } }}>
+                                                        <Trash2 size={15} />
                                                     </IconButton>
                                                 </Tooltip>
                                             </Box>
