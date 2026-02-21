@@ -99,7 +99,7 @@ export default async function PurchasesPage() {
     return (
         <Box sx={{ width: '100%' }}>
             <Box sx={{
-                py: 3,
+                py: 1.5,
                 px: 3,
                 mb: 3,
                 bgcolor: 'background.paper',
@@ -110,15 +110,15 @@ export default async function PurchasesPage() {
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{
-                        p: 1.5,
-                        bgcolor: 'primary.light',
-                        borderRadius: 3,
-                        color: 'primary.main',
+                        p: 1,
+                        bgcolor: '#3b82f6',
+                        borderRadius: 2,
+                        color: 'white',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}>
-                        <ShoppingCart size={28} />
+                        <ShoppingCart size={22} color="white" />
                     </Box>
                     <Box>
                         <Typography variant="h4" fontWeight="bold" color="text.primary">

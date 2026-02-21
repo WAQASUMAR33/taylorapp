@@ -151,9 +151,9 @@ export default function AnalyticsClient({ employees }) {
     return (
         <Box sx={{ p: 3 }}>
             {/* ── Page header ── */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, pb: 3, borderBottom: "1px solid #e5e7eb" }}>
-                <Box sx={{ p: 1.5, bgcolor: "#ede9fe", borderRadius: 2, display: "flex" }}>
-                    <BarChart3 size={26} color="#8b5cf6" />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, pb: 1.5, borderBottom: "1px solid #e5e7eb" }}>
+                <Box sx={{ p: 1, bgcolor: "#3b82f6", borderRadius: 2, display: "flex" }}>
+                    <BarChart3 size={22} color="white" />
                 </Box>
                 <Box>
                     <Typography variant="h4" fontWeight={800} color="#1f2937">Analytics</Typography>
@@ -163,8 +163,8 @@ export default function AnalyticsClient({ employees }) {
                     <Button variant="contained" startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <RefreshCw size={14} />}
                         onClick={fetchAnalytics} disabled={loading}
                         sx={{
-                            bgcolor: "#8b5cf6", borderRadius: 2, textTransform: "none", fontWeight: 600,
-                            "&:hover": { bgcolor: "#7c3aed" }
+                            bgcolor: "#3b82f6", borderRadius: 2, textTransform: "none", fontWeight: 600,
+                            "&:hover": { bgcolor: "#2563eb" }
                         }}>
                         Refresh
                     </Button>
