@@ -670,7 +670,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 onChange={(_, nv) => { const ni = [...cartItems]; ni[index][field] = nv ? nv.value : ""; setCartItems(ni); }}
                                                                                 renderInput={(params) => (
                                                                                     <TextField {...params} label={label} size="small" required
-                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                                                                                        sx={{ minWidth: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                                                                                 )}
                                                                             />
                                                                         </Grid>
@@ -683,7 +683,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 onChange={(_, nv) => { const ni = [...cartItems]; ni[index].galaSize = nv || ""; setCartItems(ni); }}
                                                                                 renderInput={(params) => (
                                                                                     <TextField {...params} label="گلے کا سائز" size="small" required
-                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
+                                                                                        sx={{ minWidth: 300, '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                                                                                 )}
                                                                             />
                                                                         </Grid>
@@ -729,25 +729,25 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     <Card variant="outlined" sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb' }}>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12}>
                                     <Autocomplete
                                         options={tailors || []}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={(tailors || []).find(t => t.id === formData.tailorId) || null}
                                         onChange={(event, newValue) => { setFormData({ ...formData, tailorId: newValue ? newValue.id : "" }); }}
                                         renderInput={(params) => (
-                                            <TextField {...params} label="Tailor" size="small" fullWidth sx={FIELD_SX} />
+                                            <TextField {...params} label="Tailor" size="small" fullWidth required sx={{ minWidth: 400, ...FIELD_SX }} />
                                         )}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12}>
                                     <Autocomplete
                                         options={cutters || []}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={(cutters || []).find(c => c.id === formData.cutterId) || null}
                                         onChange={(event, newValue) => { setFormData({ ...formData, cutterId: newValue ? newValue.id : "" }); }}
                                         renderInput={(params) => (
-                                            <TextField {...params} label="Cutter" size="small" fullWidth sx={FIELD_SX} />
+                                            <TextField {...params} label="Cutter" size="small" fullWidth required sx={{ minWidth: 400, ...FIELD_SX }} />
                                         )}
                                     />
                                 </Grid>
@@ -821,9 +821,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     onClick={() => setShowForm(true)}
                     sx={{
                         borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                        boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
-                        '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
+                        bgcolor: '#3b82f6',
+                        boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
+                        '&:hover': { bgcolor: '#2563eb' }
                     }}
                 >
                     New Booking
@@ -864,18 +864,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     </TableCell>
                                     {/* Customer */}
                                     <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                            <Avatar variant="rounded" sx={{
-                                                width: 34, height: 34, fontSize: '0.85rem', fontWeight: 700,
-                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                                                color: 'white', borderRadius: 1.5,
-                                            }}>
-                                                {(booking.customer?.name || '?')[0].toUpperCase()}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
-                                                <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
-                                            </Box>
+                                        <Box>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
                                         </Box>
                                     </TableCell>
                                     {/* Date */}
