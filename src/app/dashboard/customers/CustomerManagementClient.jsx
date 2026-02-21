@@ -542,18 +542,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                         </TableCell>
                                         <TableCell sx={{ py: 2 }}>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                <Avatar
-                                                    sx={{
-                                                        width: 32,
-                                                        height: 32,
-                                                        fontSize: "0.8rem",
-                                                        fontWeight: 700,
-                                                        bgcolor: colorSet.bg,
-                                                        color: colorSet.color,
-                                                    }}
-                                                >
-                                                    {customer.name.charAt(0).toUpperCase()}
-                                                </Avatar>
                                                 <Box>
                                                     <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
                                                         {customer.name}
@@ -624,21 +612,21 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     size="small"
                                                     component={Link}
                                                     href={`/dashboard/measurements?customerId=${customer.id}`}
-                                                    sx={{ color: "info.main", bgcolor: "info.light", "&:hover": { bgcolor: "info.main", color: "white" } }}
+                                                    sx={{ color: "info.main", bgcolor: "transparent", "&:hover": { bgcolor: "info.light" } }}
                                                 >
                                                     <Ruler size={14} />
                                                 </IconButton>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleEdit(customer)}
-                                                    sx={{ color: "primary.main", bgcolor: "primary.light", "&:hover": { bgcolor: "primary.main", color: "white" } }}
+                                                    sx={{ color: "primary.main", bgcolor: "transparent", "&:hover": { bgcolor: "primary.light" } }}
                                                 >
                                                     <Edit size={14} />
                                                 </IconButton>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleDelete(customer.id)}
-                                                    sx={{ color: "error.main", bgcolor: "error.light", "&:hover": { bgcolor: "error.main", color: "white" } }}
+                                                    sx={{ color: "error.main", bgcolor: "transparent", "&:hover": { bgcolor: "error.light" } }}
                                                 >
                                                     <Trash2 size={14} />
                                                 </IconButton>
@@ -871,17 +859,19 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 <DialogTitle sx={{ fontWeight: 800, bgcolor: "rgba(0,0,0,0.02)", borderBottom: "1px solid", borderColor: "divider" }}>
                     New Account Category
                 </DialogTitle>
-                <DialogContent sx={{ pt: 4 }}> {/* Increased padding-top to 4 to fix label overlap */}
-                    <TextField
-                        fullWidth
-                        label="Category Name"
-                        placeholder="e.g. Wholesaler, VIP"
-                        value={newCatName}
-                        onChange={(e) => setNewCatName(e.target.value)}
-                        autoFocus
-                        variant="outlined"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleQuickAddCategory(); }}
-                    />
+                <DialogContent sx={{ pt: 8 }}> {/* Further increased padding-top to fix overlap */}
+                    <Box sx={{ mt: 1 }}>
+                        <TextField
+                            fullWidth
+                            label="Category Name"
+                            placeholder="e.g. Wholesaler, VIP"
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            autoFocus
+                            variant="outlined"
+                            onKeyDown={(e) => { if (e.key === "Enter") handleQuickAddCategory(); }}
+                        />
+                    </Box>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     <Button
