@@ -287,7 +287,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <Box>
                                     <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
-                                        <Users size={20} color="white" />
+                                        <Users size={20} color="#ffffff" strokeWidth={2.5} />
                                     </Box>
                                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
                                         Total Customers
@@ -686,13 +686,21 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     )}
 
                     {/* Top action row — Add Category button sits here, top-right */}
-                    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3, mt: 2 }}>
                         <Button
                             size="small"
                             variant="outlined"
                             startIcon={<Plus size={15} />}
                             onClick={() => setQuickAddCatOpen(true)}
-                            sx={{ borderRadius: 2, textTransform: "none", fontSize: "0.8rem" }}
+                            sx={{
+                                borderRadius: 1.5,
+                                textTransform: "none",
+                                fontSize: "0.85rem",
+                                fontWeight: 600,
+                                px: 2,
+                                borderColor: "primary.main",
+                                "&:hover": { borderColor: "primary.dark", bgcolor: "rgba(37,99,235,0.04)" }
+                            }}
                         >
                             Add Category
                         </Button>
@@ -701,8 +709,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     {/* Redesigned Grid: Labels above fields, minimalist style */}
                     <Grid container spacing={4}>
                         {/* Full Name */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Full Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
                             <TextField
@@ -724,8 +732,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Father Name */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Father Name <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
                             <TextField
@@ -747,8 +755,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Phone Number */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Phone Number <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
                             <TextField
@@ -783,8 +791,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Opening Balance */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
                                 Opening Balance *
                             </Typography>
                             <TextField
@@ -814,8 +822,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Account Category */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
                                 Account Category
                             </Typography>
                             <Autocomplete
@@ -845,8 +853,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Address */}
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary", display: "flex", alignItems: "center" }}>
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary", display: "flex", alignItems: "center" }}>
                                 Address <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Box>
                             </Typography>
                             <TextField
@@ -871,7 +879,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
 
                         {/* Notes */}
                         <Grid item xs={12}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: "text.primary" }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
                                 Notes
                             </Typography>
                             <TextField

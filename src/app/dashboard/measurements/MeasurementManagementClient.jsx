@@ -270,7 +270,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
                         startAdornment: (
-                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
+                            <InputAdornment position="start"><Search size={18} color="#9ca3af" /></InputAdornment>
                         ),
                     }}
                     sx={{ minWidth: 300, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
@@ -310,7 +310,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                         {/* Customer */}
                                         <TableCell>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36, fontSize: "0.85rem", fontWeight: 700 }}>
+                                                <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36, fontSize: "0.85rem", fontWeight: 700, color: "white" }}>
                                                     {(m.customer?.name || "?").charAt(0).toUpperCase()}
                                                 </Avatar>
                                                 <Box>
@@ -399,12 +399,12 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                     )}
 
                     {/* Customer & Unit row */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid container spacing={3} sx={{ mb: 3, mt: 1 }}>
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 fullWidth
                                 size="small"
-                                options={customers || []}
+                                options={(customers || []).filter(c => c && c.name?.toLowerCase() !== "cash account")}
                                 getOptionLabel={(o) => o ? `${o.name || ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
                                 value={(customers || []).find((c) => c && c.id === formData.customerId) || null}
                                 onChange={(_, newValue) =>
@@ -420,28 +420,29 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                     );
                                 }}
                                 renderOption={(props, option) => option ? (
-                                    <Box component="li" {...props} sx={{ borderBottom: "1px solid", borderColor: "divider", py: 1 }}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                            <Box sx={{ p: 0.75, bgcolor: "primary.light", borderRadius: 1.5, color: "primary.main" }}>
-                                                <User size={16} />
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
-                                                <Stack direction="row" spacing={1.5}>
-                                                    {option.phone && (
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                                                            <Phone size={11} color="#9ca3af" />
-                                                            <Typography variant="caption" color="text.secondary">{option.phone}</Typography>
-                                                        </Box>
-                                                    )}
-                                                    {option.address && (
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                                                            <MapPin size={11} color="#9ca3af" />
-                                                            <Typography variant="caption" color="text.secondary">{option.address}</Typography>
-                                                        </Box>
-                                                    )}
-                                                </Stack>
-                                            </Box>
+                                    <Box component="li" {...props} sx={{ borderBottom: "1px solid", borderColor: "divider", py: 1.5 }}>
+                                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
+                                                {option.name}
+                                            </Typography>
+                                            <Stack direction="row" spacing={2}>
+                                                {option.phone && (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                        <Phone size={12} color="#9ca3af" />
+                                                        <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>
+                                                            {option.phone}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                                {option.address && (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                        <MapPin size={12} color="#9ca3af" />
+                                                        <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {option.address}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                            </Stack>
                                         </Box>
                                     </Box>
                                 ) : null}
