@@ -191,30 +191,34 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         value: totals.debit,
                         gradient: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
                         shadow: "rgba(59,130,246,0.3)",
-                        icon: <TrendingUp size={36} style={{ opacity: 0.8 }} />,
+                        icon: <TrendingUp size={24} style={{ opacity: 0.8 }} />,
                     },
                     {
                         label: "Total Credit",
                         value: totals.credit,
                         gradient: "linear-gradient(135deg, #f87171 0%, #ef4444 100%)",
                         shadow: "rgba(239,68,68,0.3)",
-                        icon: <TrendingDown size={36} style={{ opacity: 0.8 }} />,
+                        icon: <TrendingDown size={24} style={{ opacity: 0.8 }} />,
                     },
                     {
                         label: filterCustomer ? `${filterCustomer.name} — Balance` : "Current Balance",
                         value: balance,
                         gradient: "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
                         shadow: "rgba(16,185,129,0.3)",
-                        icon: <BookText size={36} style={{ opacity: 0.8 }} />,
+                        icon: <BookText size={24} style={{ opacity: 0.8 }} />,
                     },
                 ].map(({ label, value, gradient, shadow, icon }) => (
                     <Grid item xs={12} md={4} key={label}>
                         <Card sx={{
-                            p: 3,
+                            p: 2,
                             background: gradient,
                             color: "white",
                             borderRadius: 3,
                             boxShadow: `0 10px 40px ${shadow}`,
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
                         }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Box>
@@ -285,11 +289,18 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         />
                         {filterCustomer && (
                             <Chip
-                                icon={<Wallet size={15} />}
+                                icon={<Wallet size={15} style={{ color: "white" }} />}
                                 label={`Balance: Rs. ${(filterCustomer.balance || 0).toLocaleString()}`}
                                 color={filterCustomer.balance >= 0 ? "success" : "error"}
                                 variant="filled"
-                                sx={{ alignSelf: "center", fontWeight: 600, borderRadius: 2 }}
+                                sx={{
+                                    alignSelf: "center",
+                                    fontWeight: 600,
+                                    borderRadius: 2,
+                                    color: "white",
+                                    "& .MuiChip-label": { color: "white" },
+                                    "& .MuiChip-icon": { color: "white" }
+                                }}
                             />
                         )}
                         {hasActiveFilters && (
