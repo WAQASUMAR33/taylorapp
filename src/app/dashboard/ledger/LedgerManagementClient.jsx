@@ -364,26 +364,15 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                                         </Typography>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                            <Avatar
-                                                                variant="rounded"
-                                                                sx={(t) => ({
-                                                                    width: 32, height: 32, fontSize: "0.8rem", fontWeight: 700,
-                                                                    bgcolor: t.palette.primary.light, color: t.palette.primary.main, borderRadius: 1,
-                                                                })}
-                                                            >
-                                                                {(entry.customer?.name || "?")[0].toUpperCase()}
-                                                            </Avatar>
-                                                            <Box>
-                                                                <Typography variant="subtitle2" fontWeight={600}>
-                                                                    {entry.customer?.name}
+                                                        <Box>
+                                                            <Typography variant="subtitle2" fontWeight={600}>
+                                                                {entry.customer?.name}
+                                                            </Typography>
+                                                            {entry.customer?.code && (
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {entry.customer.code}
                                                                 </Typography>
-                                                                {entry.customer?.code && (
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {entry.customer.code}
-                                                                    </Typography>
-                                                                )}
-                                                            </Box>
+                                                            )}
                                                         </Box>
                                                     </TableCell>
                                                     <TableCell>
@@ -427,15 +416,17 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                                         />
                                                     </TableCell>
                                                     <TableCell align="right">
-                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.8 }}>
                                                             <Tooltip title="Print Entry">
-                                                                <IconButton size="small" color="primary" onClick={() => window.print()}>
-                                                                    <Printer size={17} />
+                                                                <IconButton size="small" onClick={() => window.print()}
+                                                                    sx={{ bgcolor: 'primary.main', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: 'primary.dark' } }}>
+                                                                    <Printer size={15} />
                                                                 </IconButton>
                                                             </Tooltip>
                                                             <Tooltip title="Delete Entry">
-                                                                <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
-                                                                    <Trash2 size={17} />
+                                                                <IconButton size="small" onClick={() => handleDelete(entry.id)}
+                                                                    sx={{ bgcolor: '#ef4444', color: 'white', borderRadius: 1.5, '&:hover': { bgcolor: '#dc2626' } }}>
+                                                                    <Trash2 size={15} />
                                                                 </IconButton>
                                                             </Tooltip>
                                                         </Box>
