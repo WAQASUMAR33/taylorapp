@@ -243,20 +243,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                    <Avatar
-                                                        variant="rounded"
-                                                        sx={(t) => ({
-                                                            width: 30, height: 30, fontSize: "0.75rem", fontWeight: 700,
-                                                            bgcolor: t.palette.primary.light, color: t.palette.primary.main, borderRadius: 1,
-                                                        })}
-                                                    >
-                                                        {(purchase.supplierRel?.name || purchase.supplier || "?")[0].toUpperCase()}
-                                                    </Avatar>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {purchase.supplierRel?.name || purchase.supplier}
-                                                    </Typography>
-                                                </Box>
+                                                <Typography variant="body2" fontWeight={500}>
+                                                    {purchase.supplierRel?.name || purchase.supplier}
+                                                </Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" fontWeight={700} color="text.primary">
