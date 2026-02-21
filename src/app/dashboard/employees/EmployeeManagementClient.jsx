@@ -265,149 +265,137 @@ export default function EmployeeManagementClient({ initialEmployees }) {
                         </Alert>
                     )}
 
-                    <Grid container spacing={2}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
 
                         {/* Row 1: Name | Father's Name | Role */}
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Full Name"
-                                name="name"
-                                required
-                                placeholder="Enter full name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Full Name"
+                            name="name"
+                            required
+                            placeholder="Enter full name"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                        />
 
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Father's Name"
-                                name="fatherName"
-                                placeholder="Enter father's name"
-                                value={formData.fatherName}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Father's Name"
+                            name="fatherName"
+                            placeholder="Enter father's name"
+                            value={formData.fatherName}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                        />
 
-                        <Grid item xs={4}>
-                            <Autocomplete
-                                fullWidth
-                                size="small"
-                                options={EMPLOYEE_ROLES}
-                                value={formData.role || null}
-                                onChange={(_, newValue) =>
-                                    setFormData(prev => ({ ...prev, role: newValue || "" }))
-                                }
-                                componentsProps={{
-                                    paper: { sx: { minWidth: 300 } }
-                                }}
-                                renderInput={(params) => (
-                                    <TextField {...params} label="Role" required placeholder="Select role" variant="outlined" />
-                                )}
-                            />
-                        </Grid>
+                        <Autocomplete
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            options={EMPLOYEE_ROLES}
+                            value={formData.role || null}
+                            onChange={(_, newValue) =>
+                                setFormData(prev => ({ ...prev, role: newValue || "" }))
+                            }
+                            componentsProps={{
+                                paper: { sx: { minWidth: 300 } }
+                            }}
+                            renderInput={(params) => (
+                                <TextField {...params} label="Role" required placeholder="Select role" variant="outlined" />
+                            )}
+                        />
 
                         {/* Row 2: Phone | Salary | Status */}
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Phone Number"
-                                name="phone"
-                                placeholder="03xx-xxxxxxx"
-                                value={formData.phone}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <Phone size={16} color="#9ca3af" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Phone Number"
+                            name="phone"
+                            placeholder="03xx-xxxxxxx"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Phone size={16} color="#9ca3af" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
 
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Monthly Salary"
-                                name="salary"
-                                type="number"
-                                required
-                                placeholder="0"
-                                value={formData.salary}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                }}
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 300, flex: "1 1 300px" }}
+                            size="small"
+                            label="Monthly Salary"
+                            name="salary"
+                            type="number"
+                            required
+                            placeholder="0"
+                            value={formData.salary}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                            }}
+                        />
 
-                        <Grid item xs={4}>
-                            <Box
-                                sx={{
-                                    height: '40px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                    px: 1.5,
-                                }}
-                            >
-                                <FormControlLabel
-                                    sx={{ m: 0, gap: 1 }}
-                                    control={
-                                        <Switch
-                                            checked={formData.isActive}
-                                            onChange={handleInputChange}
-                                            name="isActive"
-                                            color="success"
-                                            size="small"
-                                        />
-                                    }
-                                    label={
-                                        <Typography variant="body2" fontWeight={600}>
-                                            {formData.isActive ? "Active" : "Inactive"}
-                                        </Typography>
-                                    }
-                                />
-                            </Box>
-                        </Grid>
+                        <Box
+                            sx={{
+                                minWidth: 300,
+                                flex: "1 1 300px",
+                                height: '40px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1,
+                                px: 1.5,
+                            }}
+                        >
+                            <FormControlLabel
+                                sx={{ m: 0, gap: 1 }}
+                                control={
+                                    <Switch
+                                        checked={formData.isActive}
+                                        onChange={handleInputChange}
+                                        name="isActive"
+                                        color="success"
+                                        size="small"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {formData.isActive ? "Active" : "Inactive"}
+                                    </Typography>
+                                }
+                            />
+                        </Box>
 
                         {/* Row 3: Home Address — full width */}
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Home Address"
-                                name="address"
-                                placeholder="Enter full address"
-                                multiline
-                                rows={2}
-                                value={formData.address}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
-                                            <MapPin size={16} color="#9ca3af" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                        </Grid>
+                        <TextField
+                            sx={{ minWidth: 400, flex: "1 1 100%" }}
+                            size="small"
+                            label="Home Address"
+                            name="address"
+                            placeholder="Enter full address"
+                            multiline
+                            rows={2}
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                                        <MapPin size={16} color="#9ca3af" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
 
-                    </Grid>
+                    </Box>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
