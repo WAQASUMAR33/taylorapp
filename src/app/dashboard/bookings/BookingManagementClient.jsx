@@ -472,26 +472,19 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             PaperProps={{ sx: { borderRadius: 3, maxHeight: '95vh' } }}
         >
             <DialogTitle sx={{
-                fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pt: 2.5, pb: 2,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%)'
+                fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pt: 2, pb: 1.5,
+                display: 'flex', alignItems: 'center', gap: 1.5,
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)'
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{ p: 1, bgcolor: '#8b5cf6', borderRadius: 1.5, display: 'flex' }}>
-                        <ShoppingCart size={18} color="white" />
-                    </Box>
-                    <Typography variant="h6" fontWeight={700}>Sales Order / Booking</Typography>
+                <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 1.5, display: 'flex' }}>
+                    <Calendar size={20} color="white" />
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => setShowForm(false)} disabled={loading}
-                        sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
-                    <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
-                        sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
-                        {loading ? <CircularProgress size={18} color="inherit" /> : 'Save Booking'}
-                    </Button>
+                <Box>
+                    <Typography variant="h6" fontWeight={700} color="white">Booking Management</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>Create bookings with product billing and team assignment.</Typography>
                 </Box>
             </DialogTitle>
-            <DialogContent sx={{ p: 3 }}>
+            <DialogContent sx={{ p: 3, mt: 1 }}>
                 {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
                 <Box>
@@ -776,40 +769,45 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         </Box>
                     </Card>
 
-                    {/* ── Notes + Totals ── */}
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
-                            <TextField fullWidth size="small" label="Remarks / Notes" name="notes"
-                                multiline rows={4} value={formData.notes}
-                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                sx={FIELD_SX} />
+                    {/* ── Notes (full width) ── */}
+                    <Box sx={{ mb: 2 }}>
+                        <TextField fullWidth size="small" label="Remarks / Notes" name="notes"
+                            multiline rows={3} value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            sx={FIELD_SX} />
+                    </Box>
+
+                    {/* ── Totals (full width) ── */}
+                    <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid #d1fae5' }}>
+                            <Typography variant="body2" fontWeight={600} color="text.secondary">Total Amount</Typography>
+                            <Typography variant="h6" fontWeight={800} color="#059669">Rs.&nbsp;{totalAmount.toFixed(0)}</Typography>
+                        </Box>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField fullWidth size="small" label="Advance Amount" required
+                                    value={formData.advanceAmount}
+                                    onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
+                                    InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                    sx={FIELD_SX} />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
+                                    InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                    sx={{ '& .MuiOutlinedInput-root': { bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4', borderRadius: 2, '& .MuiInputBase-input': { fontWeight: 800, color: balanceAmount > 0 ? '#b91c1c' : '#059669', textAlign: 'center' } } }} />
+                            </Grid>
                         </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2 }}>
-                                {/* Total row */}
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid #d1fae5' }}>
-                                    <Typography variant="body2" fontWeight={600} color="text.secondary">Total Amount</Typography>
-                                    <Typography variant="h6" fontWeight={800} color="#059669">Rs.&nbsp;{totalAmount.toFixed(0)}</Typography>
-                                </Box>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={6}>
-                                        <TextField fullWidth size="small" label="Advance Amount" required
-                                            value={formData.advanceAmount}
-                                            onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
-                                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                            sx={FIELD_SX} />
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
-                                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4', borderRadius: 2, '& .MuiInputBase-input': { fontWeight: 800, color: balanceAmount > 0 ? '#b91c1c' : '#059669', textAlign: 'center' } } }} />
-                                    </Grid>
-                                </Grid>
-                            </Card>
-                        </Grid>
-                    </Grid>
+                    </Card>
                 </Box>
             </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
+                <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => setShowForm(false)} disabled={loading}
+                    sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
+                <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
+                    sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
+                    {loading ? <CircularProgress size={18} color="inherit" /> : 'Save Booking'}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
     // --- end formDialog ---
@@ -818,27 +816,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         <Box sx={{ width: '100%', p: 3 }}>
             {formDialog}
 
-            {/* ── Page Header ── */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{
-                        p: 1.5, borderRadius: 2,
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 14px rgba(139,92,246,0.35)'
-                    }}>
-                        <ShoppingCart size={22} color="white" />
-                    </Box>
-                    <Box>
-                        <Typography variant="h5" fontWeight={700} sx={{ color: '#1e293b', lineHeight: 1.2 }}>Bookings</Typography>
-                        <Typography variant="body2" color="text.secondary">Manage all sales orders and bookings</Typography>
-                    </Box>
-                </Box>
-                <Chip
-                    label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
-                    sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
-                />
-            </Box>
+
 
             {/* ── Action Bar ── */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
