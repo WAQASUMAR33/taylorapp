@@ -353,10 +353,10 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                         size="small"
                                                         onClick={() => handlePrint(m)}
                                                         sx={{
-                                                            color: "info.main",
-                                                            bgcolor: "transparent",
+                                                            color: "white",
+                                                            bgcolor: "info.main",
                                                             transition: "all 0.2s",
-                                                            "&:hover": { bgcolor: "info.main", color: "white" }
+                                                            "&:hover": { bgcolor: "info.dark" }
                                                         }}
                                                     >
                                                         <Printer size={16} />
@@ -367,10 +367,10 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                         size="small"
                                                         onClick={() => handleOpen(m)}
                                                         sx={{
-                                                            color: "primary.main",
-                                                            bgcolor: "transparent",
+                                                            color: "white",
+                                                            bgcolor: "primary.main",
                                                             transition: "all 0.2s",
-                                                            "&:hover": { bgcolor: "primary.main", color: "white" }
+                                                            "&:hover": { bgcolor: "primary.dark" }
                                                         }}
                                                     >
                                                         <Edit size={16} />
@@ -381,10 +381,10 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                         size="small"
                                                         onClick={() => handleDelete(m.id)}
                                                         sx={{
-                                                            color: "error.main",
-                                                            bgcolor: "transparent",
+                                                            color: "white",
+                                                            bgcolor: "error.main",
                                                             transition: "all 0.2s",
-                                                            "&:hover": { bgcolor: "error.main", color: "white" }
+                                                            "&:hover": { bgcolor: "error.dark" }
                                                         }}
                                                     >
                                                         <Trash2 size={16} />

@@ -613,10 +613,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     component={Link}
                                                     href={`/dashboard/measurements?customerId=${customer.id}`}
                                                     sx={{
-                                                        color: "info.main",
-                                                        bgcolor: "transparent",
+                                                        color: "white",
+                                                        bgcolor: "info.main",
                                                         transition: "all 0.2s",
-                                                        "&:hover": { bgcolor: "info.main", color: "white" }
+                                                        "&:hover": { bgcolor: "info.dark" }
                                                     }}
                                                 >
                                                     <Ruler size={14} />
@@ -625,10 +625,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     size="small"
                                                     onClick={() => handleEdit(customer)}
                                                     sx={{
-                                                        color: "primary.main",
-                                                        bgcolor: "transparent",
+                                                        color: "white",
+                                                        bgcolor: "primary.main",
                                                         transition: "all 0.2s",
-                                                        "&:hover": { bgcolor: "primary.main", color: "white" }
+                                                        "&:hover": { bgcolor: "primary.dark" }
                                                     }}
                                                 >
                                                     <Edit size={14} />
@@ -637,10 +637,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     size="small"
                                                     onClick={() => handleDelete(customer.id)}
                                                     sx={{
-                                                        color: "error.main",
-                                                        bgcolor: "transparent",
+                                                        color: "white",
+                                                        bgcolor: "error.main",
                                                         transition: "all 0.2s",
-                                                        "&:hover": { bgcolor: "error.main", color: "white" }
+                                                        "&:hover": { bgcolor: "error.dark" }
                                                     }}
                                                 >
                                                     <Trash2 size={14} />
