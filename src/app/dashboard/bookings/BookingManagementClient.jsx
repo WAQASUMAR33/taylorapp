@@ -457,8 +457,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             bgcolor: 'white',
             borderRadius: 2,
             '& fieldset': { borderColor: '#e5e7eb' },
-            '&:hover fieldset': { borderColor: '#8b5cf6' },
-            '&.Mui-focused fieldset': { borderColor: '#8b5cf6', borderWidth: 2 },
+            '&:hover fieldset': { borderColor: '#94a3b8' },
+            '&.Mui-focused fieldset': { borderColor: '#64748b', borderWidth: 2 },
         }
     };
     const DISABLED_SX = { '& .MuiOutlinedInput-root': { bgcolor: '#f3f4f6', borderRadius: 2 } };
@@ -473,23 +473,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         >
             <DialogTitle sx={{
                 fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pt: 2, pb: 1.5,
-                display: 'flex', alignItems: 'center', gap: 1.5,
-                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)'
             }}>
-                <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 1.5, display: 'flex' }}>
-                    <Calendar size={20} color="white" />
-                </Box>
-                <Box>
-                    <Typography variant="h6" fontWeight={700} color="white">Booking Management</Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>Create bookings with product billing and team assignment.</Typography>
-                </Box>
+                <Typography variant="h6" fontWeight={700} color="text.primary">Booking Management</Typography>
             </DialogTitle>
             <DialogContent sx={{ p: 3, mt: 1 }}>
                 {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
                 <Box>
                     {/* ── Row 1: 4 equal header fields ── */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid container spacing={2} sx={{ mb: 2, mt: 1 }}>
                         <Grid item xs={6} md={3}>
                             <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
                         </Grid>
@@ -516,8 +508,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                     {/* ── Customer Information Card (full-width) ── */}
                     <Card variant="outlined" sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb', overflow: 'visible' }}>
-                        <Box sx={{ px: 2.5, pt: 2, pb: 0.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6' }}>
-                            <User size={16} color="#8b5cf6" />
+                        <Box sx={{ px: 2.5, pt: 2, pb: 0.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #64748b' }}>
+                            <User size={16} color="#64748b" />
                             <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Customer Information</Typography>
                         </Box>
                         <Box sx={{ p: 2 }}>
@@ -525,7 +517,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 {/* Customer autocomplete — full width */}
                                 <Grid item xs={12}>
                                     <Autocomplete
-                                        options={customers || []}
+                                        options={(customers || []).filter(c => c.name?.toLowerCase() !== 'cash account')}
                                         getOptionLabel={(option) => option.name || ""}
                                         value={(customers || []).find(c => c.id === formData.customerId) || null}
                                         onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
@@ -576,7 +568,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                     {/* ── Items Table ── */}
                     <Box sx={{ mb: 2 }}>
-                        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
+                        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #64748b', pl: 1.5 }}>
                             <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Order Items</Typography>
                         </Box>
                         <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
@@ -613,7 +605,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                             <Chip size="small"
                                                                 label={item.bookingType === 'STITCHING' ? 'Suit (Stitching)' : 'Stitched (Readymade)'}
                                                                 variant="outlined"
-                                                                sx={{ fontSize: '0.68rem', height: 18, color: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#6b7280', borderColor: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#e5e7eb', bgcolor: item.bookingType === 'STITCHING' ? '#f5f3ff' : '#f9fafb' }}
+                                                                sx={{ fontSize: '0.68rem', height: 18, color: item.bookingType === 'STITCHING' ? '#475569' : '#6b7280', borderColor: item.bookingType === 'STITCHING' ? '#94a3b8' : '#e5e7eb', bgcolor: item.bookingType === 'STITCHING' ? '#f1f5f9' : '#f9fafb' }}
                                                             />
                                                         </Box>
                                                     </Box>
@@ -654,15 +646,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                         {item.isCollapsed ? (
                                                             <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #e5e7eb', bgcolor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                                 <Typography variant="body2" color="textSecondary"><strong>Stitching Details Saved</strong> for {item.productName || "Product"}</Typography>
-                                                                <Button size="small" onClick={() => { const ni = [...cartItems]; ni[index].isCollapsed = false; setCartItems(ni); }} sx={{ color: '#8b5cf6', textTransform: 'none' }}>Edit</Button>
+                                                                <Button size="small" onClick={() => { const ni = [...cartItems]; ni[index].isCollapsed = false; setCartItems(ni); }} sx={{ color: '#475569', textTransform: 'none' }}>Edit</Button>
                                                             </Box>
                                                         ) : (
-                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #8b5cf6', bgcolor: '#f5f3ff' }}>
+                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
                                                                 {index > 0 && previousStitchingDetails && (
                                                                     <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
                                                                         <Button size="small" variant="outlined"
                                                                             onClick={() => { const ni = [...cartItems]; ni[index] = { ...ni[index], ...previousStitchingDetails }; setCartItems(ni); }}
-                                                                            sx={{ borderColor: '#8b5cf6', color: '#8b5cf6', textTransform: 'none', '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' } }}>
+                                                                            sx={{ borderColor: '#94a3b8', color: '#475569', textTransform: 'none', '&:hover': { borderColor: '#64748b', bgcolor: '#f1f5f9' } }}>
                                                                             Use Previous Details
                                                                         </Button>
                                                                     </Box>
@@ -718,7 +710,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 setCartItems(ni);
                                                                                 setPreviousStitchingDetails({ cuffType: ni[index].cuffType, pohnchaType: ni[index].pohnchaType, gheraType: ni[index].gheraType, galaType: ni[index].galaType, galaSize: ni[index].galaSize, pocketType: ni[index].pocketType, shalwarType: ni[index].shalwarType, hasShalwarPocket: ni[index].hasShalwarPocket, hasFrontPockets: ni[index].hasFrontPockets });
                                                                             }}
-                                                                            sx={{ bgcolor: '#8b5cf6', textTransform: 'none', '&:hover': { bgcolor: '#7c3aed' } }}>
+                                                                            sx={{ bgcolor: '#475569', textTransform: 'none', '&:hover': { bgcolor: '#334155' } }}>
                                                                             Save Details
                                                                         </Button>
                                                                     </Grid>
@@ -734,7 +726,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Table>
                         </TableContainer>
                         <Button startIcon={<Plus size={15} />} onClick={handleAddRow} size="small"
-                            sx={{ mt: 1, textTransform: 'none', color: '#8b5cf6', fontWeight: 600 }}>
+                            sx={{ mt: 1, textTransform: 'none', color: '#475569', fontWeight: 600 }}>
                             Add New Item
                         </Button>
                     </Box>
@@ -804,7 +796,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => setShowForm(false)} disabled={loading}
                     sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
                 <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
-                    sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
+                    sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' } }}>
                     {loading ? <CircularProgress size={18} color="inherit" /> : 'Save Booking'}
                 </Button>
             </DialogActions>
