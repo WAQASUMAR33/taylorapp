@@ -36,6 +36,45 @@ const theme = createTheme({
             '"Segoe UI Symbol"',
         ].join(','),
     },
+    components: {
+        MuiDatePicker: {
+            styleOverrides: {
+                root: {
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                    },
+                },
+            },
+        },
+        MuiPickersDay: {
+            styleOverrides: {
+                root: {
+                    borderRadius: '8px',
+                    '&.Mui-selected': {
+                        backgroundColor: '#3B82F6 !important',
+                    },
+                    '&:hover': {
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    },
+                },
+                today: {
+                    border: '1px solid #3B82F6 !important',
+                },
+            },
+        },
+        MuiPickersCalendarHeader: {
+            styleOverrides: {
+                labelContainer: {
+                    fontWeight: 700,
+                },
+                switchViewButton: {
+                    '& .MuiSvgIcon-root': {
+                        fontSize: '1.2rem',
+                    },
+                },
+            },
+        },
+    },
 });
 
 export default theme;

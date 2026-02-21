@@ -31,6 +31,8 @@ import {
     TableRow,
     Paper,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import {
     Trash2,
     Search,
@@ -242,24 +244,18 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
                     <Box sx={{ display: "flex", gap: 2, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
                         {/* ── Date range first ── */}
-                        <TextField
-                            size="small"
-                            type="date"
+                        <DatePicker
                             label="From Date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ minWidth: 175 }}
+                            value={dateFrom ? dayjs(dateFrom) : null}
+                            onChange={(newValue) => setDateFrom(newValue ? newValue.format("YYYY-MM-DD") : "")}
+                            slotProps={{ textField: { size: "small", sx: { minWidth: 175 } } }}
                         />
-                        <TextField
-                            size="small"
-                            type="date"
+                        <DatePicker
                             label="To Date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ minWidth: 175 }}
-                            inputProps={{ min: dateFrom || undefined }}
+                            value={dateTo ? dayjs(dateTo) : null}
+                            onChange={(newValue) => setDateTo(newValue ? newValue.format("YYYY-MM-DD") : "")}
+                            minDate={dateFrom ? dayjs(dateFrom) : undefined}
+                            slotProps={{ textField: { size: "small", sx: { minWidth: 175 } } }}
                         />
                         {/* ── Then search + account ── */}
                         <TextField

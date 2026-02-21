@@ -30,6 +30,8 @@ import {
     TableRow,
     Paper,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import {
     Trash2,
     Search,
@@ -340,15 +342,18 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                             />
                         </Grid>
                         <Grid item xs={4}>
-                            <TextField
-                                fullWidth size="small"
+                            <DatePicker
                                 label="Purchase Date"
-                                type="date"
-                                required
-                                value={formData.purchaseDate}
-                                onChange={(e) => setFormData(p => ({ ...p, purchaseDate: e.target.value }))}
-                                variant="outlined"
-                                InputLabelProps={{ shrink: true }}
+                                value={formData.purchaseDate ? dayjs(formData.purchaseDate) : null}
+                                onChange={(newValue) => setFormData(p => ({ ...p, purchaseDate: newValue ? newValue.format("YYYY-MM-DD") : "" }))}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        size: "small",
+                                        required: true,
+                                        variant: "outlined"
+                                    }
+                                }}
                             />
                         </Grid>
                     </Grid>
@@ -516,14 +521,17 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ py: 1 }}>
-                                                <TextField
-                                                    fullWidth size="small"
-                                                    type="date"
+                                                <DatePicker
                                                     label="Date"
-                                                    value={payment.date}
-                                                    onChange={(e) => handlePaymentChange(idx, "date", e.target.value)}
-                                                    variant="outlined"
-                                                    InputLabelProps={{ shrink: true }}
+                                                    value={payment.date ? dayjs(payment.date) : null}
+                                                    onChange={(newValue) => handlePaymentChange(idx, "date", newValue ? newValue.format("YYYY-MM-DD") : "")}
+                                                    slotProps={{
+                                                        textField: {
+                                                            fullWidth: true,
+                                                            size: "small",
+                                                            variant: "outlined"
+                                                        }
+                                                    }}
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ py: 1 }}>

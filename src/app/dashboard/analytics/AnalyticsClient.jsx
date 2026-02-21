@@ -7,6 +7,8 @@ import {
     TableHead, TableRow, Paper, Chip, Avatar, Divider,
     CircularProgress, Alert, InputAdornment, Tooltip, LinearProgress
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import {
     BarChart3, TrendingUp, TrendingDown, DollarSign, Users,
     Scissors, Calendar, RefreshCw, Filter, ShoppingBag,
@@ -178,16 +180,35 @@ export default function AnalyticsClient({ employees }) {
                     <Typography variant="subtitle2" fontWeight={700} color="#374151">Filters</Typography>
                 </Box>
                 <Box sx={{ p: 2, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
-                    <TextField size="small" label="From Date" type="date" value={from}
-                        onChange={e => setFrom(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment> }}
-                        sx={{ width: 300, ...FIELD_SX }} />
-                    <TextField size="small" label="To Date" type="date" value={to}
-                        onChange={e => setTo(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment> }}
-                        sx={{ width: 300, ...FIELD_SX }} />
+                    <DatePicker
+                        label="From Date"
+                        value={from ? dayjs(from) : null}
+                        onChange={newValue => setFrom(newValue ? newValue.format("YYYY-MM-DD") : "")}
+                        slotProps={{
+                            textField: {
+                                size: "small",
+                                sx: { width: 300, ...FIELD_SX },
+                                InputProps: {
+                                    startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment>
+                                }
+                            }
+                        }}
+                    />
+                    <DatePicker
+                        label="To Date"
+                        value={to ? dayjs(to) : null}
+                        onChange={newValue => setTo(newValue ? newValue.format("YYYY-MM-DD") : "")}
+                        minDate={from ? dayjs(from) : undefined}
+                        slotProps={{
+                            textField: {
+                                size: "small",
+                                sx: { width: 300, ...FIELD_SX },
+                                InputProps: {
+                                    startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment>
+                                }
+                            }
+                        }}
+                    />
                     <Autocomplete options={tailors} getOptionLabel={o => o.name || ""}
                         value={filterTailor} onChange={(_, v) => setFilterTailor(v)}
                         sx={{ width: 300 }}

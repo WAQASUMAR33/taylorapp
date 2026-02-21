@@ -33,6 +33,8 @@ import {
     Checkbox,
     GlobalStyles
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -486,23 +488,40 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
                         </Grid>
                         <Grid item xs={6} md={3}>
-                            <TextField fullWidth size="small" label="Booking Date" type="date" name="bookingDate" required
-                                value={formData.bookingDate}
-                                onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
-                                InputLabelProps={{ shrink: true }}
-                                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
-                                sx={FIELD_SX} />
+                            <DatePicker
+                                label="Booking Date"
+                                value={formData.bookingDate ? dayjs(formData.bookingDate) : null}
+                                onChange={(newValue) => setFormData({ ...formData, bookingDate: newValue ? newValue.format("YYYY-MM-DD") : "" })}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        size: "small",
+                                        sx: FIELD_SX,
+                                        required: true,
+                                        InputProps: { startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }
+                                    }
+                                }}
+                            />
                         </Grid>
                         <Grid item xs={6} md={3}>
                             <TextField fullWidth size="small" label="Order Reference" value="Auto" disabled sx={DISABLED_SX} />
                         </Grid>
                         <Grid item xs={6} md={3}>
-                            <TextField fullWidth size="small" label="Delivery Date" type="date" name="deliveryDate" required
-                                value={formData.deliveryDate}
-                                onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                                InputLabelProps={{ shrink: true }}
-                                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
-                                sx={FIELD_SX} />
+                            <DatePicker
+                                label="Delivery Date"
+                                value={formData.deliveryDate ? dayjs(formData.deliveryDate) : null}
+                                onChange={(newValue) => setFormData({ ...formData, deliveryDate: newValue ? newValue.format("YYYY-MM-DD") : "" })}
+                                minDate={formData.bookingDate ? dayjs(formData.bookingDate) : undefined}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        size: "small",
+                                        sx: FIELD_SX,
+                                        required: true,
+                                        InputProps: { startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }
+                                    }
+                                }}
+                            />
                         </Grid>
                     </Grid>
 
