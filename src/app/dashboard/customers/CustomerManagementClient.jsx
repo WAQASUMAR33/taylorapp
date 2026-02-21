@@ -337,61 +337,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </CardContent>
                     </Card>
                 </Grid>
-
-                {/* Placeholder/Secondary Info Cards (Following the Dropbox/GDrive pattern) */}
-                <Grid item xs={12} md={4}>
-                    <Card
-                        elevation={0}
-                        sx={{
-                            borderRadius: 4,
-                            border: "1px solid",
-                            borderColor: "divider",
-                            background: "white",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
-                        }}
-                    >
-                        <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <Box>
-                                    <Box sx={{ bgcolor: "success.light", p: 0.8, borderRadius: 1.5, display: "inline-flex", mb: 2 }}>
-                                        <BookText size={20} color="#10b981" />
-                                    </Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2, color: "text.primary" }}>
-                                        Recent Activity
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                                        Updated Today
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ position: "relative", display: "inline-flex", mt: 1 }}>
-                                    <CircularProgress
-                                        variant="determinate"
-                                        value={100}
-                                        size={60}
-                                        thickness={4}
-                                        sx={{ color: "action.hover" }}
-                                    />
-                                    <Box
-                                        sx={{
-                                            top: 0,
-                                            left: 0,
-                                            bottom: 0,
-                                            right: 0,
-                                            position: "absolute",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                        }}
-                                    >
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: "text.primary" }}>
-                                            OK
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
             </Grid>
 
             {/* ── Quick Access Section ────────────────────────── */}
@@ -557,152 +502,151 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 elevation={0}
                 sx={{
                     borderRadius: 4,
-                    border: "1px solid",
-                    borderColor: "rgba(0,0,0,0.06)",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.03)",
+                    border: "none", // Removed rectangle border
+                    boxShadow: "none", // Removed shadow for a cleaner look
                     overflow: "hidden",
-                    bgcolor: "white",
+                    bgcolor: "transparent",
                 }}
             >
                 <Table sx={{ minWidth: 800 }}>
                     <TableHead sx={{ bgcolor: "rgba(0,0,0,0.01)" }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5, pl: 4 }}>#</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Name</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Category</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Phone</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Address</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Balance</TableCell>
-                            <TableCell sx={{ fontWeight: 800, color: "text.primary", opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5, pr: 4 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5, pl: 4 }}>#</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Name</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Phone</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Address</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5 }}>Balance</TableCell>
+                            <TableCell sx={{ fontWeight: 900, color: "text.primary", opacity: 0.8, fontSize: "0.75rem", textTransform: "uppercase", py: 2.5, pr: 4 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredCustomers.length > 0 ? (
-                            filteredCustomers.map((customer, index) => (
-                                <TableRow
-                                    key={customer.id}
-                                    hover
-                                    sx={{
-                                        "&:last-child td, &:last-child th": { border: 0 },
-                                        transition: "background-color 0.2s",
-                                        "&:hover": { bgcolor: "rgba(37, 99, 235, 0.01) !important" },
-                                    }}
-                                >
-                                    <TableCell sx={{ py: 2, pl: 4, color: "text.secondary", fontWeight: 600, fontSize: "0.85rem" }}>
-                                        {(index + 1).toString().padStart(2, '0')}
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2 }}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                            <Avatar
-                                                sx={{
-                                                    width: 32,
-                                                    height: 32,
-                                                    fontSize: "0.8rem",
-                                                    fontWeight: 700,
-                                                    bgcolor: "primary.light",
-                                                    color: "primary.main",
-                                                }}
-                                            >
-                                                {customer.name.charAt(0).toUpperCase()}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
-                                                    {customer.name}
-                                                </Typography>
-                                                {customer.fatherName && (
-                                                    <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
-                                                        S/O: {customer.fatherName}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2 }}>
-                                        <Chip
-                                            label={customer.accountCategory?.name || "Standard"}
-                                            size="small"
-                                            sx={{
-                                                height: 24,
-                                                borderRadius: 1.5,
-                                                fontSize: "0.75rem",
-                                                fontWeight: 700,
-                                                bgcolor:
-                                                    customer.accountCategory?.name?.toLowerCase().includes("vip") ? "rgba(139, 92, 246, 0.1)" :
-                                                        customer.accountCategory?.name?.toLowerCase().includes("corporate") ? "rgba(59, 130, 246, 0.1)" :
-                                                            "rgba(16, 185, 129, 0.1)",
-                                                color:
-                                                    customer.accountCategory?.name?.toLowerCase().includes("vip") ? "#7c3aed" :
-                                                        customer.accountCategory?.name?.toLowerCase().includes("corporate") ? "#2563eb" :
-                                                            "#059669",
-                                                border: "none",
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2 }}>
-                                        <Typography variant="body2" sx={{ color: "text.secondary", display: "flex", alignItems: "center", gap: 0.5 }}>
-                                            <Phone size={12} color="#9ca3af" />
-                                            {customer.phone || "—"}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2 }}>
-                                        <Typography variant="body2" sx={{ color: "text.secondary", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                            {customer.address || "—"}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2 }}>
-                                        <Tooltip title="View Ledger">
-                                            <Box sx={{ display: "inline-flex", flexDirection: "column" }}>
-                                                <Typography
-                                                    variant="body2"
-                                                    component={Link}
-                                                    href={`/dashboard/ledger?customerId=${customer.id}`}
+                            filteredCustomers.map((customer, index) => {
+                                // Match category color with statColors
+                                const catIdx = customerCategories.findIndex(c => c.id === customer.accountCategoryId);
+                                const colorSet = catIdx !== -1 ? statColors[catIdx % statColors.length] : { bg: "rgba(16, 185, 129, 0.1)", color: "#059669" };
+
+                                return (
+                                    <TableRow
+                                        key={customer.id}
+                                        hover
+                                        sx={{
+                                            "&:last-child td, &:last-child th": { border: 0 },
+                                            transition: "background-color 0.2s",
+                                            "&:hover": { bgcolor: "rgba(37, 99, 235, 0.01) !important" },
+                                        }}
+                                    >
+                                        <TableCell sx={{ py: 2, pl: 4, color: "text.secondary", fontWeight: 600, fontSize: "0.85rem" }}>
+                                            {(index + 1).toString().padStart(2, '0')}
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2 }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                <Avatar
                                                     sx={{
-                                                        textDecoration: "none",
-                                                        fontWeight: 800,
-                                                        color:
-                                                            customer.balance > 0 ? "#059669" :
-                                                                customer.balance < 0 ? "#dc2626" :
-                                                                    "text.primary",
+                                                        width: 32,
+                                                        height: 32,
+                                                        fontSize: "0.8rem",
+                                                        fontWeight: 700,
+                                                        bgcolor: colorSet.bg,
+                                                        color: colorSet.color,
                                                     }}
                                                 >
-                                                    Rs. {Math.abs(parseFloat(customer.balance || 0)).toLocaleString()}
-                                                </Typography>
-                                                {customer.balance !== 0 && (
-                                                    <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.5, lineHeight: 1 }}>
-                                                        {parseFloat(customer.balance || 0) > 0 ? "SUCCESS (Cr)" : "PENDING (Dr)"}
+                                                    {customer.name.charAt(0).toUpperCase()}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
+                                                        {customer.name}
                                                     </Typography>
-                                                )}
+                                                    {customer.fatherName && (
+                                                        <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+                                                            S/O: {customer.fatherName}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             </Box>
-                                        </Tooltip>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 2, pr: 4 }} align="right">
-                                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                            <IconButton
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2 }}>
+                                            <Chip
+                                                label={customer.accountCategory?.name || "Standard"}
                                                 size="small"
-                                                component={Link}
-                                                href={`/dashboard/measurements?customerId=${customer.id}`}
-                                                sx={{ color: "text.secondary", "&:hover": { bgcolor: "action.hover", color: "primary.main" } }}
-                                            >
-                                                <Ruler size={16} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleEdit(customer)}
-                                                sx={{ color: "text.secondary", "&:hover": { bgcolor: "action.hover", color: "primary.main" } }}
-                                            >
-                                                <Edit size={16} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDelete(customer.id)}
-                                                sx={{ color: "text.secondary", "&:hover": { bgcolor: "action.hover", color: "error.main" } }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </IconButton>
-                                        </Stack>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                                sx={{
+                                                    height: 24,
+                                                    borderRadius: 1.5,
+                                                    fontSize: "0.75rem",
+                                                    fontWeight: 700,
+                                                    bgcolor: colorSet.bg,
+                                                    color: colorSet.color,
+                                                    border: "none",
+                                                }}
+                                            />
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2 }}>
+                                            <Typography variant="body2" sx={{ color: "text.secondary", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                <Phone size={12} color="#9ca3af" />
+                                                {customer.phone || "—"}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2 }}>
+                                            <Typography variant="body2" sx={{ color: "text.secondary", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                {customer.address || "—"}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2 }}>
+                                            <Tooltip title="View Ledger">
+                                                <Box sx={{ display: "inline-flex", flexDirection: "column" }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        component={Link}
+                                                        href={`/dashboard/ledger?customerId=${customer.id}`}
+                                                        sx={{
+                                                            textDecoration: "none",
+                                                            fontWeight: 800,
+                                                            color:
+                                                                customer.balance > 0 ? "#059669" :
+                                                                    customer.balance < 0 ? "#dc2626" :
+                                                                        "text.primary",
+                                                        }}
+                                                    >
+                                                        Rs. {Math.abs(parseFloat(customer.balance || 0)).toLocaleString()}
+                                                    </Typography>
+                                                    {customer.balance !== 0 && (
+                                                        <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.5, lineHeight: 1 }}>
+                                                            {parseFloat(customer.balance || 0) > 0 ? "SUCCESS (Cr)" : "PENDING (Dr)"}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell sx={{ py: 2, pr: 4 }} align="right">
+                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                <IconButton
+                                                    size="small"
+                                                    component={Link}
+                                                    href={`/dashboard/measurements?customerId=${customer.id}`}
+                                                    sx={{ color: "info.main", bgcolor: "info.light", "&:hover": { bgcolor: "info.main", color: "white" } }}
+                                                >
+                                                    <Ruler size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleEdit(customer)}
+                                                    sx={{ color: "primary.main", bgcolor: "primary.light", "&:hover": { bgcolor: "primary.main", color: "white" } }}
+                                                >
+                                                    <Edit size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleDelete(customer.id)}
+                                                    sx={{ color: "error.main", bgcolor: "error.light", "&:hover": { bgcolor: "error.main", color: "white" } }}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </IconButton>
+                                            </Stack>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={7} sx={{ py: 10, textAlign: "center" }}>
@@ -924,10 +868,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}
             >
-                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider" }}>
+                <DialogTitle sx={{ fontWeight: 800, bgcolor: "rgba(0,0,0,0.02)", borderBottom: "1px solid", borderColor: "divider" }}>
                     New Account Category
                 </DialogTitle>
-                <DialogContent sx={{ pt: 3 }}>
+                <DialogContent sx={{ pt: 4 }}> {/* Increased padding-top to 4 to fix label overlap */}
                     <TextField
                         fullWidth
                         label="Category Name"
@@ -944,7 +888,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         onClick={() => setQuickAddCatOpen(false)}
                         variant="outlined"
                         color="inherit"
-                        sx={{ borderRadius: 2, textTransform: "none" }}
+                        sx={{ borderRadius: 2, textTransform: "none", borderColor: "divider" }}
                     >
                         Cancel
                     </Button>
@@ -952,7 +896,14 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         variant="contained"
                         onClick={handleQuickAddCategory}
                         disabled={!newCatName.trim() || newCatLoading}
-                        sx={{ borderRadius: 2, textTransform: "none" }}
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            bgcolor: "rgba(0,0,0,0.08)",
+                            color: "text.secondary",
+                            boxShadow: "none",
+                            "&:hover": { bgcolor: "rgba(0,0,0,0.12)" },
+                        }}
                     >
                         {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Create Category"}
                     </Button>
