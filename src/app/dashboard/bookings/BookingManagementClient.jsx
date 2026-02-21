@@ -524,16 +524,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
-                                                label="Select Customer"
+                                                label="گاہک منتخب کریں"
                                                 size="small"
                                                 fullWidth
                                                 required
-                                                InputProps={{
-                                                    ...params.InputProps,
-                                                    startAdornment: (
-                                                        <><InputAdornment position="start"><User size={16} color="#9ca3af" /></InputAdornment>{params.InputProps.startAdornment}</>
-                                                    ),
-                                                }}
                                                 sx={{ minWidth: 300, ...FIELD_SX }}
                                             />
                                         )}
@@ -661,14 +655,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                 )}
                                                                 <Grid container spacing={2}>
                                                                     {[
-                                                                        { label: 'Cuff', field: 'cuffType', opts: [{ value: 'single', label: 'Single' }, { value: 'double folding', label: 'Double Folding' }, { value: 'open sleeve', label: 'Open Sleeve' }] },
-                                                                        { label: 'Bottom (Pohncha)', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'With Net (Jaali)' }, { value: 'karhaai', label: 'Embroidered' }, { value: 'jaali_karhaai', label: 'Net w/ Embroidery' }, { value: 'saada', label: 'Simple' }] },
-                                                                        { label: 'Daman (Ghera)', field: 'gheraType', opts: [{ value: 'seedha', label: 'Straight' }, { value: 'gol', label: 'Round' }] },
-                                                                        { label: 'Neck (Gala)', field: 'galaType', opts: [{ value: 'ban', label: 'Ban' }, { value: 'collar', label: 'Collar' }] },
-                                                                        { label: 'Pocket', field: 'pocketType', opts: [{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }] },
-                                                                        { label: 'Shalwar Type', field: 'shalwarType', opts: [{ value: 'pajama', label: 'Pajama' }, { value: 'shalwar', label: 'Shalwar' }, { value: 'trouser', label: 'Trouser' }] },
+                                                                        { label: 'کف (Cuff)', field: 'cuffType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double folding', label: 'ڈبل فولڈنگ' }, { value: 'open sleeve', label: 'کھلی آستین' }] },
+                                                                        { label: 'پونچہ (Pohncha)', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'جالی کے ساتھ' }, { value: 'karhaai', label: 'کڑھائی' }, { value: 'jaali_karhaai', label: 'جالی + کڑھائی' }, { value: 'saada', label: 'سادہ' }] },
+                                                                        { label: 'گھیرا (Ghera)', field: 'gheraType', opts: [{ value: 'seedha', label: 'سیدھا' }, { value: 'gol', label: 'گول' }] },
+                                                                        { label: 'گلا (Gala)', field: 'galaType', opts: [{ value: 'ban', label: 'بن' }, { value: 'collar', label: 'کالر' }] },
+                                                                        { label: 'جیب (Pocket)', field: 'pocketType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double', label: 'ڈبل' }] },
+                                                                        { label: 'شلوار کی قسم', field: 'shalwarType', opts: [{ value: 'pajama', label: 'پاجامہ' }, { value: 'shalwar', label: 'شلوار' }, { value: 'trouser', label: 'ٹراؤزر' }] },
                                                                     ].map(({ label, field, opts }) => (
-                                                                        <Grid item xs={12} sm={4} key={field}>
+                                                                        <Grid item xs={12} sm={6} key={field}>
                                                                             <Autocomplete
                                                                                 options={opts}
                                                                                 getOptionLabel={(o) => o.label || ""}
@@ -682,24 +676,24 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                         </Grid>
                                                                     ))}
                                                                     {item.galaType && (
-                                                                        <Grid item xs={12} sm={4}>
+                                                                        <Grid item xs={12} sm={6}>
                                                                             <Autocomplete
                                                                                 options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
                                                                                 value={item.galaSize || null}
                                                                                 onChange={(_, nv) => { const ni = [...cartItems]; ni[index].galaSize = nv || ""; setCartItems(ni); }}
                                                                                 renderInput={(params) => (
-                                                                                    <TextField {...params} label="Neck Size" size="small" required
+                                                                                    <TextField {...params} label="گلے کا سائز" size="small" required
                                                                                         sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                                                                                 )}
                                                                             />
                                                                         </Grid>
                                                                     )}
-                                                                    <Grid item xs={12} sm={4}>
+                                                                    <Grid item xs={12} sm={6}>
                                                                         <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'center' }}>
                                                                             <FormControlLabel control={<Checkbox size="small" checked={item.hasShalwarPocket} onChange={(e) => { const ni = [...cartItems]; ni[index].hasShalwarPocket = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600}>Shalwar Pocket</Typography>} sx={{ m: 0 }} />
+                                                                                label={<Typography variant="caption" fontWeight={600}>شلوار جیب</Typography>} sx={{ m: 0 }} />
                                                                             <FormControlLabel control={<Checkbox size="small" checked={item.hasFrontPockets} onChange={(e) => { const ni = [...cartItems]; ni[index].hasFrontPockets = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600}>Front Pockets</Typography>} sx={{ m: 0 }} />
+                                                                                label={<Typography variant="caption" fontWeight={600}>سامنے جیب</Typography>} sx={{ m: 0 }} />
                                                                         </Box>
                                                                     </Grid>
                                                                     <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -711,7 +705,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 setPreviousStitchingDetails({ cuffType: ni[index].cuffType, pohnchaType: ni[index].pohnchaType, gheraType: ni[index].gheraType, galaType: ni[index].galaType, galaSize: ni[index].galaSize, pocketType: ni[index].pocketType, shalwarType: ni[index].shalwarType, hasShalwarPocket: ni[index].hasShalwarPocket, hasFrontPockets: ni[index].hasFrontPockets });
                                                                             }}
                                                                             sx={{ bgcolor: '#475569', textTransform: 'none', '&:hover': { bgcolor: '#334155' } }}>
-                                                                            Save Details
+                                                                            محفوظ کریں
                                                                         </Button>
                                                                     </Grid>
                                                                 </Grid>
@@ -893,23 +887,29 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
-                                        <TextField
-                                            select size="small" value={booking.status}
-                                            onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
-                                            sx={{
-                                                minWidth: 155,
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: getStatusColor(booking.status) + '18',
-                                                    borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Box
+                                                component="select"
+                                                value={booking.status}
+                                                onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
+                                                style={{
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.8rem',
                                                     color: getStatusColor(booking.status),
-                                                    '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
-                                                }
-                                            }}
-                                        >
-                                            {BOOKING_STATUSES.map((s) => (
-                                                <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
-                                            ))}
-                                        </TextField>
+                                                    cursor: 'pointer',
+                                                    outline: 'none',
+                                                    padding: '2px 0',
+                                                    appearance: 'none',
+                                                    WebkitAppearance: 'none',
+                                                }}
+                                            >
+                                                {BOOKING_STATUSES.map((s) => (
+                                                    <option key={s.value} value={s.value}>{s.label}</option>
+                                                ))}
+                                            </Box>
+                                        </Box>
                                     </TableCell>
                                     {/* Delivery */}
                                     <TableCell>
@@ -927,13 +927,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     <TableCell align="right">
                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                                             <Tooltip title="View Details">
-                                                <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => handleViewBooking(booking)}><Eye size={17} /></IconButton>
+                                                <IconButton size="small" onClick={() => handleViewBooking(booking)}
+                                                    sx={{ color: '#3b82f6', borderRadius: 1.5, transition: 'all 0.18s', '&:hover': { bgcolor: '#3b82f6', color: 'white' } }}>
+                                                    <Eye size={17} />
+                                                </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Print">
-                                                <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
+                                                <IconButton size="small" onClick={() => handlePrintClick(booking)}
+                                                    sx={{ color: '#3b82f6', borderRadius: 1.5, transition: 'all 0.18s', '&:hover': { bgcolor: '#3b82f6', color: 'white' } }}>
+                                                    <Printer size={17} />
+                                                </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete Booking">
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(booking.id)}><Trash2 size={17} /></IconButton>
+                                                <IconButton size="small" onClick={() => handleDelete(booking.id)}
+                                                    sx={{ color: '#ef4444', borderRadius: 1.5, transition: 'all 0.18s', '&:hover': { bgcolor: '#ef4444', color: 'white' } }}>
+                                                    <Trash2 size={17} />
+                                                </IconButton>
                                             </Tooltip>
                                         </Box>
                                     </TableCell>
