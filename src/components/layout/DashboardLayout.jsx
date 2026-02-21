@@ -32,8 +32,8 @@ export default function DashboardLayout({ children }) {
                     minHeight: '100vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'margin-left 0.2s ease, width 0.2s ease',
-                    bgcolor: '#f5f6fa',
+                    transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    bgcolor: 'background.default',
                     overflow: 'hidden',
                 }}
             >
