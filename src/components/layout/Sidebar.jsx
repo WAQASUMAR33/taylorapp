@@ -82,27 +82,27 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
         >
             {/* Brand */}
             <Box sx={{
-                px: 3,
-                py: 3,
+                px: 2,
+                py: 2,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
+                gap: 1.5,
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                minHeight: 80,
+                minHeight: 64,
                 flexShrink: 0,
             }}>
                 <Box sx={{
-                    height: 40,
-                    width: 40,
-                    borderRadius: '12px',
-                    background: 'primary.main',
+                    height: 38,
+                    width: 38,
+                    borderRadius: 2.5,
+                    background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(75, 59, 195, 0.3)',
+                    boxShadow: '0 4px 10px rgba(79,70,229,0.4)',
                     flexShrink: 0,
                 }}>
-                    <Box sx={{ color: 'white', fontWeight: 900, fontSize: '1.2rem' }}>H</Box>
+                    <Scissors size={20} color="white" />
                 </Box>
                 {!collapsed && (
                     <Typography
@@ -110,42 +110,42 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
                         fontWeight={800}
                         noWrap
                         sx={{
-                            color: '#1E293B',
-                            letterSpacing: '-0.02em',
-                            fontSize: '1.25rem'
+                            background: 'linear-gradient(to right, #2563EB, #4F46E5)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        Hireism
+                        TailorFlow
                     </Typography>
                 )}
             </Box>
 
+            <Divider />
+
             {/* Nav links */}
             <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', py: 1 }}>
-                <List disablePadding sx={{ px: 2 }}>
+                <List disablePadding sx={{ px: 1 }}>
                     {filteredNavItems.map((item) => {
                         const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                         return (
-                            <ListItem key={item.name} disablePadding sx={{ mb: 1 }}>
+                            <ListItem key={item.name} disablePadding sx={{ mb: 0.5 }}>
                                 <Tooltip title={collapsed ? item.name : ""} placement="right" arrow>
                                     <ListItemButton
                                         component={Link}
                                         href={item.href}
                                         sx={{
-                                            minHeight: 48,
-                                            borderRadius: '16px',
+                                            minHeight: 44,
+                                            borderRadius: 2,
                                             justifyContent: collapsed ? 'center' : 'flex-start',
                                             px: collapsed ? 1.5 : 2,
-                                            backgroundColor: isActive ? 'primary.main' : 'transparent',
-                                            color: isActive ? 'white' : '#64748B',
-                                            boxShadow: isActive ? '0 8px 16px rgba(75, 59, 195, 0.25)' : 'none',
-                                            transition: 'all 0.2s ease',
+                                            background: isActive
+                                                ? 'linear-gradient(135deg, #2563EB, #4F46E5)'
+                                                : 'transparent',
+                                            color: isActive ? 'white' : 'text.secondary',
+                                            boxShadow: isActive ? '0 4px 12px rgba(79,70,229,0.3)' : 'none',
                                             '&:hover': {
-                                                bgcolor: isActive ? 'primary.main' : 'rgba(75, 59, 195, 0.05)',
-                                                color: isActive ? 'white' : 'primary.main',
-                                                '& .MuiListItemIcon-root': {
-                                                    color: isActive ? 'white' : 'primary.main',
-                                                }
+                                                bgcolor: isActive ? undefined : 'action.hover',
+                                                color: isActive ? 'white' : 'text.primary',
                                             },
                                         }}
                                     >
@@ -154,22 +154,18 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
                                             mr: collapsed ? 0 : 2,
                                             color: 'inherit',
                                             justifyContent: 'center',
-                                            opacity: isActive ? 1 : 0.7,
                                         }}>
-                                            <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                            <item.icon size={19} />
                                         </ListItemIcon>
                                         {!collapsed && (
                                             <ListItemText
                                                 primary={item.name}
                                                 primaryTypographyProps={{
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: isActive ? 700 : 500,
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: isActive ? 600 : 400,
                                                     noWrap: true,
                                                 }}
                                             />
-                                        )}
-                                        {isActive && !collapsed && (
-                                            <Box sx={{ width: 4, height: 18, bgcolor: 'white', borderRadius: 2, ml: 1 }} />
                                         )}
                                     </ListItemButton>
                                 </Tooltip>
@@ -179,35 +175,54 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
                 </List>
             </Box>
 
+            <Divider />
+
             {/* Bottom actions */}
-            <Box sx={{ px: 2, py: 2, flexShrink: 0 }}>
+            <Box sx={{ px: 1, py: 1, flexShrink: 0 }}>
+                {/* Collapse toggle */}
+                <Tooltip title={collapsed ? "Expand" : ""} placement="right" arrow>
+                    <ListItemButton
+                        onClick={() => setCollapsed(!collapsed)}
+                        sx={{
+                            minHeight: 44,
+                            borderRadius: 2,
+                            justifyContent: collapsed ? 'center' : 'flex-start',
+                            px: collapsed ? 1.5 : 2,
+                            mb: 0.5,
+                            color: 'text.secondary',
+                            '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2, color: 'inherit', justifyContent: 'center' }}>
+                            {collapsed ? <ChevronRight size={19} /> : <ChevronLeft size={19} />}
+                        </ListItemIcon>
+                        {!collapsed && <ListItemText primary="Collapse" primaryTypographyProps={{ fontSize: '0.875rem' }} />}
+                    </ListItemButton>
+                </Tooltip>
+
                 {/* Logout */}
                 <Tooltip title={collapsed ? "Logout" : ""} placement="right" arrow>
                     <ListItemButton
                         onClick={() => signOut({ callbackUrl: "/login" })}
                         sx={{
-                            minHeight: 48,
-                            borderRadius: '16px',
+                            minHeight: 44,
+                            borderRadius: 2,
                             justifyContent: collapsed ? 'center' : 'flex-start',
                             px: collapsed ? 1.5 : 2,
-                            color: '#64748B',
-                            '&:hover': {
-                                bgcolor: 'rgba(239, 68, 68, 0.08)',
-                                color: 'error.main',
-                                '& .MuiListItemIcon-root': { color: 'error.main' }
-                            },
+                            color: 'error.main',
+                            '&:hover': { bgcolor: 'error.50', backgroundColor: 'rgba(239,68,68,0.08)' },
                         }}
                     >
                         <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2, color: 'inherit', justifyContent: 'center' }}>
-                            <LogOut size={20} />
+                            <LogOut size={19} />
                         </ListItemIcon>
-                        {!collapsed && <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />}
+                        {!collapsed && <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />}
                     </ListItemButton>
                 </Tooltip>
 
                 {!collapsed && (
-                    <Typography variant="caption" color="text.disabled" align="center" display="block" sx={{ pt: 2, pb: 0.5, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em' }}>
-                        V1.0.0
+                    <Typography variant="caption" color="text.disabled" align="center" display="block" sx={{ pt: 1, pb: 0.5 }}>
+                        v1.0.0
                     </Typography>
                 )}
             </Box>

@@ -1,9 +1,10 @@
 "use client";
 
-import { Bell, Search, User, Settings, ExternalLink, Plus } from "lucide-react";
+import { Bell, Search, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
+    Toolbar,
     TextField,
     InputAdornment,
     IconButton,
@@ -11,8 +12,7 @@ import {
     Typography,
     Box,
     Avatar,
-    useTheme,
-    Button
+    useTheme
 } from "@mui/material";
 
 export default function Header() {
@@ -32,81 +32,74 @@ export default function Header() {
     return (
         <Box
             sx={{
-                height: 80,
+                height: 64,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                px: 4,
+                px: 3,
                 gap: 2,
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                backdropFilter: 'blur(20px)',
-                borderBottom: 'none',
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                backdropFilter: 'blur(12px)',
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
             }}
         >
-            {/* Search - Centered */}
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+            {/* Search */}
+            <Box sx={{ flexGrow: 1, maxWidth: 420 }}>
                 <TextField
-                    placeholder="Search something..."
+                    fullWidth
+                    placeholder="Search everything..."
                     variant="outlined"
                     size="small"
                     onKeyDown={handleSearch}
-                    sx={{ width: '100%', maxWidth: 460 }}
                     InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <Search size={18} color="#94A3B8" />
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Search size={18} color={theme.palette.text.secondary} />
                             </InputAdornment>
                         ),
                         sx: {
-                            borderRadius: '16px',
-                            backgroundColor: '#fff',
-                            border: '1px solid #E2E8F0',
-                            transition: 'all 0.2s ease',
-                            '& fieldset': { border: 'none' },
+                            borderRadius: '12px',
+                            backgroundColor: theme.palette.action.hover,
+                            transition: 'all 0.25s ease',
+                            '& fieldset': { border: '1px solid transparent' },
                             '&:hover': {
-                                borderColor: theme.palette.primary.main,
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                backgroundColor: theme.palette.action.selected,
+                                '& fieldset': { borderColor: theme.palette.divider }
                             },
+                            '&.Mui-focused': {
+                                backgroundColor: '#fff',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                '& fieldset': { borderColor: theme.palette.primary.main, borderWidth: '1px !important' },
+                            }
                         }
                     }}
                 />
             </Box>
 
             {/* Right side */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <IconButton
+                    size="medium"
                     sx={{
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        px: 3,
-                        py: 1,
-                        borderRadius: '16px',
-                        boxShadow: '0 4px 12px rgba(75, 59, 195, 0.2)',
-                        '&:hover': {
-                            bgcolor: 'primary.dark',
-                        }
+                        transition: 'all 0.2s',
+                        '&:hover': { backgroundColor: theme.palette.action.hover, transform: 'translateY(-1px)' }
                     }}
                 >
-                    Add Now
-                </Button>
+                    <Badge
+                        badgeContent={0}
+                        color="error"
+                        variant="dot"
+                        sx={{ '& .MuiBadge-badge': { boxShadow: `0 0 0 2px #fff` } }}
+                    >
+                        <Bell size={20} color={theme.palette.text.secondary} />
+                    </Badge>
+                </IconButton>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <IconButton sx={{ bgcolor: '#F8FAFC', borderRadius: '12px', p: 1.25 }}>
-                        <Settings size={20} color="#64748B" />
-                    </IconButton>
-                    <IconButton sx={{ bgcolor: '#F8FAFC', borderRadius: '12px', p: 1.25 }}>
-                        <ExternalLink size={20} color="#64748B" />
-                    </IconButton>
-                    <IconButton sx={{ bgcolor: '#FFF1F2', borderRadius: '12px', p: 1.25 }}>
-                        <Badge badgeContent={0} color="error" variant="dot">
-                            <Bell size={20} color="#F43F5E" />
-                        </Badge>
-                    </IconButton>
-                </Box>
+                {/* Divider */}
+                <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 0.5 }} />
 
-                {/* User Info */}
+                {/* User info */}
                 <Box sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -118,14 +111,27 @@ export default function Header() {
                     transition: 'all 0.2s',
                     '&:hover': {
                         backgroundColor: theme.palette.action.hover,
+                        '& .user-name': { color: theme.palette.primary.main }
                     }
                 }}>
                     <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
-                        <Typography variant="body2" fontWeight={700} sx={{ color: '#1E293B' }}>
+                        <Typography
+                            variant="subtitle2"
+                            className="user-name"
+                            fontWeight={700}
+                            fontSize="0.875rem"
+                            lineHeight={1.2}
+                            sx={{ transition: 'color 0.2s' }}
+                        >
                             {session?.user?.name || "Admin User"}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B', cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
-                            View profile
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            fontWeight={600}
+                            sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem', opacity: 0.8 }}
+                        >
+                            {session?.user?.role || "ADMIN"}
                         </Typography>
                     </Box>
                     <Avatar
@@ -135,9 +141,9 @@ export default function Header() {
                             bgcolor: 'primary.main',
                             width: 38,
                             height: 38,
-                            borderRadius: '14px',
-                            border: '2px solid #fff',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'scale(1.05)' }
                         }}
