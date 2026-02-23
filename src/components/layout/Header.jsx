@@ -25,6 +25,7 @@ import {
 export default function Header() {
     const { data: session } = useSession();
     const router = useRouter();
+    const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 
@@ -266,7 +267,7 @@ export default function Header() {
                             mx: 1,
                             borderRadius: '10px',
                             color: 'error.main',
-                            '&:hover': { backgroundColor: 'error.lighter' }
+                            '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.08)' }
                         }}
                     >
                         <ListItemIcon>
