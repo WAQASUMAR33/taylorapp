@@ -307,7 +307,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 4 }}>
                 {quickActions.map((a) => (
-                    <Box key={a.title} sx={{ width: 200, flex: '0 0 auto' }}>
+                    <Box key={a.title} sx={{ width: 300, flex: '0 0 auto' }}>
                         <ActionCard {...a} />
                     </Box>
                 ))}
