@@ -325,6 +325,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                             border: "1px solid",
                             borderColor: "divider",
                             borderRadius: 3,
+                            minWidth: 700,
                         }}
                     >
                         {/* Header */}
