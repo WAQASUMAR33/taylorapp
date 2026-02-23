@@ -68,33 +68,34 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
                 '&:hover': {
                     borderColor: 'primary.main',
                     '& .arrow-box': {
-                        backgroundColor: (t) => t.palette.primary.light,
-                        color: (t) => t.palette.primary.main,
-                        transform: 'translateX(4px)'
+                        backgroundColor: (t) => t.palette.primary.main,
+                        color: "#fff",
+                        transform: 'translateX(4px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                     }
                 }
             }}
         >
             <CardActionArea component={Link} href={href} sx={{ height: "100%" }}>
                 <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.2 }}>
                         <Avatar
                             variant="rounded"
                             sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 2,
+                                width: 36,
+                                height: 36,
+                                borderRadius: 1.5,
                                 bgcolor: iconBgColor,
                                 color: iconColor,
                             }}
                         >
-                            <Icon size={20} />
+                            <Icon size={18} />
                         </Avatar>
                         <Box
                             className="arrow-box"
                             sx={{
-                                width: 32,
-                                height: 32,
+                                width: 28,
+                                height: 28,
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -104,20 +105,18 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
                                 backgroundColor: 'transparent'
                             }}
                         >
-                            <ChevronRight size={18} />
+                            <ChevronRight size={16} />
                         </Box>
                     </Box>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.5, letterSpacing: '0.02em' }}>
                         {title}
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ mt: 0.5, lineHeight: 1.2 }}>
+                    <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2, mb: 0.5 }}>
                         {value}
                     </Typography>
-                    {subtitle && (
-                        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: "block" }}>
-                            {subtitle}
-                        </Typography>
-                    )}
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
+                        {subtitle}
+                    </Typography>
                 </CardContent>
             </CardActionArea>
         </Card>
