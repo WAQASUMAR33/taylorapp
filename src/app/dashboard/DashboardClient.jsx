@@ -59,12 +59,20 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
         <Card
             elevation={0}
             sx={{
-                height: "100%",
-                minHeight: 150,
+                height: 150,
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 3,
                 overflow: "hidden",
+                transition: "all 0.3s ease",
+                '&:hover': {
+                    borderColor: 'primary.main',
+                    '& .arrow-box': {
+                        backgroundColor: (t) => t.palette.primary.light,
+                        color: (t) => t.palette.primary.main,
+                        transform: 'translateX(4px)'
+                    }
+                }
             }}
         >
             <CardActionArea component={Link} href={href} sx={{ height: "100%" }}>
@@ -82,7 +90,22 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
                         >
                             <Icon size={20} />
                         </Avatar>
-                        <ChevronRight size={18} color="#9ca3af" />
+                        <Box
+                            className="arrow-box"
+                            sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#9ca3af',
+                                transition: 'all 0.2s ease',
+                                backgroundColor: 'transparent'
+                            }}
+                        >
+                            <ChevronRight size={18} />
+                        </Box>
                     </Box>
                     <Typography variant="body2" color="text.secondary" fontWeight={500}>
                         {title}
