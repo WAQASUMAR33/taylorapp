@@ -67,19 +67,19 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
             }}
         >
             <CardActionArea component={Link} href={href} sx={{ height: "100%" }}>
-                <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                <CardContent sx={{ p: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
                         <Avatar
                             variant="rounded"
                             sx={{
-                                width: 48,
-                                height: 48,
+                                width: 40,
+                                height: 40,
                                 borderRadius: 2,
                                 bgcolor: iconBgColor,
                                 color: iconColor,
                             }}
                         >
-                            <Icon size={24} />
+                            <Icon size={20} />
                         </Avatar>
                         <ChevronRight size={18} color="#9ca3af" />
                     </Box>
@@ -188,8 +188,8 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             title: "Total Customers",
             value: statsData.totalCustomers.toLocaleString(),
             icon: Users,
-            iconBgColor: (t) => t.palette.primary.light,
-            iconColor: (t) => t.palette.primary.main,
+            iconBgColor: (t) => t.palette.primary.main,
+            iconColor: "#fff",
             href: "/dashboard/customers",
             subtitle: "Registered accounts",
         },
@@ -197,8 +197,8 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             title: "Active Orders",
             value: statsData.activeOrders.toLocaleString(),
             icon: Scissors,
-            iconBgColor: (t) => t.palette.secondary.light,
-            iconColor: (t) => t.palette.secondary.main,
+            iconBgColor: (t) => t.palette.secondary.main,
+            iconColor: "#fff",
             href: "/dashboard/bookings",
             subtitle: "In progress",
         },
@@ -206,8 +206,8 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             title: "Revenue (MTD)",
             value: `Rs. ${Number(statsData.revenue).toLocaleString()}`,
             icon: TrendingUp,
-            iconBgColor: (t) => t.palette.success.light,
-            iconColor: (t) => t.palette.success.main,
+            iconBgColor: (t) => t.palette.success.main,
+            iconColor: "#fff",
             href: "/dashboard/bookings",
             subtitle: "Month to date",
         },
@@ -215,8 +215,8 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             title: "Ready for Delivery",
             value: statsData.pendingDelivery.toLocaleString(),
             icon: Clock,
-            iconBgColor: (t) => t.palette.warning.light,
-            iconColor: (t) => t.palette.warning.main,
+            iconBgColor: (t) => t.palette.warning.main,
+            iconColor: "#fff",
             href: "/dashboard/bookings?status=READY",
             subtitle: "Awaiting pickup",
         },
