@@ -100,47 +100,54 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
     );
 }
 
-/* ─── Quick-action card ───────────────────────────────────── */
-function ActionCard({ title, icon: Icon, iconBgColor, iconColor, href }) {
+/* ─── Quick-action item ───────────────────────────────────── */
+function ActionItem({ title, icon: Icon, iconBgColor, iconColor, href }) {
     return (
-        <Card
-            elevation={0}
+        <Box
+            component={Link}
+            href={href}
             sx={{
-                height: "100%",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 3,
-                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.2,
+                textDecoration: "none",
+                transition: "all 0.2s ease",
+                '&:hover': {
+                    transform: "translateY(-4px)",
+                    '& .MuiAvatar-root': {
+                        boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
+                    }
+                }
             }}
         >
-            <CardActionArea component={Link} href={href} sx={{ height: "100%" }}>
-                <CardContent
-                    sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        p: 2.5,
-                    }}
-                >
-                    <Avatar
-                        variant="rounded"
-                        sx={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 2,
-                            bgcolor: iconBgColor,
-                            color: iconColor,
-                            flexShrink: 0,
-                        }}
-                    >
-                        <Icon size={20} />
-                    </Avatar>
-                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                        {title}
-                    </Typography>
-                </CardContent>
-            </CardActionArea>
-        </Card>
+            <Avatar
+                variant="rounded"
+                sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 2.5,
+                    bgcolor: iconBgColor,
+                    color: iconColor,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                }}
+            >
+                <Icon size={24} />
+            </Avatar>
+            <Typography
+                variant="caption"
+                fontWeight={700}
+                color="text.primary"
+                sx={{
+                    fontSize: '0.75rem',
+                    textAlign: 'center',
+                    lineHeight: 1.2,
+                    maxWidth: 80
+                }}
+            >
+                {title}
+            </Typography>
+        </Box>
     );
 }
 
@@ -305,11 +312,9 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             <Typography variant="subtitle1" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
                 Quick Actions
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 5, mb: 4, px: 1 }}>
                 {quickActions.map((a) => (
-                    <Box key={a.title} sx={{ width: 300, flex: '0 0 auto' }}>
-                        <ActionCard {...a} />
-                    </Box>
+                    <ActionItem key={a.title} {...a} />
                 ))}
             </Box>
 
@@ -447,22 +452,22 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                             >
                                 <OverviewRow
                                     icon={CheckCircle2}
-                                    iconBgColor={(t) => t.palette.success.light}
-                                    iconColor={(t) => t.palette.success.main}
+                                    iconBgColor={(t) => t.palette.success.main}
+                                    iconColor="#fff"
                                     label="Completed Orders"
                                     value={statsData.completedToday}
                                 />
                                 <OverviewRow
                                     icon={Calendar}
-                                    iconBgColor={(t) => t.palette.info.light}
-                                    iconColor={(t) => t.palette.info.main}
+                                    iconBgColor={(t) => t.palette.info.main}
+                                    iconColor="#fff"
                                     label="Scheduled Trials"
                                     value={statsData.trialsToday}
                                 />
                                 <OverviewRow
                                     icon={DollarSign}
-                                    iconBgColor={(t) => t.palette.warning.light}
-                                    iconColor={(t) => t.palette.warning.main}
+                                    iconBgColor={(t) => t.palette.warning.main}
+                                    iconColor="#fff"
                                     label="Revenue Today"
                                     value={`Rs. ${Number(statsData.revenueToday).toLocaleString()}`}
                                 />
