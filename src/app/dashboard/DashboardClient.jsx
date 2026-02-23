@@ -226,29 +226,29 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
         {
             title: "New Order",
             icon: Plus,
-            iconBgColor: (t) => t.palette.primary.light,
-            iconColor: (t) => t.palette.primary.main,
+            iconBgColor: (t) => t.palette.primary.main,
+            iconColor: "#fff",
             href: "/dashboard/bookings",
         },
         {
             title: "Add Customer",
             icon: Users,
-            iconBgColor: (t) => t.palette.success.light,
-            iconColor: (t) => t.palette.success.main,
+            iconBgColor: (t) => t.palette.success.main,
+            iconColor: "#fff",
             href: "/dashboard/customers",
         },
         {
             title: "Add Product",
             icon: Package,
-            iconBgColor: (t) => t.palette.info.light,
-            iconColor: (t) => t.palette.info.main,
+            iconBgColor: (t) => t.palette.info.main,
+            iconColor: "#fff",
             href: "/dashboard/products",
         },
         {
             title: "Purchases",
             icon: ShoppingBag,
-            iconBgColor: (t) => t.palette.warning.light,
-            iconColor: (t) => t.palette.warning.main,
+            iconBgColor: (t) => t.palette.warning.main,
+            iconColor: "#fff",
             href: "/dashboard/purchases",
         },
     ];
@@ -293,9 +293,9 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             </Box>
 
             {/* ── Stat cards ──────────────────────────────────── */}
-            <Grid container spacing={2.5} sx={{ mb: 4 }}>
+            <Grid container spacing={2.5} sx={{ mb: 4, alignItems: 'stretch' }}>
                 {stats.map((s) => (
-                    <Grid item xs={3} key={s.title}>
+                    <Grid item xs={12} sm={6} md={3} key={s.title} sx={{ display: 'flex' }}>
                         <StatCard {...s} />
                     </Grid>
                 ))}
@@ -305,9 +305,9 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             <Typography variant="subtitle1" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
                 Quick Actions
             </Typography>
-            <Grid container spacing={2} sx={{ mb: 4 }}>
+            <Grid container spacing={2} sx={{ mb: 4, alignItems: 'stretch' }}>
                 {quickActions.map((a) => (
-                    <Grid item xs={3} key={a.title}>
+                    <Grid item xs={12} sm={6} md={3} key={a.title} sx={{ display: 'flex' }}>
                         <ActionCard {...a} />
                     </Grid>
                 ))}
@@ -317,7 +317,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             <Grid container spacing={3}>
 
                 {/* Recent Orders */}
-                <Grid item xs={12} lg={8}>
+                <Grid item xs={12} lg={9}>
                     <Card
                         elevation={0}
                         sx={{
@@ -413,7 +413,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                 </Grid>
 
                 {/* Today's Overview */}
-                <Grid item xs={12} lg={4}>
+                <Grid item xs={12} lg={3}>
                     <Card
                         elevation={0}
                         sx={{
