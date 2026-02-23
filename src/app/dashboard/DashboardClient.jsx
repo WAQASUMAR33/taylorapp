@@ -293,25 +293,25 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             </Box>
 
             {/* ── Stat cards ──────────────────────────────────── */}
-            <Grid container spacing={2.5} sx={{ mb: 4, alignItems: 'stretch' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5, mb: 4 }}>
                 {stats.map((s) => (
-                    <Grid item xs={12} sm={6} md={3} key={s.title} sx={{ display: 'flex' }}>
+                    <Box key={s.title} sx={{ width: 300, flex: '0 0 auto' }}>
                         <StatCard {...s} />
-                    </Grid>
+                    </Box>
                 ))}
-            </Grid>
+            </Box>
 
             {/* ── Quick Actions ────────────────────────────────── */}
             <Typography variant="subtitle1" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
                 Quick Actions
             </Typography>
-            <Grid container spacing={2} sx={{ mb: 4, alignItems: 'stretch' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 4 }}>
                 {quickActions.map((a) => (
-                    <Grid item xs={12} sm={6} md={3} key={a.title} sx={{ display: 'flex' }}>
+                    <Box key={a.title} sx={{ width: 300, flex: '0 0 auto' }}>
                         <ActionCard {...a} />
-                    </Grid>
+                    </Box>
                 ))}
-            </Grid>
+            </Box>
 
             {/* ── Bottom row ───────────────────────────────────── */}
             <Grid container spacing={3}>
