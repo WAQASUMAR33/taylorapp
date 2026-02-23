@@ -60,6 +60,7 @@ function StatCard({ title, value, icon: Icon, iconBgColor, iconColor, href, subt
             elevation={0}
             sx={{
                 height: "100%",
+                minHeight: 150,
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 3,
