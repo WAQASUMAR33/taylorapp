@@ -41,7 +41,6 @@ export default function Header() {
                 backgroundColor: 'rgba(255,255,255,0.8)',
                 backdropFilter: 'blur(20px)',
                 borderBottom: 'none',
-                // boxShadow: 'none', // cleaner look as per Hireism
             }}
         >
             {/* Search - Centered */}
@@ -90,6 +89,25 @@ export default function Header() {
                         }
                     }}
                 >
+                    Add Now
+                </Button>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton sx={{ bgcolor: '#F8FAFC', borderRadius: '12px', p: 1.25 }}>
+                        <Settings size={20} color="#64748B" />
+                    </IconButton>
+                    <IconButton sx={{ bgcolor: '#F8FAFC', borderRadius: '12px', p: 1.25 }}>
+                        <ExternalLink size={20} color="#64748B" />
+                    </IconButton>
+                    <IconButton sx={{ bgcolor: '#FFF1F2', borderRadius: '12px', p: 1.25 }}>
+                        <Badge badgeContent={0} color="error" variant="dot">
+                            <Bell size={20} color="#F43F5E" />
+                        </Badge>
+                    </IconButton>
+                </Box>
+
+                {/* User Info */}
+                <Box sx={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1.5,
@@ -100,27 +118,14 @@ export default function Header() {
                     transition: 'all 0.2s',
                     '&:hover': {
                         backgroundColor: theme.palette.action.hover,
-                    '& .user-name': {color: theme.palette.primary.main }
                     }
                 }}>
                     <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
-                        <Typography
-                            variant="subtitle2"
-                            className="user-name"
-                            fontWeight={700}
-                            fontSize="0.875rem"
-                            lineHeight={1.2}
-                            sx={{ transition: 'color 0.2s' }}
-                        >
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#1E293B' }}>
                             {session?.user?.name || "Admin User"}
                         </Typography>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            fontWeight={600}
-                            sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem', opacity: 0.8 }}
-                        >
-                            {session?.user?.role || "ADMIN"}
+                        <Typography variant="caption" sx={{ color: '#64748B', cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
+                            View profile
                         </Typography>
                     </Box>
                     <Avatar
@@ -130,17 +135,17 @@ export default function Header() {
                             bgcolor: 'primary.main',
                             width: 38,
                             height: 38,
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
+                            borderRadius: '14px',
+                            border: '2px solid #fff',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'scale(1.05)' }
                         }}
                     >
                         {(session?.user?.name || "A")[0]}
                     </Avatar>
+                </Box>
             </Box>
         </Box>
-        </Box >
     );
 }
