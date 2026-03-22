@@ -1,8 +1,8 @@
-# 🪡 TailorFlow - Modern Tailor Management System
+# 🪡 RAPID TAILOR - Modern Tailor Management System
 
 A beautiful, modern web application for managing tailor shop operations built with Next.js 16, Tailwind CSS 4, and MySQL.
 
-![TailorFlow](https://img.shields.io/badge/TailorFlow-v1.0-blue)
+![RAPID TAILOR](https://img.shields.io/badge/RAPID TAILOR-v1.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-4479a1)
@@ -176,7 +176,7 @@ tailorapp/
 
 ## 📱 Responsive Design
 
-TailorFlow is fully responsive and works seamlessly on:
+RAPID TAILOR is fully responsive and works seamlessly on:
 - 📱 Mobile devices (320px+)
 - 📱 Tablets (768px+)
 - 💻 Laptops (1024px+)
@@ -253,4 +253,4 @@ For support, email theitxprts@gmail.com
 
 ---
 
-**TailorFlow** - Making tailor shop management beautiful and efficient! ✂️✨
+**RAPID TAILOR** - Making tailor shop management beautiful and efficient! ✂️✨

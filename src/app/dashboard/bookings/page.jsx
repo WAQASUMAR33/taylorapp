@@ -6,7 +6,7 @@ import { Calendar } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Booking Management | TailorFlow",
+    title: "Booking Management | RAPID TAILOR",
     description: "Manage suit and stitching bookings with product billing.",
 };
 
@@ -18,10 +18,17 @@ async function getBookings() {
                     select: { id: true, name: true, phone: true, email: true }
                 },
                 tailor: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true, accountCategory: { select: { name: true } } }
                 },
                 cutter: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true, accountCategory: { select: { name: true } } }
+                },
+                staff: {
+                    include: {
+                        customer: {
+                            select: { id: true, name: true, accountCategory: { select: { name: true } } }
+                        }
+                    }
                 },
                 items: {
                     include: {
@@ -56,7 +63,12 @@ async function getCustomers() {
 async function getProducts() {
     try {
         const products = await prisma.product.findMany({
-            where: { quantity: { gt: 0 } },
+            where: {
+                OR: [
+                    { category: { name: "Stitching" } },
+                    { quantity: { gt: 0 } },
+                ]
+            },
             orderBy: { name: "asc" },
             select: { id: true, name: true, sku: true, unitPrice: true, quantity: true, category: { select: { name: true } } }
         });
@@ -67,16 +79,20 @@ async function getProducts() {
     }
 }
 
-async function getEmployees() {
+async function getStaffCustomers() {
     try {
-        const employees = await prisma.employee.findMany({
-            where: { isActive: true },
+        const staff = await prisma.customer.findMany({
+            where: {
+                accountCategory: {
+                    name: { in: ["Tailor", "Cutter", "tailor", "cutter", "TAILOR", "CUTTER"] }
+                }
+            },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, role: true }
+            select: { id: true, name: true, accountCategory: { select: { name: true } } }
         });
-        return employees;
+        return JSON.parse(JSON.stringify(staff));
     } catch (error) {
-        console.error("Database error fetching employees:", error);
+        console.error("Database error fetching staff customers:", error);
         return [];
     }
 }
@@ -85,7 +101,7 @@ export default async function BookingsPage() {
     const bookings = await getBookings();
     const customers = await getCustomers();
     const products = await getProducts();
-    const employees = await getEmployees();
+    const employees = await getStaffCustomers();
 
     return (
         <Box sx={{ width: '100%' }}>

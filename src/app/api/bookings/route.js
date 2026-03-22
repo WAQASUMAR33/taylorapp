@@ -8,26 +8,20 @@ export async function GET(req) {
         const id = searchParams.get("id");
         const customerId = searchParams.get("customerId");
 
+        const STAFF_INCLUDE = {
+            staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } }
+        };
+        const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
+
         if (id) {
             const booking = await prisma.booking.findUnique({
                 where: { id: parseInt(id) },
                 include: {
-                    customer: {
-                        select: { id: true, name: true, phone: true, email: true }
-                    },
-                    tailor: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    cutter: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    items: {
-                        include: {
-                            product: {
-                                select: { id: true, name: true, sku: true }
-                            }
-                        }
-                    }
+                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    tailor: TAILOR_CUTTER_SELECT,
+                    cutter: TAILOR_CUTTER_SELECT,
+                    ...STAFF_INCLUDE,
+                    items: { include: { product: { select: { id: true, name: true, sku: true } } } }
                 }
             });
             return NextResponse.json(booking);
@@ -37,22 +31,11 @@ export async function GET(req) {
             const bookings = await prisma.booking.findMany({
                 where: { customerId: parseInt(customerId) },
                 include: {
-                    customer: {
-                        select: { id: true, name: true, phone: true, email: true }
-                    },
-                    tailor: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    cutter: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    items: {
-                        include: {
-                            product: {
-                                select: { id: true, name: true, sku: true }
-                            }
-                        }
-                    }
+                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    tailor: TAILOR_CUTTER_SELECT,
+                    cutter: TAILOR_CUTTER_SELECT,
+                    ...STAFF_INCLUDE,
+                    items: { include: { product: { select: { id: true, name: true, sku: true } } } }
                 },
                 orderBy: { bookingDate: "desc" }
             });
@@ -65,10 +48,13 @@ export async function GET(req) {
                     select: { id: true, name: true, phone: true, email: true }
                 },
                 tailor: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true }
                 },
                 cutter: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true }
+                },
+                staff: {
+                    include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } }
                 },
                 items: {
                     include: {
@@ -104,6 +90,8 @@ export async function POST(req) {
             trialDate,
             tailorId,
             cutterId,
+            tailorIds,   // array of employee IDs for tailors
+            cutterIds,   // array of employee IDs for cutters
             totalAmount,
             advanceAmount,
             remainingAmount,
@@ -121,15 +109,20 @@ export async function POST(req) {
             hasFrontPockets
         } = body;
 
+        // Normalise staff arrays — fall back to legacy single fields
+        const resolvedTailorIds = Array.isArray(tailorIds) && tailorIds.length > 0
+            ? tailorIds.map(Number).filter(Boolean)
+            : tailorId ? [parseInt(tailorId)] : [];
+        const resolvedCutterIds = Array.isArray(cutterIds) && cutterIds.length > 0
+            ? cutterIds.map(Number).filter(Boolean)
+            : cutterId ? [parseInt(cutterId)] : [];
+
         if (!customerId || !bookingType || !totalAmount || !items || items.length === 0) {
             return NextResponse.json(
                 { error: "Customer, booking type, total amount, and at least one item are required" },
                 { status: 400 }
             );
         }
-
-        // Generate booking number
-        const bookingNumber = `BK-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
         // Fetch products to get current cost prices
         const productIds = items.map(item => parseInt(item.productId));
@@ -149,6 +142,10 @@ export async function POST(req) {
 
         // Use transaction to ensure data integrity
         const result = await prisma.$transaction(async (tx) => {
+            // Generate sequential booking number inside transaction to avoid race conditions
+            const count = await tx.booking.count();
+            const bookingNumber = String(count + 1);
+
             // 1. Create the booking
             const booking = await tx.booking.create({
                 data: {
@@ -159,13 +156,19 @@ export async function POST(req) {
                     returnDate: returnDate ? new Date(returnDate) : null,
                     deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
                     trialDate: trialDate ? new Date(trialDate) : null,
-                    tailorId: tailorId ? parseInt(tailorId) : null,
-                    cutterId: cutterId ? parseInt(cutterId) : null,
+                    tailorId: resolvedTailorIds[0] || null,
+                    cutterId: resolvedCutterIds[0] || null,
                     totalAmount: parseFloat(totalAmount),
                     advanceAmount: parseFloat(advanceAmount || 0),
                     remainingAmount: parseFloat(remainingAmount || totalAmount),
                     notes,
                     status: "PENDING",
+                    staff: {
+                        create: [
+                            ...resolvedTailorIds.map(id => ({ customerId: id, role: "TAILOR" })),
+                            ...resolvedCutterIds.map(id => ({ customerId: id, role: "CUTTER" })),
+                        ]
+                    },
                     items: {
                         create: items.map(item => {
                             const product = productsMap.get(parseInt(item.productId));
@@ -194,22 +197,11 @@ export async function POST(req) {
                     }
                 },
                 include: {
-                    customer: {
-                        select: { id: true, name: true, phone: true, email: true }
-                    },
-                    tailor: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    cutter: {
-                        select: { id: true, name: true, role: true }
-                    },
-                    items: {
-                        include: {
-                            product: {
-                                select: { id: true, name: true, sku: true }
-                            }
-                        }
-                    }
+                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    tailor: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
+                    cutter: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
+                    staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } },
+                    items: { include: { product: { select: { id: true, name: true, sku: true } } } }
                 }
             });
 
@@ -322,6 +314,8 @@ export async function PUT(req) {
             advanceAmount,
             tailorId,
             cutterId,
+            tailorIds,   // array of employee IDs for tailors
+            cutterIds,   // array of employee IDs for cutters
             notes
         } = body;
 
@@ -332,14 +326,21 @@ export async function PUT(req) {
             );
         }
 
+        // Resolve staff arrays — prefer arrays, fall back to legacy single fields
+        const hasStaffUpdate = tailorIds !== undefined || cutterIds !== undefined || tailorId !== undefined || cutterId !== undefined;
+        const resolvedTailorIds = Array.isArray(tailorIds)
+            ? tailorIds.map(Number).filter(Boolean)
+            : tailorId !== undefined ? (tailorId ? [parseInt(tailorId)] : []) : undefined;
+        const resolvedCutterIds = Array.isArray(cutterIds)
+            ? cutterIds.map(Number).filter(Boolean)
+            : cutterId !== undefined ? (cutterId ? [parseInt(cutterId)] : []) : undefined;
+
         const updateData = {};
         if (status) updateData.status = status;
         if (deliveryDate) updateData.deliveryDate = new Date(deliveryDate);
         if (trialDate) updateData.trialDate = new Date(trialDate);
         if (returnDate) updateData.returnDate = new Date(returnDate);
         if (notes !== undefined) updateData.notes = notes;
-        if (tailorId !== undefined) updateData.tailorId = tailorId ? parseInt(tailorId) : null;
-        if (cutterId !== undefined) updateData.cutterId = cutterId ? parseInt(cutterId) : null;
 
         const booking = await prisma.$transaction(async (tx) => {
             const currentBooking = await tx.booking.findUnique({
@@ -411,7 +412,24 @@ export async function PUT(req) {
                 });
             }
 
-            // 4. Perform the actually update
+            // 4. Update staff assignments if provided
+            if (resolvedTailorIds !== undefined || resolvedCutterIds !== undefined) {
+                await tx.booking_staff.deleteMany({ where: { bookingId: parseInt(id) } });
+                const newTailorIds = resolvedTailorIds ?? [];
+                const newCutterIds = resolvedCutterIds ?? [];
+                if (newTailorIds.length > 0 || newCutterIds.length > 0) {
+                    await tx.booking_staff.createMany({
+                        data: [
+                            ...newTailorIds.map(custId => ({ bookingId: parseInt(id), customerId: custId, role: "TAILOR" })),
+                            ...newCutterIds.map(custId => ({ bookingId: parseInt(id), customerId: custId, role: "CUTTER" })),
+                        ]
+                    });
+                }
+                updateData.tailorId = newTailorIds[0] ?? null;
+                updateData.cutterId = newCutterIds[0] ?? null;
+            }
+
+            // 5. Perform the actually update
             updateData.totalAmount = newTotal;
             updateData.advanceAmount = newAdvance;
             updateData.remainingAmount = newTotal - newAdvance;
@@ -424,10 +442,13 @@ export async function PUT(req) {
                         select: { id: true, name: true, phone: true, email: true }
                     },
                     tailor: {
-                        select: { id: true, name: true, role: true }
+                        select: { id: true, name: true, accountCategory: { select: { name: true } } }
                     },
                     cutter: {
-                        select: { id: true, name: true, role: true }
+                        select: { id: true, name: true, accountCategory: { select: { name: true } } }
+                    },
+                    staff: {
+                        include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } }
                     },
                     items: {
                         include: {

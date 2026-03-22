@@ -181,31 +181,31 @@ export default function AnalyticsClient({ employees }) {
                 </Box>
                 <Box sx={{ p: 2 }}>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="From Date" type="date" value={from}
                                 onChange={e => setFrom(e.target.value)}
                                 InputLabelProps={{ shrink: true }}
                                 InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment> }}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="To Date" type="date" value={to}
                                 onChange={e => setTo(e.target.value)}
                                 InputLabelProps={{ shrink: true }}
                                 InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment> }}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Autocomplete options={allForDropdown} getOptionLabel={o => o.name || ""}
                                 value={filterTailor} onChange={(_, v) => setFilterTailor(v)}
                                 renderInput={params => <TextField {...params} label="Filter by Tailor" size="small" sx={{ minWidth: 300, ...FIELD_SX }} />} />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Autocomplete options={allForDropdown} getOptionLabel={o => o.name || ""}
                                 value={filterCutter} onChange={(_, v) => setFilterCutter(v)}
                                 renderInput={params => <TextField {...params} label="Filter by Cutter" size="small" sx={{ minWidth: 300, ...FIELD_SX }} />} />
                         </Grid>
-                        <Grid item xs={12} sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                        <Grid size={{ xs: 12 }}>
                             <Button size="small" variant="outlined"
                                 onClick={() => { setFrom(firstOfMonth); setTo(today); setFilterTailor(null); setFilterCutter(null); }}
                                 sx={{ borderRadius: 2, textTransform: "none", borderColor: "#d1d5db", color: "#6b7280" }}>
@@ -230,37 +230,37 @@ export default function AnalyticsClient({ employees }) {
                 <>
                     {/* ── Summary Stats ── */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={ShoppingBag} label="Total Bookings" value={s.totalBookingAmount}
                                 sub={`${s.bookingCount} orders`} color="#8b5cf6" bgColor="#ede9fe"
                                 trend={profitMargin} />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={CheckCircle} label="Amount Received" value={s.totalReceived}
                                 color="#059669" bgColor="#d1fae5" />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={Clock} label="Amount Pending" value={s.totalPending}
                                 color="#d97706" bgColor="#fef3c7" />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={TrendingUp} label="Net Profit" value={s.totalProfit}
                                 color={s.totalProfit >= 0 ? "#059669" : "#dc2626"}
                                 bgColor={s.totalProfit >= 0 ? "#d1fae5" : "#fee2e2"} />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={Package} label="Total Cost" value={s.totalCost}
                                 color="#6b7280" bgColor="#f3f4f6" />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={Wallet} label="Total Receivables" value={s.totalReceivables}
                                 sub="From customer balances" color="#2563eb" bgColor="#dbeafe" />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={CreditCard} label="Total Payable" value={s.totalPayable}
                                 sub="Outstanding supplier dues" color="#dc2626" bgColor="#fee2e2" />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Card variant="outlined" sx={{ borderRadius: 3, border: "1px solid #e5e7eb", height: "100%" }}>
                                 <CardContent sx={{ p: 2.5 }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={600}

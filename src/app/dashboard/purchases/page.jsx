@@ -4,7 +4,7 @@ import { Container, Box, Typography } from "@mui/material";
 import { ShoppingCart } from "lucide-react";
 
 export const metadata = {
-    title: "Purchase Management - TailorFlow",
+    title: "Purchase Management - RAPID TAILOR",
 };
 
 export default async function PurchasesPage() {

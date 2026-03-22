@@ -186,7 +186,7 @@ export default function CategoryManagementClient({ initialCategories }) {
 
                     <Box sx={{ p: 3 }}>
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Box sx={{ mb: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Name</Typography>
                                 </Box>
@@ -208,7 +208,7 @@ export default function CategoryManagementClient({ initialCategories }) {
                                     }}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={{ mb: 1.5 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                         Description

@@ -6,7 +6,7 @@ import { Tags } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Account Categories | TailorFlow",
+    title: "Account Categories | RAPID TAILOR",
     description: "Manage customer account categories and classifications.",
 };
 

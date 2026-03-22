@@ -4,7 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { Users } from "lucide-react";
 
 export const metadata = {
-    title: "User Management - TailorFlow",
+    title: "User Management - RAPID TAILOR",
 };
 
 export default async function UsersPage() {

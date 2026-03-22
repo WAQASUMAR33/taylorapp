@@ -28,8 +28,8 @@ export async function GET(req) {
             where,
             include: {
                 customer: { select: { id: true, name: true, phone: true } },
-                tailor: { select: { id: true, name: true, role: true } },
-                cutter: { select: { id: true, name: true, role: true } },
+                tailor: { select: { id: true, name: true } },
+                cutter: { select: { id: true, name: true } },
                 items: {
                     include: {
                         product: { select: { id: true, name: true, sku: true } }

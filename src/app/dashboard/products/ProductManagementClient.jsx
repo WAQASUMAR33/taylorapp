@@ -63,7 +63,8 @@ export default function ProductManagementClient({ initialProducts, categories })
         unitPrice: "",
         cuttingCost: "",
         stitchingCost: "",
-        materialCost: "",
+        materialCostColor: "",
+        materialCostBain: "",
     });
 
     // Quick-add category dialog
@@ -84,17 +85,24 @@ export default function ProductManagementClient({ initialProducts, categories })
             unitPrice: "",
             cuttingCost: "",
             stitchingCost: "",
-            materialCost: "",
+            materialCostColor: "",
+            materialCostBain: "",
         });
         setEditMode(false);
         setSelectedProdId(null);
         setError("");
     };
 
-    const isSuit = () => {
+    const isStitching = () => {
         if (!formData.categoryId) return false;
         const cat = localCategories?.find(c => c.id === formData.categoryId);
-        return cat?.name?.toLowerCase().includes("suit");
+        return cat?.name?.toLowerCase() === "stitching";
+    };
+
+    const isNonStitching = () => {
+        if (!formData.categoryId) return false;
+        const cat = localCategories?.find(c => c.id === formData.categoryId);
+        return cat?.name?.toLowerCase() === "non-stitching";
     };
 
     /* ── handlers ────────────────────────────────────── */
@@ -123,7 +131,8 @@ export default function ProductManagementClient({ initialProducts, categories })
             unitPrice: prod.unitPrice || "",
             cuttingCost: prod.cuttingCost || "",
             stitchingCost: prod.stitchingCost || "",
-            materialCost: prod.materialCost || "",
+            materialCostColor: prod.materialCostColor || "",
+            materialCostBain: prod.materialCostBain || "",
         });
         setOpen(true);
     };
@@ -133,12 +142,13 @@ export default function ProductManagementClient({ initialProducts, categories })
         setFormData(prev => {
             const updated = { ...prev, [name]: value };
             const selectedCategory = localCategories?.find(c => c.id === updated.categoryId);
-            if (selectedCategory?.name?.toLowerCase().includes("suit")) {
-                if (["cuttingCost", "stitchingCost", "materialCost", "categoryId"].includes(name)) {
+            if (selectedCategory?.name?.toLowerCase() === "stitching") {
+                if (["cuttingCost", "stitchingCost", "materialCostColor", "materialCostBain", "categoryId"].includes(name)) {
                     const cutting = parseFloat(updated.cuttingCost) || 0;
                     const stitching = parseFloat(updated.stitchingCost) || 0;
-                    const material = parseFloat(updated.materialCost) || 0;
-                    updated.costPrice = (cutting + stitching + material).toString();
+                    const materialColor = parseFloat(updated.materialCostColor) || 0;
+                    const materialBain = parseFloat(updated.materialCostBain) || 0;
+                    updated.costPrice = (cutting + stitching + materialColor + materialBain).toString();
                 }
             }
             return updated;
@@ -402,7 +412,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                     <Grid container spacing={2}>
 
                         {/* Row 1: Category (+) | Product Name | Sale Price */}
-                        <Grid item xs={5}>
+                        <Grid size={{ xs: 5 }}>
                             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                                 <Autocomplete
                                     size="small"
@@ -438,7 +448,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                             </Box>
                         </Grid>
 
-                        <Grid item xs={3.5}>
+                        <Grid size={{ xs: 3.5 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -452,7 +462,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                             />
                         </Grid>
 
-                        <Grid item xs={3.5}>
+                        <Grid size={{ xs: 3.5 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -470,10 +480,11 @@ export default function ProductManagementClient({ initialProducts, categories })
                             />
                         </Grid>
 
-                        {/* Row 2: Cost fields — changes based on suit */}
-                        {isSuit() ? (
+                        {/* Row 2: Cost fields — changes based on category */}
+                        {isStitching() ? (
                             <>
-                                <Grid item xs={3}>
+                                {/* Row A: Cutting | Stitching | Material with Color | Material with Bain */}
+                                <Grid size={{ xs: 3 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -490,7 +501,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         }}
                                     />
                                 </Grid>
-                                <Grid item xs={3}>
+                                <Grid size={{ xs: 3 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -507,16 +518,15 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         }}
                                     />
                                 </Grid>
-                                <Grid item xs={3}>
+                                <Grid size={{ xs: 3 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        label="Material Cost (Rs.)"
-                                        name="materialCost"
+                                        label="Material Cost with Color (Rs.)"
+                                        name="materialCostColor"
                                         type="number"
-                                        required
-                                        placeholder="e.g. 1000"
-                                        value={formData.materialCost}
+                                        placeholder="e.g. 200"
+                                        value={formData.materialCostColor}
                                         onChange={handleInputChange}
                                         variant="outlined"
                                         InputProps={{
@@ -524,57 +534,95 @@ export default function ProductManagementClient({ initialProducts, categories })
                                         }}
                                     />
                                 </Grid>
-                                <Grid item xs={3}>
+                                <Grid size={{ xs: 3 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        label="Total Cost (Calculated)"
+                                        label="Material Cost with Bain (Rs.)"
+                                        name="materialCostBain"
+                                        type="number"
+                                        placeholder="e.g. 150"
+                                        value={formData.materialCostBain}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                        }}
+                                    />
+                                </Grid>
+                            </>
+                        ) : isNonStitching() ? (
+                            <>
+                                <Grid size={{ xs: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Cost Price (Rs.)"
                                         name="costPrice"
                                         type="number"
+                                        required
+                                        placeholder="e.g. 3000"
                                         value={formData.costPrice}
-                                        variant="filled"
-                                        InputProps={{ readOnly: true }}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Initial Quantity"
+                                        name="quantity"
+                                        type="number"
+                                        required
+                                        placeholder="e.g. 10"
+                                        value={formData.quantity}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
                                     />
                                 </Grid>
                             </>
                         ) : (
-                            <Grid item xs={4}>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="Cost Price (Rs.)"
-                                    name="costPrice"
-                                    type="number"
-                                    required
-                                    placeholder="e.g. 3000"
-                                    value={formData.costPrice}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                    }}
-                                />
-                            </Grid>
+                            <>
+                                <Grid size={{ xs: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Cost Price (Rs.)"
+                                        name="costPrice"
+                                        type="number"
+                                        required
+                                        placeholder="e.g. 3000"
+                                        value={formData.costPrice}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Initial Quantity"
+                                        name="quantity"
+                                        type="number"
+                                        required
+                                        placeholder="e.g. 10"
+                                        value={formData.quantity}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                    />
+                                </Grid>
+                            </>
                         )}
 
-                        {/* Quantity */}
-                        <Grid item xs={isSuit() ? 12 : 4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Initial Quantity"
-                                name="quantity"
-                                type="number"
-                                required
-                                placeholder="e.g. 10"
-                                value={formData.quantity}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
-                        </Grid>
-
                         {/* Description — full width */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -586,7 +634,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 600 }}
+                                sx={{ width: "100%" }}
                             />
                         </Grid>
 

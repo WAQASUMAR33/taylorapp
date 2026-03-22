@@ -6,7 +6,7 @@ import { Scissors } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Stitching Orders | TailorFlow",
+    title: "Stitching Orders | RAPID TAILOR",
     description: "Manage bookings with booking type 'STITCHING'.",
 };
 
@@ -21,10 +21,10 @@ async function getBookings() {
                     select: { id: true, name: true, phone: true, email: true }
                 },
                 tailor: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true }
                 },
                 cutter: {
-                    select: { id: true, name: true, role: true }
+                    select: { id: true, name: true }
                 },
                 items: {
                     include: {
@@ -59,9 +59,14 @@ async function getCustomers() {
 async function getProducts() {
     try {
         const products = await prisma.product.findMany({
-            where: { quantity: { gt: 0 } },
+            where: {
+                OR: [
+                    { category: { name: "Stitching" } },
+                    { quantity: { gt: 0 } },
+                ]
+            },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true }
+            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true, category: { select: { name: true } } }
         });
         return JSON.parse(JSON.stringify(products));
     } catch (error) {

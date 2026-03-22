@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 
 export const metadata = {
-    title: "Search Results - TailorFlow",
+    title: "Search Results - RAPID TAILOR",
 };
 
 export default async function SearchPage({ searchParams }) {
@@ -102,7 +102,7 @@ export default async function SearchPage({ searchParams }) {
                         </Box>
                         <Grid container spacing={2}>
                             {customers.map(c => (
-                                <Grid item xs={12} md={6} lg={4} key={c.id}>
+                                <Grid key={c.id} size={{ xs: 12, md: 6, lg: 4 }}>
                                     <Link href="/dashboard/customers" style={{ textDecoration: 'none' }}>
                                         <Card sx={{
                                             height: '100%',
@@ -148,7 +148,7 @@ export default async function SearchPage({ searchParams }) {
                         </Box>
                         <Grid container spacing={2}>
                             {bookings.map(b => (
-                                <Grid item xs={12} md={6} lg={4} key={b.id}>
+                                <Grid key={b.id} size={{ xs: 12, md: 6, lg: 4 }}>
                                     <Card sx={{
                                         border: 1,
                                         borderColor: 'divider',
@@ -210,7 +210,7 @@ export default async function SearchPage({ searchParams }) {
                         </Box>
                         <Grid container spacing={2}>
                             {products.map(p => (
-                                <Grid item xs={12} md={6} lg={4} key={p.id}>
+                                <Grid key={p.id} size={{ xs: 12, md: 6, lg: 4 }}>
                                     <Link href="/dashboard/products" style={{ textDecoration: 'none' }}>
                                         <Card sx={{
                                             border: 1,

@@ -371,7 +371,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
                     {/* All 3 fields on one row — each xs=4 for equal sizing */}
                     <Grid container spacing={2}>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -384,7 +384,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 variant="outlined"
                             />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -398,7 +398,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 variant="outlined"
                             />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -470,7 +470,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
                     <Grid container spacing={2}>
                         {/* Material selector — full width row */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Autocomplete
                                 size="small"
                                 options={materials}
@@ -495,7 +495,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         {/* 3 quantity fields — only shown once a material is selected */}
                         {stockFormData.materialId && (
                             <>
-                                <Grid item xs={4}>
+                                <Grid size={{ xs: 4 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -505,7 +505,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                         InputProps={{ readOnly: true }}
                                     />
                                 </Grid>
-                                <Grid item xs={4}>
+                                <Grid size={{ xs: 4 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -520,7 +520,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                         variant="outlined"
                                     />
                                 </Grid>
-                                <Grid item xs={4}>
+                                <Grid size={{ xs: 4 }}>
                                     <TextField
                                         fullWidth
                                         size="small"
@@ -593,7 +593,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                     value: `Rs. ${(selectedMaterial.quantity * selectedMaterial.price).toLocaleString()}`,
                                 },
                             ].map(({ label, value }) => (
-                                <Grid item xs={6} key={label}>
+                                <Grid key={label} size={{ xs: 6 }}>
                                     <Typography variant="caption" color="text.secondary" display="block">
                                         {label}
                                     </Typography>
@@ -604,7 +604,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                             ))}
 
                             {selectedMaterial.movements?.length > 0 && (
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <Divider sx={{ my: 1 }} />
                                     <Typography
                                         variant="subtitle2"

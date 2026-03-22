@@ -68,12 +68,17 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
+    // First category in the list as default
+    const getDefaultCategoryId = (cats) => {
+        return (cats || []).length > 0 ? cats[0].id : null;
+    };
+
     const [formData, setFormData] = useState({
         name: "",
         fatherName: "",
         phone: "",
         address: "",
-        accountCategoryId: categories.length > 0 ? categories[0].id : null,
+        accountCategoryId: getDefaultCategoryId(accountCategories),
         notes: "",
         balance: 0,
     });
@@ -85,7 +90,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             phone: "",
             address: "",
             code: "",
-            accountCategoryId: categories.length > 0 ? categories[0].id : null,
+            accountCategoryId: getDefaultCategoryId(categories),
             notes: "",
             balance: 0,
         });
@@ -269,9 +274,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         <Box sx={{ width: "100%", p: 3 }}>
 
             {/* ── Summary Cards ─────────────────────────────── */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: { xs: "wrap", md: "nowrap" } }}>
                 {/* Total Customers */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ flex: "1 1 0%", minWidth: 0 }}>
                     <Card
                         elevation={0}
                         sx={{
@@ -279,6 +284,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                             color: "white",
                             boxShadow: "0 4px 20px rgba(37,99,235,0.25)",
+                            height: "100%",
                         }}
                     >
                         <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
@@ -295,13 +301,13 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             </Box>
                         </CardContent>
                     </Card>
-                </Grid>
+                </Box>
 
                 {/* Category Stats */}
                 {categoryStats.map((stat, idx) => {
                     const c = statColors[idx % statColors.length];
                     return (
-                        <Grid item xs={12} sm={6} md={3} key={stat.id}>
+                        <Box key={stat.id} sx={{ flex: "1 1 0%", minWidth: 0 }}>
                             <Card
                                 elevation={0}
                                 sx={{
@@ -327,10 +333,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     </Box>
                                 </CardContent>
                             </Card>
-                        </Grid>
+                        </Box>
                     );
                 })}
-            </Grid>
+            </Box>
 
             {/* ── Action Bar ────────────────────────────────── */}
             <Stack
@@ -572,10 +578,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Button>
                     </Box>
 
-                    {/* 3 fields per row — all size="small", minWidth 300 */}
                     <Grid container spacing={2}>
                         {/* Full Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -586,12 +591,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                             />
                         </Grid>
 
                         {/* Father Name */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -601,12 +605,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 value={formData.fatherName || ""}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                             />
                         </Grid>
 
                         {/* Phone */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -616,7 +619,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 value={formData.phone}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -632,7 +634,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Opening Balance */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -644,7 +646,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 value={formData.balance}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -656,15 +657,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Account Category */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <Autocomplete
                                 fullWidth
                                 size="small"
-                                options={categories.filter(
-                                    (cat) =>
-                                        !cat.name.toLowerCase().includes("cutter") &&
-                                        !cat.name.toLowerCase().includes("tailor")
-                                )}
+                                options={categories}
                                 getOptionLabel={(option) => option.name || ""}
                                 value={categories.find((c) => c.id === formData.accountCategoryId) || null}
                                 onChange={(event, newValue) => {
@@ -673,8 +670,6 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                         accountCategoryId: newValue ? newValue.id : null,
                                     }));
                                 }}
-                                sx={{ minWidth: 300 }}
-                                ListboxProps={{ style: { minWidth: 300 } }}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
@@ -687,7 +682,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         </Grid>
 
                         {/* Address */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -699,12 +694,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 value={formData.address}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                             />
                         </Grid>
 
-                        {/* Notes */}
-                        <Grid item xs={12} md={4}>
+                        {/* Notes — full width on last row */}
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -712,11 +706,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 name="notes"
                                 placeholder="Additional information..."
                                 multiline
-                                rows={3}
+                                rows={2}
                                 value={formData.notes}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ minWidth: 300 }}
                             />
                         </Grid>
                     </Grid>

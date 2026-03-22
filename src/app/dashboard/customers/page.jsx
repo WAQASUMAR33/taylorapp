@@ -3,8 +3,10 @@ import CustomerManagementClient from "./CustomerManagementClient";
 import { Box, Typography } from "@mui/material";
 import { Users } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
-    title: "Customer Management - TailorFlow",
+    title: "Customer Management - RAPID TAILOR",
 };
 
 export default async function CustomersPage() {
@@ -16,7 +18,6 @@ export default async function CustomersPage() {
     });
 
     const accountCategories = await prisma.accountCategory.findMany({
-        where: { isActive: true },
         orderBy: { name: "asc" },
     });
 

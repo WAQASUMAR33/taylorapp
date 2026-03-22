@@ -99,7 +99,7 @@ export default function LoginPage() {
                     </Avatar>
                     <Box sx={{ textAlign: "center" }}>
                         <Typography variant="h5" fontWeight={700} color="primary.contrastText">
-                            TailorFlow
+                            RAPID TAILOR
                         </Typography>
                         <Typography variant="body2" sx={{ color: "primary.contrastText", opacity: 0.8, mt: 0.5 }}>
                             Tailor Management System
@@ -213,7 +213,7 @@ export default function LoginPage() {
                     <Divider sx={{ my: 3 }} />
 
                     <Typography variant="caption" color="text.disabled" align="center" display="block">
-                        &copy; {new Date().getFullYear()} TailorFlow &mdash; All rights reserved.
+                        &copy; {new Date().getFullYear()} RAPID TAILOR &mdash; All rights reserved.
                     </Typography>
                 </Box>
             </Paper>

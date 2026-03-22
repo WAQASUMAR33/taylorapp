@@ -316,7 +316,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
 
                     {/* ── Row 1: Invoice | Supplier | Date ── */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth size="small"
                                 label="Invoice Number"
@@ -325,7 +325,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 InputProps={{ readOnly: true }}
                             />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <Autocomplete
                                 size="small"
                                 options={suppliers || []}
@@ -339,7 +339,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 )}
                             />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth size="small"
                                 label="Purchase Date"

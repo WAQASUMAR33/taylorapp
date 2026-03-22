@@ -295,7 +295,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             {/* ── Stat cards ──────────────────────────────────── */}
             <Grid container spacing={2.5} sx={{ mb: 4 }}>
                 {stats.map((s) => (
-                    <Grid item xs={3} key={s.title}>
+                    <Grid key={s.title} size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard {...s} />
                     </Grid>
                 ))}
@@ -307,7 +307,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             </Typography>
             <Grid container spacing={2} sx={{ mb: 4 }}>
                 {quickActions.map((a) => (
-                    <Grid item xs={3} key={a.title}>
+                    <Grid key={a.title} size={{ xs: 6, sm: 6, md: 3 }}>
                         <ActionCard {...a} />
                     </Grid>
                 ))}
@@ -317,7 +317,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
             <Grid container spacing={3}>
 
                 {/* Recent Orders */}
-                <Grid item xs={12} lg={8}>
+                <Grid size={{ xs: 12, lg: 8 }}>
                     <Card
                         elevation={0}
                         sx={{
@@ -413,7 +413,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                 </Grid>
 
                 {/* Today's Overview */}
-                <Grid item xs={12} lg={4}>
+                <Grid size={{ xs: 12, lg: 4 }}>
                     <Card
                         elevation={0}
                         sx={{

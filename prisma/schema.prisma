@@ -53,6 +53,9 @@ model customer {
   measurements      measurement[]
   orders            order[]
   purchases         purchase[]       @relation("SupplierPurchases")
+  tailorBookings    booking[]        @relation("BookingTailor")
+  cutterBookings    booking[]        @relation("BookingCutter")
+  bookingStaff      booking_staff[]
 
   @@index([accountCategoryId], map: "customer_accountCategoryId_fkey")
 }
@@ -80,8 +83,6 @@ model employee {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   fatherName      String?
-  cutterBookings  booking[] @relation("BookingCutter")
-  tailorBookings  booking[] @relation("BookingTailor")
   stitchingOrders order[]
 }
 
@@ -290,14 +291,27 @@ model booking {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   customer        customer       @relation(fields: [customerId], references: [id])
-  cutter          employee?      @relation("BookingCutter", fields: [cutterId], references: [id])
-  tailor          employee?      @relation("BookingTailor", fields: [tailorId], references: [id])
+  cutter          customer?      @relation("BookingCutter", fields: [cutterId], references: [id])
+  tailor          customer?      @relation("BookingTailor", fields: [tailorId], references: [id])
   items           booking_item[]
+  staff           booking_staff[]
   ledgerEntries   ledgerentry[]
 
   @@index([customerId], map: "Booking_customerId_fkey")
   @@index([tailorId], map: "Booking_tailorId_fkey")
   @@index([cutterId], map: "Booking_cutterId_fkey")
+}
+
+model booking_staff {
+  id         Int      @id @default(autoincrement())
+  bookingId  Int
+  customerId Int
+  role       String   // "TAILOR" | "CUTTER"
+  booking    booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer   customer @relation(fields: [customerId], references: [id])
+
+  @@index([bookingId])
+  @@index([customerId])
 }
 
 model booking_item {

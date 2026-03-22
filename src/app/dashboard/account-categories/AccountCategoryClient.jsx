@@ -128,7 +128,7 @@ export default function AccountCategoryClient({ initialCategories }) {
 
             {/* ── Stats Cards ──────────────────────────── */}
             <Grid container spacing={2.5} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card sx={{
                         p: 3,
                         background: "linear-gradient(135deg, #818cf8 0%, #6366f1 100%)",
@@ -149,7 +149,7 @@ export default function AccountCategoryClient({ initialCategories }) {
                         </Box>
                     </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card sx={{
                         p: 3,
                         background: "linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)",

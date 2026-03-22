@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
-    UserRound,
+
     ShoppingCart,
     Scissors,
     Settings,
+    SlidersHorizontal,
     LogOut,
     ChevronLeft,
     ChevronRight,
@@ -40,7 +41,7 @@ const navItems = [
     { name: "Measurements", href: "/dashboard/measurements", icon: Ruler, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
-    { name: "Employees", href: "/dashboard/employees", icon: UserRound, roles: ["ADMIN", "MANAGER"] },
+
     { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
@@ -48,6 +49,7 @@ const navItems = [
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Orders", href: "/dashboard/stitching-orders", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "User Management", href: "/dashboard/users", icon: Settings, roles: ["ADMIN"] },
+    { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal, roles: ["ADMIN"] },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapsedDrawerWidth }) {
@@ -115,7 +117,7 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        TailorFlow
+                        RAPID TAILOR
                     </Typography>
                 )}
             </Box>

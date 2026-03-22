@@ -581,20 +581,20 @@ export default function UserManagementClient({ initialUsers }) {
                     {/* ── Tab 0: User Details ── */}
                     {activeTab === 0 && (
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField fullWidth size="small" label="Full Name" name="fullName" required
                                     placeholder="Enter full name" value={formData.fullName}
                                     onChange={handleInputChange} sx={FIELD_SX}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><User size={16} /></InputAdornment> }} />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField fullWidth size="small" label="Username" name="username" required
                                     placeholder="Enter username" value={formData.username}
                                     onChange={handleInputChange} sx={FIELD_SX} />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Autocomplete
                                     size="small"
                                     options={ROLES}
@@ -607,21 +607,21 @@ export default function UserManagementClient({ initialUsers }) {
                                 />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField fullWidth size="small" label="Email" name="email" type="email"
                                     placeholder="Enter email" value={formData.email}
                                     onChange={handleInputChange} sx={FIELD_SX}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><Mail size={16} /></InputAdornment> }} />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField fullWidth size="small" label="Phone Number" name="phone"
                                     placeholder="Enter phone number" value={formData.phone}
                                     onChange={handleInputChange} sx={FIELD_SX}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><Phone size={16} /></InputAdornment> }} />
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField fullWidth size="small"
                                     label={editMode ? "Change Password (optional)" : "Password"}
                                     name="password" type="password" required={!editMode}
@@ -631,7 +631,7 @@ export default function UserManagementClient({ initialUsers }) {
                             </Grid>
 
                             {editMode && (
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <FormControlLabel
                                         control={
                                             <Switch checked={formData.isActive} onChange={handleInputChange}
@@ -643,7 +643,7 @@ export default function UserManagementClient({ initialUsers }) {
                             )}
 
                             {/* Role hint */}
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Alert severity="info" sx={{ borderRadius: 2 }} icon={<Shield size={16} />}>
                                     Changing the role will <strong>reset permissions</strong> to the default for that role.
                                     You can fine-tune them in the <strong>Module Permissions</strong> tab.

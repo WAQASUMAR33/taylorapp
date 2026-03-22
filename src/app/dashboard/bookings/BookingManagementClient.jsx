@@ -65,8 +65,11 @@ const BOOKING_STATUSES = [
 ];
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees }) {
-    const [bookings, setBookings] = useState(initialBookings);
+    const [bookings, setBookings] = useState(Array.isArray(initialBookings) ? initialBookings : []);
     const [searchQuery, setSearchQuery] = useState("");
+    const [filterCustomerId, setFilterCustomerId] = useState(null);
+    const [filterDateFrom, setFilterDateFrom] = useState("");
+    const [filterDateTo, setFilterDateTo] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -81,6 +84,17 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [customerMeasurements, setCustomerMeasurements] = useState(null);
     const [tempPrintBooking, setTempPrintBooking] = useState(null);
 
+    // Bulk select state
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [isBulkPrint, setIsBulkPrint] = useState(false);
+    const [bulkPrintBookings, setBulkPrintBookings] = useState([]);
+
+    // Inline staff edit state
+    const [staffEditOpen, setStaffEditOpen] = useState(false);
+    const [staffEditBooking, setStaffEditBooking] = useState(null);
+    const [staffEditTailorIds, setStaffEditTailorIds] = useState([]);
+    const [staffEditCutterIds, setStaffEditCutterIds] = useState([]);
+
     // Effect to trigger print when printBooking is set
     React.useEffect(() => {
         if (printBooking) {
@@ -92,18 +106,32 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
     }, [printBooking]);
 
-    // Fetch measurements when needed
+    // Measurement field keys shared between cart items and measurement records
+    const MEASUREMENT_KEYS = [
+        "qameez_lambai", "bazoo", "teera", "galaa", "chaati",
+        "gheera", "kaf", "kandha", "chaati_around", "kamar_around",
+        "hip_around", "shalwar_lambai", "puhncha", "shalwar_gheera",
+    ];
+
+    const applyMeasurementToItem = (item, measurement) => ({
+        ...item,
+        ...Object.fromEntries(MEASUREMENT_KEYS.map(k => [k, measurement?.[k] ?? item[k] ?? ""])),
+    });
+
+    // Fetch measurements when needed; returns the record for immediate use
     const fetchMeasurements = async (customerId) => {
         try {
             const res = await fetch(`/api/measurements?customerId=${customerId}`);
             if (res.ok) {
                 const data = await res.json();
-                // Get the most recent measurement
-                setCustomerMeasurements(data.length > 0 ? data[0] : null);
+                const measurement = data.length > 0 ? data[0] : null;
+                setCustomerMeasurements(measurement);
+                return measurement;
             }
         } catch (error) {
             console.error("Failed to fetch measurements", error);
         }
+        return null;
     };
 
     const handlePrintClick = (booking) => {
@@ -115,10 +143,20 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPrintType(type);
         setPrintDialogOpen(false);
 
+        if (isBulkPrint) {
+            const selected = filteredBookings.filter(b => selectedIds.has(b.id));
+            setBulkPrintBookings(selected);
+            setPrintBooking(null);
+            setIsBulkPrint(false);
+            setTimeout(() => window.print(), 500);
+            return;
+        }
+
         if (type === 'STITCHING' && tempPrintBooking?.customerId) {
             await fetchMeasurements(tempPrintBooking.customerId);
         }
 
+        setBulkPrintBookings([]);
         setPrintBooking(tempPrintBooking);
     };
 
@@ -131,15 +169,23 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         customerAddress: "",
         customerPhone: "",
         bookingType: "STITCHING",
-        bookingDate: new Date().toISOString().split('T')[0],
+        bookingDate: "",
         returnDate: "",
         deliveryDate: "",
         trialDate: "",
-        tailorId: "",
-        cutterId: "",
+        tailorIds: [],
+        cutterIds: [],
         advanceAmount: "",
         notes: ""
     });
+
+    // Set today's date client-side only to avoid SSR hydration mismatch
+    React.useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            bookingDate: new Date().toISOString().split('T')[0]
+        }));
+    }, []);
 
     // Cart items for the grid
     const [cartItems, setCartItems] = useState([
@@ -156,7 +202,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             pocketType: "",
             shalwarType: "",
             hasShalwarPocket: false,
-            hasFrontPockets: false
+            hasFrontPockets: false,
+            // Measurements
+            qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
+            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+            hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
         }
     ]);
 
@@ -164,11 +214,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [previousStitchingDetails, setPreviousStitchingDetails] = useState(null);
 
 
-    // Filter employees by role
-    const tailors = (employees || []).filter(e => e.role === "Tailor");
-    const cutters = (employees || []).filter(e => e.role === "Cutter");
+    // Filter staff customers by accountCategory name (case-insensitive)
+    const tailors = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "tailor");
+    const cutters = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "cutter");
 
-    const handleCustomerChange = (customerId) => {
+    const handleCustomerChange = async (customerId) => {
         const customer = (customers || []).find(c => c.id === parseInt(customerId));
         if (customer) {
             setFormData(prev => ({
@@ -179,6 +229,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 customerAddress: customer.address || "",
                 customerPhone: customer.phone || ""
             }));
+            // Fetch saved measurements and pre-fill any stitching cart items
+            const measurement = await fetchMeasurements(customer.id);
+            if (measurement) {
+                setCartItems(prev => prev.map(item =>
+                    item.isStitching ? applyMeasurementToItem(item, measurement) : item
+                ));
+            }
         }
     };
 
@@ -191,11 +248,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             // Category "Suit" -> needs stitching (STITCHING enum displays breakdown)
             // Category "Stitched" -> readymade (SUIT enum hides breakdown)
             let bookingType = "SUIT";
-            if (product.category?.name?.toLowerCase().includes("suit")) {
+            if (product.category?.name?.toLowerCase() === "stitching") {
                 bookingType = "STITCHING";
             }
 
-            newItems[index] = {
+            const baseItem = {
                 ...newItems[index],
                 productId: product.id,
                 productName: product.name,
@@ -207,6 +264,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 isStitching: bookingType === 'STITCHING',
                 isCollapsed: bookingType === 'SUIT', // Auto-collapse for readymade
             };
+            // Pre-fill measurements from customer's saved record when stitching
+            newItems[index] = (bookingType === 'STITCHING' && customerMeasurements)
+                ? applyMeasurementToItem(baseItem, customerMeasurements)
+                : baseItem;
             setCartItems(newItems);
         }
     };
@@ -252,7 +313,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             pocketType: "",
             shalwarType: "",
             hasShalwarPocket: false,
-            hasFrontPockets: false
+            hasFrontPockets: false,
+            // Measurements
+            qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
+            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+            hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
         };
 
         setCartItems([
@@ -310,8 +375,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 returnDate: formData.returnDate || null,
                 deliveryDate: formData.deliveryDate || null,
                 trialDate: formData.trialDate || null,
-                tailorId: formData.bookingType === 'STITCHING' ? (formData.tailorId || null) : null,
-                cutterId: formData.bookingType === 'STITCHING' ? (formData.cutterId || null) : null,
+                tailorIds: formData.tailorIds || [],
+                cutterIds: formData.cutterIds || [],
                 totalAmount,
                 advanceAmount,
                 remainingAmount: balanceAmount,
@@ -331,7 +396,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     pocketType: item.pocketType,
                     shalwarType: item.shalwarType,
                     hasShalwarPocket: item.hasShalwarPocket,
-                    hasFrontPockets: item.hasFrontPockets
+                    hasFrontPockets: item.hasFrontPockets,
+                    // Measurements
+                    qameez_lambai: item.qameez_lambai,
+                    bazoo: item.bazoo,
+                    teera: item.teera,
+                    galaa: item.galaa,
+                    chaati: item.chaati,
+                    gheera: item.gheera,
+                    kaf: item.kaf,
+                    kandha: item.kandha,
+                    chaati_around: item.chaati_around,
+                    kamar_around: item.kamar_around,
+                    hip_around: item.hip_around,
+                    shalwar_lambai: item.shalwar_lambai,
+                    puhncha: item.puhncha,
+                    shalwar_gheera: item.shalwar_gheera,
                 }))
             };
 
@@ -348,7 +428,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
             const refreshRes = await fetch("/api/bookings");
             const refreshed = await refreshRes.json();
-            setBookings(refreshed);
+            setBookings(Array.isArray(refreshed) ? refreshed : []);
 
             setSuccessMessage("Booking created successfully!");
             setShowForm(false);
@@ -372,8 +452,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             returnDate: "",
             deliveryDate: "",
             trialDate: "",
-            tailorId: "",
-            cutterId: "",
+            tailorIds: [],
+            cutterIds: [],
             advanceAmount: "",
             notes: "",
             // Stitching Details
@@ -425,7 +505,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
             const refreshRes = await fetch("/api/bookings");
             const refreshed = await refreshRes.json();
-            setBookings(refreshed);
+            setBookings(Array.isArray(refreshed) ? refreshed : []);
 
             setSuccessMessage("Status updated successfully!");
         } catch (err) {
@@ -438,13 +518,75 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setViewOpen(true);
     };
 
-    const filteredBookings = (bookings || []).filter(b =>
-        (b.customer?.name || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
-        (b.customer?.phone || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
-        (b.customer?.address || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
-        (b.id || "").toString().includes(searchQuery || "") ||
-        (b.bookingNumber || "").toLowerCase().includes((searchQuery || "").toLowerCase())
-    );
+    const handleOpenStaffEdit = (booking) => {
+        setStaffEditBooking(booking);
+        const tailors = (booking.staff || []).filter(s => s.role === "TAILOR").map(s => s.customer);
+        const cutters = (booking.staff || []).filter(s => s.role === "CUTTER").map(s => s.customer);
+        setStaffEditTailorIds(tailors);
+        setStaffEditCutterIds(cutters);
+        setStaffEditOpen(true);
+    };
+
+    const handleStaffEditSave = async () => {
+        if (!staffEditBooking) return;
+        try {
+            const response = await fetch("/api/bookings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: staffEditBooking.id,
+                    tailorIds: staffEditTailorIds.map(e => e.id),
+                    cutterIds: staffEditCutterIds.map(e => e.id),
+                }),
+            });
+            if (!response.ok) throw new Error("Failed to update staff");
+            const refreshRes = await fetch("/api/bookings");
+            const refreshed = await refreshRes.json();
+            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            setStaffEditOpen(false);
+            setSuccessMessage("Staff updated successfully!");
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleBulkPrintClick = () => {
+        if (selectedIds.size === 0) return;
+        setIsBulkPrint(true);
+        setTempPrintBooking(null);
+        setPrintDialogOpen(true);
+    };
+
+    const handleToggleSelect = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSelectAll = (checked) => {
+        if (checked) setSelectedIds(new Set(filteredBookings.map(b => b.id)));
+        else setSelectedIds(new Set());
+    };
+
+    const filteredBookings = (bookings || []).filter(b => {
+        const q = (searchQuery || "").toLowerCase();
+        const matchesSearch = !q ||
+            (b.customer?.name || "").toLowerCase().includes(q) ||
+            (b.customer?.phone || "").toLowerCase().includes(q) ||
+            (b.customer?.address || "").toLowerCase().includes(q) ||
+            (b.id || "").toString().includes(q) ||
+            (b.bookingNumber || "").toLowerCase().includes(q);
+
+        const matchesCustomer = !filterCustomerId || b.customerId === filterCustomerId;
+
+        const bDate = b.bookingDate ? b.bookingDate.slice(0, 10) : "";
+        const matchesFrom = !filterDateFrom || bDate >= filterDateFrom;
+        const matchesTo   = !filterDateTo   || bDate <= filterDateTo;
+
+        return matchesSearch && matchesCustomer && matchesFrom && matchesTo;
+    });
 
     const getStatusColor = (status) => {
         const statusObj = BOOKING_STATUSES.find(s => s.value === status);
@@ -491,16 +633,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     </Button>
                 </Box>
             </DialogTitle>
-            <DialogContent sx={{ p: 3 }}>
+            <DialogContent sx={{ p: 3, pt: '24px !important' }}>
                 {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
                 <Box>
                     {/* ── Row 1: 4 equal header fields ── */}
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={6} md={3}>
+                        <Grid size={{ xs: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
                         </Grid>
-                        <Grid item xs={6} md={3}>
+                        <Grid size={{ xs: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="Booking Date" type="date" name="bookingDate" required
                                 value={formData.bookingDate}
                                 onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
@@ -508,10 +650,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid item xs={6} md={3}>
+                        <Grid size={{ xs: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="Order Reference" value="Auto" disabled sx={DISABLED_SX} />
                         </Grid>
-                        <Grid item xs={6} md={3}>
+                        <Grid size={{ xs: 6, md: 3 }}>
                             <TextField fullWidth size="small" label="Delivery Date" type="date" name="deliveryDate" required
                                 value={formData.deliveryDate}
                                 onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
@@ -530,7 +672,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={2}>
                                 {/* Customer autocomplete — full width */}
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <Autocomplete
                                         options={customers || []}
                                         getOptionLabel={(option) => option.name || ""}
@@ -555,12 +697,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     />
                                 </Grid>
                                 {/* Name */}
-                                <Grid item xs={12} sm={4}>
+                                <Grid size={{ xs: 12, sm: 4 }}>
                                     <TextField fullWidth size="small" label="Name" value={formData.customerName}
                                         disabled placeholder="Auto-filled" sx={DISABLED_SX} />
                                 </Grid>
                                 {/* Phone */}
-                                <Grid item xs={12} sm={4}>
+                                <Grid size={{ xs: 12, sm: 4 }}>
                                     <TextField fullWidth size="small" label="Phone Number" value={formData.customerPhone}
                                         disabled placeholder="+92 300 1234567"
                                         InputProps={{
@@ -573,7 +715,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         sx={DISABLED_SX} />
                                 </Grid>
                                 {/* Address */}
-                                <Grid item xs={12} sm={4}>
+                                <Grid size={{ xs: 12, sm: 4 }}>
                                     <TextField fullWidth size="small" label="Address" value={formData.customerAddress}
                                         disabled placeholder="Auto-filled" sx={DISABLED_SX} />
                                 </Grid>
@@ -670,54 +812,111 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                         <Button size="small" variant="outlined"
                                                                             onClick={() => { const ni = [...cartItems]; ni[index] = { ...ni[index], ...previousStitchingDetails }; setCartItems(ni); }}
                                                                             sx={{ borderColor: '#8b5cf6', color: '#8b5cf6', textTransform: 'none', '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' } }}>
-                                                                            Use Previous Details
+                                                                            پچھلی تفصیلات
                                                                         </Button>
                                                                     </Box>
                                                                 )}
                                                                 <Grid container spacing={2}>
                                                                     {[
-                                                                        { label: 'Cuff', field: 'cuffType', opts: [{ value: 'single', label: 'Single' }, { value: 'double folding', label: 'Double Folding' }, { value: 'open sleeve', label: 'Open Sleeve' }] },
-                                                                        { label: 'Bottom (Pohncha)', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'With Net (Jaali)' }, { value: 'karhaai', label: 'Embroidered' }, { value: 'jaali_karhaai', label: 'Net w/ Embroidery' }, { value: 'saada', label: 'Simple' }] },
-                                                                        { label: 'Daman (Ghera)', field: 'gheraType', opts: [{ value: 'seedha', label: 'Straight' }, { value: 'gol', label: 'Round' }] },
-                                                                        { label: 'Neck (Gala)', field: 'galaType', opts: [{ value: 'ban', label: 'Ban' }, { value: 'collar', label: 'Collar' }] },
-                                                                        { label: 'Pocket', field: 'pocketType', opts: [{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }] },
-                                                                        { label: 'Shalwar Type', field: 'shalwarType', opts: [{ value: 'pajama', label: 'Pajama' }, { value: 'shalwar', label: 'Shalwar' }, { value: 'trouser', label: 'Trouser' }] },
+                                                                        { label: 'کف', field: 'cuffType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double folding', label: 'ڈبل فولڈنگ' }, { value: 'open sleeve', label: 'اوپن آستین' }] },
+                                                                        { label: 'پہنچا', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'جالی کے ساتھ' }, { value: 'karhaai', label: 'کڑھائی' }, { value: 'jaali_karhaai', label: 'جالی و کڑھائی' }, { value: 'saada', label: 'سادہ' }] },
+                                                                        { label: 'دامن (گھیرا)', field: 'gheraType', opts: [{ value: 'seedha', label: 'سیدھا' }, { value: 'gol', label: 'گول' }] },
+                                                                        { label: 'گلا', field: 'galaType', opts: [{ value: 'ban', label: 'بن' }, { value: 'collar', label: 'کالر' }] },
+                                                                        { label: 'جیب', field: 'pocketType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double', label: 'ڈبل' }] },
+                                                                        { label: 'شلوار کی قسم', field: 'shalwarType', opts: [{ value: 'pajama', label: 'پاجامہ' }, { value: 'shalwar', label: 'شلوار' }, { value: 'trouser', label: 'ٹراؤزر' }] },
                                                                     ].map(({ label, field, opts }) => (
-                                                                        <Grid item xs={12} sm={4} key={field}>
+                                                                        <Grid key={field} size={{ xs: 12, sm: 4 }}>
                                                                             <Autocomplete
                                                                                 options={opts}
                                                                                 getOptionLabel={(o) => o.label || ""}
                                                                                 value={opts.find(o => o.value === item[field]) || null}
                                                                                 onChange={(_, nv) => { const ni = [...cartItems]; ni[index][field] = nv ? nv.value : ""; setCartItems(ni); }}
                                                                                 renderInput={(params) => (
-                                                                                    <TextField {...params} label={label} size="small" required
+                                                                                    <TextField {...params} label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{label}</span>} size="small" required
                                                                                         sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                                                                                 )}
                                                                             />
                                                                         </Grid>
                                                                     ))}
                                                                     {item.galaType && (
-                                                                        <Grid item xs={12} sm={4}>
+                                                                        <Grid size={{ xs: 12, sm: 4 }}>
                                                                             <Autocomplete
                                                                                 options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
                                                                                 value={item.galaSize || null}
                                                                                 onChange={(_, nv) => { const ni = [...cartItems]; ni[index].galaSize = nv || ""; setCartItems(ni); }}
                                                                                 renderInput={(params) => (
-                                                                                    <TextField {...params} label="Neck Size" size="small" required
+                                                                                    <TextField {...params} label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>گلے کا سائز</span>} size="small" required
                                                                                         sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
                                                                                 )}
                                                                             />
                                                                         </Grid>
                                                                     )}
-                                                                    <Grid item xs={12} sm={4}>
+                                                                    <Grid size={{ xs: 12, sm: 4 }}>
                                                                         <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'center' }}>
                                                                             <FormControlLabel control={<Checkbox size="small" checked={item.hasShalwarPocket} onChange={(e) => { const ni = [...cartItems]; ni[index].hasShalwarPocket = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600}>Shalwar Pocket</Typography>} sx={{ m: 0 }} />
+                                                                                label={<Typography variant="caption" fontWeight={600} sx={{ fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>شلوار جیب</Typography>} sx={{ m: 0 }} />
                                                                             <FormControlLabel control={<Checkbox size="small" checked={item.hasFrontPockets} onChange={(e) => { const ni = [...cartItems]; ni[index].hasFrontPockets = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600}>Front Pockets</Typography>} sx={{ m: 0 }} />
+                                                                                label={<Typography variant="caption" fontWeight={600} sx={{ fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>اگلی جیبیں</Typography>} sx={{ m: 0 }} />
                                                                         </Box>
                                                                     </Grid>
-                                                                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                    {/* ── Measurements ── */}
+                                                                    <Grid size={{ xs: 12 }}>
+                                                                        <Divider sx={{ mt: 1, mb: 1.5 }} />
+                                                                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 1.5, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl", letterSpacing: 0 }}>
+                                                                            پیمائش
+                                                                        </Typography>
+                                                                    </Grid>
+                                                                    {/* Qameez (Shirt) */}
+                                                                    <Grid size={{ xs: 12 }}>
+                                                                        <Typography variant="caption" fontWeight={600} color="primary.main" sx={{ display: 'block', mb: 1, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>
+                                                                            قمیض
+                                                                        </Typography>
+                                                                    </Grid>
+                                                                    {[
+                                                                        { name: "qameez_lambai", label: "قمیض لمبائی" },
+                                                                        { name: "bazoo", label: "بازو" },
+                                                                        { name: "teera", label: "تیرہ" },
+                                                                        { name: "galaa", label: "گلا" },
+                                                                        { name: "chaati", label: "چھاتی" },
+                                                                        { name: "gheera", label: "گھیرا" },
+                                                                        { name: "kaf", label: "کف" },
+                                                                        { name: "kandha", label: "کندھا" },
+                                                                        { name: "chaati_around", label: "چھاتی گرد" },
+                                                                        { name: "kamar_around", label: "کمر گرد" },
+                                                                        { name: "hip_around", label: "ہپ گرد" },
+                                                                    ].map(f => (
+                                                                        <Grid key={f.name} size={{ xs: 6, sm: 3 }}>
+                                                                            <TextField
+                                                                                fullWidth size="small" type="text"
+                                                                                label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{f.label}</span>}
+                                                                                value={item[f.name] || ""}
+                                                                                onChange={(e) => { const ni = [...cartItems]; ni[index][f.name] = e.target.value; setCartItems(ni); }}
+                                                                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }}
+                                                                            />
+                                                                        </Grid>
+                                                                    ))}
+                                                                    {/* Shalwar (Trouser) */}
+                                                                    <Grid size={{ xs: 12 }}>
+                                                                        <Typography variant="caption" fontWeight={600} color="primary.main" sx={{ display: 'block', mb: 1, mt: 0.5, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>
+                                                                            شلوار
+                                                                        </Typography>
+                                                                    </Grid>
+                                                                    {[
+                                                                        { name: "shalwar_lambai", label: "شلوار لمبائی" },
+                                                                        { name: "puhncha", label: "پہنچا" },
+                                                                        { name: "shalwar_gheera", label: "شلوار گھیرا" },
+                                                                    ].map(f => (
+                                                                        <Grid key={f.name} size={{ xs: 6, sm: 3 }}>
+                                                                            <TextField
+                                                                                fullWidth size="small" type="text"
+                                                                                label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{f.label}</span>}
+                                                                                value={item[f.name] || ""}
+                                                                                onChange={(e) => { const ni = [...cartItems]; ni[index][f.name] = e.target.value; setCartItems(ni); }}
+                                                                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }}
+                                                                            />
+                                                                        </Grid>
+                                                                    ))}
+                                                                    <Grid size={{ xs: 12 }}>
                                                                         <Button variant="contained" size="small" startIcon={<Save size={14} />}
                                                                             onClick={() => {
                                                                                 const ni = [...cartItems];
@@ -726,7 +925,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                                 setPreviousStitchingDetails({ cuffType: ni[index].cuffType, pohnchaType: ni[index].pohnchaType, gheraType: ni[index].gheraType, galaType: ni[index].galaType, galaSize: ni[index].galaSize, pocketType: ni[index].pocketType, shalwarType: ni[index].shalwarType, hasShalwarPocket: ni[index].hasShalwarPocket, hasFrontPockets: ni[index].hasFrontPockets });
                                                                             }}
                                                                             sx={{ bgcolor: '#8b5cf6', textTransform: 'none', '&:hover': { bgcolor: '#7c3aed' } }}>
-                                                                            Save Details
+                                                                            تفصیلات محفوظ کریں
                                                                         </Button>
                                                                     </Grid>
                                                                 </Grid>
@@ -746,29 +945,49 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         </Button>
                     </Box>
 
-                    {/* ── Tailor & Cutter ── */}
+                    {/* ── Staff Assignment (multi-select) ── */}
                     <Card variant="outlined" sx={{ mb: 2, borderRadius: 2, border: '1px solid #e5e7eb' }}>
+                        <Box sx={{ px: 2.5, pt: 2, pb: 0.5, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #f59e0b' }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Staff Assignment</Typography>
+                            <Typography variant="caption" color="text.secondary">(select one or more)</Typography>
+                        </Box>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Autocomplete
+                                        multiple
                                         options={tailors || []}
                                         getOptionLabel={(option) => option.name || ""}
-                                        value={(tailors || []).find(t => t.id === formData.tailorId) || null}
-                                        onChange={(event, newValue) => { setFormData({ ...formData, tailorId: newValue ? newValue.id : "" }); }}
+                                        value={(tailors || []).filter(t => (formData.tailorIds || []).includes(t.id))}
+                                        onChange={(event, newValue) => { setFormData({ ...formData, tailorIds: newValue.map(v => v.id) }); }}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({ index });
+                                                return <Chip key={key} label={option.name} size="small" {...tagProps} sx={{ bgcolor: '#f5f3ff', color: '#7c3aed' }} />;
+                                            })
+                                        }
                                         renderInput={(params) => (
-                                            <TextField {...params} label="Tailor" size="small" fullWidth sx={FIELD_SX} />
+                                            <TextField {...params} label="Tailor(s)" size="small" fullWidth sx={FIELD_SX}
+                                                helperText={`${(formData.tailorIds || []).length} selected`} />
                                         )}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Autocomplete
+                                        multiple
                                         options={cutters || []}
                                         getOptionLabel={(option) => option.name || ""}
-                                        value={(cutters || []).find(c => c.id === formData.cutterId) || null}
-                                        onChange={(event, newValue) => { setFormData({ ...formData, cutterId: newValue ? newValue.id : "" }); }}
+                                        value={(cutters || []).filter(c => (formData.cutterIds || []).includes(c.id))}
+                                        onChange={(event, newValue) => { setFormData({ ...formData, cutterIds: newValue.map(v => v.id) }); }}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({ index });
+                                                return <Chip key={key} label={option.name} size="small" {...tagProps} sx={{ bgcolor: '#fef3c7', color: '#92400e' }} />;
+                                            })
+                                        }
                                         renderInput={(params) => (
-                                            <TextField {...params} label="Cutter" size="small" fullWidth sx={FIELD_SX} />
+                                            <TextField {...params} label="Cutter(s)" size="small" fullWidth sx={FIELD_SX}
+                                                helperText={`${(formData.cutterIds || []).length} selected`} />
                                         )}
                                     />
                                 </Grid>
@@ -778,13 +997,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
                     {/* ── Notes + Totals ── */}
                     <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField fullWidth size="small" label="Remarks / Notes" name="notes"
                                 multiline rows={4} value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2 }}>
                                 {/* Total row */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid #d1fae5' }}>
@@ -792,14 +1011,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     <Typography variant="h6" fontWeight={800} color="#059669">Rs.&nbsp;{totalAmount.toFixed(0)}</Typography>
                                 </Box>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <TextField fullWidth size="small" label="Advance Amount" required
                                             value={formData.advanceAmount}
                                             onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={FIELD_SX} />
                                     </Grid>
-                                    <Grid item xs={6}>
+                                    <Grid size={{ xs: 6 }}>
                                         <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={{ '& .MuiOutlinedInput-root': { bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4', borderRadius: 2, '& .MuiInputBase-input': { fontWeight: 800, color: balanceAmount > 0 ? '#b91c1c' : '#059669', textAlign: 'center' } } }} />
@@ -841,40 +1060,99 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             </Box>
 
             {/* ── Action Bar ── */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
+            <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                 <TextField
-                    placeholder="Search by customer or booking number…"
+                    placeholder="Search…"
                     variant="outlined"
                     size="small"
-                    sx={{ minWidth: 320, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    sx={{ width: 200, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{ startAdornment: (<InputAdornment position="start"><Search size={18} /></InputAdornment>) }}
+                    InputProps={{ startAdornment: (<InputAdornment position="start"><Search size={16} /></InputAdornment>) }}
                 />
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={() => setShowForm(true)}
-                    sx={{
-                        borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                        boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
-                        '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
-                    }}
-                >
-                    New Booking
-                </Button>
+                <TextField
+                    label="From"
+                    type="date"
+                    size="small"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                />
+                <TextField
+                    label="To"
+                    type="date"
+                    size="small"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                />
+                <Autocomplete
+                    options={customers || []}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={(customers || []).find(c => c.id === filterCustomerId) || null}
+                    onChange={(_, newValue) => setFilterCustomerId(newValue ? newValue.id : null)}
+                    size="small"
+                    sx={{ width: 220, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    renderInput={(params) => <TextField {...params} label="Customer" />}
+                />
+                {(filterDateFrom || filterDateTo || filterCustomerId) && (
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterCustomerId(null); }}
+                        sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#6b7280', whiteSpace: 'nowrap' }}
+                    >
+                        Clear
+                    </Button>
+                )}
+                <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                    {selectedIds.size > 0 && (
+                        <Button
+                            variant="outlined"
+                            startIcon={<Printer size={18} />}
+                            onClick={handleBulkPrintClick}
+                            sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: 'nowrap', borderColor: '#8b5cf6', color: '#8b5cf6' }}
+                        >
+                            Print Selected ({selectedIds.size})
+                        </Button>
+                    )}
+                    <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        onClick={() => setShowForm(true)}
+                        sx={{
+                            borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                            boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
+                            '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
+                        }}
+                    >
+                        New Booking
+                    </Button>
+                </Box>
             </Box>
 
             <TableContainer component={Card} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead>
                         <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Booking No</TableCell>
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    size="small"
+                                    checked={filteredBookings.length > 0 && filteredBookings.every(b => selectedIds.has(b.id))}
+                                    indeterminate={selectedIds.size > 0 && !filteredBookings.every(b => selectedIds.has(b.id))}
+                                    onChange={(e) => handleSelectAll(e.target.checked)}
+                                />
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>#</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Book Date</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Tailor</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Cutter</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Delivery</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Amount</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Actions</TableCell>
                         </TableRow>
@@ -882,11 +1160,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     <TableBody>
                         {filteredBookings.length > 0 ? (
                             filteredBookings.map((booking) => (
-                                <TableRow key={booking.id} sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s' }}>
-                                    {/* Booking No */}
+                                <TableRow key={booking.id} sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', bgcolor: selectedIds.has(booking.id) ? '#f5f3ff' : 'inherit' }}>
+                                    {/* Checkbox */}
+                                    <TableCell padding="checkbox">
+                                        <Checkbox size="small" checked={selectedIds.has(booking.id)} onChange={() => handleToggleSelect(booking.id)} />
+                                    </TableCell>
+                                    {/* # Booking No */}
                                     <TableCell>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>
-                                            #{booking.bookingNumber}
+                                            #{booking.id}
                                         </Typography>
                                         <Chip
                                             label={booking.bookingType === 'SUIT' ? 'Readymade' : 'Stitching'}
@@ -897,6 +1179,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 color: booking.bookingType === 'SUIT' ? '#1e40af' : '#92400e'
                                             }}
                                         />
+                                    </TableCell>
+                                    {/* Book Date */}
+                                    <TableCell>
+                                        <Typography variant="body2">{new Date(booking.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                        {booking.returnDate && (
+                                            <Typography variant="caption" color="primary" sx={{ display: 'block' }}>Return: {new Date(booking.returnDate).toLocaleDateString('en-GB')}</Typography>
+                                        )}
                                     </TableCell>
                                     {/* Customer */}
                                     <TableCell>
@@ -914,12 +1203,40 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             </Box>
                                         </Box>
                                     </TableCell>
-                                    {/* Date */}
+                                    {/* Tailor */}
                                     <TableCell>
-                                        <Typography variant="body2">{new Date(booking.bookingDate).toLocaleDateString()}</Typography>
-                                        {booking.returnDate && (
-                                            <Typography variant="caption" color="primary" sx={{ display: 'block' }}>Return: {new Date(booking.returnDate).toLocaleDateString()}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                                            <Box sx={{ flex: 1 }}>
+                                                {(booking.staff || []).filter(s => s.role === "TAILOR").length > 0 ? (
+                                                    (booking.staff || []).filter(s => s.role === "TAILOR").map(s => (
+                                                        <Chip key={s.id} label={s.customer?.name} size="small" sx={{ mb: 0.3, mr: 0.3, bgcolor: '#f5f3ff', color: '#7c3aed', height: 20, fontSize: '0.7rem' }} />
+                                                    ))
+                                                ) : (
+                                                    <Typography variant="caption" color="text.disabled">—</Typography>
+                                                )}
+                                            </Box>
+                                            <Tooltip title="Edit Staff">
+                                                <IconButton size="small" sx={{ color: '#9ca3af', p: 0.25 }} onClick={() => handleOpenStaffEdit(booking)}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    </TableCell>
+                                    {/* Cutter */}
+                                    <TableCell>
+                                        {(booking.staff || []).filter(s => s.role === "CUTTER").length > 0 ? (
+                                            (booking.staff || []).filter(s => s.role === "CUTTER").map(s => (
+                                                <Chip key={s.id} label={s.customer?.name} size="small" sx={{ mb: 0.3, mr: 0.3, bgcolor: '#fef3c7', color: '#92400e', height: 20, fontSize: '0.7rem' }} />
+                                            ))
+                                        ) : (
+                                            <Typography variant="caption" color="text.disabled">—</Typography>
                                         )}
+                                    </TableCell>
+                                    {/* Delivery */}
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString('en-GB') : '—'}
+                                        </Typography>
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
@@ -940,12 +1257,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
                                             ))}
                                         </TextField>
-                                    </TableCell>
-                                    {/* Delivery */}
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString() : '—'}
-                                        </Typography>
                                     </TableCell>
                                     {/* Amount */}
                                     <TableCell align="right">
@@ -971,7 +1282,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                                         <ShoppingCart size={40} style={{ opacity: 0.25 }} />
                                         <Typography color="text.secondary" fontWeight={500}>No bookings found.</Typography>
@@ -983,6 +1294,63 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* ── Inline Staff Edit Dialog ── */}
+            <Dialog open={staffEditOpen} onClose={() => setStaffEditOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700}>Edit Staff — Booking #{staffEditBooking?.id}</Typography>
+                        <Typography variant="caption" color="text.secondary">You can assign multiple tailors and multiple cutters</Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent sx={{ pt: '20px !important' }}>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12 }}>
+                            <Autocomplete
+                                multiple
+                                options={tailors || []}
+                                getOptionLabel={(option) => option.name || ""}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                value={staffEditTailorIds}
+                                onChange={(_, newValue) => setStaffEditTailorIds(newValue)}
+                                renderTags={(value, getTagProps) =>
+                                    value.map((option, index) => {
+                                        const { key, ...tagProps } = getTagProps({ index });
+                                        return <Chip key={key} label={option.name} size="small" {...tagProps} sx={{ bgcolor: '#f5f3ff', color: '#7c3aed' }} />;
+                                    })
+                                }
+                                renderInput={(params) => <TextField {...params} label="Tailor(s)" size="small" fullWidth
+                                    helperText={`${staffEditTailorIds.length} tailor(s) assigned`} />}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <Autocomplete
+                                multiple
+                                options={cutters || []}
+                                getOptionLabel={(option) => option.name || ""}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                value={staffEditCutterIds}
+                                onChange={(_, newValue) => setStaffEditCutterIds(newValue)}
+                                renderTags={(value, getTagProps) =>
+                                    value.map((option, index) => {
+                                        const { key, ...tagProps } = getTagProps({ index });
+                                        return <Chip key={key} label={option.name} size="small" {...tagProps} sx={{ bgcolor: '#fef3c7', color: '#92400e' }} />;
+                                    })
+                                }
+                                renderInput={(params) => <TextField {...params} label="Cutter(s)" size="small" fullWidth
+                                    helperText={`${staffEditCutterIds.length} cutter(s) assigned`} />}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                    <Button onClick={() => setStaffEditOpen(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
+                    <Button variant="contained" onClick={handleStaffEditSave}
+                        sx={{ textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
+                        Save Staff
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Print type picker dialog */}
             <Dialog open={printDialogOpen} onClose={() => setPrintDialogOpen(false)} maxWidth="xs" fullWidth
@@ -1017,7 +1385,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     {selectedBooking && (
                         <Box sx={{ mt: 2 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Card variant="outlined" sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">گاہک کی معلومات</Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}><strong>نام:</strong> {selectedBooking.customer?.name}</Typography>
@@ -1025,21 +1393,21 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Typography variant="body2"><strong>پتہ:</strong> {selectedBooking.customer?.address}</Typography>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Card variant="outlined" sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">آرڈر کی معلومات</Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                            <strong>بکنگ نمبر:</strong> {selectedBooking.bookingNumber}
+                                            <strong>بکنگ نمبر:</strong> {selectedBooking.id}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>تاریخ بکنگ:</strong> {new Date(selectedBooking.bookingDate).toLocaleDateString()}</Typography>
-                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>ڈیلیوری کی تاریخ:</strong> {selectedBooking.deliveryDate ? new Date(selectedBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
-                                        <Typography variant="body2"><strong>ٹرائل کی تاریخ:</strong> {selectedBooking.trialDate ? new Date(selectedBooking.trialDate).toLocaleDateString() : '-'}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>تاریخ بکنگ:</strong> {new Date(selectedBooking.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>ڈیلیوری کی تاریخ:</strong> {selectedBooking.deliveryDate ? new Date(selectedBooking.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
+                                        <Typography variant="body2"><strong>ٹرائل کی تاریخ:</strong> {selectedBooking.trialDate ? new Date(selectedBooking.trialDate).toLocaleDateString('en-GB') : '-'}</Typography>
                                     </Card>
                                 </Grid>
                             </Grid>
 
                             <Grid container spacing={3} sx={{ mt: 1 }}>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Card variant="outlined" sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">درزی کی تفصیلات</Typography>
                                         {selectedBooking.tailor ? (
@@ -1052,7 +1420,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         )}
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Card variant="outlined" sx={{ p: 2 }}>
                                         <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>Cutter Details</Typography>
                                         {selectedBooking.cutter ? (
@@ -1156,7 +1524,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             </Snackbar>
 
             {/* Print Layout - Hidden normally, visible during print */}
-            {printBooking && (
+            {(printBooking || bulkPrintBookings.length > 0) && (
                 <Box
                     id="printable-section"
                     sx={{
@@ -1182,16 +1550,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Box>
 
                             <Grid container spacing={2} sx={{ mb: 4 }}>
-                                <Grid item xs={6}>
+                                <Grid size={{ xs: 6 }}>
                                     <Typography variant="subtitle2" fontWeight="bold">Customer Info</Typography>
                                     <Typography variant="body2">{printBooking.customer?.name}</Typography>
                                     <Typography variant="body2">{printBooking.customer?.phone}</Typography>
                                 </Grid>
-                                <Grid item xs={6} sx={{ textAlign: 'left' }}>
+                                <Grid size={{ xs: 6 }}>
                                     <Typography variant="subtitle2" fontWeight="bold">Booking Info</Typography>
-                                    <Typography variant="body2">No: {printBooking.bookingNumber}</Typography>
-                                    <Typography variant="body2">Date: {new Date(printBooking.bookingDate).toLocaleDateString()}</Typography>
-                                    <Typography variant="body2">Delivery: {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : '-'}</Typography>
+                                    <Typography variant="body2">No: {printBooking.id}</Typography>
+                                    <Typography variant="body2">Date: {new Date(printBooking.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                    <Typography variant="body2">Delivery: {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
                                 </Grid>
                             </Grid>
 
@@ -1256,31 +1624,31 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         >
                             <Box sx={{ textAlign: 'center', mb: 2 }}>
                                 <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{printBooking.bookingNumber})</Typography>
+                                <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{printBooking.id})</Typography>
                             </Box>
 
                             <Box sx={{ mb: 2, pb: 1 }}>
                                 <Grid container spacing={1}>
-                                    <Grid item xs={12}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Typography variant="body1"><strong>Customer:</strong> {printBooking.customer?.name || ''}</Typography>
                                     </Grid>
-                                    <Grid item xs={12} sx={{ minHeight: '3em' }}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Typography variant="body1"><strong>Address:</strong> {printBooking.customer?.address || ''}</Typography>
                                     </Grid>
-                                    <Grid item xs={12}>
+                                    <Grid size={{ xs: 12 }}>
                                         <Typography variant="body1"><strong>Phone:</strong> {printBooking.customer?.phone || ''}</Typography>
                                     </Grid>
                                 </Grid>
                             </Box>
 
                             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>Date:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString() : ''}</Typography>
-                                <Typography variant="body1"><strong>Delivery:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString() : ''}</Typography>
+                                <Typography variant="body1"><strong>Date:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString('en-GB') : ''}</Typography>
+                                <Typography variant="body1"><strong>Delivery:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString('en-GB') : ''}</Typography>
                             </Box>
 
                             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>Cutter:</strong> {employees?.find(e => e.id === printBooking.cutterId)?.name || ''}</Typography>
-                                <Typography variant="body1"><strong>Tailor:</strong> {employees?.find(e => e.id === printBooking.tailorId)?.name || ''}</Typography>
+                                <Typography variant="body1"><strong>Cutter:</strong> {(printBooking?.staff || []).filter(s => s.role === "CUTTER").map(s => s.customer?.name).join(", ")}</Typography>
+                                <Typography variant="body1"><strong>Tailor:</strong> {(printBooking?.staff || []).filter(s => s.role === "TAILOR").map(s => s.customer?.name).join(", ")}</Typography>
                             </Box>
 
                             {/* MERGED MEASUREMENTS AND STITCHING DETAILS TABLE */}
@@ -1402,6 +1770,94 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Box>
                         </Box>
                     )}
+
+                    {/* Bulk print: render each selected booking with a page break */}
+                    {bulkPrintBookings.length > 0 && bulkPrintBookings.map((bk, bkIdx) => (
+                        <Box key={bk.id} sx={{ pageBreakAfter: bkIdx < bulkPrintBookings.length - 1 ? 'always' : 'auto', pb: 2 }}>
+                            {printType === 'BILL' ? (
+                                <Box>
+                                    <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                        <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
+                                        <Typography variant="body2">Booking Invoice</Typography>
+                                    </Box>
+                                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                                        <Grid size={{ xs: 6 }}>
+                                            <Typography variant="subtitle2" fontWeight="bold">Customer Info</Typography>
+                                            <Typography variant="body2">{bk.customer?.name}</Typography>
+                                            <Typography variant="body2">{bk.customer?.phone}</Typography>
+                                        </Grid>
+                                        <Grid size={{ xs: 6 }}>
+                                            <Typography variant="subtitle2" fontWeight="bold">Booking Info</Typography>
+                                            <Typography variant="body2">No: {bk.id}</Typography>
+                                            <Typography variant="body2">Date: {new Date(bk.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                            <Typography variant="body2">Delivery: {bk.deliveryDate ? new Date(bk.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
+                                        </Grid>
+                                    </Grid>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow sx={{ bgcolor: '#f9fafb' }}>
+                                                    <TableCell align="right"><strong>Product</strong></TableCell>
+                                                    <TableCell align="right"><strong>Qty</strong></TableCell>
+                                                    <TableCell align="right"><strong>Price</strong></TableCell>
+                                                    <TableCell align="right"><strong>Total</strong></TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {bk.items?.map((item, idx) => (
+                                                    <TableRow key={idx}>
+                                                        <TableCell align="right">{item.product?.name}</TableCell>
+                                                        <TableCell align="right">{item.quantity}</TableCell>
+                                                        <TableCell align="right">{parseFloat(item.unitPrice).toFixed(2)}</TableCell>
+                                                        <TableCell align="right">{parseFloat(item.totalPrice).toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                        <Box sx={{ width: 250 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Total:</Typography>
+                                                <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(bk.totalAmount).toFixed(2)}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2">Advance:</Typography>
+                                                <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(bk.advanceAmount).toFixed(2)}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
+                                                <Typography variant="body2">Remaining:</Typography>
+                                                <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(bk.remainingAmount).toFixed(2)}</Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ mt: 4, textAlign: 'center', borderTop: '1px dashed #ccc', pt: 2 }}>
+                                        <Typography variant="caption">Thank you for your business!</Typography>
+                                    </Box>
+                                </Box>
+                            ) : (
+                                <Box sx={{ fontFamily: 'Arial, sans-serif', p: 1, color: 'black' }}>
+                                    <Box sx={{ textAlign: 'center', mb: 2 }}>
+                                        <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
+                                        <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{bk.id})</Typography>
+                                    </Box>
+                                    <Typography variant="body1"><strong>Customer:</strong> {bk.customer?.name}</Typography>
+                                    <Typography variant="body1"><strong>Phone:</strong> {bk.customer?.phone}</Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 1 }}>
+                                        <Typography variant="body1"><strong>Date:</strong> {new Date(bk.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                        <Typography variant="body1"><strong>Delivery:</strong> {bk.deliveryDate ? new Date(bk.deliveryDate).toLocaleDateString('en-GB') : ''}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="body1"><strong>Cutter:</strong> {(bk.staff || []).filter(s => s.role === "CUTTER").map(s => s.customer?.name).join(", ")}</Typography>
+                                        <Typography variant="body1"><strong>Tailor:</strong> {(bk.staff || []).filter(s => s.role === "TAILOR").map(s => s.customer?.name).join(", ")}</Typography>
+                                    </Box>
+                                    <Box sx={{ mt: 3, borderTop: '2px solid #000', pt: 1, textAlign: 'center' }}>
+                                        <Typography variant="body2" fontWeight="bold">fazal plaza, dhulyan chowk dinga, tel: 053-7401543</Typography>
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    ))}
                 </Box>
             )}
 

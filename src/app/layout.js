@@ -19,7 +19,7 @@ const notoNastaliqUrdu = Noto_Nastaliq_Urdu({
 });
 
 export const metadata = {
-  title: "TailorFlow - Tailor Management System",
+  title: "RAPID TAILOR - Tailor Management System",
   description: "Modern tailor shop management system",
 };
 

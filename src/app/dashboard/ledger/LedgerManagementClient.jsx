@@ -208,7 +208,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         icon: <BookText size={36} style={{ opacity: 0.8 }} />,
                     },
                 ].map(({ label, value, gradient, shadow, icon }) => (
-                    <Grid item xs={12} md={4} key={label}>
+                    <Grid key={label} size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             p: 3,
                             background: gradient,
@@ -480,7 +480,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
 
                     <Grid container spacing={2}>
                         {/* Row 1: Account | Type | Amount */}
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <Autocomplete
                                 size="small"
                                 options={customers}
@@ -495,7 +495,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                             />
                         </Grid>
 
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <Autocomplete
                                 size="small"
                                 options={ENTRY_TYPES}
@@ -510,7 +510,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                             />
                         </Grid>
 
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -529,7 +529,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
 
                         {/* Balance info banner — shown when an account is selected */}
                         {selectedFormCustomer && (
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={(t) => ({
                                     display: "flex",
                                     alignItems: "center",
@@ -563,7 +563,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         )}
 
                         {/* Description — full width, minWidth 600 */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 size="small"
