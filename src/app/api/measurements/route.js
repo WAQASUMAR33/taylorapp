@@ -75,26 +75,26 @@ export async function POST(req) {
                 customerId: parseInt(customerId),
                 unit: unit || "in",
                 notes,
-                qameez_lambai: qameez_lambai ? parseFloat(qameez_lambai) : null,
-                bazoo: bazoo ? parseFloat(bazoo) : null,
-                teera: teera ? parseFloat(teera) : null,
-                galaa: galaa ? parseFloat(galaa) : null,
-                chaati: chaati ? parseFloat(chaati) : null,
-                gheera: gheera ? parseFloat(gheera) : null,
-                kaf: kaf ? parseFloat(kaf) : null,
-                shalwar_lambai: shalwar_lambai ? parseFloat(shalwar_lambai) : null,
-                puhncha: puhncha ? parseFloat(puhncha) : null,
-                shalwar_gheera: shalwar_gheera ? parseFloat(shalwar_gheera) : null,
-                chaati_around: chaati_around ? parseFloat(chaati_around) : null,
-                kamar_around: kamar_around ? parseFloat(kamar_around) : null,
-                hip_around: hip_around ? parseFloat(hip_around) : null,
-                kandha: kandha ? parseFloat(kandha) : null,
-                wskot_lambai: wskot_lambai ? parseFloat(wskot_lambai) : null,
-                wskot_teera: wskot_teera ? parseFloat(wskot_teera) : null,
-                wskot_gala: wskot_gala ? parseFloat(wskot_gala) : null,
-                wskot_chaati: wskot_chaati ? parseFloat(wskot_chaati) : null,
-                wskot_kamar: wskot_kamar ? parseFloat(wskot_kamar) : null,
-                wskot_hip: wskot_hip ? parseFloat(wskot_hip) : null,
+                qameez_lambai: qameez_lambai || null,
+                bazoo: bazoo || null,
+                teera: teera || null,
+                galaa: galaa || null,
+                chaati: chaati || null,
+                gheera: gheera || null,
+                kaf: kaf || null,
+                shalwar_lambai: shalwar_lambai || null,
+                puhncha: puhncha || null,
+                shalwar_gheera: shalwar_gheera || null,
+                chaati_around: chaati_around || null,
+                kamar_around: kamar_around || null,
+                hip_around: hip_around || null,
+                kandha: kandha || null,
+                wskot_lambai: wskot_lambai || null,
+                wskot_teera: wskot_teera || null,
+                wskot_gala: wskot_gala || null,
+                wskot_chaati: wskot_chaati || null,
+                wskot_kamar: wskot_kamar || null,
+                wskot_hip: wskot_hip || null,
             },
         });
 
@@ -132,11 +132,7 @@ export async function PUT(req) {
 
         fields.forEach(field => {
             if (data[field] !== undefined) {
-                if (field === 'unit' || field === 'notes') {
-                    updateData[field] = data[field];
-                } else {
-                    updateData[field] = data[field] === "" || data[field] === null ? null : parseFloat(data[field]);
-                }
+                updateData[field] = data[field] === "" ? null : (data[field] ?? null);
             }
         });
 

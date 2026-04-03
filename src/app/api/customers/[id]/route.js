@@ -67,7 +67,7 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
-        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance } = body;
+        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
 
         if (!name) {
             return NextResponse.json(
@@ -113,6 +113,7 @@ export async function PUT(req, { params }) {
                     code,
                     balance: newBalance,
                     accountCategoryId: accountCategoryId ? parseInt(accountCategoryId) : null,
+                    ...(image !== undefined && { image: image || null }),
                 },
                 include: {
                     accountCategory: true

@@ -9,8 +9,6 @@ import {
     TextField,
     InputAdornment,
     Card,
-    CardContent,
-    Grid,
     CircularProgress,
     Alert,
     Snackbar,
@@ -18,7 +16,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Autocomplete,
     Tooltip,
     Table,
     TableBody,
@@ -26,10 +23,8 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
-    Chip,
     Avatar,
-    Divider,
+    Grid,
 } from "@mui/material";
 import {
     Edit,
@@ -38,15 +33,13 @@ import {
     Plus,
     X as XIcon,
     Package,
-    Tag,
     Save,
 } from "lucide-react";
 
-export default function ProductManagementClient({ initialProducts, categories }) {
+export default function ProductManagementClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Dialog state
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedProdId, setSelectedProdId] = useState(null);
@@ -55,57 +48,20 @@ export default function ProductManagementClient({ initialProducts, categories })
     const [successMessage, setSuccessMessage] = useState("");
 
     const [formData, setFormData] = useState({
+        sku: "",
         name: "",
         description: "",
-        categoryId: "",
         quantity: 0,
         costPrice: "",
         unitPrice: "",
-        cuttingCost: "",
-        stitchingCost: "",
-        materialCostColor: "",
-        materialCostBain: "",
     });
 
-    // Quick-add category dialog
-    const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
-    const [newCatName, setNewCatName] = useState("");
-    const [newCatLoading, setNewCatLoading] = useState(false);
-    const [localCategories, setLocalCategories] = useState(categories);
-
-    /* ── helpers ─────────────────────────────────────── */
-
     const resetForm = () => {
-        setFormData({
-            name: "",
-            description: "",
-            categoryId: "",
-            quantity: 0,
-            costPrice: "",
-            unitPrice: "",
-            cuttingCost: "",
-            stitchingCost: "",
-            materialCostColor: "",
-            materialCostBain: "",
-        });
+        setFormData({ sku: "", name: "", description: "", quantity: 0, costPrice: "", unitPrice: "" });
         setEditMode(false);
         setSelectedProdId(null);
         setError("");
     };
-
-    const isStitching = () => {
-        if (!formData.categoryId) return false;
-        const cat = localCategories?.find(c => c.id === formData.categoryId);
-        return cat?.name?.toLowerCase() === "stitching";
-    };
-
-    const isNonStitching = () => {
-        if (!formData.categoryId) return false;
-        const cat = localCategories?.find(c => c.id === formData.categoryId);
-        return cat?.name?.toLowerCase() === "non-stitching";
-    };
-
-    /* ── handlers ────────────────────────────────────── */
 
     const handleOpen = () => {
         resetForm();
@@ -113,69 +69,26 @@ export default function ProductManagementClient({ initialProducts, categories })
     };
 
     const handleClose = () => {
-        if (!loading) {
-            setOpen(false);
-            resetForm();
-        }
+        if (!loading) { setOpen(false); resetForm(); }
     };
 
     const handleEdit = (prod) => {
         setEditMode(true);
         setSelectedProdId(prod.id);
         setFormData({
+            sku: prod.sku || "",
             name: prod.name || "",
             description: prod.description || "",
-            categoryId: prod.categoryId || "",
             quantity: prod.quantity || 0,
             costPrice: prod.costPrice || "",
             unitPrice: prod.unitPrice || "",
-            cuttingCost: prod.cuttingCost || "",
-            stitchingCost: prod.stitchingCost || "",
-            materialCostColor: prod.materialCostColor || "",
-            materialCostBain: prod.materialCostBain || "",
         });
         setOpen(true);
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => {
-            const updated = { ...prev, [name]: value };
-            const selectedCategory = localCategories?.find(c => c.id === updated.categoryId);
-            if (selectedCategory?.name?.toLowerCase() === "stitching") {
-                if (["cuttingCost", "stitchingCost", "materialCostColor", "materialCostBain", "categoryId"].includes(name)) {
-                    const cutting = parseFloat(updated.cuttingCost) || 0;
-                    const stitching = parseFloat(updated.stitchingCost) || 0;
-                    const materialColor = parseFloat(updated.materialCostColor) || 0;
-                    const materialBain = parseFloat(updated.materialCostBain) || 0;
-                    updated.costPrice = (cutting + stitching + materialColor + materialBain).toString();
-                }
-            }
-            return updated;
-        });
-    };
-
-    const handleQuickAddCategory = async () => {
-        if (!newCatName) return;
-        setNewCatLoading(true);
-        try {
-            const response = await fetch("/api/categories", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newCatName }),
-            });
-            if (!response.ok) throw new Error("Failed to add category");
-            const newCat = await response.json();
-            setLocalCategories(prev => [...prev, newCat]);
-            setFormData(prev => ({ ...prev, categoryId: newCat.id }));
-            setQuickAddCatOpen(false);
-            setNewCatName("");
-            setSuccessMessage("Category added successfully!");
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setNewCatLoading(false);
-        }
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async () => {
@@ -183,12 +96,7 @@ export default function ProductManagementClient({ initialProducts, categories })
         setError("");
         try {
             const method = editMode ? "PUT" : "POST";
-            const finalSku = editMode
-                ? products.find(p => p.id === selectedProdId)?.sku
-                : `PRD-${Date.now()}`;
-            const payload = editMode
-                ? { ...formData, id: selectedProdId, sku: finalSku }
-                : { ...formData, sku: finalSku };
+            const payload = editMode ? { ...formData, id: selectedProdId } : formData;
 
             const response = await fetch("/api/products", {
                 method,
@@ -204,7 +112,6 @@ export default function ProductManagementClient({ initialProducts, categories })
             const refreshRes = await fetch("/api/products");
             const refreshedProds = await refreshRes.json();
             setProducts(refreshedProds);
-
             setSuccessMessage(`Product ${editMode ? "updated" : "added"} successfully!`);
             handleClose();
         } catch (err) {
@@ -231,28 +138,16 @@ export default function ProductManagementClient({ initialProducts, categories })
 
     const filteredProducts = (products || []).filter(prod =>
         (prod.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (prod.category?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
+        (prod.sku || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    const selectedCategory = localCategories?.find(c => c.id === formData.categoryId) || null;
-
-    /* ── render ──────────────────────────────────────── */
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>
 
-            {/* ── Action bar ─────────────────────────────── */}
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 3,
-                    gap: 2,
-                }}
-            >
+            {/* ── Action bar ─────────────────────────────────── */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
                 <TextField
-                    placeholder="Search by name or category…"
+                    placeholder="Search by name or product code…"
                     variant="outlined"
                     size="small"
                     value={searchQuery}
@@ -260,9 +155,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                     sx={{ width: 360 }}
                     InputProps={{
                         startAdornment: (
-                            <InputAdornment position="start">
-                                <Search size={18} />
-                            </InputAdornment>
+                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
                         ),
                     }}
                 />
@@ -276,19 +169,16 @@ export default function ProductManagementClient({ initialProducts, categories })
                 </Button>
             </Box>
 
-            {/* ── Products table ──────────────────────────── */}
-            <Card
-                elevation={0}
-                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}
-            >
+            {/* ── Products table ──────────────────────────────── */}
+            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}>
                 <TableContainer>
                     <Table sx={{ minWidth: 650 }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: "action.hover" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Code</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Cost</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Cost Price</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Sale Price</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                             </TableRow>
@@ -296,17 +186,13 @@ export default function ProductManagementClient({ initialProducts, categories })
                         <TableBody>
                             {filteredProducts.length > 0 ? (
                                 filteredProducts.map((prod) => (
-                                    <TableRow
-                                        key={prod.id}
-                                        sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
-                                    >
+                                    <TableRow key={prod.id} sx={{ "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}>
                                         <TableCell>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                                                 <Avatar
                                                     variant="rounded"
                                                     sx={(t) => ({
-                                                        width: 36,
-                                                        height: 36,
+                                                        width: 36, height: 36,
                                                         bgcolor: t.palette.primary.light,
                                                         color: t.palette.primary.main,
                                                         borderRadius: 1.5,
@@ -315,32 +201,26 @@ export default function ProductManagementClient({ initialProducts, categories })
                                                     <Package size={18} />
                                                 </Avatar>
                                                 <Box>
-                                                    <Typography variant="subtitle2" fontWeight={600}>
-                                                        {prod.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {prod.description || "No description"}
-                                                    </Typography>
+                                                    <Typography variant="subtitle2" fontWeight={600}>{prod.name}</Typography>
+                                                    {prod.description && (
+                                                        <Typography variant="caption" color="text.secondary">{prod.description}</Typography>
+                                                    )}
                                                 </Box>
                                             </Box>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip
-                                                icon={<Tag size={12} />}
-                                                label={prod.category?.name || "Uncategorized"}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{ borderRadius: 1, fontWeight: 500 }}
-                                            />
+                                            <Typography variant="body2" fontFamily="monospace" sx={{ bgcolor: "action.hover", px: 1, py: 0.3, borderRadius: 1, display: "inline-block" }}>
+                                                {prod.sku}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip
-                                                label={`${prod.quantity} units`}
-                                                size="small"
-                                                color={prod.quantity <= 5 ? "error" : "default"}
-                                                variant={prod.quantity <= 5 ? "filled" : "outlined"}
-                                                sx={{ borderRadius: 1, fontWeight: 600 }}
-                                            />
+                                            <Typography
+                                                variant="body2"
+                                                fontWeight={600}
+                                                sx={{ color: prod.quantity <= 5 ? "error.main" : "success.main" }}
+                                            >
+                                                {prod.quantity} units
+                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" fontWeight={500}>
@@ -372,9 +252,7 @@ export default function ProductManagementClient({ initialProducts, categories })
                                 <TableRow>
                                     <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                                         <Package size={40} color="#d1d5db" />
-                                        <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-                                            No products found.
-                                        </Typography>
+                                        <Typography color="text.secondary" sx={{ mt: 1.5 }}>No products found.</Typography>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -383,279 +261,87 @@ export default function ProductManagementClient({ initialProducts, categories })
                 </TableContainer>
             </Card>
 
-            {/* ── Add / Edit Product Dialog ───────────────── */}
-            <Dialog
-                open={open}
-                onClose={handleClose}
-                maxWidth="lg"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
-            >
-                <DialogTitle
-                    sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}
-                >
+            {/* ── Add / Edit Product Dialog ───────────────────── */}
+            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
                     {editMode ? "Edit Product" : "Add New Product"}
                 </DialogTitle>
 
                 <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
                     {error && (
-                        <Alert
-                            severity="error"
-                            variant="filled"
-                            onClose={() => setError("")}
-                            sx={{ mb: 2.5, borderRadius: 2 }}
-                        >
+                        <Alert severity="error" variant="filled" onClose={() => setError("")} sx={{ mb: 2.5, borderRadius: 2 }}>
                             {error}
                         </Alert>
                     )}
 
                     <Grid container spacing={2}>
-
-                        {/* Row 1: Category (+) | Product Name | Sale Price */}
-                        <Grid size={{ xs: 5 }}>
-                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                                <Autocomplete
-                                    size="small"
-                                    options={localCategories || []}
-                                    getOptionLabel={(option) => option.name || ""}
-                                    value={selectedCategory}
-                                    onChange={(_, newValue) => {
-                                        handleInputChange({
-                                            target: { name: "categoryId", value: newValue ? newValue.id : "" },
-                                        });
-                                    }}
-                                    componentsProps={{ paper: { sx: { minWidth: 300 } } }}
-                                    sx={{ minWidth: 300, flexShrink: 0 }}
-                                    renderInput={(params) => (
-                                        <TextField {...params} label="Category" variant="outlined" />
-                                    )}
-                                />
-                                <Tooltip title="New Category">
-                                    <IconButton
-                                        onClick={() => setQuickAddCatOpen(true)}
-                                        size="small"
-                                        sx={(t) => ({
-                                            bgcolor: t.palette.primary.light,
-                                            color: t.palette.primary.main,
-                                            borderRadius: 1.5,
-                                            flexShrink: 0,
-                                            "&:hover": { bgcolor: t.palette.primary.main, color: "#fff" },
-                                        })}
-                                    >
-                                        <Plus size={18} />
-                                    </IconButton>
-                                </Tooltip>
-                            </Box>
-                        </Grid>
-
-                        <Grid size={{ xs: 3.5 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                fullWidth
-                                size="small"
-                                label="Product Name"
-                                name="name"
-                                required
+                                fullWidth size="small" label="Product Code" name="sku" required
+                                placeholder="e.g. PRD-001"
+                                value={formData.sku}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                fullWidth size="small" label="Product Name" name="name" required
                                 placeholder="e.g. Cotton Shirt"
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 variant="outlined"
                             />
                         </Grid>
-
-                        <Grid size={{ xs: 3.5 }}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <TextField
-                                fullWidth
-                                size="small"
-                                label="Sale Price (Rs.)"
-                                name="unitPrice"
-                                type="number"
-                                required
-                                placeholder="e.g. 4500"
+                                fullWidth size="small" label="Cost Price" name="costPrice" type="number"
+                                placeholder="0.00"
+                                value={formData.costPrice}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                            <TextField
+                                fullWidth size="small" label="Sale Price" name="unitPrice" type="number" required
+                                placeholder="0.00"
                                 value={formData.unitPrice}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                }}
+                                InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                             />
                         </Grid>
-
-                        {/* Row 2: Cost fields — changes based on category */}
-                        {isStitching() ? (
-                            <>
-                                {/* Row A: Cutting | Stitching | Material with Color | Material with Bain */}
-                                <Grid size={{ xs: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Cutting Cost (Rs.)"
-                                        name="cuttingCost"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 500"
-                                        value={formData.cuttingCost}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Stitching Cost (Rs.)"
-                                        name="stitchingCost"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 1500"
-                                        value={formData.stitchingCost}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Material Cost with Color (Rs.)"
-                                        name="materialCostColor"
-                                        type="number"
-                                        placeholder="e.g. 200"
-                                        value={formData.materialCostColor}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 3 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Material Cost with Bain (Rs.)"
-                                        name="materialCostBain"
-                                        type="number"
-                                        placeholder="e.g. 150"
-                                        value={formData.materialCostBain}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                            </>
-                        ) : isNonStitching() ? (
-                            <>
-                                <Grid size={{ xs: 6 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Cost Price (Rs.)"
-                                        name="costPrice"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 3000"
-                                        value={formData.costPrice}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Initial Quantity"
-                                        name="quantity"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 10"
-                                        value={formData.quantity}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                    />
-                                </Grid>
-                            </>
-                        ) : (
-                            <>
-                                <Grid size={{ xs: 6 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Cost Price (Rs.)"
-                                        name="costPrice"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 3000"
-                                        value={formData.costPrice}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        label="Initial Quantity"
-                                        name="quantity"
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 10"
-                                        value={formData.quantity}
-                                        onChange={handleInputChange}
-                                        variant="outlined"
-                                    />
-                                </Grid>
-                            </>
-                        )}
-
-                        {/* Description — full width */}
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                            <TextField
+                                fullWidth size="small" label="Stock Quantity" name="quantity" type="number"
+                                placeholder="0"
+                                value={formData.quantity}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
                         <Grid size={{ xs: 12 }}>
                             <TextField
-                                fullWidth
-                                size="small"
-                                label="Description"
-                                name="description"
-                                placeholder="e.g. High quality cotton fabric with premium stitching…"
-                                multiline
-                                rows={3}
+                                fullWidth size="small" label="Description" name="description"
+                                placeholder="Optional description…"
+                                multiline rows={2}
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 variant="outlined"
-                                sx={{ width: "100%" }}
                             />
                         </Grid>
-
                     </Grid>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
-                    <Button
-                        onClick={handleClose}
-                        variant="outlined"
-                        color="inherit"
-                        disabled={loading}
-                        startIcon={<XIcon size={17} />}
-                        sx={{ borderRadius: 2, textTransform: "none" }}
-                    >
+                    <Button onClick={handleClose} variant="outlined" color="inherit" disabled={loading} startIcon={<XIcon size={17} />} sx={{ borderRadius: 2, textTransform: "none" }}>
                         Cancel
                     </Button>
                     <Button
-                        variant="contained"
-                        onClick={handleSubmit}
-                        disabled={loading}
+                        variant="contained" onClick={handleSubmit}
+                        disabled={loading || !formData.name?.trim() || !formData.sku?.trim()}
                         startIcon={loading ? null : <Save size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none", px: 3, fontWeight: 600 }}
                     >
@@ -664,62 +350,13 @@ export default function ProductManagementClient({ initialProducts, categories })
                 </DialogActions>
             </Dialog>
 
-            {/* ── Quick Add Category Dialog ───────────────── */}
-            <Dialog
-                open={quickAddCatOpen}
-                onClose={() => setQuickAddCatOpen(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
-            >
-                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
-                    New Category
-                </DialogTitle>
-                <DialogContent sx={{ pt: "20px !important" }}>
-                    <TextField
-                        fullWidth
-                        size="small"
-                        label="Category Name"
-                        value={newCatName}
-                        onChange={(e) => setNewCatName(e.target.value)}
-                        autoFocus
-                        onKeyDown={(e) => e.key === "Enter" && handleQuickAddCategory()}
-                        variant="outlined"
-                    />
-                </DialogContent>
-                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
-                    <Button
-                        onClick={() => setQuickAddCatOpen(false)}
-                        variant="outlined"
-                        color="inherit"
-                        sx={{ borderRadius: 2, textTransform: "none" }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleQuickAddCategory}
-                        disabled={newCatLoading || !newCatName.trim()}
-                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-                    >
-                        {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Add Category"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* ── Success Snackbar ────────────────────────── */}
+            {/* ── Success Snackbar ────────────────────────────── */}
             <Snackbar
-                open={!!successMessage}
-                autoHideDuration={4000}
+                open={!!successMessage} autoHideDuration={4000}
                 onClose={() => setSuccessMessage("")}
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
-                <Alert
-                    onClose={() => setSuccessMessage("")}
-                    severity="success"
-                    variant="filled"
-                    sx={{ width: "100%", borderRadius: 2 }}
-                >
+                <Alert onClose={() => setSuccessMessage("")} severity="success" variant="filled" sx={{ width: "100%", borderRadius: 2 }}>
                     {successMessage}
                 </Alert>
             </Snackbar>

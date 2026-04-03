@@ -191,9 +191,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [cartItems, setCartItems] = useState([
         {
             quantity: "", unitPrice: "", discount: "", totalPrice: 0,
-            bookingType: "", // No default selection
-            // Per-Item Stitching Details
-            isStitching: false,
+            bookingType: "STITCHING",
+            isStitching: true,
             cuffType: "",
             pohnchaType: "",
             gheraType: "",
@@ -244,14 +243,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         if (product) {
             const newItems = [...cartItems];
 
-            // Auto-select bookingType based on product category
-            // Category "Suit" -> needs stitching (STITCHING enum displays breakdown)
-            // Category "Stitched" -> readymade (SUIT enum hides breakdown)
-            let bookingType = "SUIT";
-            if (product.category?.name?.toLowerCase() === "stitching") {
-                bookingType = "STITCHING";
-            }
-
             const baseItem = {
                 ...newItems[index],
                 productId: product.id,
@@ -260,12 +251,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 quantity: newItems[index].quantity || 1,
                 discount: newItems[index].discount || 0,
                 totalPrice: ((newItems[index].quantity || 1) * parseFloat(product.unitPrice || 0)) - (parseFloat(newItems[index].discount) || 0),
-                bookingType: bookingType,
-                isStitching: bookingType === 'STITCHING',
-                isCollapsed: bookingType === 'SUIT', // Auto-collapse for readymade
+                bookingType: "STITCHING",
+                isStitching: true,
+                isCollapsed: false,
             };
-            // Pre-fill measurements from customer's saved record when stitching
-            newItems[index] = (bookingType === 'STITCHING' && customerMeasurements)
+            // Pre-fill measurements from customer's saved record
+            newItems[index] = customerMeasurements
                 ? applyMeasurementToItem(baseItem, customerMeasurements)
                 : baseItem;
             setCartItems(newItems);
@@ -330,9 +321,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 unitPrice: 0,
                 discount: 0,
                 totalPrice: 0,
-                bookingType: "", // No default
-                isStitching: false,
-                isCollapsed: true,
+                bookingType: "STITCHING",
+                isStitching: true,
+                isCollapsed: false,
                 ...newStitchingDetails,
             }
         ]);
@@ -758,13 +749,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                                 <TextField {...params} label="Select Product" size="small" required fullWidth sx={FIELD_SX} />
                                                             )}
                                                         />
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Chip size="small"
-                                                                label={item.bookingType === 'STITCHING' ? 'Suit (Stitching)' : 'Stitched (Readymade)'}
-                                                                variant="outlined"
-                                                                sx={{ fontSize: '0.68rem', height: 18, color: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#6b7280', borderColor: item.bookingType === 'STITCHING' ? '#8b5cf6' : '#e5e7eb', bgcolor: item.bookingType === 'STITCHING' ? '#f5f3ff' : '#f9fafb' }}
-                                                            />
-                                                        </Box>
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell>

@@ -4,11 +4,6 @@ import prisma from "@/lib/prisma";
 export async function GET() {
     try {
         const products = await prisma.product.findMany({
-            include: {
-                category: {
-                    select: { name: true }
-                }
-            },
             orderBy: { name: "asc" },
         });
         return NextResponse.json(products);
@@ -24,11 +19,11 @@ export async function GET() {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { sku, name, description, categoryId, quantity, costPrice, unitPrice, cuttingCost, stitchingCost, materialCost } = body;
+        const { sku, name, description, quantity, costPrice, unitPrice } = body;
 
         if (!sku || !name) {
             return NextResponse.json(
-                { error: "SKU and Name are required" },
+                { error: "Code and Name are required" },
                 { status: 400 }
             );
         }
@@ -38,13 +33,9 @@ export async function POST(req) {
                 sku,
                 name,
                 description,
-                categoryId: categoryId ? parseInt(categoryId) : null,
                 quantity: quantity ? parseInt(quantity) : 0,
                 costPrice: costPrice ? parseFloat(costPrice) : null,
                 unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-                cuttingCost: cuttingCost ? parseFloat(cuttingCost) : null,
-                stitchingCost: stitchingCost ? parseFloat(stitchingCost) : null,
-                materialCost: materialCost ? parseFloat(materialCost) : null,
             },
         });
 
@@ -67,11 +58,11 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, sku, name, description, categoryId, quantity, costPrice, unitPrice, cuttingCost, stitchingCost, materialCost } = body;
+        const { id, sku, name, description, quantity, costPrice, unitPrice } = body;
 
         if (!id || !sku || !name) {
             return NextResponse.json(
-                { error: "ID, SKU and Name are required" },
+                { error: "ID, Code and Name are required" },
                 { status: 400 }
             );
         }
@@ -82,13 +73,9 @@ export async function PUT(req) {
                 sku,
                 name,
                 description,
-                categoryId: categoryId ? parseInt(categoryId) : null,
                 quantity: quantity ? parseInt(quantity) : 0,
                 costPrice: costPrice ? parseFloat(costPrice) : null,
                 unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-                cuttingCost: cuttingCost ? parseFloat(cuttingCost) : null,
-                stitchingCost: stitchingCost ? parseFloat(stitchingCost) : null,
-                materialCost: materialCost ? parseFloat(materialCost) : null,
             },
         });
 

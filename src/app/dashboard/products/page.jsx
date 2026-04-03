@@ -13,14 +13,8 @@ export const metadata = {
 async function getProducts() {
     try {
         const products = await prisma.product.findMany({
-            include: {
-                category: {
-                    select: { name: true }
-                }
-            },
             orderBy: { name: "asc" },
         });
-        // Convert Decimal to string/number for serialization
         return JSON.parse(JSON.stringify(products));
     } catch (error) {
         console.error("Failed to fetch products:", error);
@@ -28,21 +22,8 @@ async function getProducts() {
     }
 }
 
-async function getCategories() {
-    try {
-        const categories = await prisma.category.findMany({
-            orderBy: { name: "asc" },
-        });
-        return categories;
-    } catch (error) {
-        console.error("Failed to fetch categories:", error);
-        return [];
-    }
-}
-
 export default async function ProductManagementPage() {
     const products = await getProducts();
-    const categories = await getCategories();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -79,7 +60,7 @@ export default async function ProductManagementPage() {
                 </Box>
             </Box>
 
-            <ProductManagementClient initialProducts={products} categories={categories} />
+            <ProductManagementClient initialProducts={products} />
         </Box>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import {
     Table,
@@ -49,6 +49,8 @@ import {
     Users,
     BookText,
     Tag,
+    Camera,
+    X,
 } from "lucide-react";
 
 export default function CustomerManagementClient({ initialCustomers, accountCategories }) {
@@ -67,6 +69,11 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+
+    // Image upload state
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
 
     // First category in the list as default
     const getDefaultCategoryId = (cats) => {
@@ -94,6 +101,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             notes: "",
             balance: 0,
         });
+        setImageFile(null);
+        setImagePreview(null);
         setError("");
         setLoading(false);
     };
@@ -121,12 +130,43 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    const handleRemoveImage = () => {
+        setImageFile(null);
+        setImagePreview(null);
+        setFormData((prev) => ({ ...prev, image: null }));
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError("");
 
         try {
+            let imageUrl = formData.image || null;
+
+            // Upload new image if selected
+            if (imageFile) {
+                const uploadData = new FormData();
+                uploadData.append("file", imageFile);
+                const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
+                if (!uploadRes.ok) {
+                    const d = await uploadRes.json();
+                    throw new Error(d.error || "Image upload failed");
+                }
+                const uploadJson = await uploadRes.json();
+                imageUrl = uploadJson.url;
+            } else if (imagePreview === null) {
+                imageUrl = null; // explicitly removed
+            }
+
             const isEditing = formData.id;
             const url = isEditing ? `/api/customers/${formData.id}` : "/api/customers";
             const method = isEditing ? "PUT" : "POST";
@@ -134,7 +174,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, image: imageUrl }),
             });
 
             if (!response.ok) {
@@ -205,7 +245,10 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             accountCategoryId: customer.accountCategoryId || (categories.length > 0 ? categories[0].id : null),
             notes: customer.notes || "",
             balance: customer.balance || 0,
+            image: customer.image || null,
         });
+        setImageFile(null);
+        setImagePreview(customer.image || null);
         setShowForm(true);
     };
 
@@ -417,6 +460,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     <TableCell>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                                             <Avatar
+                                                src={customer.image || undefined}
                                                 sx={{
                                                     bgcolor: "primary.main",
                                                     width: 38,
@@ -425,7 +469,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                                     fontWeight: 700,
                                                 }}
                                             >
-                                                {customer.name.charAt(0).toUpperCase()}
+                                                {!customer.image && customer.name.charAt(0).toUpperCase()}
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="subtitle2" fontWeight={600}>
@@ -576,6 +620,44 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         >
                             Add Category
                         </Button>
+                    </Box>
+
+                    {/* Image Upload */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                        <Box sx={{ position: "relative" }}>
+                            <Avatar
+                                src={imagePreview || undefined}
+                                sx={{ width: 72, height: 72, fontSize: "1.6rem", fontWeight: 700, bgcolor: "primary.main", cursor: "pointer", border: "2px dashed", borderColor: imagePreview ? "transparent" : "primary.main" }}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {!imagePreview && <Camera size={28} />}
+                            </Avatar>
+                            {imagePreview && (
+                                <IconButton
+                                    size="small"
+                                    onClick={handleRemoveImage}
+                                    sx={{ position: "absolute", top: -6, right: -6, bgcolor: "error.main", color: "white", width: 20, height: 20, "&:hover": { bgcolor: "error.dark" } }}
+                                >
+                                    <X size={12} />
+                                </IconButton>
+                            )}
+                        </Box>
+                        <Box>
+                            <Typography variant="body2" fontWeight={600}>Customer Photo</Typography>
+                            <Typography variant="caption" color="text.secondary">JPEG, PNG, WebP up to 5MB</Typography>
+                            <Box sx={{ mt: 0.5 }}>
+                                <Button size="small" variant="outlined" onClick={() => fileInputRef.current?.click()} sx={{ borderRadius: 2, textTransform: "none", fontSize: "0.75rem" }}>
+                                    {imagePreview ? "Change Photo" : "Upload Photo"}
+                                </Button>
+                            </Box>
+                        </Box>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            style={{ display: "none" }}
+                            onChange={handleImageChange}
+                        />
                     </Box>
 
                     <Grid container spacing={2}>

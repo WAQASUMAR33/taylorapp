@@ -63,14 +63,8 @@ async function getCustomers() {
 async function getProducts() {
     try {
         const products = await prisma.product.findMany({
-            where: {
-                OR: [
-                    { category: { name: "Stitching" } },
-                    { quantity: { gt: 0 } },
-                ]
-            },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true, category: { select: { name: true } } }
+            select: { id: true, name: true, sku: true, unitPrice: true, quantity: true }
         });
         return JSON.parse(JSON.stringify(products));
     } catch (error) {

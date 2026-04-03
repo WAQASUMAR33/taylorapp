@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance } = body;
+        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
 
         if (!name) {
             return NextResponse.json(
@@ -22,6 +22,7 @@ export async function POST(req) {
                     email,
                     address,
                     notes,
+                    image: image || null,
                     balance: 0, // Start at 0, ledger will update it
                     code: code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
                     accountCategoryId: accountCategoryId ? parseInt(accountCategoryId) : null,
