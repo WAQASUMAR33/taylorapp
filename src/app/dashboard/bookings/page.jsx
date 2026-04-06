@@ -30,11 +30,13 @@ async function getBookings() {
                         }
                     }
                 },
+                billingCustomer: {
+                    select: { id: true, name: true, phone: true }
+                },
                 items: {
                     include: {
-                        product: {
-                            select: { id: true, name: true, sku: true }
-                        }
+                        product: { select: { id: true, name: true, sku: true } },
+                        selectedOptions: { include: { stitchingOption: true } }
                     }
                 }
             },
@@ -73,6 +75,19 @@ async function getProducts() {
     }
 }
 
+async function getStitchingOptions() {
+    try {
+        const options = await prisma.stitching_option.findMany({
+            where: { isActive: true },
+            orderBy: { createdAt: "asc" }
+        });
+        return JSON.parse(JSON.stringify(options));
+    } catch (error) {
+        console.error("Database error fetching stitching options:", error);
+        return [];
+    }
+}
+
 async function getStaffCustomers() {
     try {
         const staff = await prisma.customer.findMany({
@@ -96,6 +111,7 @@ export default async function BookingsPage() {
     const customers = await getCustomers();
     const products = await getProducts();
     const employees = await getStaffCustomers();
+    const stitchingOptions = await getStitchingOptions();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -139,6 +155,7 @@ export default async function BookingsPage() {
                     customers={customers}
                     products={products}
                     employees={employees}
+                    stitchingOptions={stitchingOptions}
                 />
             </Box>
         </Box>

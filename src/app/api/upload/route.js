@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(req) {
     try {
@@ -21,19 +19,45 @@ export async function POST(req) {
             return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 });
         }
 
+        // Convert file to base64
         const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
+        const base64 = Buffer.from(bytes).toString("base64");
         const ext = file.name.split(".").pop().toLowerCase();
-        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const uploadDir = path.join(process.cwd(), "public", "uploads", "customers");
+        const base64Data = `data:${file.type};base64,${base64}`;
 
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(path.join(uploadDir, filename), buffer);
+        const uploadUrl = process.env.NEXT_PUBLIC_IMAGE_UPLOAD_URL;
+        const backUrl = process.env.NEXT_PUBLIC_IMAGE_BACK_URL;
 
-        return NextResponse.json({ url: `/uploads/customers/${filename}` }, { status: 201 });
+        // Send base64 image to PHP endpoint
+        const phpRes = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64Data, ext }),
+        });
+
+        const rawText = await phpRes.text();
+
+        if (!phpRes.ok) {
+            throw new Error("PHP upload failed: " + rawText);
+        }
+
+        let phpJson;
+        try {
+            phpJson = JSON.parse(rawText);
+        } catch {
+            throw new Error("PHP returned non-JSON: " + rawText);
+        }
+
+        // Accept either { filename } or { url } or { path } or { file }
+        const filename = phpJson.image_url || phpJson.filename || phpJson.file || phpJson.path || phpJson.name;
+        if (!filename && !phpJson.url) {
+            throw new Error(phpJson.error || phpJson.message || "Upload failed: " + rawText);
+        }
+
+        const url = phpJson.url || `${backUrl}/${filename}`;
+        return NextResponse.json({ url }, { status: 201 });
     } catch (error) {
         console.error("Upload failed:", error);
-        return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+        return NextResponse.json({ error: "Upload failed: " + error.message }, { status: 500 });
     }
 }

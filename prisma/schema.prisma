@@ -49,6 +49,7 @@ model customer {
   balance           Decimal          @default(0.00) @db.Decimal(10, 2)
   bills             bill[]
   bookings          booking[]
+  billingBookings   booking[]        @relation("BookingBillingCustomer")
   accountCategory   accountCategory? @relation(fields: [accountCategoryId], references: [id])
   ledgerEntries     ledgerentry[]
   measurements      measurement[]
@@ -292,30 +293,33 @@ model stockmovement {
 model booking {
   id              Int            @id @default(autoincrement())
   bookingNumber   String         @unique
-  customerId      Int
-  bookingType     booking_type
-  bookingDate     DateTime       @default(now())
-  returnDate      DateTime?
-  deliveryDate    DateTime?
-  trialDate       DateTime?
-  tailorId        Int?
-  cutterId        Int?
-  status          booking_status @default(PENDING)
-  totalAmount     Decimal        @db.Decimal(10, 2)
-  advanceAmount   Decimal        @default(0.00) @db.Decimal(10, 2)
-  remainingAmount  Decimal        @db.Decimal(10, 2)
-  notes            String?
-  
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  customer        customer       @relation(fields: [customerId], references: [id])
-  cutter          customer?      @relation("BookingCutter", fields: [cutterId], references: [id])
-  tailor          customer?      @relation("BookingTailor", fields: [tailorId], references: [id])
-  items           booking_item[]
-  staff           booking_staff[]
-  ledgerEntries   ledgerentry[]
+  customerId        Int
+  billingCustomerId Int?
+  bookingType       booking_type
+  bookingDate       DateTime       @default(now())
+  returnDate        DateTime?
+  deliveryDate      DateTime?
+  trialDate         DateTime?
+  tailorId          Int?
+  cutterId          Int?
+  status            booking_status @default(PENDING)
+  totalAmount       Decimal        @db.Decimal(10, 2)
+  advanceAmount     Decimal        @default(0.00) @db.Decimal(10, 2)
+  remainingAmount   Decimal        @db.Decimal(10, 2)
+  notes             String?
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  customer          customer       @relation(fields: [customerId], references: [id])
+  billingCustomer   customer?      @relation("BookingBillingCustomer", fields: [billingCustomerId], references: [id])
+  cutter            customer?      @relation("BookingCutter", fields: [cutterId], references: [id])
+  tailor            customer?      @relation("BookingTailor", fields: [tailorId], references: [id])
+  items             booking_item[]
+  staff             booking_staff[]
+  ledgerEntries     ledgerentry[]
 
   @@index([customerId], map: "Booking_customerId_fkey")
+  @@index([billingCustomerId], map: "Booking_billingCustomerId_fkey")
   @@index([tailorId], map: "Booking_tailorId_fkey")
   @@index([cutterId], map: "Booking_cutterId_fkey")
 }
@@ -335,7 +339,7 @@ model booking_staff {
 model booking_item {
   id            Int      @id @default(autoincrement())
   bookingId     Int
-  productId     Int
+  productId     Int?
   quantity      Int
   unitPrice     Decimal  @db.Decimal(10, 2)
   totalPrice    Decimal  @db.Decimal(10, 2)
@@ -357,11 +361,38 @@ model booking_item {
   hasShalwarPocket Boolean?       @default(false)
   hasFrontPockets  Boolean?       @default(false)
 
-  booking       booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  product       product  @relation(fields: [productId], references: [id])
+  // Per-item status & note
+  itemStatus       String?        @default("PENDING")
+  itemNote         String?        @db.Text
+
+  booking          booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  product          product? @relation(fields: [productId], references: [id])
+  selectedOptions  booking_item_stitching_option[]
 
   @@index([bookingId], map: "BookingItem_bookingId_fkey")
   @@index([productId], map: "BookingItem_productId_fkey")
+}
+
+model stitching_option {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bookingItemOptions booking_item_stitching_option[]
+}
+
+model booking_item_stitching_option {
+  id                Int              @id @default(autoincrement())
+  bookingItemId     Int
+  stitchingOptionId Int
+  price             Decimal          @db.Decimal(10, 2)
+  bookingItem       booking_item     @relation(fields: [bookingItemId], references: [id], onDelete: Cascade)
+  stitchingOption   stitching_option @relation(fields: [stitchingOptionId], references: [id])
+
+  @@index([bookingItemId])
+  @@index([stitchingOptionId])
 }
 
 model material {

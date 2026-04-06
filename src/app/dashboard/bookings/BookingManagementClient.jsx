@@ -64,12 +64,16 @@ const BOOKING_STATUSES = [
     { value: "CANCELLED", label: "Cancelled", color: "#ef4444" }
 ];
 
-export default function BookingManagementClient({ initialBookings, customers, products, employees }) {
+export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
+    const stitchingOptions = initialStitchingOptions || [];
     const [bookings, setBookings] = useState(Array.isArray(initialBookings) ? initialBookings : []);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCustomerId, setFilterCustomerId] = useState(null);
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+    const [filterDeliveryFrom, setFilterDeliveryFrom] = useState("");
+    const [filterDeliveryTo, setFilterDeliveryTo] = useState("");
+    const [filterItemStatus, setFilterItemStatus] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -168,6 +172,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         customerName: "",
         customerAddress: "",
         customerPhone: "",
+        billingCustomerId: "",
+        sameBilling: true,
         bookingType: "STITCHING",
         bookingDate: "",
         returnDate: "",
@@ -190,19 +196,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     // Cart items for the grid
     const [cartItems, setCartItems] = useState([
         {
-            quantity: "", unitPrice: "", discount: "", totalPrice: 0,
+            selectedOptionIds: [], totalPrice: 0,
             bookingType: "STITCHING",
             isStitching: true,
-            cuffType: "",
-            pohnchaType: "",
-            gheraType: "",
-            galaType: "",
-            galaSize: "",
-            pocketType: "",
-            shalwarType: "",
-            hasShalwarPocket: false,
-            hasFrontPockets: false,
-            // Measurements
+            itemStatus: "PENDING", itemNote: "",
+            cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
+            pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
             qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
             gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
             hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
@@ -242,20 +241,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const product = (products || []).find(p => p.id === parseInt(productId));
         if (product) {
             const newItems = [...cartItems];
-
             const baseItem = {
                 ...newItems[index],
                 productId: product.id,
                 productName: product.name,
-                unitPrice: parseFloat(product.unitPrice || 0),
-                quantity: newItems[index].quantity || 1,
-                discount: newItems[index].discount || 0,
-                totalPrice: ((newItems[index].quantity || 1) * parseFloat(product.unitPrice || 0)) - (parseFloat(newItems[index].discount) || 0),
                 bookingType: "STITCHING",
                 isStitching: true,
                 isCollapsed: false,
             };
-            // Pre-fill measurements from customer's saved record
             newItems[index] = customerMeasurements
                 ? applyMeasurementToItem(baseItem, customerMeasurements)
                 : baseItem;
@@ -263,68 +256,38 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
     };
 
-    const handleQuantityChange = (index, quantity) => {
-        const newItems = [...cartItems];
-        const qty = parseFloat(quantity) || 0;
-        const price = parseFloat(newItems[index].unitPrice) || 0;
-        const discount = parseFloat(newItems[index].discount) || 0;
-        newItems[index].quantity = qty;
-        newItems[index].totalPrice = (qty * price) - discount;
-        setCartItems(newItems);
+    const calculateItemTotal = (item, opts) => {
+        const options = opts || stitchingOptions;
+        return (item.selectedOptionIds || []).reduce((sum, id) => {
+            const opt = options.find(o => o.id === id);
+            return sum + (opt ? parseFloat(opt.price) : 0);
+        }, 0);
     };
 
-    const handleDiscountChange = (index, discount) => {
+    const handleToggleStitchingOption = (itemIndex, optionId) => {
         const newItems = [...cartItems];
-        const qty = parseFloat(newItems[index].quantity) || 0;
-        const price = parseFloat(newItems[index].unitPrice) || 0;
-        const disc = parseFloat(discount) || 0;
-        newItems[index].discount = disc;
-        newItems[index].totalPrice = (qty * price) - disc;
+        const item = newItems[itemIndex];
+        const ids = item.selectedOptionIds || [];
+        const exists = ids.includes(optionId);
+        item.selectedOptionIds = exists ? ids.filter(id => id !== optionId) : [...ids, optionId];
+        item.totalPrice = calculateItemTotal(item, stitchingOptions);
         setCartItems(newItems);
-    };
-
-    const calculateItemTotal = (item) => {
-        const qty = parseFloat(item.quantity) || 0;
-        const price = parseFloat(item.unitPrice) || 0;
-        const disc = parseFloat(item.discount) || 0;
-        return (qty * price) - disc;
     };
 
     const handleAddRow = () => {
-        const lastItem = cartItems[cartItems.length - 1];
-        const newId = cartItems.length > 0 ? Math.max(...cartItems.map(i => i.id)) + 1 : 1;
-
-        let newStitchingDetails = {
-            isStitching: false,
-            cuffType: "",
-            pohnchaType: "",
-            gheraType: "",
-            galaType: "",
-            galaSize: "",
-            pocketType: "",
-            shalwarType: "",
-            hasShalwarPocket: false,
-            hasFrontPockets: false,
-            // Measurements
-            qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
-            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
-            hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
-        };
-
+        const newId = cartItems.length > 0 ? Math.max(...cartItems.map(i => i.id || 0)) + 1 : 1;
         setCartItems([
             ...cartItems,
             {
                 id: newId,
-                productId: "",
-                productName: "",
-                quantity: 1,
-                unitPrice: 0,
-                discount: 0,
-                totalPrice: 0,
-                bookingType: "STITCHING",
-                isStitching: true,
-                isCollapsed: false,
-                ...newStitchingDetails,
+                productId: "", productName: "",
+                selectedOptionIds: [], totalPrice: 0,
+                bookingType: "STITCHING", isStitching: true, isCollapsed: false,
+                cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
+                pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
+                qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
+                gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+                hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
             }
         ]);
     };
@@ -344,7 +307,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setLoading(true);
         setError("");
 
-        const validItems = cartItems.filter(item => item.productId && item.quantity > 0);
+        const validItems = cartItems.filter(item => (item.selectedOptionIds || []).length > 0);
 
         if (!formData.customerId) {
             setError("Please select a customer");
@@ -353,7 +316,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
 
         if (validItems.length === 0) {
-            setError("Please add at least one product");
+            setError("Please select at least one stitching option");
             setLoading(false);
             return;
         }
@@ -361,6 +324,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         try {
             const payload = {
                 customerId: formData.customerId,
+                billingCustomerId: (!formData.sameBilling && formData.billingCustomerId) ? formData.billingCustomerId : null,
                 bookingType: formData.bookingType,
                 bookingDate: formData.bookingDate,
                 returnDate: formData.returnDate || null,
@@ -373,11 +337,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 remainingAmount: balanceAmount,
                 notes: formData.notes,
                 items: validItems.map(item => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    discount: item.discount,
+                    productId: item.productId || null,
+                    quantity: 1,
+                    unitPrice: item.totalPrice,
+                    discount: 0,
                     totalPrice: item.totalPrice,
+                    selectedOptionIds: item.selectedOptionIds || [],
+                    itemStatus: item.itemStatus || "PENDING",
+                    itemNote: item.itemNote || null,
                     // Per-Item Stitching Details
                     cuffType: item.cuffType,
                     pohnchaType: item.pohnchaType,
@@ -438,6 +405,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             customerName: "",
             customerAddress: "",
             customerPhone: "",
+            billingCustomerId: "",
+            sameBilling: true,
             bookingType: "STITCHING",
             bookingDate: new Date().toISOString().split('T')[0],
             returnDate: "",
@@ -459,7 +428,17 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             hasFrontPockets: false
         });
         setCartItems([
-            { id: 1, productId: "", productName: "", quantity: "", unitPrice: "", discount: "", totalPrice: 0, bookingType: "STITCHING", isStitching: true, isCollapsed: false }
+            {
+                id: 1, productId: "", productName: "",
+                selectedOptionIds: [], totalPrice: 0,
+                bookingType: "STITCHING", isStitching: true, isCollapsed: false,
+                itemStatus: "PENDING", itemNote: "",
+                cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
+                pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
+                qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
+                gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+                hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
+            }
         ]);
     };
 
@@ -576,7 +555,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const matchesFrom = !filterDateFrom || bDate >= filterDateFrom;
         const matchesTo   = !filterDateTo   || bDate <= filterDateTo;
 
-        return matchesSearch && matchesCustomer && matchesFrom && matchesTo;
+        const dDate = b.deliveryDate ? b.deliveryDate.slice(0, 10) : "";
+        const matchesDeliveryFrom = !filterDeliveryFrom || dDate >= filterDeliveryFrom;
+        const matchesDeliveryTo   = !filterDeliveryTo   || dDate <= filterDeliveryTo;
+
+        const matchesItemStatus = !filterItemStatus ||
+            (b.items || []).some(item => (item.itemStatus || "PENDING") === filterItemStatus);
+
+        return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus;
     });
 
     const getStatusColor = (status) => {
@@ -710,6 +696,39 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     <TextField fullWidth size="small" label="Address" value={formData.customerAddress}
                                         disabled placeholder="Auto-filled" sx={DISABLED_SX} />
                                 </Grid>
+                                {/* Billing Account toggle */}
+                                <Grid size={{ xs: 12 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                        <Checkbox
+                                            size="small"
+                                            checked={formData.sameBilling}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, sameBilling: e.target.checked, billingCustomerId: "" }))}
+                                            sx={{ color: '#8b5cf6', '&.Mui-checked': { color: '#7c3aed' }, p: 0.5 }}
+                                        />
+                                        <Typography variant="body2" color="#374151">Billing account same as booking customer</Typography>
+                                    </Box>
+                                </Grid>
+                                {!formData.sameBilling && (
+                                    <Grid size={{ xs: 12 }}>
+                                        <Autocomplete
+                                            options={customers || []}
+                                            getOptionLabel={(option) => option.name || ""}
+                                            value={(customers || []).find(c => c.id === formData.billingCustomerId) || null}
+                                            onChange={(_, newValue) => setFormData(prev => ({ ...prev, billingCustomerId: newValue ? newValue.id : "" }))}
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    label="Billing Account *"
+                                                    size="small"
+                                                    fullWidth
+                                                    required
+                                                    placeholder="Select who will be billed"
+                                                    sx={FIELD_SX}
+                                                />
+                                            )}
+                                        />
+                                    </Grid>
+                                )}
                             </Grid>
                         </Box>
                     </Card>
@@ -724,11 +743,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: '#f3f4f6' }}>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 90 }}>Qty</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Rate</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Discount</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 100 }}>Total</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Stitching Options</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total (Rs.)</TableCell>
                                         <TableCell sx={{ width: 40 }} />
                                     </TableRow>
                                 </TableHead>
@@ -736,42 +752,89 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     {cartItems.map((item, index) => (
                                         <React.Fragment key={index}>
                                             <TableRow sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', '& td, & th': { borderBottom: item.bookingType === 'STITCHING' && !item.isCollapsed ? 'none' : undefined } }}>
-                                                <TableCell sx={{ color: '#6b7280', fontWeight: 600 }}>{index + 1}</TableCell>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                                        <Autocomplete
-                                                            options={products || []}
-                                                            getOptionLabel={(option) => option.name || ""}
-                                                            value={(products || []).find(p => p.id === item.productId) || null}
-                                                            onChange={(event, newValue) => { handleProductChange(index, newValue ? newValue.id : ""); }}
-                                                            sx={{ flexGrow: 1 }}
-                                                            renderInput={(params) => (
-                                                                <TextField {...params} label="Select Product" size="small" required fullWidth sx={FIELD_SX} />
-                                                            )}
+                                                <TableCell sx={{ color: '#6b7280', fontWeight: 600, verticalAlign: 'top', pt: 1.5 }}>{index + 1}</TableCell>
+                                                <TableCell sx={{ verticalAlign: 'top', pt: 1 }}>
+                                                    {stitchingOptions.length === 0 ? (
+                                                        <Typography variant="caption" color="text.disabled">
+                                                            No stitching options defined. Add them in Stitching Option Pricing.
+                                                        </Typography>
+                                                    ) : (
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {stitchingOptions.map(opt => {
+                                                                const checked = (item.selectedOptionIds || []).includes(opt.id);
+                                                                return (
+                                                                    <FormControlLabel
+                                                                        key={opt.id}
+                                                                        control={
+                                                                            <Checkbox
+                                                                                size="small"
+                                                                                checked={checked}
+                                                                                onChange={() => handleToggleStitchingOption(index, opt.id)}
+                                                                                sx={{ color: '#8b5cf6', '&.Mui-checked': { color: '#7c3aed' }, p: 0.5 }}
+                                                                            />
+                                                                        }
+                                                                        label={
+                                                                            <Typography variant="caption" sx={{ fontWeight: checked ? 700 : 400, color: checked ? '#7c3aed' : '#374151' }}>
+                                                                                {opt.name} <span style={{ color: '#059669', fontWeight: 600 }}>Rs.{parseFloat(opt.price).toLocaleString()}</span>
+                                                                            </Typography>
+                                                                        }
+                                                                        sx={{ m: 0, border: '1px solid', borderColor: checked ? '#c4b5fd' : '#e5e7eb', borderRadius: 1.5, px: 1, py: 0.3, bgcolor: checked ? '#f5f3ff' : 'white' }}
+                                                                    />
+                                                                );
+                                                            })}
+                                                        </Box>
+                                                    )}
+                                                    {/* Item Status & Note */}
+                                                    <Box sx={{ display: 'flex', gap: 1.5, mt: 1, alignItems: 'flex-start' }}>
+                                                        <TextField
+                                                            select
+                                                            size="small"
+                                                            label="Suit Status"
+                                                            value={item.itemStatus || "PENDING"}
+                                                            onChange={(e) => {
+                                                                const ni = [...cartItems];
+                                                                ni[index].itemStatus = e.target.value;
+                                                                setCartItems(ni);
+                                                            }}
+                                                            sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.8rem' } }}
+                                                        >
+                                                            {[
+                                                                { value: "PENDING", label: "Pending", color: "#f59e0b" },
+                                                                { value: "READY", label: "Ready", color: "#10b981" },
+                                                                { value: "DELIVERED", label: "Delivered", color: "#059669" },
+                                                                { value: "CANCELLED", label: "Cancelled", color: "#ef4444" },
+                                                            ].map(s => (
+                                                                <MenuItem key={s.value} value={s.value}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: s.color, flexShrink: 0 }} />
+                                                                        <span>{s.label}</span>
+                                                                    </Box>
+                                                                </MenuItem>
+                                                            ))}
+                                                        </TextField>
+                                                        <TextField
+                                                            size="small"
+                                                            label="Note"
+                                                            multiline
+                                                            minRows={1}
+                                                            maxRows={4}
+                                                            value={item.itemNote || ""}
+                                                            onChange={(e) => {
+                                                                const ni = [...cartItems];
+                                                                ni[index].itemNote = e.target.value;
+                                                                setCartItems(ni);
+                                                            }}
+                                                            placeholder="Add a note for this suit..."
+                                                            sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.8rem' } }}
                                                         />
                                                     </Box>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <TextField size="small" required value={item.quantity} onFocus={(e) => e.target.select()}
-                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { handleQuantityChange(index, val); } }}
-                                                        sx={{ width: '80px', ...FIELD_SX }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField size="small" required value={item.unitPrice} onFocus={(e) => e.target.select()}
-                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { const ni = [...cartItems]; ni[index].unitPrice = val; ni[index].totalPrice = calculateItemTotal(ni[index]); setCartItems(ni); } }}
-                                                        sx={{ width: '100px', ...FIELD_SX }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField size="small" value={item.discount} onFocus={(e) => e.target.select()}
-                                                        onChange={(e) => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { const ni = [...cartItems]; ni[index].discount = val; ni[index].totalPrice = calculateItemTotal(ni[index]); setCartItems(ni); } }}
-                                                        sx={{ width: '90px', ...FIELD_SX }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1f2937' }}>
-                                                        {(parseFloat(item.totalPrice) || 0).toFixed(0)}
+                                                <TableCell sx={{ verticalAlign: 'top', pt: 1.5 }}>
+                                                    <Typography variant="body1" sx={{ fontWeight: 800, color: '#059669' }}>
+                                                        Rs.&nbsp;{(parseFloat(item.totalPrice) || 0).toLocaleString()}
                                                     </Typography>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ verticalAlign: 'top', pt: 1.5 }}>
                                                     <Tooltip title="Remove item">
                                                         <span>
                                                             <IconButton size="small" color="error" onClick={() => handleRemoveRow(index)} disabled={cartItems.length === 1}>
@@ -1055,23 +1118,55 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     InputProps={{ startAdornment: (<InputAdornment position="start"><Search size={16} /></InputAdornment>) }}
                 />
                 <TextField
-                    label="From"
+                    label="Booking From"
                     type="date"
                     size="small"
                     value={filterDateFrom}
                     onChange={(e) => setFilterDateFrom(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    sx={{ width: 155, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                 />
                 <TextField
-                    label="To"
+                    label="Booking To"
                     type="date"
                     size="small"
                     value={filterDateTo}
                     onChange={(e) => setFilterDateTo(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    sx={{ width: 155, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                 />
+                <TextField
+                    label="Delivery From"
+                    type="date"
+                    size="small"
+                    value={filterDeliveryFrom}
+                    onChange={(e) => setFilterDeliveryFrom(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: 155, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                />
+                <TextField
+                    label="Delivery To"
+                    type="date"
+                    size="small"
+                    value={filterDeliveryTo}
+                    onChange={(e) => setFilterDeliveryTo(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: 155, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                />
+                <TextField
+                    select
+                    label="Suit Status"
+                    size="small"
+                    value={filterItemStatus}
+                    onChange={(e) => setFilterItemStatus(e.target.value)}
+                    sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="PENDING">Pending</MenuItem>
+                    <MenuItem value="READY">Ready</MenuItem>
+                    <MenuItem value="DELIVERED">Delivered</MenuItem>
+                    <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                </TextField>
                 <Autocomplete
                     options={customers || []}
                     getOptionLabel={(option) => option.name || ""}
@@ -1081,11 +1176,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     sx={{ width: 220, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     renderInput={(params) => <TextField {...params} label="Customer" />}
                 />
-                {(filterDateFrom || filterDateTo || filterCustomerId) && (
+                {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus) && (
                     <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterCustomerId(null); }}
+                        onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterDeliveryFrom(""); setFilterDeliveryTo(""); setFilterCustomerId(null); setFilterItemStatus(""); }}
                         sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#6b7280', whiteSpace: 'nowrap' }}
                     >
                         Clear
@@ -1184,6 +1279,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Box>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
+                                                {booking.billingCustomer && booking.billingCustomer.id !== booking.customerId && (
+                                                    <Typography variant="caption" sx={{ display: 'block', color: '#8b5cf6', fontWeight: 600 }}>
+                                                        Bill: {booking.billingCustomer.name}
+                                                    </Typography>
+                                                )}
                                             </Box>
                                         </Box>
                                     </TableCell>
@@ -1221,6 +1321,19 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Typography variant="body2">
                                             {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString('en-GB') : '—'}
                                         </Typography>
+                                        {/* Suit status chips per item */}
+                                        {(booking.items || []).length > 0 && (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
+                                                {(booking.items || []).map((item, idx) => {
+                                                    const sc = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" }[item.itemStatus || "PENDING"] || "#6b7280";
+                                                    return (
+                                                        <Chip key={idx} size="small"
+                                                            label={`S${idx + 1}: ${item.itemStatus || "PENDING"}`}
+                                                            sx={{ height: 16, fontSize: '0.6rem', bgcolor: sc + '22', color: sc, fontWeight: 700, borderRadius: 1 }} />
+                                                    );
+                                                })}
+                                            </Box>
+                                        )}
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
@@ -1374,7 +1487,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">گاہک کی معلومات</Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}><strong>نام:</strong> {selectedBooking.customer?.name}</Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}><strong>فون:</strong> {selectedBooking.customer?.phone}</Typography>
-                                        <Typography variant="body2"><strong>پتہ:</strong> {selectedBooking.customer?.address}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>پتہ:</strong> {selectedBooking.customer?.address}</Typography>
+                                        {selectedBooking.billingCustomer && selectedBooking.billingCustomer.id !== selectedBooking.customerId && (
+                                            <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed #e5e7eb' }}>
+                                                <Typography variant="caption" color="#8b5cf6" fontWeight={700}>Billing Account</Typography>
+                                                <Typography variant="body2"><strong>Name:</strong> {selectedBooking.billingCustomer.name}</Typography>
+                                                <Typography variant="body2"><strong>Phone:</strong> {selectedBooking.billingCustomer.phone}</Typography>
+                                            </Box>
+                                        )}
                                     </Card>
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
@@ -1424,47 +1544,42 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: '#f9fafb' }}>
                                         <TableRow>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Product</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Qty</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Price</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Disc</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Net Price</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>Stitching Options</TableCell>
                                             <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {selectedBooking.items?.map((item, idx) => {
-                                            const unitPrice = parseFloat(item.unitPrice) || 0;
-                                            const qty = parseFloat(item.quantity) || 0;
-                                            const discount = parseFloat(item.discount || 0);
-                                            const discountedPrice = qty > 0 ? (unitPrice - (discount / qty)) : unitPrice;
-
+                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" };
+                                            const sc = statusColors[item.itemStatus || "PENDING"] || "#6b7280";
                                             return (
-                                                <React.Fragment key={idx}>
-                                                    <TableRow>
-                                                        <TableCell align="right" sx={{ fontWeight: 600 }}>{item.product?.name}</TableCell>
-                                                        <TableCell align="right">{item.quantity}</TableCell>
-                                                        <TableCell align="right">Rs. {unitPrice.toFixed(2)}</TableCell>
-                                                        <TableCell align="right">Rs. {discount.toFixed(2)}</TableCell>
-                                                        <TableCell align="right">Rs. {discountedPrice.toFixed(2)}</TableCell>
-                                                        <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(2)}</TableCell>
-                                                    </TableRow>
-                                                    {(item.cuffType || item.pohnchaType || item.galaType) && (
-                                                        <TableRow>
-                                                            <TableCell colSpan={6} sx={{ bgcolor: '#f8fafc', py: 1 }}>
-                                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, justifyContent: 'flex-start' }}>
-                                                                    {item.cuffType && <Typography variant="caption"><strong>Cuff:</strong> {item.cuffType}</Typography>}
-                                                                    {item.pohnchaType && <Typography variant="caption"><strong>Bottom:</strong> {item.pohnchaType}</Typography>}
-                                                                    {item.galaType && <Typography variant="caption"><strong>Neck:</strong> {item.galaType === 'ban' ? 'Ban' : 'Collar'} ({item.galaSize})</Typography>}
-                                                                    {item.gheraType && <Typography variant="caption"><strong>Daman:</strong> {item.gheraType === 'seedha' ? 'Straight' : 'Round'}</Typography>}
-                                                                    {item.shalwarType && <Typography variant="caption"><strong>Shalwar:</strong> {item.shalwarType}</Typography>}
-                                                                    <Typography variant="caption"><strong>Shalwar Pocket:</strong> {item.hasShalwarPocket ? 'Yes' : 'No'}</Typography>
-                                                                    <Typography variant="caption"><strong>Front Pockets:</strong> {item.hasFrontPockets ? 'Yes' : 'No'}</Typography>
-                                                                </Box>
-                                                            </TableCell>
-                                                        </TableRow>
+                                            <TableRow key={idx}>
+                                                <TableCell sx={{ fontWeight: 600, verticalAlign: 'top' }}>{item.product?.name}</TableCell>
+                                                <TableCell>
+                                                    {(item.selectedOptions || []).length > 0 ? (
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {item.selectedOptions.map(so => (
+                                                                <Chip key={so.id} size="small"
+                                                                    label={`${so.stitchingOption?.name} – Rs.${parseFloat(so.price).toLocaleString()}`}
+                                                                    sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontSize: '0.7rem', height: 20 }} />
+                                                            ))}
+                                                        </Box>
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.disabled">No options</Typography>
                                                     )}
-                                                </React.Fragment>
+                                                    {item.itemNote && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                                                            Note: {item.itemNote}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip size="small" label={item.itemStatus || "PENDING"}
+                                                        sx={{ bgcolor: sc + '22', color: sc, fontWeight: 700, fontSize: '0.7rem', height: 20 }} />
+                                                </TableCell>
+                                                <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
+                                            </TableRow>
                                             );
                                         })}
                                     </TableBody>
@@ -1551,22 +1666,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                            <TableCell align="right"><strong>Product</strong></TableCell>
-                                            <TableCell align="right"><strong>Qty</strong></TableCell>
-                                            <TableCell align="right"><strong>Price</strong></TableCell>
+                                            <TableCell><strong>Product</strong></TableCell>
+                                            <TableCell><strong>Stitching Options</strong></TableCell>
                                             <TableCell align="right"><strong>Total</strong></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {printBooking.items?.map((item, idx) => (
-                                            <React.Fragment key={idx}>
-                                                <TableRow>
-                                                    <TableCell align="right">{item.product?.name}</TableCell>
-                                                    <TableCell align="right">{item.quantity}</TableCell>
-                                                    <TableCell align="right">{parseFloat(item.unitPrice).toFixed(2)}</TableCell>
-                                                    <TableCell align="right">{parseFloat(item.totalPrice).toFixed(2)}</TableCell>
-                                                </TableRow>
-                                            </React.Fragment>
+                                            <TableRow key={idx}>
+                                                <TableCell>{item.product?.name}</TableCell>
+                                                <TableCell>
+                                                    {(item.selectedOptions || []).map(so => (
+                                                        <div key={so.id}>{so.stitchingOption?.name} — Rs.{parseFloat(so.price).toLocaleString()}</div>
+                                                    ))}
+                                                </TableCell>
+                                                <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -1781,19 +1896,21 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <Table size="small">
                                             <TableHead>
                                                 <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                                    <TableCell align="right"><strong>Product</strong></TableCell>
-                                                    <TableCell align="right"><strong>Qty</strong></TableCell>
-                                                    <TableCell align="right"><strong>Price</strong></TableCell>
+                                                    <TableCell><strong>Product</strong></TableCell>
+                                                    <TableCell><strong>Stitching Options</strong></TableCell>
                                                     <TableCell align="right"><strong>Total</strong></TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
                                                 {bk.items?.map((item, idx) => (
                                                     <TableRow key={idx}>
-                                                        <TableCell align="right">{item.product?.name}</TableCell>
-                                                        <TableCell align="right">{item.quantity}</TableCell>
-                                                        <TableCell align="right">{parseFloat(item.unitPrice).toFixed(2)}</TableCell>
-                                                        <TableCell align="right">{parseFloat(item.totalPrice).toFixed(2)}</TableCell>
+                                                        <TableCell>{item.product?.name}</TableCell>
+                                                        <TableCell>
+                                                            {(item.selectedOptions || []).map(so => (
+                                                                <div key={so.id}>{so.stitchingOption?.name} — Rs.{parseFloat(so.price).toLocaleString()}</div>
+                                                            ))}
+                                                        </TableCell>
+                                                        <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
