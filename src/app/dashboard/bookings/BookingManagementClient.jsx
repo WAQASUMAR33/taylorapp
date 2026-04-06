@@ -40,6 +40,7 @@ import DialogActions from "@mui/material/DialogActions";
 import {
     Trash2,
     Plus,
+    Pencil,
     ShoppingCart,
     Calendar,
     User,
@@ -64,6 +65,349 @@ const BOOKING_STATUSES = [
     { value: "CANCELLED", label: "Cancelled", color: "#ef4444" }
 ];
 
+// ─── Shared print header ─────────────────────────────────────────────────────
+function PrintHeader() {
+    return (
+        <div style={{ borderBottom: '3px solid #1a1a2e', paddingBottom: 10, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <img src="/logo.png" alt="Logo" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1, color: '#1a1a2e', textTransform: 'uppercase' }}>
+                        Grace Cloth and Tailors
+                    </div>
+                    <div style={{ fontSize: 12, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
+                        Where Style Meets Perfection
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4, color: '#222' }}>
+                        📞 03006284318 &nbsp;|&nbsp; 03186284318
+                    </div>
+                    <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
+                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ─── Customer Bill ────────────────────────────────────────────────────────────
+function CustomerBill({ booking }) {
+    if (!booking) return null;
+    const billingCust = booking.billingCustomer || booking.customer;
+    const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
+    const suitDetailLabel = {
+        cuffType: 'Cuff Style',
+        pohnchaType: 'Bottom Style',
+        gheraType: 'Daman',
+        galaType: 'Collar / Gala',
+        pocketType: 'Pocket',
+        shalwarType: 'Shalwar Type',
+    };
+    const suitDetailValue = (item) => {
+        const rows = [];
+        if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
+        if (item.pohnchaType) rows.push(['Bottom', item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net (Jaali)' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net + Embroidery']);
+        if (item.gheraType) rows.push(['Daman', item.gheraType === 'seedha' ? 'Straight' : 'Round']);
+        if (item.galaType) rows.push([`Collar`, `${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`]);
+        if (item.pocketType) rows.push(['Pocket', item.pocketType === 'single' ? 'Single' : 'Double']);
+        if (item.hasFrontPockets) rows.push(['Front Pockets', 'Yes']);
+        if (item.hasShalwarPocket) rows.push(['Shalwar Pocket', 'Yes']);
+        if (item.shalwarType) rows.push(['Shalwar', item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar']);
+        if (item.itemNote) rows.push(['Note', item.itemNote]);
+        return rows;
+    };
+
+    const tdStyle = { border: '1px solid #ccc', padding: '5px 8px', fontSize: 12 };
+    const thStyle = { ...tdStyle, backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 };
+
+    return (
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
+            <PrintHeader />
+
+            {/* Title */}
+            <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 15, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+                Customer Bill / Invoice
+            </div>
+
+            {/* Customer + Booking info row */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+                <tbody>
+                    <tr>
+                        <td style={{ border: '1px solid #ddd', padding: '8px 12px', verticalAlign: 'top', width: '50%' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Customer Details</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>{booking.customer?.name}</div>
+                            {(booking.customer?.code || booking.customer?.id) && (
+                                <div style={{ fontSize: 12, color: '#555' }}>ID: {booking.customer.code || booking.customer.id}</div>
+                            )}
+                            <div style={{ fontSize: 12 }}>Ph: {booking.customer?.phone || '—'}</div>
+                            <div style={{ fontSize: 12 }}>{booking.customer?.address || '—'}</div>
+                            {billingCust?.id !== booking.customer?.id && (
+                                <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Billing: {billingCust?.name}</div>
+                            )}
+                        </td>
+                        <td style={{ border: '1px solid #ddd', padding: '8px 12px', verticalAlign: 'top', width: '50%' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Booking Details</div>
+                            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, width: 80 }}>Bill No:</td>
+                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>#{booking.id}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2 }}>Date:</td>
+                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.bookingDate)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2 }}>Delivery:</td>
+                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.deliveryDate)}</td>
+                                    </tr>
+                                    {booking.trialDate && (
+                                        <tr>
+                                            <td style={{ fontSize: 12, fontWeight: 600 }}>Trial:</td>
+                                            <td style={{ fontSize: 12 }}>{fmt(booking.trialDate)}</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {/* Items Table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                <thead>
+                    <tr>
+                        <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
+                        <th style={thStyle}>Description</th>
+                        <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
+                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(booking.items || []).map((item, idx) => {
+                        const unitPr = item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice);
+                        return (
+                            <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                                <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
+                                <td style={tdStyle}>
+                                    {item.product?.name && <span style={{ fontWeight: 700 }}>{item.product.name} — </span>}
+                                    {(item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ')}
+                                </td>
+                                <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
+                                <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{unitPr.toLocaleString()}</td>
+                                <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+
+            {/* Suit Details — single string per suit row, right after items table */}
+            {(booking.items || []).some(item => suitDetailValue(item).length > 0) && (
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                    <thead>
+                        <tr>
+                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
+                            <th style={thStyle}>Suit Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(booking.items || []).map((item, idx) => {
+                            const details = suitDetailValue(item);
+                            if (details.length === 0) return null;
+                            const detailStr = details.map(([label, val]) => `${label}: ${val}`).join('  |  ');
+                            return (
+                                <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
+                                    <td style={{ ...tdStyle, fontSize: 11 }}>{detailStr}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            )}
+
+            {/* Totals */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <table style={{ borderCollapse: 'collapse', width: '45%' }}>
+                    <tbody>
+                        <tr>
+                            <td style={{ ...tdStyle, fontWeight: 600 }}>Total Amount</td>
+                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(booking.totalAmount).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td style={{ ...tdStyle, fontWeight: 600 }}>Advance Paid</td>
+                            <td style={{ ...tdStyle, textAlign: 'right', color: '#059669', fontWeight: 700 }}>Rs.{parseFloat(booking.advanceAmount).toLocaleString()}</td>
+                        </tr>
+                        <tr style={{ backgroundColor: '#fff3f3' }}>
+                            <td style={{ ...tdStyle, fontWeight: 700, fontSize: 13 }}>Balance Due</td>
+                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 900, fontSize: 13, color: '#dc2626' }}>Rs.{parseFloat(booking.remainingAmount).toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Booking note */}
+            {booking.notes && (
+                <div style={{ border: '1px dashed #aaa', borderRadius: 4, padding: '5px 10px', marginBottom: 10, fontSize: 12 }}>
+                    <strong>Note:</strong> {booking.notes}
+                </div>
+            )}
+
+        </div>
+    );
+}
+
+// ─── Tailor Ticket ────────────────────────────────────────────────────────────
+function TailorTicket({ booking, measurements }) {
+    if (!booking) return null;
+    const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+    const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
+    const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
+
+    const tdStyle = { border: '1px solid #000', padding: '4px 8px', fontSize: 12 };
+    const thStyle = { ...tdStyle, backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 };
+
+    const getMeasureRows = (src) => [
+        ['قمیض لمبائی (Length)', src?.qameez_lambai],
+        ['بازو (Sleeve)', src?.bazoo],
+        ['تیرا (Shoulder)', src?.teera],
+        ['گلا (Neck)', src?.galaa],
+        ['چھاتی (Chest)', src?.chaati],
+        ['گھیرا (Daman Width)', src?.gheera],
+        ['کف (Cuff Width)', src?.kaf],
+        ['کاندھا (Shoulder Width)', src?.kandha],
+        ['چھاتی گھیرا (Chest Around)', src?.chaati_around],
+        ['کمر گھیرا (Waist)', src?.kamar_around],
+        ['ہپ گھیرا (Hip)', src?.hip_around],
+        ['شلوار لمبائی (Trouser Length)', src?.shalwar_lambai],
+        ['پہنچا (Bottom)', src?.puhncha],
+        ['شلوار گھیرا (Trouser Width)', src?.shalwar_gheera],
+    ];
+
+    return (
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', minHeight: '277mm' }}>
+            <PrintHeader />
+
+            {/* Title */}
+            <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 15, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+                Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی
+            </div>
+
+            {/* Customer + Order info */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Customer</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{booking.customer?.name}</div>
+                </div>
+                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Order Info</div>
+                    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                        <tbody>
+                            <tr>
+                                <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, paddingRight: 8 }}>Booking#:</td>
+                                <td style={{ fontSize: 12, paddingBottom: 2, fontWeight: 700, color: '#1a1a2e' }}>#{booking.id}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, paddingRight: 8 }}>Date:</td>
+                                <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.bookingDate)}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ fontSize: 12, fontWeight: 600, paddingRight: 8 }}>Delivery:</td>
+                                <td style={{ fontSize: 12 }}>{fmt(booking.deliveryDate)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Staff</div>
+                    <div style={{ fontSize: 12, marginBottom: 2 }}><strong>Tailor:</strong> {tailors || '—'}</div>
+                    <div style={{ fontSize: 12 }}><strong>Cutter:</strong> {cutters || '—'}</div>
+                </div>
+            </div>
+
+            {/* Per-suit: measurements + stitching details */}
+            {(booking.items || []).map((item, idx) => {
+                // Use item's own measurements, fall back to customer-level measurements
+                const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati || item.gheera;
+                const measureSrc = hasItemMeasure ? item : measurements;
+                const measureRows = getMeasureRows(measureSrc);
+
+                const parts = [];
+                if (item.cuffType) parts.push(`Cuff: ${item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve'}`);
+                if (item.pohnchaType) parts.push(`Bottom: ${item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net+Embroidery'}`);
+                if (item.gheraType) parts.push(`Daman: ${item.gheraType === 'seedha' ? 'Straight' : 'Round'}`);
+                if (item.galaType) parts.push(`Collar: ${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`);
+                if (item.pocketType) parts.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+                if (item.hasFrontPockets) parts.push('Front Pockets: Yes');
+                if (item.hasShalwarPocket) parts.push('Shalwar Pocket: Yes');
+                if (item.shalwarType) parts.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
+                const opts = (item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean);
+                if (opts.length) parts.push(`Stitching: ${opts.join(', ')}`);
+
+                return (
+                    <div key={idx} style={{ border: '1px solid #ccc', borderRadius: 3, marginBottom: 8, overflow: 'hidden', pageBreakInside: 'avoid' }}>
+                        {/* Suit header */}
+                        <div style={{ backgroundColor: '#1a1a2e', color: 'white', padding: '4px 8px', fontWeight: 700, fontSize: 12 }}>
+                            Suit {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''} | Qty: {item.quantity || 1}
+                        </div>
+
+                        {/* Measurements — 3 pairs per row RTL */}
+                        <div style={{ borderBottom: '1px solid #eee', padding: '4px 0' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#555', padding: '2px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                Measurements — پیمائش
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, direction: 'rtl' }}>
+                                <tbody>
+                                    {Array.from({ length: Math.ceil(measureRows.length / 3) }, (_, rowIdx) => (
+                                        <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? '#f9f9f9' : 'white' }}>
+                                            {[0, 1, 2].map(col => {
+                                                const entry = measureRows[rowIdx * 3 + col];
+                                                if (!entry) return [
+                                                    <td key={`h${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px' }} />,
+                                                    <td key={`v${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px' }} />
+                                                ];
+                                                const [label, val] = entry;
+                                                return [
+                                                    <td key={`h${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px', fontWeight: 600, whiteSpace: 'nowrap', color: '#333', textAlign: 'right' }}>{label}</td>,
+                                                    <td key={`v${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px', fontWeight: val ? 700 : 400, color: val ? '#000' : '#bbb', width: '8%', textAlign: 'center' }}>{val || '—'}</td>
+                                                ];
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Stitching details */}
+                        <div style={{ padding: '4px 8px', fontSize: 11, lineHeight: 1.7 }}>
+                            {parts.length === 0
+                                ? <span style={{ color: '#888' }}>No stitching details recorded.</span>
+                                : parts.join('   •   ')
+                            }
+                            <div style={{ marginTop: 3, color: '#555', fontStyle: 'italic' }}>
+                                Note: {item.itemNote ? item.itemNote : '—'}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* Booking note */}
+            {booking.notes && (
+                <div style={{ border: '1px dashed #aaa', borderRadius: 3, padding: '4px 8px', marginBottom: 8, fontSize: 11 }}>
+                    <strong>Note:</strong> {booking.notes}
+                </div>
+            )}
+
+        </div>
+    );
+}
+
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
     const stitchingOptions = initialStitchingOptions || [];
     const [bookings, setBookings] = useState(Array.isArray(initialBookings) ? initialBookings : []);
@@ -82,6 +426,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     // View Modal State
     const [viewOpen, setViewOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [editingBookingId, setEditingBookingId] = useState(null);
     const [printBooking, setPrintBooking] = useState(null);
     const [printType, setPrintType] = useState("BILL"); // 'BILL' or 'STITCHING'
     const [printDialogOpen, setPrintDialogOpen] = useState(false);
@@ -99,16 +444,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [staffEditTailorIds, setStaffEditTailorIds] = useState([]);
     const [staffEditCutterIds, setStaffEditCutterIds] = useState([]);
 
+    const triggerPrint = React.useCallback(() => {
+        const prev = document.title;
+        document.title = '';
+        setTimeout(() => {
+            window.print();
+            document.title = prev;
+        }, 500);
+    }, []);
+
     // Effect to trigger print when printBooking is set
     React.useEffect(() => {
         if (printBooking) {
-            // Short timeout to ensure DOM update
-            const timer = setTimeout(() => {
-                window.print();
-            }, 500);
+            const timer = setTimeout(() => triggerPrint(), 400);
             return () => clearTimeout(timer);
         }
-    }, [printBooking]);
+    }, [printBooking, triggerPrint]);
 
     // Measurement field keys shared between cart items and measurement records
     const MEASUREMENT_KEYS = [
@@ -144,15 +495,20 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     };
 
     const handlePrintConfirm = async (type) => {
-        setPrintType(type);
         setPrintDialogOpen(false);
+
+        // Always reset first so useEffect fires even for the same booking
+        setPrintBooking(null);
+        setBulkPrintBookings([]);
 
         if (isBulkPrint) {
             const selected = filteredBookings.filter(b => selectedIds.has(b.id));
-            setBulkPrintBookings(selected);
-            setPrintBooking(null);
             setIsBulkPrint(false);
-            setTimeout(() => window.print(), 500);
+            setPrintType(type);
+            setTimeout(() => {
+                setBulkPrintBookings(selected);
+                setTimeout(() => triggerPrint(), 300);
+            }, 50);
             return;
         }
 
@@ -160,8 +516,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             await fetchMeasurements(tempPrintBooking.customerId);
         }
 
-        setBulkPrintBookings([]);
-        setPrintBooking(tempPrintBooking);
+        setPrintType(type);
+        setTimeout(() => {
+            setPrintBooking(tempPrintBooking);
+        }, 50);
     };
 
 
@@ -196,7 +554,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     // Cart items for the grid
     const [cartItems, setCartItems] = useState([
         {
-            selectedOptionIds: [], totalPrice: 0,
+            selectedOptionIds: [], unitPrice: 0, quantity: 1, totalPrice: 0,
             bookingType: "STITCHING",
             isStitching: true,
             itemStatus: "PENDING", itemNote: "",
@@ -258,6 +616,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
     const calculateItemTotal = (item, opts) => {
         const options = opts || stitchingOptions;
+        const unitPrice = (item.selectedOptionIds || []).reduce((sum, id) => {
+            const opt = options.find(o => o.id === id);
+            return sum + (opt ? parseFloat(opt.price) : 0);
+        }, 0);
+        return unitPrice * (parseInt(item.quantity) || 1);
+    };
+
+    const calculateUnitPrice = (item, opts) => {
+        const options = opts || stitchingOptions;
         return (item.selectedOptionIds || []).reduce((sum, id) => {
             const opt = options.find(o => o.id === id);
             return sum + (opt ? parseFloat(opt.price) : 0);
@@ -270,7 +637,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const ids = item.selectedOptionIds || [];
         const exists = ids.includes(optionId);
         item.selectedOptionIds = exists ? ids.filter(id => id !== optionId) : [...ids, optionId];
-        item.totalPrice = calculateItemTotal(item, stitchingOptions);
+        item.unitPrice = calculateUnitPrice(item, stitchingOptions);
+        item.totalPrice = item.unitPrice * (parseInt(item.quantity) || 1);
+        setCartItems(newItems);
+    };
+
+    const handleQuantityChange = (itemIndex, qty) => {
+        const newItems = [...cartItems];
+        const item = newItems[itemIndex];
+        item.quantity = Math.max(1, parseInt(qty) || 1);
+        item.totalPrice = calculateUnitPrice(item, stitchingOptions) * item.quantity;
         setCartItems(newItems);
     };
 
@@ -281,8 +657,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             {
                 id: newId,
                 productId: "", productName: "",
-                selectedOptionIds: [], totalPrice: 0,
+                selectedOptionIds: [], unitPrice: 0, quantity: 1, totalPrice: 0,
                 bookingType: "STITCHING", isStitching: true, isCollapsed: false,
+                itemStatus: "PENDING", itemNote: "",
                 cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
                 pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
                 qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
@@ -338,8 +715,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 notes: formData.notes,
                 items: validItems.map(item => ({
                     productId: item.productId || null,
-                    quantity: 1,
-                    unitPrice: item.totalPrice,
+                    quantity: parseInt(item.quantity) || 1,
+                    unitPrice: item.unitPrice || 0,
                     discount: 0,
                     totalPrice: item.totalPrice,
                     selectedOptionIds: item.selectedOptionIds || [],
@@ -373,22 +750,23 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 }))
             };
 
+            const isEdit = !!editingBookingId;
             const response = await fetch("/api/bookings", {
-                method: "POST",
+                method: isEdit ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(isEdit ? { id: editingBookingId, ...payload } : payload),
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || "Failed to create booking");
+                throw new Error(data.error || (isEdit ? "Failed to update booking" : "Failed to create booking"));
             }
 
             const refreshRes = await fetch("/api/bookings");
             const refreshed = await refreshRes.json();
             setBookings(Array.isArray(refreshed) ? refreshed : []);
 
-            setSuccessMessage("Booking created successfully!");
+            setSuccessMessage(isEdit ? "Booking updated successfully!" : "Booking created successfully!");
             setShowForm(false);
             resetForm();
         } catch (err) {
@@ -398,7 +776,68 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
     };
 
+    const handleEdit = (booking) => {
+        setEditingBookingId(booking.id);
+        setFormData({
+            customerId: booking.customerId || "",
+            customerCode: booking.customer?.code || "",
+            customerName: booking.customer?.name || "",
+            customerAddress: booking.customer?.address || "",
+            customerPhone: booking.customer?.phone || "",
+            billingCustomerId: booking.billingCustomerId || "",
+            sameBilling: !booking.billingCustomerId,
+            bookingType: booking.bookingType || "STITCHING",
+            bookingDate: booking.bookingDate ? booking.bookingDate.slice(0, 10) : "",
+            returnDate: booking.returnDate ? booking.returnDate.slice(0, 10) : "",
+            deliveryDate: booking.deliveryDate ? booking.deliveryDate.slice(0, 10) : "",
+            trialDate: booking.trialDate ? booking.trialDate.slice(0, 10) : "",
+            tailorIds: (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customerId),
+            cutterIds: (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customerId),
+            advanceAmount: booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "",
+            notes: booking.notes || "",
+        });
+        setCartItems((booking.items || []).map((item, i) => ({
+            id: i + 1,
+            productId: item.productId || "",
+            productName: item.product?.name || "",
+            selectedOptionIds: (item.selectedOptions || []).map(so => so.stitchingOptionId),
+            unitPrice: parseFloat(item.unitPrice) || 0,
+            quantity: item.quantity || 1,
+            totalPrice: parseFloat(item.totalPrice) || 0,
+            bookingType: booking.bookingType || "STITCHING",
+            isStitching: true,
+            isCollapsed: true,
+            itemStatus: item.itemStatus || "PENDING",
+            itemNote: item.itemNote || "",
+            cuffType: item.cuffType || "",
+            pohnchaType: item.pohnchaType || "",
+            gheraType: item.gheraType || "",
+            galaType: item.galaType || "",
+            galaSize: item.galaSize || "",
+            pocketType: item.pocketType || "",
+            shalwarType: item.shalwarType || "",
+            hasShalwarPocket: item.hasShalwarPocket || false,
+            hasFrontPockets: item.hasFrontPockets || false,
+            qameez_lambai: item.qameez_lambai || "",
+            bazoo: item.bazoo || "",
+            teera: item.teera || "",
+            galaa: item.galaa || "",
+            chaati: item.chaati || "",
+            gheera: item.gheera || "",
+            kaf: item.kaf || "",
+            kandha: item.kandha || "",
+            chaati_around: item.chaati_around || "",
+            kamar_around: item.kamar_around || "",
+            hip_around: item.hip_around || "",
+            shalwar_lambai: item.shalwar_lambai || "",
+            puhncha: item.puhncha || "",
+            shalwar_gheera: item.shalwar_gheera || "",
+        })));
+        setShowForm(true);
+    };
+
     const resetForm = () => {
+        setEditingBookingId(null);
         setFormData({
             customerId: "",
             customerCode: "",
@@ -430,7 +869,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setCartItems([
             {
                 id: 1, productId: "", productName: "",
-                selectedOptionIds: [], totalPrice: 0,
+                selectedOptionIds: [], unitPrice: 0, quantity: 1, totalPrice: 0,
                 bookingType: "STITCHING", isStitching: true, isCollapsed: false,
                 itemStatus: "PENDING", itemNote: "",
                 cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
@@ -599,14 +1038,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     <Box sx={{ p: 1, bgcolor: '#8b5cf6', borderRadius: 1.5, display: 'flex' }}>
                         <ShoppingCart size={18} color="white" />
                     </Box>
-                    <Typography variant="h6" fontWeight={700}>Sales Order / Booking</Typography>
+                    <Typography variant="h6" fontWeight={700}>{editingBookingId ? `Edit Booking #${editingBookingId}` : 'Sales Order / Booking'}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => setShowForm(false)} disabled={loading}
+                    <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => { setShowForm(false); resetForm(); }} disabled={loading}
                         sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
                     <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
                         sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
-                        {loading ? <CircularProgress size={18} color="inherit" /> : 'Save Booking'}
+                        {loading ? <CircularProgress size={18} color="inherit" /> : (editingBookingId ? 'Update Booking' : 'Save Booking')}
                     </Button>
                 </Box>
             </DialogTitle>
@@ -784,6 +1223,24 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                             })}
                                                         </Box>
                                                     )}
+                                                    {/* Quantity & per-unit price */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                                        <Typography variant="caption" color="text.secondary">Qty:</Typography>
+                                                        <TextField
+                                                            size="small"
+                                                            type="number"
+                                                            value={item.quantity || 1}
+                                                            onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                                            inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
+                                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.85rem' } }}
+                                                        />
+                                                        {(item.quantity || 1) > 1 && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Rs.{(calculateUnitPrice(item)).toLocaleString()} × {item.quantity} =&nbsp;
+                                                                <strong style={{ color: '#059669' }}>Rs.{(item.totalPrice || 0).toLocaleString()}</strong>
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
                                                     {/* Item Status & Note */}
                                                     <Box sx={{ display: 'flex', gap: 1.5, mt: 1, alignItems: 'flex-start' }}>
                                                         <TextField
@@ -1367,6 +1824,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Tooltip title="View Details">
                                                 <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => handleViewBooking(booking)}><Eye size={17} /></IconButton>
                                             </Tooltip>
+                                            <Tooltip title="Edit Booking">
+                                                <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
+                                            </Tooltip>
                                             <Tooltip title="Print">
                                                 <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
                                             </Tooltip>
@@ -1622,362 +2082,65 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 </Alert>
             </Snackbar>
 
-            {/* Print Layout - Hidden normally, visible during print */}
+            {/* ═══════════════════════════════════════════════
+                PRINT LAYOUTS — hidden on screen, shown on print
+            ═══════════════════════════════════════════════ */}
             {(printBooking || bulkPrintBookings.length > 0) && (
-                <Box
-                    id="printable-section"
-                    sx={{
-                        display: 'none',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        bgcolor: 'white',
-                        zIndex: 9999,
-                        p: 4,
-                        '@media print': {
-                            display: 'block',
-                        }
-                    }}
-                >
-                    {printType === 'BILL' ? (
-                        // --- BILL / INVOICE LAYOUT ---
-                        <Box>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                <Typography variant="body2">Booking Invoice</Typography>
-                            </Box>
-
-                            <Grid container spacing={2} sx={{ mb: 4 }}>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold">Customer Info</Typography>
-                                    <Typography variant="body2">{printBooking.customer?.name}</Typography>
-                                    <Typography variant="body2">{printBooking.customer?.phone}</Typography>
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold">Booking Info</Typography>
-                                    <Typography variant="body2">No: {printBooking.id}</Typography>
-                                    <Typography variant="body2">Date: {new Date(printBooking.bookingDate).toLocaleDateString('en-GB')}</Typography>
-                                    <Typography variant="body2">Delivery: {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
-                                </Grid>
-                            </Grid>
-
-                            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                            <TableCell><strong>Product</strong></TableCell>
-                                            <TableCell><strong>Stitching Options</strong></TableCell>
-                                            <TableCell align="right"><strong>Total</strong></TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {printBooking.items?.map((item, idx) => (
-                                            <TableRow key={idx}>
-                                                <TableCell>{item.product?.name}</TableCell>
-                                                <TableCell>
-                                                    {(item.selectedOptions || []).map(so => (
-                                                        <div key={so.id}>{so.stitchingOption?.name} — Rs.{parseFloat(so.price).toLocaleString()}</div>
-                                                    ))}
-                                                </TableCell>
-                                                <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                                <Box sx={{ width: 250 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Total Amount:</Typography>
-                                        <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(printBooking.totalAmount).toFixed(2)}</Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body2">Advance:</Typography>
-                                        <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(printBooking.advanceAmount).toFixed(2)}</Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
-                                        <Typography variant="body2">Remaining:</Typography>
-                                        <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(printBooking.remainingAmount).toFixed(2)}</Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-
-                            <Box sx={{ mt: 8, textAlign: 'center', borderTop: '1px dashed #ccc', pt: 2 }}>
-                                <Typography variant="caption">Thank you for your business!</Typography>
-                            </Box>
-                        </Box>
-                    ) : (
-                        <Box
-                            sx={{
-                                fontFamily: 'Arial, sans-serif',
-                                p: 1,
-                                color: 'black',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                minHeight: '10in', // Approximate A4 height to help keep footer at bottom
-                                width: '100%',
-                                boxSizing: 'border-box'
-                            }}
-                        >
-                            <Box sx={{ textAlign: 'center', mb: 2 }}>
-                                <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{printBooking.id})</Typography>
-                            </Box>
-
-                            <Box sx={{ mb: 2, pb: 1 }}>
-                                <Grid container spacing={1}>
-                                    <Grid size={{ xs: 12 }}>
-                                        <Typography variant="body1"><strong>Customer:</strong> {printBooking.customer?.name || ''}</Typography>
-                                    </Grid>
-                                    <Grid size={{ xs: 12 }}>
-                                        <Typography variant="body1"><strong>Address:</strong> {printBooking.customer?.address || ''}</Typography>
-                                    </Grid>
-                                    <Grid size={{ xs: 12 }}>
-                                        <Typography variant="body1"><strong>Phone:</strong> {printBooking.customer?.phone || ''}</Typography>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-
-                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>Date:</strong> {printBooking.bookingDate ? new Date(printBooking.bookingDate).toLocaleDateString('en-GB') : ''}</Typography>
-                                <Typography variant="body1"><strong>Delivery:</strong> {printBooking.deliveryDate ? new Date(printBooking.deliveryDate).toLocaleDateString('en-GB') : ''}</Typography>
-                            </Box>
-
-                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', pb: 1 }}>
-                                <Typography variant="body1"><strong>Cutter:</strong> {(printBooking?.staff || []).filter(s => s.role === "CUTTER").map(s => s.customer?.name).join(", ")}</Typography>
-                                <Typography variant="body1"><strong>Tailor:</strong> {(printBooking?.staff || []).filter(s => s.role === "TAILOR").map(s => s.customer?.name).join(", ")}</Typography>
-                            </Box>
-
-                            {/* MERGED MEASUREMENTS AND STITCHING DETAILS TABLE */}
-                            <TableContainer component={Box} sx={{ mb: 2 }}>
-                                <Table size="small" sx={{ border: '1px solid #000' }}>
-                                    <TableHead>
-                                        <TableRow sx={{ bgcolor: '#f3f4f6' }}>
-                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Detail</TableCell>
-                                            <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Measurement / Stitching</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {printBooking.items?.map((item, idx) => (
-                                            <React.Fragment key={idx}>
-                                                {/* Product Header if more than 1 item */}
-                                                {printBooking.items.length > 1 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={2} sx={{ border: '1px solid #000', fontWeight: 'bold', bgcolor: '#f9fafb', textAlign: 'center' }}>
-                                                            {item.product?.name} (Qty: {item.quantity})
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-
-                                                {/* Measurements & Related Stitching Details */}
-                                                {true && (
-                                                    <>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Length</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.qameez_lambai || ''}</TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Shoulder</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.teera || ''}</TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Sleeve / Cuff</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>
-                                                                {customerMeasurements?.bazoo || ''}
-                                                                {item.cuffType ? ` (${item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double' : item.cuffType === 'open sleeve' ? 'Open Sleeve' : item.cuffType})` : ''}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Neck / Collar</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>
-                                                                {customerMeasurements?.galaa || ''}
-                                                                {item.galaType ? ` (${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` : ${item.galaSize}` : ''})` : ''}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Chest</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.chaati || ''}</TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Waist</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.kamar_around || ''}</TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Daman</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>
-                                                                {customerMeasurements?.gheera || ''}
-                                                                {item.gheraType ? ` (${item.gheraType === 'seedha' ? 'Straight' : 'Round'})` : ''}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Shalwar Length</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>{customerMeasurements?.shalwar_lambai || ''}</TableCell>
-                                                        </TableRow>
-                                                        <TableRow>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>Bottom</TableCell>
-                                                            <TableCell sx={{ border: '1px solid #000' }}>
-                                                                {customerMeasurements?.puhncha || ''}
-                                                                {item.pohnchaType ? ` (${item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net' : item.pohnchaType === 'karhaai' ? 'Embroided' : 'Net + Embroided'})` : ''}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    </>
-                                                )}
-
-                                                {/* Stitching Only Details */}
-                                                <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>Pocket</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.pocketType === 'single' ? 'Single' : (item.pocketType === 'double' ? 'Double' : '')}</TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>Front Pocket</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.hasFrontPockets ? 'Yes' : ''}</TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>Shalwar Pocket</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.hasShalwarPocket ? 'Yes' : ''}</TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>Shalwar Type</TableCell>
-                                                    <TableCell sx={{ border: '1px solid #000' }}>{item.shalwarType === 'pajama' ? 'Pajama' : (item.shalwarType === 'shalwar' ? 'Shalwar' : '')}</TableCell>
-                                                </TableRow>
-                                            </React.Fragment>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-
-                            {/* NOTE SECTION */}
-                            <Box sx={{ mb: 3 }}>
-                                <Typography variant="body1"><strong>Note:</strong></Typography>
-                                <Typography variant="body2" sx={{ p: 1, border: '1px dashed #000', borderRadius: 1, minHeight: '60px' }}>
-                                    {printBooking.notes || ''}
-                                </Typography>
-                            </Box>
-
-                            {/* FOOTER */}
-                            <Box sx={{ mt: 'auto', pt: 2, borderTop: '2px solid #000', textAlign: 'center' }}>
-                                <Typography variant="body2" fontWeight="bold">
-                                    fazal plaza, dhulyan chowk dinga, tel: 053-7401543
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 1 }}>
-                                    <Typography variant="body2" fontWeight="bold">Zameer Ahmed raza</Typography>
-                                    <MessageCircle size={16} color="#25D366" />
-                                    <Typography variant="body2" fontWeight="bold">0300-6284318</Typography>
-                                </Box>
-                            </Box>
-                        </Box>
+                <div id="printable-section" style={{ display: 'none' }}>
+                    {/* Single booking print */}
+                    {printBooking && (
+                        <div className="print-page">
+                            {printType === 'BILL'
+                                ? <CustomerBill booking={printBooking} />
+                                : <TailorTicket booking={printBooking} measurements={customerMeasurements} />
+                            }
+                        </div>
                     )}
-
-                    {/* Bulk print: render each selected booking with a page break */}
-                    {bulkPrintBookings.length > 0 && bulkPrintBookings.map((bk, bkIdx) => (
-                        <Box key={bk.id} sx={{ pageBreakAfter: bkIdx < bulkPrintBookings.length - 1 ? 'always' : 'auto', pb: 2 }}>
-                            {printType === 'BILL' ? (
-                                <Box>
-                                    <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                        <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                        <Typography variant="body2">Booking Invoice</Typography>
-                                    </Box>
-                                    <Grid container spacing={2} sx={{ mb: 4 }}>
-                                        <Grid size={{ xs: 6 }}>
-                                            <Typography variant="subtitle2" fontWeight="bold">Customer Info</Typography>
-                                            <Typography variant="body2">{bk.customer?.name}</Typography>
-                                            <Typography variant="body2">{bk.customer?.phone}</Typography>
-                                        </Grid>
-                                        <Grid size={{ xs: 6 }}>
-                                            <Typography variant="subtitle2" fontWeight="bold">Booking Info</Typography>
-                                            <Typography variant="body2">No: {bk.id}</Typography>
-                                            <Typography variant="body2">Date: {new Date(bk.bookingDate).toLocaleDateString('en-GB')}</Typography>
-                                            <Typography variant="body2">Delivery: {bk.deliveryDate ? new Date(bk.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
-                                        </Grid>
-                                    </Grid>
-                                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                                        <Table size="small">
-                                            <TableHead>
-                                                <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                                    <TableCell><strong>Product</strong></TableCell>
-                                                    <TableCell><strong>Stitching Options</strong></TableCell>
-                                                    <TableCell align="right"><strong>Total</strong></TableCell>
-                                                </TableRow>
-                                            </TableHead>
-                                            <TableBody>
-                                                {bk.items?.map((item, idx) => (
-                                                    <TableRow key={idx}>
-                                                        <TableCell>{item.product?.name}</TableCell>
-                                                        <TableCell>
-                                                            {(item.selectedOptions || []).map(so => (
-                                                                <div key={so.id}>{so.stitchingOption?.name} — Rs.{parseFloat(so.price).toLocaleString()}</div>
-                                                            ))}
-                                                        </TableCell>
-                                                        <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </TableContainer>
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                                        <Box sx={{ width: 250 }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                <Typography variant="body2">Total:</Typography>
-                                                <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(bk.totalAmount).toFixed(2)}</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                <Typography variant="body2">Advance:</Typography>
-                                                <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(bk.advanceAmount).toFixed(2)}</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
-                                                <Typography variant="body2">Remaining:</Typography>
-                                                <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(bk.remainingAmount).toFixed(2)}</Typography>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-                                    <Box sx={{ mt: 4, textAlign: 'center', borderTop: '1px dashed #ccc', pt: 2 }}>
-                                        <Typography variant="caption">Thank you for your business!</Typography>
-                                    </Box>
-                                </Box>
-                            ) : (
-                                <Box sx={{ fontFamily: 'Arial, sans-serif', p: 1, color: 'black' }}>
-                                    <Box sx={{ textAlign: 'center', mb: 2 }}>
-                                        <Typography variant="h4" fontWeight="bold">Grace Cloth and Tailor</Typography>
-                                        <Typography variant="subtitle1" fontWeight="bold">Order Ticket (Booking #{bk.id})</Typography>
-                                    </Box>
-                                    <Typography variant="body1"><strong>Customer:</strong> {bk.customer?.name}</Typography>
-                                    <Typography variant="body1"><strong>Phone:</strong> {bk.customer?.phone}</Typography>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 1 }}>
-                                        <Typography variant="body1"><strong>Date:</strong> {new Date(bk.bookingDate).toLocaleDateString('en-GB')}</Typography>
-                                        <Typography variant="body1"><strong>Delivery:</strong> {bk.deliveryDate ? new Date(bk.deliveryDate).toLocaleDateString('en-GB') : ''}</Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="body1"><strong>Cutter:</strong> {(bk.staff || []).filter(s => s.role === "CUTTER").map(s => s.customer?.name).join(", ")}</Typography>
-                                        <Typography variant="body1"><strong>Tailor:</strong> {(bk.staff || []).filter(s => s.role === "TAILOR").map(s => s.customer?.name).join(", ")}</Typography>
-                                    </Box>
-                                    <Box sx={{ mt: 3, borderTop: '2px solid #000', pt: 1, textAlign: 'center' }}>
-                                        <Typography variant="body2" fontWeight="bold">fazal plaza, dhulyan chowk dinga, tel: 053-7401543</Typography>
-                                    </Box>
-                                </Box>
-                            )}
-                        </Box>
+                    {/* Bulk print */}
+                    {bulkPrintBookings.length > 0 && bulkPrintBookings.map((bk) => (
+                        <div key={bk.id} className="print-page">
+                            {printType === 'BILL'
+                                ? <CustomerBill booking={bk} />
+                                : <TailorTicket booking={bk} measurements={null} />
+                            }
+                        </div>
                     ))}
-                </Box>
+                </div>
             )}
 
             <GlobalStyles styles={{
                 '@media print': {
-                    'body *': {
-                        visibility: 'hidden',
-                    },
-                    '#printable-section, #printable-section *': {
-                        visibility: 'visible',
-                    },
+                    '@page': { size: 'A4 portrait', margin: '10mm', marginTop: '0mm', marginBottom: '0mm' },
+                    'html, body': { margin: '0 !important', padding: '0 !important', height: 'auto !important', overflow: 'visible !important' },
+                    'body *': { visibility: 'hidden' },
                     '#printable-section': {
-                        position: 'fixed',
+                        display: 'block !important',
+                        visibility: 'visible',
+                        position: 'absolute',
                         left: 0,
                         top: 0,
                         width: '100%',
-                        height: '100%',
                         backgroundColor: 'white',
-                        zIndex: 9999,
+                    },
+                    '#printable-section *': { visibility: 'visible' },
+                    '#printable-section .print-page': {
+                        pageBreakAfter: 'always',
+                        breakAfter: 'page',
+                        pageBreakInside: 'avoid',
+                        width: '100%',
+                    },
+                    '#printable-section .print-page:last-child': {
+                        pageBreakAfter: 'auto',
+                        breakAfter: 'auto',
+                    },
+                    '#printable-section table': {
+                        tableLayout: 'fixed',
+                        width: '100% !important',
+                        wordBreak: 'break-word',
+                    },
+                    '#printable-section td, #printable-section th': {
+                        overflow: 'hidden',
+                        wordBreak: 'break-word',
                     },
                 },
             }} />

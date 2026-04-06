@@ -190,7 +190,7 @@ export async function POST(req) {
                             const pid = item.productId ? parseInt(item.productId) : null;
                             const product = pid ? productsMap.get(pid) : null;
                             return {
-                                productId: pid,
+                                ...(pid ? { product: { connect: { id: pid } } } : {}),
                                 quantity: parseInt(item.quantity) || 1,
                                 unitPrice: parseFloat(item.unitPrice || item.totalPrice || 0),
                                 totalPrice: parseFloat(item.totalPrice || 0),
@@ -211,6 +211,21 @@ export async function POST(req) {
                                 hasFrontPockets: item.hasFrontPockets || false,
                                 itemStatus: item.itemStatus || "PENDING",
                                 itemNote: item.itemNote || null,
+                                // Per-item measurements
+                                qameez_lambai: item.qameez_lambai || null,
+                                bazoo: item.bazoo || null,
+                                teera: item.teera || null,
+                                galaa: item.galaa || null,
+                                chaati: item.chaati || null,
+                                gheera: item.gheera || null,
+                                kaf: item.kaf || null,
+                                shalwar_lambai: item.shalwar_lambai || null,
+                                puhncha: item.puhncha || null,
+                                shalwar_gheera: item.shalwar_gheera || null,
+                                chaati_around: item.chaati_around || null,
+                                kamar_around: item.kamar_around || null,
+                                hip_around: item.hip_around || null,
+                                kandha: item.kandha || null,
                             };
                         })
                     }
@@ -356,6 +371,9 @@ export async function PUT(req) {
         const {
             id,
             status,
+            customerId,
+            bookingType,
+            bookingDate,
             deliveryDate,
             trialDate,
             returnDate,
@@ -364,9 +382,10 @@ export async function PUT(req) {
             billingCustomerId,
             tailorId,
             cutterId,
-            tailorIds,   // array of employee IDs for tailors
-            cutterIds,   // array of employee IDs for cutters
-            notes
+            tailorIds,
+            cutterIds,
+            notes,
+            items  // full items array for edit mode
         } = body;
 
         if (!id) {
@@ -387,9 +406,12 @@ export async function PUT(req) {
 
         const updateData = {};
         if (status) updateData.status = status;
-        if (deliveryDate) updateData.deliveryDate = new Date(deliveryDate);
-        if (trialDate) updateData.trialDate = new Date(trialDate);
-        if (returnDate) updateData.returnDate = new Date(returnDate);
+        if (customerId) updateData.customerId = parseInt(customerId);
+        if (bookingType) updateData.bookingType = bookingType;
+        if (bookingDate) updateData.bookingDate = new Date(bookingDate);
+        if (deliveryDate !== undefined) updateData.deliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+        if (trialDate !== undefined) updateData.trialDate = trialDate ? new Date(trialDate) : null;
+        if (returnDate !== undefined) updateData.returnDate = returnDate ? new Date(returnDate) : null;
         if (notes !== undefined) updateData.notes = notes;
         if (billingCustomerId !== undefined) updateData.billingCustomerId = billingCustomerId ? parseInt(billingCustomerId) : null;
 
@@ -484,7 +506,72 @@ export async function PUT(req) {
                 updateData.cutterId = newCutterIds[0] ?? null;
             }
 
-            // 5. Perform the actually update
+            // 5. Replace booking items if provided
+            if (Array.isArray(items) && items.length > 0) {
+                await tx.booking_item.deleteMany({ where: { bookingId: parseInt(id) } });
+
+                const productIds = items.map(i => parseInt(i.productId)).filter(Boolean);
+                const products = productIds.length > 0 ? await tx.product.findMany({
+                    where: { id: { in: productIds } },
+                    select: { id: true, costPrice: true, materialCost: true, cuttingCost: true, stitchingCost: true }
+                }) : [];
+                const productsMap = new Map(products.map(p => [p.id, p]));
+
+                for (const item of items) {
+                    const pid = item.productId ? parseInt(item.productId) : null;
+                    const product = pid ? productsMap.get(pid) : null;
+                    const selectedOptionIds = (item.selectedOptionIds || []).map(Number).filter(Boolean);
+
+                    const createdItem = await tx.booking_item.create({
+                        data: {
+                            bookingId: parseInt(id),
+                            ...(pid ? { product: { connect: { id: pid } } } : {}),
+                            quantity: parseInt(item.quantity) || 1,
+                            unitPrice: parseFloat(item.unitPrice || 0),
+                            totalPrice: parseFloat(item.totalPrice || 0),
+                            discount: parseFloat(item.discount || 0),
+                            costPrice: product?.costPrice ? parseFloat(product.costPrice) : null,
+                            materialCost: product?.materialCost ? parseFloat(product.materialCost) : null,
+                            cuttingCost: product?.cuttingCost ? parseFloat(product.cuttingCost) : null,
+                            stitchingCost: product?.stitchingCost ? parseFloat(product.stitchingCost) : null,
+                            cuffType: item.cuffType || null,
+                            pohnchaType: item.pohnchaType || null,
+                            gheraType: item.gheraType || null,
+                            galaType: item.galaType || null,
+                            galaSize: item.galaSize || null,
+                            pocketType: item.pocketType || null,
+                            shalwarType: item.shalwarType || null,
+                            hasShalwarPocket: item.hasShalwarPocket || false,
+                            hasFrontPockets: item.hasFrontPockets || false,
+                            itemStatus: item.itemStatus || "PENDING",
+                            itemNote: item.itemNote || null,
+                            qameez_lambai: item.qameez_lambai || null,
+                            bazoo: item.bazoo || null,
+                            teera: item.teera || null,
+                            galaa: item.galaa || null,
+                            chaati: item.chaati || null,
+                            gheera: item.gheera || null,
+                            kaf: item.kaf || null,
+                            shalwar_lambai: item.shalwar_lambai || null,
+                            puhncha: item.puhncha || null,
+                            shalwar_gheera: item.shalwar_gheera || null,
+                            chaati_around: item.chaati_around || null,
+                            kamar_around: item.kamar_around || null,
+                            hip_around: item.hip_around || null,
+                            kandha: item.kandha || null,
+                        }
+                    });
+
+                    if (selectedOptionIds.length > 0) {
+                        const validOptions = await tx.stitching_option.findMany({ where: { id: { in: selectedOptionIds } }, select: { id: true, price: true } });
+                        await tx.booking_item_stitching_option.createMany({
+                            data: validOptions.map(opt => ({ bookingItemId: createdItem.id, stitchingOptionId: opt.id, price: opt.price }))
+                        });
+                    }
+                }
+            }
+
+            // 6. Perform the actual update
             updateData.totalAmount = newTotal;
             updateData.advanceAmount = newAdvance;
             updateData.remainingAmount = newTotal - newAdvance;

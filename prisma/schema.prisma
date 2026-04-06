@@ -365,6 +365,22 @@ model booking_item {
   itemStatus       String?        @default("PENDING")
   itemNote         String?        @db.Text
 
+  // Per-item measurements
+  qameez_lambai  String?
+  bazoo          String?
+  teera          String?
+  galaa          String?
+  chaati         String?
+  gheera         String?
+  kaf            String?
+  shalwar_lambai String?
+  puhncha        String?
+  shalwar_gheera String?
+  chaati_around  String?
+  kamar_around   String?
+  hip_around     String?
+  kandha         String?
+
   booking          booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   product          product? @relation(fields: [productId], references: [id])
   selectedOptions  booking_item_stitching_option[]
