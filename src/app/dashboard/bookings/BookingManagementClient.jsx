@@ -91,6 +91,90 @@ function PrintHeader() {
 }
 
 
+// ─── Booking List Print ───────────────────────────────────────────────────────
+function BookingListPrint({ bookings, dateFrom, dateTo }) {
+    const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+    const ITEM_STATUS_COLORS = { PENDING: '#f59e0b', READY: '#10b981', DELIVERED: '#059669', CANCELLED: '#ef4444' };
+    const totalAmount = bookings.reduce((s, b) => s + parseFloat(b.totalAmount || 0), 0);
+    const totalAdvance = bookings.reduce((s, b) => s + parseFloat(b.advanceAmount || 0), 0);
+    const totalRemaining = bookings.reduce((s, b) => s + parseFloat(b.remainingAmount || 0), 0);
+
+    return (
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', fontSize: 11 }}>
+            <PrintHeader />
+            <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 14, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+                Booking List Report
+            </div>
+            {(dateFrom || dateTo) && (
+                <div style={{ textAlign: 'center', fontSize: 11, color: '#555', marginBottom: 8 }}>
+                    Period: {dateFrom ? fmt(dateFrom) : '—'} &nbsp;to&nbsp; {dateTo ? fmt(dateTo) : '—'}
+                </div>
+            )}
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#555', marginBottom: 10 }}>
+                Total Bookings: <strong>{bookings.length}</strong>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                <thead>
+                    <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 28 }}>#</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Customer</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 60 }}>Date</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 60 }}>Delivery</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Tailor</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Suits / Qty</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Suit Status</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 70 }}>Status</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Total</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Advance</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {bookings.map((booking, idx) => {
+                        const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
+                        const totalQty = (booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+                        return (
+                            <tr key={booking.id} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontWeight: 700, color: '#7c3aed' }}>#{booking.id}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
+                                    <div style={{ fontWeight: 700 }}>{booking.customer?.name}</div>
+                                    {booking.customer?.phone && <div style={{ color: '#555' }}>{booking.customer.phone}</div>}
+                                </td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{fmt(booking.bookingDate)}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{fmt(booking.deliveryDate)}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{tailorNames || '—'}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
+                                    {(booking.items || []).length} suits / {totalQty} pcs
+                                </td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
+                                    {(booking.items || []).map((item, i) => (
+                                        <span key={i} style={{ display: 'inline-block', marginRight: 3, marginBottom: 2, padding: '1px 4px', borderRadius: 3, fontSize: 9, fontWeight: 700, backgroundColor: (ITEM_STATUS_COLORS[item.itemStatus || 'PENDING'] || '#aaa') + '22', color: ITEM_STATUS_COLORS[item.itemStatus || 'PENDING'] || '#aaa' }}>
+                                            S{i + 1}: {item.itemStatus || 'PENDING'}
+                                        </span>
+                                    ))}
+                                </td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{booking.status}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', fontWeight: 700 }}>{parseFloat(booking.totalAmount).toLocaleString()}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', color: '#059669', fontWeight: 700 }}>{parseFloat(booking.advanceAmount).toLocaleString()}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', color: '#dc2626', fontWeight: 700 }}>{parseFloat(booking.remainingAmount).toLocaleString()}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+                <tfoot>
+                    <tr style={{ backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 }}>
+                        <td colSpan={8} style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>TOTAL ({bookings.length} bookings)</td>
+                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalAmount.toLocaleString()}</td>
+                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalAdvance.toLocaleString()}</td>
+                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalRemaining.toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    );
+}
+
 // ─── Customer Bill ────────────────────────────────────────────────────────────
 function CustomerBill({ booking }) {
     if (!booking) return null;
@@ -437,6 +521,23 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isBulkPrint, setIsBulkPrint] = useState(false);
     const [bulkPrintBookings, setBulkPrintBookings] = useState([]);
+
+    // List print state
+    const [printListBookings, setPrintListBookings] = useState([]);
+
+    const handlePrintList = () => {
+        const prev = document.title;
+        document.title = '';
+        setPrintListBookings([]);
+        setTimeout(() => {
+            setPrintListBookings(filteredBookings);
+            setTimeout(() => {
+                window.print();
+                document.title = prev;
+                setTimeout(() => setPrintListBookings([]), 1000);
+            }, 400);
+        }, 50);
+    };
 
     // Inline staff edit state
     const [staffEditOpen, setStaffEditOpen] = useState(false);
@@ -1644,6 +1745,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     </Button>
                 )}
                 <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<Printer size={18} />}
+                        onClick={handlePrintList}
+                        sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: 'nowrap', borderColor: '#0ea5e9', color: '#0ea5e9' }}
+                    >
+                        Print List ({filteredBookings.length})
+                    </Button>
                     {selectedIds.size > 0 && (
                         <Button
                             variant="outlined"
@@ -1687,6 +1796,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Tailor</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Cutter</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Suits</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Delivery</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Amount</TableCell>
@@ -1773,24 +1883,27 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Typography variant="caption" color="text.disabled">—</Typography>
                                         )}
                                     </TableCell>
+                                    {/* Suits */}
+                                    <TableCell>
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', display: 'block' }}>
+                                            {(booking.items || []).length} suits / {(booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0)} pcs
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
+                                            {(booking.items || []).map((item, idx) => {
+                                                const sc = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" }[item.itemStatus || "PENDING"] || "#6b7280";
+                                                return (
+                                                    <Chip key={idx} size="small"
+                                                        label={`S${idx + 1}: ${item.itemStatus || "PENDING"}`}
+                                                        sx={{ height: 16, fontSize: '0.6rem', bgcolor: sc + '22', color: sc, fontWeight: 700, borderRadius: 1 }} />
+                                                );
+                                            })}
+                                        </Box>
+                                    </TableCell>
                                     {/* Delivery */}
                                     <TableCell>
                                         <Typography variant="body2">
                                             {booking.deliveryDate ? new Date(booking.deliveryDate).toLocaleDateString('en-GB') : '—'}
                                         </Typography>
-                                        {/* Suit status chips per item */}
-                                        {(booking.items || []).length > 0 && (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
-                                                {(booking.items || []).map((item, idx) => {
-                                                    const sc = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" }[item.itemStatus || "PENDING"] || "#6b7280";
-                                                    return (
-                                                        <Chip key={idx} size="small"
-                                                            label={`S${idx + 1}: ${item.itemStatus || "PENDING"}`}
-                                                            sx={{ height: 16, fontSize: '0.6rem', bgcolor: sc + '22', color: sc, fontWeight: 700, borderRadius: 1 }} />
-                                                    );
-                                                })}
-                                            </Box>
-                                        )}
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
@@ -1839,7 +1952,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                                         <ShoppingCart size={40} style={{ opacity: 0.25 }} />
                                         <Typography color="text.secondary" fontWeight={500}>No bookings found.</Typography>
@@ -2085,7 +2198,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             {/* ═══════════════════════════════════════════════
                 PRINT LAYOUTS — hidden on screen, shown on print
             ═══════════════════════════════════════════════ */}
-            {(printBooking || bulkPrintBookings.length > 0) && (
+            {(printBooking || bulkPrintBookings.length > 0 || printListBookings.length > 0) && (
                 <div id="printable-section" style={{ display: 'none' }}>
                     {/* Single booking print */}
                     {printBooking && (
@@ -2105,6 +2218,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             }
                         </div>
                     ))}
+                    {/* List print */}
+                    {printListBookings.length > 0 && (
+                        <div className="print-page">
+                            <BookingListPrint
+                                bookings={printListBookings}
+                                dateFrom={filterDateFrom || filterDeliveryFrom || null}
+                                dateTo={filterDateTo || filterDeliveryTo || null}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
