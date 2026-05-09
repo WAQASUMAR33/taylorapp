@@ -353,141 +353,168 @@ function TailorTicket({ booking, measurements }) {
     const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
     const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
 
-    const tdStyle = { border: '1px solid #000', padding: '4px 8px', fontSize: 12 };
-    const thStyle = { ...tdStyle, backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 };
+    const cell = { border: '1px solid #000', padding: '3px 6px', fontSize: 11 };
 
     const getMeasureRows = (src) => [
-        ['قمیض لمبائی (Length)', src?.qameez_lambai],
-        ['بازو (Sleeve)', src?.bazoo],
-        ['تیرا (Shoulder)', src?.teera],
-        ['گلا (Neck)', src?.galaa],
-        ['چھاتی (Chest)', src?.chaati],
-        ['گھیرا (Daman Width)', src?.gheera],
-        ['کف (Cuff Width)', src?.kaf],
-        ['کاندھا (Shoulder Width)', src?.kandha],
-        ['چھاتی گھیرا (Chest Around)', src?.chaati_around],
-        ['کمر گھیرا (Waist)', src?.kamar_around],
-        ['ہپ گھیرا (Hip)', src?.hip_around],
-        ['شلوار لمبائی (Trouser Length)', src?.shalwar_lambai],
-        ['پہنچا (Bottom)', src?.puhncha],
-        ['شلوار گھیرا (Trouser Width)', src?.shalwar_gheera],
+        ['Lambai',   src?.qameez_lambai],
+        ['Bazoo',    src?.bazoo],
+        ['Teera',    src?.teera],
+        ['Galla',    src?.galaa],
+        ['Chatti',   src?.chaati],
+        ['Kamar',    src?.kamar_around],
+        ['Ghera',    src?.gheera],
+        ['Shalwar',  src?.shalwar_lambai],
+        ['Poncha',   src?.puhncha],
+        ['Kaf',      src?.kaf],
+        ['Kandha',   src?.kandha],
+        ['Hip',      src?.hip_around],
+        ['S. Ghera', src?.shalwar_gheera],
+        ['Chaati A', src?.chaati_around],
     ];
 
+    const getStitchingBoxes = (item) => {
+        const boxes = [];
+        if (item.galaType)     boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
+        if (item.cuffType)     boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
+        if (item.pohnchaType)  boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
+        if (item.gheraType)    boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
+        if (item.pocketType)   boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+        if (item.shalwarType)  boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
+        if (item.hasFrontPockets)  boxes.push('Front Pockets');
+        if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
+        (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
+        return boxes;
+    };
+
     return (
-        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', minHeight: '277mm' }}>
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
             <PrintHeader />
 
             {/* Title */}
-            <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 15, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+            <div style={{ textAlign: 'center', margin: '6px 0', fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
                 Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی
             </div>
 
-            {/* Customer + Order info */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Customer</div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{booking.customer?.name}</div>
-                </div>
-                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Order Info</div>
-                    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-                        <tbody>
-                            <tr>
-                                <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, paddingRight: 8 }}>Booking#:</td>
-                                <td style={{ fontSize: 12, paddingBottom: 2, fontWeight: 700, color: '#1a1a2e' }}>#{booking.id}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, paddingRight: 8 }}>Date:</td>
-                                <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.bookingDate)}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ fontSize: 12, fontWeight: 600, paddingRight: 8 }}>Delivery:</td>
-                                <td style={{ fontSize: 12 }}>{fmt(booking.deliveryDate)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: 4, padding: '7px 10px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 3 }}>Staff</div>
-                    <div style={{ fontSize: 12, marginBottom: 2 }}><strong>Tailor:</strong> {tailors || '—'}</div>
-                    <div style={{ fontSize: 12 }}><strong>Cutter:</strong> {cutters || '—'}</div>
-                </div>
-            </div>
+            {/* Info bar */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 11, border: '1px solid #000' }}>
+                <tbody>
+                    <tr>
+                        <td style={{ ...cell, fontWeight: 700, width: '15%' }}>Customer:</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '25%', fontSize: 13 }}>{booking.customer?.name}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '12%' }}>Booking #:</td>
+                        <td style={{ ...cell, width: '18%', fontWeight: 800, color: '#1a1a2e' }}>{booking.bookingNumber || booking.id}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '10%' }}>Date:</td>
+                        <td style={{ ...cell, width: '20%' }}>{fmt(booking.bookingDate)}</td>
+                    </tr>
+                    <tr>
+                        <td style={{ ...cell, fontWeight: 700 }}>Tailor:</td>
+                        <td style={{ ...cell }}>{tailors || '—'}</td>
+                        <td style={{ ...cell, fontWeight: 700 }}>Cutter:</td>
+                        <td style={{ ...cell }}>{cutters || '—'}</td>
+                        <td style={{ ...cell, fontWeight: 700 }}>Delivery:</td>
+                        <td style={{ ...cell }}>{fmt(booking.deliveryDate)}</td>
+                    </tr>
+                </tbody>
+            </table>
 
-            {/* Per-suit: measurements + stitching details */}
+            {/* Per-suit block */}
             {(booking.items || []).map((item, idx) => {
-                // Use item's own measurements, fall back to customer-level measurements
-                const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati || item.gheera;
-                const measureSrc = hasItemMeasure ? item : measurements;
-                const measureRows = getMeasureRows(measureSrc);
-
-                const parts = [];
-                if (item.cuffType) parts.push(`Cuff: ${item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve'}`);
-                if (item.pohnchaType) parts.push(`Bottom: ${item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net+Embroidery'}`);
-                if (item.gheraType) parts.push(`Daman: ${item.gheraType === 'seedha' ? 'Straight' : 'Round'}`);
-                if (item.galaType) parts.push(`Collar: ${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`);
-                if (item.pocketType) parts.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
-                if (item.hasFrontPockets) parts.push('Front Pockets: Yes');
-                if (item.hasShalwarPocket) parts.push('Shalwar Pocket: Yes');
-                if (item.shalwarType) parts.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
-                const opts = (item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean);
-                if (opts.length) parts.push(`Stitching: ${opts.join(', ')}`);
+                const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
+                const src = hasItemMeasure ? item : measurements;
+                const measureRows = getMeasureRows(src);
+                const stitchBoxes = getStitchingBoxes(item);
+                // pad stitching boxes to at least 8 rows so the column has height
+                const STITCH_ROWS = Math.max(stitchBoxes.length, 8);
 
                 return (
-                    <div key={idx} style={{ border: '1px solid #ccc', borderRadius: 3, marginBottom: 8, overflow: 'hidden', pageBreakInside: 'avoid' }}>
-                        {/* Suit header */}
-                        <div style={{ backgroundColor: '#1a1a2e', color: 'white', padding: '4px 8px', fontWeight: 700, fontSize: 12 }}>
-                            Suit {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''} | Qty: {item.quantity || 1}
+                    <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+
+                        {/* Suit header row */}
+                        <div style={{ backgroundColor: '#1a1a2e', color: '#fff', padding: '3px 8px', fontWeight: 700, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Suit {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''}</span>
+                            <span>Qty: {item.quantity || 1}</span>
                         </div>
 
-                        {/* Measurements — 3 pairs per row RTL */}
-                        <div style={{ borderBottom: '1px solid #eee', padding: '4px 0' }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: '#555', padding: '2px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                Measurements — پیمائش
+                        {/* 3-column body */}
+                        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+
+                            {/* ── Measurements column ── */}
+                            <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                    Measurements — پیمائش
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <tbody>
+                                        {measureRows.map(([label, val], i) => (
+                                            <tr key={i}>
+                                                <td style={{ padding: '2px 6px', fontSize: 11, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
+                                                    {label}:
+                                                </td>
+                                                <td style={{ padding: '2px 4px', fontSize: 11, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        minWidth: 52,
+                                                        fontWeight: 700,
+                                                        textDecoration: val ? 'underline' : 'none',
+                                                        textDecorationStyle: 'solid',
+                                                    }}>
+                                                        {val || ''}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, direction: 'rtl' }}>
-                                <tbody>
-                                    {Array.from({ length: Math.ceil(measureRows.length / 3) }, (_, rowIdx) => (
-                                        <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? '#f9f9f9' : 'white' }}>
-                                            {[0, 1, 2].map(col => {
-                                                const entry = measureRows[rowIdx * 3 + col];
-                                                if (!entry) return [
-                                                    <td key={`h${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px' }} />,
-                                                    <td key={`v${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px' }} />
-                                                ];
-                                                const [label, val] = entry;
-                                                return [
-                                                    <td key={`h${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px', fontWeight: 600, whiteSpace: 'nowrap', color: '#333', textAlign: 'right' }}>{label}</td>,
-                                                    <td key={`v${col}`} style={{ border: '1px solid #ddd', padding: '2px 6px', fontWeight: val ? 700 : 400, color: val ? '#000' : '#bbb', width: '8%', textAlign: 'center' }}>{val || '—'}</td>
-                                                ];
-                                            })}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
 
-                        {/* Stitching details */}
-                        <div style={{ padding: '4px 8px', fontSize: 11, lineHeight: 1.7 }}>
-                            {parts.length === 0
-                                ? <span style={{ color: '#888' }}>No stitching details recorded.</span>
-                                : parts.join('   •   ')
-                            }
-                            <div style={{ marginTop: 3, color: '#555', fontStyle: 'italic' }}>
-                                Note: {item.itemNote ? item.itemNote : '—'}
+                            {/* ── Stitching options column ── */}
+                            <div style={{ flex: '0 0 30%', borderRight: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                    Stitching Details
+                                </div>
+                                {Array.from({ length: STITCH_ROWS }, (_, i) => (
+                                    <div key={i} style={{
+                                        border: '1px solid #000',
+                                        margin: '3px 4px',
+                                        padding: '2px 5px',
+                                        fontSize: 11,
+                                        minHeight: 20,
+                                        fontWeight: stitchBoxes[i] ? 600 : 400,
+                                    }}>
+                                        {stitchBoxes[i] || ''}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* ── Notes column ── */}
+                            <div style={{ flex: 1 }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                    Notes
+                                </div>
+                                <div style={{
+                                    border: '1px solid #000',
+                                    margin: '4px',
+                                    padding: '4px 6px',
+                                    fontSize: 12,
+                                    minHeight: 120,
+                                    fontWeight: 600,
+                                    lineHeight: 1.6,
+                                    whiteSpace: 'pre-wrap',
+                                }}>
+                                    {item.itemNote || ''}
+                                </div>
                             </div>
                         </div>
                     </div>
                 );
             })}
 
-            {/* Booking note */}
+            {/* Booking-level note */}
             {booking.notes && (
-                <div style={{ border: '1px dashed #aaa', borderRadius: 3, padding: '4px 8px', marginBottom: 8, fontSize: 11 }}>
-                    <strong>Note:</strong> {booking.notes}
+                <div style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 11, marginTop: 4 }}>
+                    <strong>Order Note:</strong> {booking.notes}
                 </div>
             )}
-
         </div>
     );
 }
