@@ -133,7 +133,6 @@ model category {
 model product {
   id            Int             @id @default(autoincrement())
   sku           String          @unique(map: "Product_sku_key")
-  barcode       String?         @unique(map: "Product_barcode_key")
   name          String
   description   String?
   categoryId    Int?
