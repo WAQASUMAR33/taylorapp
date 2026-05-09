@@ -4,7 +4,7 @@ import AnalyticsClient from "./AnalyticsClient";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Analytics | RAPID TAILOR",
+    title: "Analytics | GRACE TAILORS",
     description: "Date-wise analytics for bookings, revenue, costs and staff performance.",
 };
 

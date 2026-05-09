@@ -4,7 +4,7 @@ import { Container, Box, Typography } from "@mui/material";
 import { ShoppingCart } from "lucide-react";
 
 export const metadata = {
-    title: "Purchase Management - RAPID TAILOR",
+    title: "Purchase Management - GRACE TAILORS",
 };
 
 export default async function PurchasesPage() {

@@ -6,7 +6,7 @@ import { Scissors } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Stitching Option Pricing | RAPID TAILOR",
+    title: "Stitching Option Pricing | GRACE TAILORS",
     description: "Manage stitching options and their prices.",
 };
 

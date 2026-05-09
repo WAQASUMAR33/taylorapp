@@ -3,7 +3,7 @@ import CategoryManagementClient from "./CategoryManagementClient";
 import { Container, Box, Typography } from "@mui/material";
 
 export const metadata = {
-    title: "Category Management | RAPID TAILOR",
+    title: "Category Management | GRACE TAILORS",
     description: "Manage product and material categories.",
 };
 

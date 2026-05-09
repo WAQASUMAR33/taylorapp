@@ -40,6 +40,7 @@ import {
     Package,
     History,
     Eye,
+    TrendingDown,
 } from "lucide-react";
 
 export default function MaterialManagementClient({ initialMaterials }) {
@@ -59,6 +60,10 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
     const [stockFormData, setStockFormData] = useState({ materialId: "", addQuantity: "" });
 
+    // Out Stock dialog states
+    const [outStockDialogOpen, setOutStockDialogOpen] = useState(false);
+    const [outStockFormData, setOutStockFormData] = useState({ materialId: "", outQuantity: "", description: "" });
+
     /* ── helpers ──────────────────────────────────────── */
 
     const resetForm = () => {
@@ -67,6 +72,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
     };
 
     const resetStockForm = () => setStockFormData({ materialId: "", addQuantity: "" });
+    const resetOutStockForm = () => setOutStockFormData({ materialId: "", outQuantity: "", description: "" });
 
     const currentMaterial = materials.find(
         (m) => m.id === parseInt(stockFormData.materialId)
@@ -75,6 +81,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
     const totalQty = (
         parseFloat(currentMaterial?.quantity || 0) +
         parseFloat(stockFormData.addQuantity || 0)
+    ).toFixed(2);
+
+    const outCurrentMaterial = materials.find(
+        (m) => m.id === parseInt(outStockFormData.materialId)
+    );
+
+    const outTotalQty = (
+        parseFloat(outCurrentMaterial?.quantity || 0) -
+        parseFloat(outStockFormData.outQuantity || 0)
     ).toFixed(2);
 
     /* ── handlers ─────────────────────────────────────── */
@@ -179,6 +194,55 @@ export default function MaterialManagementClient({ initialMaterials }) {
         }
     };
 
+    const handleOutStockSubmit = async () => {
+        if (!outStockFormData.materialId || !outStockFormData.outQuantity) {
+            setError("Please select a material and enter quantity");
+            return;
+        }
+        const outQty = parseFloat(outStockFormData.outQuantity);
+        if (outQty <= 0) {
+            setError("Out quantity must be greater than zero");
+            return;
+        }
+        if (!outCurrentMaterial) {
+            setError("Material not found");
+            return;
+        }
+        const currentQty = parseFloat(outCurrentMaterial.quantity);
+        if (outQty > currentQty) {
+            setError(`Cannot remove more than available stock (${currentQty} units)`);
+            return;
+        }
+        setLoading(true);
+        setError("");
+        try {
+            const newQty = currentQty - outQty;
+            const res = await fetch(`/api/materials/${outStockFormData.materialId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    quantity: newQty,
+                    adjustmentNotes: outStockFormData.description || `Stock out on ${new Date().toLocaleDateString()}`,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Stock out failed");
+            }
+
+            const updated = await res.json();
+            setMaterials((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+            setSuccessMessage("Stock out recorded successfully!");
+            setOutStockDialogOpen(false);
+            resetOutStockForm();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleView = async (id) => {
         try {
             const res = await fetch(`/api/materials/${id}`);
@@ -233,6 +297,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
                         Add Stock
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        startIcon={<TrendingDown size={18} />}
+                        onClick={() => setOutStockDialogOpen(true)}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        Out Stock
                     </Button>
                 </Box>
             </Box>
@@ -566,6 +639,150 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 </DialogActions>
             </Dialog>
 
+            {/* ── Out Stock Dialog ────────────────────────── */}
+            <Dialog
+                open={outStockDialogOpen}
+                onClose={() => { setOutStockDialogOpen(false); resetOutStockForm(); setError(""); }}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <TrendingDown size={20} />
+                        Out Stock
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
+                    {error && (
+                        <Alert
+                            severity="error"
+                            variant="filled"
+                            onClose={() => setError("")}
+                            sx={{ mb: 2.5, borderRadius: 2 }}
+                        >
+                            {error}
+                        </Alert>
+                    )}
+
+                    <Grid container spacing={2}>
+                        {/* Material selector */}
+                        <Grid size={{ xs: 12 }}>
+                            <Autocomplete
+                                size="small"
+                                options={materials}
+                                getOptionLabel={(option) => option.title || ""}
+                                value={outCurrentMaterial || null}
+                                onChange={(_, newValue) =>
+                                    setOutStockFormData({ ...outStockFormData, materialId: newValue ? newValue.id.toString() : "" })
+                                }
+                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Select Material"
+                                        required
+                                        variant="outlined"
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {outStockFormData.materialId && (
+                            <>
+                                <Grid size={{ xs: 4 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Current Stock"
+                                        value={outCurrentMaterial?.quantity ?? 0}
+                                        variant="filled"
+                                        InputProps={{ readOnly: true }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 4 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Out Quantity"
+                                        type="number"
+                                        required
+                                        placeholder="e.g. 10"
+                                        value={outStockFormData.outQuantity}
+                                        onChange={(e) =>
+                                            setOutStockFormData({ ...outStockFormData, outQuantity: e.target.value })
+                                        }
+                                        inputProps={{ min: 1, max: parseFloat(outCurrentMaterial?.quantity || 0) }}
+                                        variant="outlined"
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 4 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Remaining Stock"
+                                        value={parseFloat(outTotalQty) < 0 ? "Exceeds stock!" : outTotalQty}
+                                        variant="filled"
+                                        InputProps={{ readOnly: true }}
+                                        sx={{
+                                            "& .MuiFilledInput-root": {
+                                                bgcolor: parseFloat(outTotalQty) < 0 ? "error.light" : "warning.light",
+                                                color: parseFloat(outTotalQty) < 0 ? "error.dark" : "warning.dark",
+                                                fontWeight: 700,
+                                            },
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Description / Reason"
+                                        placeholder="e.g. Used for booking #123, damaged, returned to supplier…"
+                                        value={outStockFormData.description}
+                                        onChange={(e) =>
+                                            setOutStockFormData({ ...outStockFormData, description: e.target.value })
+                                        }
+                                        variant="outlined"
+                                        multiline
+                                        rows={2}
+                                    />
+                                </Grid>
+                            </>
+                        )}
+                    </Grid>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={() => { setOutStockDialogOpen(false); resetOutStockForm(); setError(""); }}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={loading}
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleOutStockSubmit}
+                        disabled={
+                            loading ||
+                            !outStockFormData.materialId ||
+                            !outStockFormData.outQuantity ||
+                            parseFloat(outTotalQty) < 0
+                        }
+                        startIcon={loading ? null : <TrendingDown size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : "Confirm Out Stock"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* ── View Details Dialog ─────────────────────── */}
             <Dialog
                 open={viewOpen}
@@ -620,7 +837,8 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                                 <TableRow>
                                                     <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
                                                     <TableCell sx={{ fontWeight: 600 }} align="right">Qty</TableCell>
-                                                    <TableCell sx={{ fontWeight: 600 }} align="right">Type</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600 }} align="center">Type</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -630,7 +848,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                                             {new Date(mv.movedAt).toLocaleDateString()}
                                                         </TableCell>
                                                         <TableCell align="right">{mv.quantity}</TableCell>
-                                                        <TableCell align="right">
+                                                        <TableCell align="center">
                                                             <Chip
                                                                 label={mv.type}
                                                                 size="small"
@@ -638,6 +856,11 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                                                 variant="filled"
                                                                 sx={{ borderRadius: 1, fontWeight: 700, minWidth: 44 }}
                                                             />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {mv.notes || "—"}
+                                                            </Typography>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}

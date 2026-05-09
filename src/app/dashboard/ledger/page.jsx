@@ -7,7 +7,7 @@ import { BookText } from "lucide-react";
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: "Ledger | RAPID TAILOR",
+    title: "Ledger | GRACE TAILORS",
 };
 
 export default async function LedgerPage() {

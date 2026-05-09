@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
     Box,
     Button,
@@ -25,6 +25,7 @@ import {
     TableRow,
     Avatar,
     Grid,
+    Divider,
 } from "@mui/material";
 import {
     Edit,
@@ -34,7 +35,10 @@ import {
     X as XIcon,
     Package,
     Save,
+    Printer,
+    Tag,
 } from "lucide-react";
+import JsBarcode from "jsbarcode";
 
 export default function ProductManagementClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts);
@@ -56,6 +60,103 @@ export default function ProductManagementClient({ initialProducts }) {
         unitPrice: "",
     });
 
+    // ── Barcode print state ──────────────────────────────
+    const [printProduct, setPrintProduct] = useState(null);
+    const [printQty, setPrintQty] = useState(1);
+    const barcodeRef = useRef(null);
+
+    useEffect(() => {
+        if (!printProduct || !barcodeRef.current) return;
+        try {
+            JsBarcode(barcodeRef.current, printProduct.sku || "NOSKU", {
+                format: "CODE128",
+                width: 1.5,
+                height: 38,
+                displayValue: true,
+                fontSize: 9,
+                margin: 2,
+                textMargin: 1,
+                background: "#ffffff",
+                lineColor: "#000000",
+            });
+        } catch (e) {
+            console.error("Barcode generation failed:", e);
+        }
+    }, [printProduct]);
+
+    const handlePrintLabel = (prod) => {
+        setPrintProduct(prod);
+        setPrintQty(1);
+    };
+
+    const closePrintDialog = () => setPrintProduct(null);
+
+    const handlePrint = () => {
+        const svgEl = barcodeRef.current;
+        if (!svgEl) return;
+
+        const svgStr = new XMLSerializer().serializeToString(svgEl);
+        const b64 = btoa(unescape(encodeURIComponent(svgStr)));
+        const dataUrl = `data:image/svg+xml;base64,${b64}`;
+
+        const safeName = (printProduct.name || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        const price = `Rs. ${parseFloat(printProduct.unitPrice || 0).toLocaleString()}`;
+
+        const sticker = `
+          <div class="sticker">
+            <div class="brand">Grace Cloth &amp; Tailors</div>
+            <div class="pname">${safeName}</div>
+            <img src="${dataUrl}" class="barcode-img" />
+            <div class="price">${price}</div>
+          </div>`;
+
+        const win = window.open("", "_blank", "width=400,height=300");
+        if (!win) {
+            alert("Popup blocked. Please allow popups for this site.");
+            return;
+        }
+
+        win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Print Label</title>
+<style>
+  @page { margin: 0; size: 2in 1in; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; }
+  .page { display: flex; flex-wrap: wrap; }
+  .sticker {
+    width: 2in;
+    height: 1in;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px 1px;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .brand { font-size: 6.5pt; font-weight: bold; text-align: center; letter-spacing: 0.2px; line-height: 1.2; }
+  .pname { font-size: 7pt; font-weight: 600; text-align: center; line-height: 1.2; margin-top: 1px; }
+  .barcode-img { width: 1.88in; height: 0.42in; object-fit: fill; display: block; margin: 1px 0; }
+  .price { font-size: 8.5pt; font-weight: bold; text-align: center; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+${Array(Math.max(1, printQty)).fill(sticker).join("")}
+</div>
+<script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`);
+        win.document.close();
+    };
+
+    // ── Product CRUD handlers ────────────────────────────
     const resetForm = () => {
         setFormData({ sku: "", name: "", description: "", quantity: 0, costPrice: "", unitPrice: "" });
         setEditMode(false);
@@ -63,10 +164,7 @@ export default function ProductManagementClient({ initialProducts }) {
         setError("");
     };
 
-    const handleOpen = () => {
-        resetForm();
-        setOpen(true);
-    };
+    const handleOpen = () => { resetForm(); setOpen(true); };
 
     const handleClose = () => {
         if (!loading) { setOpen(false); resetForm(); }
@@ -234,6 +332,11 @@ export default function ProductManagementClient({ initialProducts }) {
                                         </TableCell>
                                         <TableCell align="right">
                                             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                                                <Tooltip title="Print Label">
+                                                    <IconButton size="small" sx={{ color: "secondary.main" }} onClick={() => handlePrintLabel(prod)}>
+                                                        <Printer size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="Edit Product">
                                                     <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
                                                         <Edit size={17} />
@@ -260,6 +363,88 @@ export default function ProductManagementClient({ initialProducts }) {
                     </Table>
                 </TableContainer>
             </Card>
+
+            {/* ── Print Label Dialog ──────────────────────────── */}
+            <Dialog
+                open={!!printProduct}
+                onClose={closePrintDialog}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Tag size={20} />
+                    Print Barcode Label
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "20px !important", pb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                        Preview — 2&quot; × 1&quot; sticker
+                    </Typography>
+
+                    {/* Sticker preview */}
+                    <Box sx={{
+                        width: 360,
+                        height: 180,
+                        border: "2px dashed",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        p: "6px 10px",
+                        mx: "auto",
+                        my: 2,
+                        bgcolor: "#fff",
+                        gap: 0.4,
+                    }}>
+                        <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: "Arial, sans-serif", letterSpacing: 0.4, color: "#000" }}>
+                            Grace Cloth &amp; Tailors
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600, fontFamily: "Arial, sans-serif", color: "#000" }}>
+                            {printProduct?.name}
+                        </Typography>
+                        <svg ref={barcodeRef} style={{ width: "100%", height: 68 }} />
+                        <Typography sx={{ fontSize: 13, fontWeight: 700, fontFamily: "Arial, sans-serif", color: "#000" }}>
+                            Rs. {parseFloat(printProduct?.unitPrice || 0).toLocaleString()}
+                        </Typography>
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    <TextField
+                        label="Number of copies"
+                        type="number"
+                        size="small"
+                        value={printQty}
+                        onChange={(e) => setPrintQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        inputProps={{ min: 1, max: 200 }}
+                        sx={{ width: 170 }}
+                        variant="outlined"
+                    />
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={closePrintDialog}
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<XIcon size={17} />}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Printer size={17} />}
+                        onClick={handlePrint}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        Print{printQty > 1 ? ` (${printQty} copies)` : ""}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* ── Add / Edit Product Dialog ───────────────────── */}
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>

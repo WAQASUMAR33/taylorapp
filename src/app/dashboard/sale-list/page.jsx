@@ -6,7 +6,7 @@ import { ClipboardList } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Sale History | RAPID TAILOR",
+    title: "Sale History | GRACE TAILORS",
     description: "View all sales, bills and revenue statistics.",
 };
 

@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { customerId, items, billDiscountAmt, notes } = body;
+        const { customerId, items, billDiscountAmt, cashPaid, notes } = body;
 
         if (!items || items.length === 0) {
             return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
@@ -45,22 +45,30 @@ export async function POST(req) {
                 include: { items: { include: { product: true } }, customer: true },
             });
 
-            // If customer selected: create ledger entry and update balance
+            // If customer selected: handle partial payment
             if (customerId) {
-                await tx.ledgerentry.create({
-                    data: {
-                        customerId: parseInt(customerId),
-                        type: "CREDIT",
-                        amount: total,
-                        description: `Sale - ${billNumber}`,
-                        entryDate: new Date(),
-                    },
-                });
+                const cashPaidAmt = Math.min(Math.max(parseFloat(cashPaid) || 0, 0), total);
+                const balanceAdded = total - cashPaidAmt;
 
-                await tx.customer.update({
-                    where: { id: parseInt(customerId) },
-                    data: { balance: { decrement: total } },
-                });
+                // Only add remaining unpaid amount to ledger/balance
+                if (balanceAdded > 0) {
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: parseInt(customerId),
+                            type: "CREDIT",
+                            amount: balanceAdded,
+                            description: cashPaidAmt > 0
+                                ? `Sale - ${billNumber} (partial: Rs.${cashPaidAmt.toFixed(0)} paid, Rs.${balanceAdded.toFixed(0)} on account)`
+                                : `Sale - ${billNumber}`,
+                            entryDate: new Date(),
+                        },
+                    });
+
+                    await tx.customer.update({
+                        where: { id: parseInt(customerId) },
+                        data: { balance: { decrement: balanceAdded } },
+                    });
+                }
             }
 
             return newBill;

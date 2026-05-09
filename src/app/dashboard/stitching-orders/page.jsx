@@ -6,7 +6,7 @@ import { Scissors } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Stitching Orders | RAPID TAILOR",
+    title: "Stitching Orders | GRACE TAILORS",
     description: "Manage bookings with booking type 'STITCHING'.",
 };
 

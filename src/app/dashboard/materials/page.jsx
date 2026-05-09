@@ -4,7 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { Boxes } from "lucide-react";
 
 export const metadata = {
-    title: "Material Stock | RAPID TAILOR",
+    title: "Material Stock | GRACE TAILORS",
 };
 
 export default async function MaterialStockPage() {

@@ -1103,6 +1103,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             (b.items || []).some(item => (item.itemStatus || "PENDING") === filterItemStatus);
 
         return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus;
+    }).sort((a, b) => {
+        const da = a.deliveryDate ? new Date(a.deliveryDate) : null;
+        const db = b.deliveryDate ? new Date(b.deliveryDate) : null;
+        if (!da && !db) return 0;
+        if (!da) return 1;   // no date → bottom
+        if (!db) return -1;
+        return da - db;      // ascending: nearest date first
     });
 
     const getStatusColor = (status) => {

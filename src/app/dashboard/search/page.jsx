@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 
 export const metadata = {
-    title: "Search Results - RAPID TAILOR",
+    title: "Search Results - GRACE TAILORS",
 };
 
 export default async function SearchPage({ searchParams }) {

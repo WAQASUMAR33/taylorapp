@@ -1,6 +1,85 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// ── Account helpers ───────────────────────────────────────────────────────────
+async function getOrCreateCashAccount(tx) {
+    let acc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: 'Cash Account', code: 'CASH-001', notes: 'System account for cash transactions' }
+        });
+    }
+    return acc;
+}
+
+async function getOrCreateBankAccount(tx, bankId) {
+    const bank = await tx.bank.findUnique({ where: { id: bankId } });
+    if (!bank) throw new Error(`Bank with ID ${bankId} not found`);
+    const accountName = `Bank Account - ${bank.name}`;
+    let acc = await tx.customer.findFirst({ where: { name: accountName } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: accountName, code: `BANK-${bankId}`, notes: `System receiving account for ${bank.name}` }
+        });
+    }
+    return { acc, bank };
+}
+
+// Sync advance payment to the appropriate ledger account(s).
+// paymentMethod: 'CASH' | 'BANK' | 'BOTH'
+async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt, description, bookingId }) {
+    if (advAmt <= 0) return;
+
+    if (paymentMethod === 'CASH' || paymentMethod === 'BOTH') {
+        const amount = paymentMethod === 'BOTH' ? cashAmt : advAmt;
+        if (amount > 0) {
+            const cashAcc = await getOrCreateCashAccount(tx);
+            await tx.ledgerentry.create({
+                data: { customerId: cashAcc.id, type: 'DEBIT', amount, description: `Cash Received - ${description}`, bookingId }
+            });
+            await tx.customer.update({ where: { id: cashAcc.id }, data: { balance: { increment: amount } } });
+        }
+    }
+
+    if ((paymentMethod === 'BANK' || paymentMethod === 'BOTH') && bankId) {
+        const amount = paymentMethod === 'BOTH' ? bankAmt : advAmt;
+        if (amount > 0) {
+            const { acc: bankAcc, bank } = await getOrCreateBankAccount(tx, bankId);
+            await tx.ledgerentry.create({
+                data: { customerId: bankAcc.id, type: 'DEBIT', amount, description: `Bank Received via ${bank.name} - ${description}`, bookingId }
+            });
+            await tx.customer.update({ where: { id: bankAcc.id }, data: { balance: { increment: amount } } });
+            await tx.bank.update({ where: { id: bankId }, data: { balance: { increment: amount } } });
+        }
+    }
+}
+
+// Reverse a previously-synced payment from ledger accounts.
+async function reversePaymentFromAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt }) {
+    if (advAmt <= 0) return;
+
+    if (paymentMethod === 'CASH' || paymentMethod === 'BOTH') {
+        const amount = paymentMethod === 'BOTH' ? cashAmt : advAmt;
+        if (amount > 0) {
+            const cashAcc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+            if (cashAcc) {
+                await tx.customer.update({ where: { id: cashAcc.id }, data: { balance: { decrement: amount } } });
+            }
+        }
+    }
+
+    if ((paymentMethod === 'BANK' || paymentMethod === 'BOTH') && bankId) {
+        const amount = paymentMethod === 'BOTH' ? bankAmt : advAmt;
+        if (amount > 0) {
+            const bankAcc = await tx.customer.findFirst({ where: { name: { startsWith: `Bank Account -` } } });
+            if (bankAcc) {
+                await tx.customer.update({ where: { id: bankAcc.id }, data: { balance: { decrement: amount } } });
+            }
+            await tx.bank.update({ where: { id: bankId }, data: { balance: { decrement: amount } } });
+        }
+    }
+}
+
 // GET - Fetch all bookings or a specific booking
 export async function GET(req) {
     try {
@@ -116,6 +195,11 @@ export async function POST(req) {
             remainingAmount,
             notes,
             items,
+            // Payment method fields
+            paymentMethod,
+            bankId,
+            cashAmount,
+            bankAmount,
             // Stitching Details
             cuffType,
             pohnchaType,
@@ -127,6 +211,11 @@ export async function POST(req) {
             hasShalwarPocket,
             hasFrontPockets
         } = body;
+
+        const resolvedPaymentMethod = paymentMethod || 'CASH';
+        const resolvedBankId = bankId ? parseInt(bankId) : null;
+        const resolvedCashAmt = parseFloat(cashAmount || 0);
+        const resolvedBankAmt = parseFloat(bankAmount || 0);
 
         // The account that gets debited/credited is the billing customer (or booking customer if none)
         const effectiveBillingId = billingCustomerId ? parseInt(billingCustomerId) : parseInt(customerId);

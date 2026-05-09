@@ -6,7 +6,7 @@ import { PackageSearch } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Product Management | RAPID TAILOR",
+    title: "Product Management | GRACE TAILORS",
     description: "Manage your inventory, prices, and product details.",
 };
 

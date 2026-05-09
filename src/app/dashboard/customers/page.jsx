@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Customer Management - RAPID TAILOR",
+    title: "Customer Management - GRACE TAILORS",
 };
 
 export default async function CustomersPage() {

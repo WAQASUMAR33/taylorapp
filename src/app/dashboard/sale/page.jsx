@@ -6,7 +6,7 @@ import { ShoppingBag } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "New Sale | RAPID TAILOR",
+    title: "New Sale | GRACE TAILORS",
     description: "Create a new sale and generate a bill.",
 };
 

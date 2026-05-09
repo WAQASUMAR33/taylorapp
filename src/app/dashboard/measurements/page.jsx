@@ -6,7 +6,7 @@ import { Ruler } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Measurement Management | RAPID TAILOR",
+    title: "Measurement Management | GRACE TAILORS",
     description: "Manage customer measurements for Shalwar Qameez and Waistcoats.",
 };
 

@@ -6,7 +6,7 @@ import { Calendar } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Booking Management | RAPID TAILOR",
+    title: "Booking Management | GRACE TAILORS",
     description: "Manage suit and stitching bookings with product billing.",
 };
 
@@ -106,12 +106,27 @@ async function getStaffCustomers() {
     }
 }
 
+async function getBanks() {
+    try {
+        const banks = await prisma.bank.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, accountNumber: true, branch: true }
+        });
+        return JSON.parse(JSON.stringify(banks));
+    } catch (error) {
+        console.error("Database error fetching banks:", error);
+        return [];
+    }
+}
+
 export default async function BookingsPage() {
     const bookings = await getBookings();
     const customers = await getCustomers();
     const products = await getProducts();
     const employees = await getStaffCustomers();
     const stitchingOptions = await getStitchingOptions();
+    const banks = await getBanks();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -156,6 +171,7 @@ export default async function BookingsPage() {
                     products={products}
                     employees={employees}
                     stitchingOptions={stitchingOptions}
+                    banks={banks}
                 />
             </Box>
         </Box>

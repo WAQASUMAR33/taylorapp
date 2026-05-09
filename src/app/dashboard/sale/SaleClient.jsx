@@ -9,8 +9,147 @@ import {
 } from "@mui/material";
 import {
     Search, Plus, Trash2, ShoppingBag, User, Tag, ReceiptText,
-    Minus, BadgePercent,
+    Minus, BadgePercent, Printer, Wallet,
 } from "lucide-react";
+
+// ─── Print Header (same style as bookings) ───────────────────────────────────
+function PrintHeader() {
+    return (
+        <div style={{ borderBottom: '3px solid #1a1a2e', paddingBottom: 10, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <img src="/logo.png" alt="Logo" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1, color: '#1a1a2e', textTransform: 'uppercase' }}>
+                        Grace Cloth and Tailors
+                    </div>
+                    <div style={{ fontSize: 12, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
+                        Where Style Meets Perfection
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4, color: '#222' }}>
+                        📞 03006284318 &nbsp;|&nbsp; 03186284318
+                    </div>
+                    <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
+                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Sale Receipt ─────────────────────────────────────────────────────────────
+function SaleReceipt({ bill, cashPaid }) {
+    if (!bill) return null;
+    const fmtDate = (d) => new Date(d).toLocaleString('en-PK', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const fmtAmt = (n) => parseFloat(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    return (
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', fontSize: 12 }}>
+            <PrintHeader />
+
+            {/* Receipt title */}
+            <div style={{ textAlign: 'center', margin: '10px 0 6px', fontSize: 15, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+                Sale Receipt
+            </div>
+
+            {/* Bill info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 11 }}>
+                <div>
+                    <div><strong>Bill #:</strong> {bill.billNumber}</div>
+                    <div><strong>Date:</strong> {fmtDate(bill.createdAt)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    {bill.customer ? (
+                        <>
+                            <div><strong>Customer:</strong> {bill.customer.name}</div>
+                            {bill.customer.phone && <div><strong>Phone:</strong> {bill.customer.phone}</div>}
+                        </>
+                    ) : (
+                        <div><strong>Customer:</strong> Walk-in / Cash Sale</div>
+                    )}
+                </div>
+            </div>
+
+            {/* Items table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                    <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>#</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>Product</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>Code</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Disc %</th>
+                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(bill.items || []).map((item, idx) => (
+                        <tr key={item.id} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px' }}>{idx + 1}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', fontWeight: 600 }}>{item.product?.name || '—'}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', color: '#555', fontFamily: 'monospace' }}>{item.product?.sku || '—'}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'center' }}>{item.quantity}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right' }}>Rs. {fmtAmt(item.unitPrice)}</td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right' }}>
+                                {parseFloat(item.discount) > 0 ? `${parseFloat(item.discount)}%` : '—'}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right', fontWeight: 700 }}>Rs. {fmtAmt(item.total)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* Totals */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                <table style={{ fontSize: 12, borderCollapse: 'collapse', minWidth: 220 }}>
+                    <tbody>
+                        <tr>
+                            <td style={{ padding: '3px 10px', color: '#555' }}>Subtotal</td>
+                            <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600 }}>Rs. {fmtAmt(bill.subtotal)}</td>
+                        </tr>
+                        {parseFloat(bill.discount) > 0 && (
+                            <tr>
+                                <td style={{ padding: '3px 10px', color: '#dc2626' }}>Discount</td>
+                                <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600, color: '#dc2626' }}>− Rs. {fmtAmt(bill.discount)}</td>
+                            </tr>
+                        )}
+                        <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
+                            <td style={{ padding: '6px 10px', fontWeight: 800, fontSize: 13 }}>TOTAL</td>
+                            <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, fontSize: 13 }}>Rs. {fmtAmt(bill.total)}</td>
+                        </tr>
+                        {bill.customer && cashPaid < parseFloat(bill.total) && (
+                            <>
+                                <tr>
+                                    <td style={{ padding: '3px 10px', color: '#059669' }}>Cash Paid</td>
+                                    <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600, color: '#059669' }}>Rs. {fmtAmt(cashPaid)}</td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '3px 10px', color: '#d97706', fontWeight: 700 }}>Added to Balance</td>
+                                    <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 700, color: '#d97706' }}>Rs. {fmtAmt(parseFloat(bill.total) - cashPaid)}</td>
+                                </tr>
+                            </>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Notes */}
+            {bill.notes && (
+                <div style={{ marginTop: 10, fontSize: 11, color: '#444' }}>
+                    <strong>Note:</strong> {bill.notes}
+                </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ marginTop: 18, borderTop: '1px dashed #aaa', paddingTop: 8, textAlign: 'center', fontSize: 11, color: '#555' }}>
+                Thank you for your purchase! &nbsp;|&nbsp; Please keep this receipt for your records.
+            </div>
+        </div>
+    );
+}
 
 const emptyCart = [];
 
@@ -18,12 +157,13 @@ export default function SaleClient({ products, customers }) {
     const [cart, setCart] = useState(emptyCart);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [billDiscount, setBillDiscount] = useState("");
+    const [cashPaid, setCashPaid] = useState("");
     const [notes, setNotes] = useState("");
     const [productSearch, setProductSearch] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-    const [lastBillNumber, setLastBillNumber] = useState(null);
+    const [lastSavedBill, setLastSavedBill] = useState(null);
 
     // Add product to cart
     const handleAddProduct = (product) => {
@@ -80,6 +220,12 @@ export default function SaleClient({ products, customers }) {
     const billDiscountAmt = Math.min(parseFloat(billDiscount) || 0, subtotal);
     const total = subtotal - billDiscountAmt;
 
+    // Partial payment calculations (only relevant when customer is selected)
+    const cashPaidAmt = selectedCustomer
+        ? Math.min(Math.max(parseFloat(cashPaid) || 0, 0), total)
+        : total;
+    const balanceAdded = selectedCustomer ? total - cashPaidAmt : 0;
+
     const handleSave = async () => {
         if (cart.length === 0) { setError("Add at least one product to the cart."); return; }
         setLoading(true);
@@ -97,6 +243,7 @@ export default function SaleClient({ products, customers }) {
                         discount: parseFloat(i.discount) || 0,
                     })),
                     billDiscountAmt,
+                    cashPaid: cashPaidAmt,
                     notes,
                 }),
             });
@@ -107,12 +254,13 @@ export default function SaleClient({ products, customers }) {
             }
 
             const saved = await res.json();
-            setLastBillNumber(saved.billNumber);
+            setLastSavedBill({ bill: saved, cashPaid: cashPaidAmt });
             setSuccessMessage(`Bill ${saved.billNumber} saved successfully!`);
             // Reset
             setCart([]);
             setSelectedCustomer(null);
             setBillDiscount("");
+            setCashPaid("");
             setNotes("");
         } catch (err) {
             setError(err.message);
@@ -121,8 +269,32 @@ export default function SaleClient({ products, customers }) {
         }
     };
 
+    const handlePrintReceipt = () => {
+        window.print();
+    };
+
     return (
         <Box sx={{ px: 3, pb: 4 }}>
+            {/* Print styles */}
+            <style>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 0; }
+                    body * { visibility: hidden !important; }
+                    #sale-receipt-printable,
+                    #sale-receipt-printable * { visibility: visible !important; }
+                    #sale-receipt-printable {
+                        display: block !important;
+                        position: absolute;
+                        top: 0; left: 0;
+                        width: 210mm;
+                        min-height: 297mm;
+                        padding: 15mm;
+                        box-sizing: border-box;
+                        background: white;
+                    }
+                }
+                #sale-receipt-printable { display: none; }
+            `}</style>
             <Grid container spacing={3}>
 
                 {/* ── Left: Product search + Cart ──────────── */}
@@ -287,6 +459,29 @@ export default function SaleClient({ products, customers }) {
                                 clearOnEscape
                             />
 
+                            {/* Customer balance */}
+                            {selectedCustomer && (
+                                <Box sx={{
+                                    mt: 1.5, px: 2, py: 1.2,
+                                    bgcolor: parseFloat(selectedCustomer.balance || 0) < 0 ? "error.50" : "success.50",
+                                    border: "1px solid",
+                                    borderColor: parseFloat(selectedCustomer.balance || 0) < 0 ? "error.200" : "success.200",
+                                    borderRadius: 2,
+                                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                                }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Current Balance
+                                    </Typography>
+                                    <Typography
+                                        variant="body2" fontWeight={800}
+                                        color={parseFloat(selectedCustomer.balance || 0) < 0 ? "error.main" : "success.main"}
+                                    >
+                                        Rs. {Math.abs(parseFloat(selectedCustomer.balance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {parseFloat(selectedCustomer.balance || 0) < 0 ? " (due)" : " (credit)"}
+                                    </Typography>
+                                </Box>
+                            )}
+
                             <Divider sx={{ my: 2.5 }} />
 
                             {/* Bill Discount */}
@@ -303,6 +498,34 @@ export default function SaleClient({ products, customers }) {
                                 InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                             />
+
+                            {/* Partial Payment — only when customer is selected */}
+                            {selectedCustomer && (
+                                <>
+                                    <Divider sx={{ my: 2.5 }} />
+                                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 0.8 }}>
+                                        <Wallet size={16} /> Payment
+                                    </Typography>
+                                    <TextField
+                                        fullWidth size="small"
+                                        label="Cash Paid Now"
+                                        type="number"
+                                        placeholder={total.toFixed(0)}
+                                        value={cashPaid}
+                                        onChange={(e) => setCashPaid(e.target.value)}
+                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                        helperText="Leave blank to pay full amount. Enter less to add remaining to account balance."
+                                    />
+                                    {balanceAdded > 0 && (
+                                        <Box sx={{ mt: 1.5, p: 1.5, bgcolor: "warning.50", border: "1px solid", borderColor: "warning.200", borderRadius: 2 }}>
+                                            <Typography variant="caption" color="warning.dark" fontWeight={700} display="block">
+                                                Rs. {balanceAdded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be added to {selectedCustomer.name}'s balance
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </>
+                            )}
 
                             <Divider sx={{ my: 2.5 }} />
 
@@ -333,6 +556,22 @@ export default function SaleClient({ products, customers }) {
                                         Rs. {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Box>
+                                {selectedCustomer && cashPaidAmt < total && (
+                                    <>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="body2" color="text.secondary">Cash Paid</Typography>
+                                            <Typography variant="body2" fontWeight={600} color="success.main">
+                                                Rs. {cashPaidAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="body2" color="warning.main" fontWeight={600}>Added to Balance</Typography>
+                                            <Typography variant="body2" fontWeight={700} color="warning.main">
+                                                Rs. {balanceAdded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </Typography>
+                                        </Box>
+                                    </>
+                                )}
                             </Box>
 
                             <Divider sx={{ my: 2.5 }} />
@@ -371,10 +610,26 @@ export default function SaleClient({ products, customers }) {
                                     Clear Cart
                                 </Button>
                             )}
+
+                            {lastSavedBill && (
+                                <Button
+                                    fullWidth variant="outlined" color="primary" size="small"
+                                    onClick={handlePrintReceipt}
+                                    startIcon={<Printer size={15} />}
+                                    sx={{ mt: 1, borderRadius: 2, textTransform: "none" }}
+                                >
+                                    Print Last Receipt
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
                 </Grid>
             </Grid>
+
+            {/* Hidden printable receipt */}
+            <div id="sale-receipt-printable">
+                <SaleReceipt bill={lastSavedBill?.bill} cashPaid={lastSavedBill?.cashPaid} />
+            </div>
 
             <Snackbar
                 open={!!successMessage} autoHideDuration={5000}

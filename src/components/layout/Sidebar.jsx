@@ -22,6 +22,7 @@ import {
     BarChart3,
     ShoppingBag,
     ClipboardList,
+    TrendingDown,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -48,6 +49,7 @@ const navItems = [
     { name: "Sale History", href: "/dashboard/sale-list", icon: ClipboardList, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
+    { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, roles: ["ADMIN", "MANAGER"] },
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
@@ -122,7 +124,7 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        RAPID TAILOR
+                        GRACE TAILORS
                     </Typography>
                 )}
             </Box>
