@@ -95,9 +95,8 @@ export default function ProductManagementClient({ initialProducts }) {
         const svgEl = barcodeRef.current;
         if (!svgEl) return;
 
+        // Inline SVG is far more reliable in print popups than data: URLs
         const svgStr = new XMLSerializer().serializeToString(svgEl);
-        const b64 = btoa(unescape(encodeURIComponent(svgStr)));
-        const dataUrl = `data:image/svg+xml;base64,${b64}`;
 
         const safeName = (printProduct.name || "")
             .replace(/&/g, "&amp;")
@@ -109,7 +108,7 @@ export default function ProductManagementClient({ initialProducts }) {
           <div class="sticker">
             <div class="brand">Grace Cloth &amp; Tailors</div>
             <div class="pname">${safeName}</div>
-            <img src="${dataUrl}" class="barcode-img" />
+            <div class="barcode-wrap">${svgStr}</div>
             <div class="price">${price}</div>
           </div>`;
 
@@ -142,7 +141,8 @@ export default function ProductManagementClient({ initialProducts }) {
   }
   .brand { font-size: 6.5pt; font-weight: bold; text-align: center; letter-spacing: 0.2px; line-height: 1.2; }
   .pname { font-size: 7pt; font-weight: 600; text-align: center; line-height: 1.2; margin-top: 1px; }
-  .barcode-img { width: 1.88in; height: 0.42in; object-fit: fill; display: block; margin: 1px 0; }
+  .barcode-wrap { width: 1.9in; margin: 1px 0; display: flex; align-items: center; justify-content: center; }
+  .barcode-wrap svg { width: 100% !important; height: auto !important; display: block; }
   .price { font-size: 8.5pt; font-weight: bold; text-align: center; line-height: 1; }
 </style>
 </head>
