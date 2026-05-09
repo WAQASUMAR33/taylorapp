@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     Table,
     TableBody,
@@ -51,7 +51,8 @@ import {
     Printer,
     BookText,
     Ruler,
-    MessageCircle
+    MessageCircle,
+    ScanLine,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -742,6 +743,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     // Product items added to the bill (non-stitching)
     const [productItems, setProductItems] = useState([]);
 
+    // Barcode scanner for product items
+    const [scanCode, setScanCode] = useState("");
+    const [scanStatus, setScanStatus] = useState(null);
+    const scanRef = useRef(null);
+
 
     // Filter staff customers by accountCategory name (case-insensitive)
     const tailors = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "tailor");
@@ -850,6 +856,36 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
     const handleAddProductItem = () => {
         setProductItems(prev => [...prev, { id: Date.now(), productId: null, productName: "", quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }]);
+    };
+
+    const handleBookingScan = (raw) => {
+        const code = raw.trim();
+        if (!code) return;
+        const q = code.toLowerCase();
+        const product = (products || []).find(p =>
+            (p.sku || "").toLowerCase() === q ||
+            (p.barcode || "").toLowerCase() === q
+        );
+        setScanCode("");
+        if (product) {
+            setProductItems(prev => {
+                const existing = prev.find(i => i.productId === product.id);
+                if (existing) {
+                    return prev.map(i => {
+                        if (i.productId !== product.id) return i;
+                        const qty = i.quantity + 1;
+                        return { ...i, quantity: qty, totalPrice: qty * parseFloat(i.unitPrice) * (1 - parseFloat(i.discount || 0) / 100) };
+                    });
+                }
+                const price = parseFloat(product.unitPrice || 0);
+                return [...prev, { id: Date.now(), productId: product.id, productName: product.name, quantity: 1, unitPrice: price, discount: 0, totalPrice: price }];
+            });
+            setScanStatus({ type: "success", msg: `Added: ${product.name}` });
+        } else {
+            setScanStatus({ type: "error", msg: `No product found for "${code}"` });
+        }
+        setTimeout(() => setScanStatus(null), 2500);
+        setTimeout(() => scanRef.current?.focus(), 50);
     };
 
     const handleRemoveProductItem = (index) => {
@@ -1705,6 +1741,42 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 Add Product
                             </Button>
                         </Box>
+
+                        {/* Barcode scanner input */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                            <TextField
+                                inputRef={scanRef}
+                                size="small"
+                                placeholder="Scan barcode to add product..."
+                                value={scanCode}
+                                onChange={(e) => setScanCode(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleBookingScan(scanCode); }}
+                                autoComplete="off"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <ScanLine size={16} color="#f59e0b" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    width: 300,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2,
+                                        bgcolor: 'white',
+                                        '& fieldset': { borderColor: '#f59e0b', borderWidth: 1.5 },
+                                        '&:hover fieldset': { borderColor: '#d97706' },
+                                        '&.Mui-focused fieldset': { borderColor: '#d97706', borderWidth: 2 },
+                                    },
+                                }}
+                            />
+                            {scanStatus && (
+                                <Alert severity={scanStatus.type} sx={{ py: 0, px: 1.5, borderRadius: 2, fontSize: '0.8rem' }} variant="filled">
+                                    {scanStatus.msg}
+                                </Alert>
+                            )}
+                        </Box>
+
                         {productItems.length > 0 && (
                             <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                                 <Table size="small">
