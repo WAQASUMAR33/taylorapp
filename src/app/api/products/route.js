@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { sku, name, description, quantity, costPrice, unitPrice } = body;
+        const { sku, name, description, quantity, costPrice, unitPrice, barcode } = body;
 
         if (!sku || !name) {
             return NextResponse.json(
@@ -36,6 +36,7 @@ export async function POST(req) {
                 quantity: quantity ? parseInt(quantity) : 0,
                 costPrice: costPrice ? parseFloat(costPrice) : null,
                 unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+                barcode: barcode || null,
             },
         });
 
@@ -58,7 +59,7 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, sku, name, description, quantity, costPrice, unitPrice } = body;
+        const { id, sku, name, description, quantity, costPrice, unitPrice, barcode } = body;
 
         if (!id || !sku || !name) {
             return NextResponse.json(
@@ -76,6 +77,7 @@ export async function PUT(req) {
                 quantity: quantity ? parseInt(quantity) : 0,
                 costPrice: costPrice ? parseFloat(costPrice) : null,
                 unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+                barcode: barcode || null,
             },
         });
 

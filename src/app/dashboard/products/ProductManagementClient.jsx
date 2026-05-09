@@ -37,6 +37,7 @@ import {
     Save,
     Printer,
     Tag,
+    RefreshCw,
 } from "lucide-react";
 import JsBarcode from "jsbarcode";
 
@@ -58,7 +59,14 @@ export default function ProductManagementClient({ initialProducts }) {
         quantity: 0,
         costPrice: "",
         unitPrice: "",
+        barcode: "",
     });
+
+    const generateBarcode = () => {
+        const ts = Date.now().toString().slice(-8);
+        const rand = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
+        return ts + rand;
+    };
 
     // ── Barcode print state ──────────────────────────────
     const [printProduct, setPrintProduct] = useState(null);
@@ -68,7 +76,7 @@ export default function ProductManagementClient({ initialProducts }) {
     useEffect(() => {
         if (!printProduct || !barcodeRef.current) return;
         try {
-            JsBarcode(barcodeRef.current, printProduct.sku || "NOSKU", {
+            JsBarcode(barcodeRef.current, printProduct.barcode || printProduct.sku || "NOSKU", {
                 format: "CODE128",
                 width: 1.5,
                 height: 38,
@@ -158,7 +166,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
 
     // ── Product CRUD handlers ────────────────────────────
     const resetForm = () => {
-        setFormData({ sku: "", name: "", description: "", quantity: 0, costPrice: "", unitPrice: "" });
+        setFormData({ sku: "", name: "", description: "", quantity: 0, costPrice: "", unitPrice: "", barcode: "" });
         setEditMode(false);
         setSelectedProdId(null);
         setError("");
@@ -180,6 +188,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
             quantity: prod.quantity || 0,
             costPrice: prod.costPrice || "",
             unitPrice: prod.unitPrice || "",
+            barcode: prod.barcode || "",
         });
         setOpen(true);
     };
@@ -274,7 +283,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         <TableHead>
                             <TableRow sx={{ bgcolor: "action.hover" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Code</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Code / Barcode</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Cost Price</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Sale Price</TableCell>
@@ -310,6 +319,11 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                                             <Typography variant="body2" fontFamily="monospace" sx={{ bgcolor: "action.hover", px: 1, py: 0.3, borderRadius: 1, display: "inline-block" }}>
                                                 {prod.sku}
                                             </Typography>
+                                            {prod.barcode && (
+                                                <Typography variant="caption" fontFamily="monospace" color="text.secondary" sx={{ display: "block", mt: 0.3 }}>
+                                                    {prod.barcode}
+                                                </Typography>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Typography
@@ -476,6 +490,29 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 variant="outlined"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <TextField
+                                fullWidth size="small" label="Barcode (Code 128)" name="barcode"
+                                placeholder="Auto-generate or enter manually"
+                                value={formData.barcode}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <Tooltip title="Auto-generate barcode">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => setFormData(prev => ({ ...prev, barcode: generateBarcode() }))}
+                                                >
+                                                    <RefreshCw size={16} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </InputAdornment>
+                                    ),
+                                }}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 4 }}>
