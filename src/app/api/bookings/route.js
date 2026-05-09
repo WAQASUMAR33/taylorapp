@@ -246,9 +246,18 @@ export async function POST(req) {
 
         // Use transaction to ensure data integrity
         const result = await prisma.$transaction(async (tx) => {
-            // Generate sequential booking number inside transaction to avoid race conditions
-            const count = await tx.booking.count();
-            const bookingNumber = String(count + 1);
+            // Generate monthly-reset booking number: YYYYMM-NNNN (restarts at 0001 each month)
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-indexed
+            const startOfMonth = new Date(year, month, 1);
+            const startOfNextMonth = new Date(year, month + 1, 1);
+            const countThisMonth = await tx.booking.count({
+                where: { bookingDate: { gte: startOfMonth, lt: startOfNextMonth } }
+            });
+            const mm = String(month + 1).padStart(2, "0");
+            const seq = String(countThisMonth + 1).padStart(4, "0");
+            const bookingNumber = `${year}${mm}-${seq}`;
 
             // 1. Create the booking
             const booking = await tx.booking.create({
