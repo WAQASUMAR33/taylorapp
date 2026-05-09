@@ -37,116 +37,142 @@ function PrintHeader() {
     );
 }
 
-// ─── Sale Receipt ─────────────────────────────────────────────────────────────
+// ─── Sale Receipt — 80 mm thermal ────────────────────────────────────────────
 function SaleReceipt({ bill, cashPaid }) {
     if (!bill) return null;
+
     const fmtDate = (d) => new Date(d).toLocaleString('en-PK', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
     });
-    const fmtAmt = (n) => parseFloat(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rs = (n) => `Rs. ${parseFloat(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+    const Dash = () => (
+        <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+    );
+
+    const Row = ({ label, value, bold, large }) => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: large ? 14 : 11, fontWeight: bold ? 800 : 400, marginBottom: 2 }}>
+            <span>{label}</span>
+            <span>{value}</span>
+        </div>
+    );
 
     return (
-        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', fontSize: 12 }}>
-            <PrintHeader />
-
-            {/* Receipt title */}
-            <div style={{ textAlign: 'center', margin: '10px 0 6px', fontSize: 15, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
-                Sale Receipt
+        <div style={{
+            fontFamily: "'Courier New', Courier, monospace",
+            color: '#000',
+            width: '76mm',
+            boxSizing: 'border-box',
+            fontSize: 11,
+            padding: '3mm 2mm',
+        }}>
+            {/* ── Shop header ── */}
+            <div style={{ textAlign: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', lineHeight: 1.2 }}>
+                    Grace Cloth<br />&amp; Tailors
+                </div>
+                <div style={{ fontSize: 10, fontStyle: 'italic', marginTop: 3 }}>
+                    Where Style Meets Perfection
+                </div>
+                <div style={{ fontSize: 10, marginTop: 3 }}>
+                    0300-6284318 | 0318-6284318
+                </div>
+                <div style={{ fontSize: 10, marginTop: 2 }}>
+                    Basement Faazal Plaza,<br />Dhulyan Chowk Dinga
+                </div>
             </div>
 
-            {/* Bill info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 11 }}>
+            <Dash />
+
+            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+                SALE RECEIPT
+            </div>
+
+            <Dash />
+
+            {/* ── Bill info ── */}
+            <div style={{ fontSize: 10, lineHeight: 1.6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span><strong>Bill #:</strong> {bill.billNumber}</span>
+                    <span>{fmtDate(bill.createdAt)}</span>
+                </div>
                 <div>
-                    <div><strong>Bill #:</strong> {bill.billNumber}</div>
-                    <div><strong>Date:</strong> {fmtDate(bill.createdAt)}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                    {bill.customer ? (
-                        <>
-                            <div><strong>Customer:</strong> {bill.customer.name}</div>
-                            {bill.customer.phone && <div><strong>Phone:</strong> {bill.customer.phone}</div>}
-                        </>
-                    ) : (
-                        <div><strong>Customer:</strong> Walk-in / Cash Sale</div>
-                    )}
+                    <strong>Customer:</strong>{' '}
+                    {bill.customer ? bill.customer.name : 'Walk-in / Cash Sale'}
+                    {bill.customer?.phone && ` | ${bill.customer.phone}`}
                 </div>
             </div>
 
-            {/* Items table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                <thead>
-                    <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>#</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>Product</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'left' }}>Code</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'center' }}>Qty</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Unit Price</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Disc %</th>
-                        <th style={{ border: '1px solid #555', padding: '5px 7px', textAlign: 'right' }}>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {(bill.items || []).map((item, idx) => (
-                        <tr key={item.id} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px' }}>{idx + 1}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', fontWeight: 600 }}>{item.product?.name || '—'}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', color: '#555', fontFamily: 'monospace' }}>{item.product?.sku || '—'}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'center' }}>{item.quantity}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right' }}>Rs. {fmtAmt(item.unitPrice)}</td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right' }}>
-                                {parseFloat(item.discount) > 0 ? `${parseFloat(item.discount)}%` : '—'}
-                            </td>
-                            <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'right', fontWeight: 700 }}>Rs. {fmtAmt(item.total)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            <Dash />
 
-            {/* Totals */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <table style={{ fontSize: 12, borderCollapse: 'collapse', minWidth: 220 }}>
-                    <tbody>
-                        <tr>
-                            <td style={{ padding: '3px 10px', color: '#555' }}>Subtotal</td>
-                            <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600 }}>Rs. {fmtAmt(bill.subtotal)}</td>
-                        </tr>
-                        {parseFloat(bill.discount) > 0 && (
-                            <tr>
-                                <td style={{ padding: '3px 10px', color: '#dc2626' }}>Discount</td>
-                                <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600, color: '#dc2626' }}>− Rs. {fmtAmt(bill.discount)}</td>
-                            </tr>
-                        )}
-                        <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
-                            <td style={{ padding: '6px 10px', fontWeight: 800, fontSize: 13 }}>TOTAL</td>
-                            <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 800, fontSize: 13 }}>Rs. {fmtAmt(bill.total)}</td>
-                        </tr>
-                        {bill.customer && cashPaid < parseFloat(bill.total) && (
-                            <>
-                                <tr>
-                                    <td style={{ padding: '3px 10px', color: '#059669' }}>Cash Paid</td>
-                                    <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 600, color: '#059669' }}>Rs. {fmtAmt(cashPaid)}</td>
-                                </tr>
-                                <tr>
-                                    <td style={{ padding: '3px 10px', color: '#d97706', fontWeight: 700 }}>Added to Balance</td>
-                                    <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 700, color: '#d97706' }}>Rs. {fmtAmt(parseFloat(bill.total) - cashPaid)}</td>
-                                </tr>
-                            </>
-                        )}
-                    </tbody>
-                </table>
+            {/* ── Items ── */}
+            <div style={{ fontSize: 10 }}>
+                <div style={{ display: 'flex', fontWeight: 700, borderBottom: '1px solid #000', paddingBottom: 3, marginBottom: 4 }}>
+                    <span style={{ flex: 4 }}>Item</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Qty</span>
+                    <span style={{ flex: 2, textAlign: 'right' }}>Price</span>
+                    <span style={{ flex: 2, textAlign: 'right' }}>Total</span>
+                </div>
+
+                {(bill.items || []).map((item, idx) => (
+                    <div key={item.id} style={{ marginBottom: 6 }}>
+                        <div style={{ fontWeight: 700, fontSize: 11 }}>
+                            {idx + 1}. {item.product?.name || '—'}
+                        </div>
+                        <div style={{ display: 'flex', fontSize: 10 }}>
+                            <span style={{ flex: 4, color: '#555' }}>{item.product?.sku || ''}</span>
+                            <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
+                            <span style={{ flex: 2, textAlign: 'right' }}>
+                                {rs(item.unitPrice)}
+                                {parseFloat(item.discount) > 0 && ` -${parseFloat(item.discount)}%`}
+                            </span>
+                            <span style={{ flex: 2, textAlign: 'right', fontWeight: 700 }}>
+                                {rs(item.total)}
+                            </span>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            {/* Notes */}
-            {bill.notes && (
-                <div style={{ marginTop: 10, fontSize: 11, color: '#444' }}>
-                    <strong>Note:</strong> {bill.notes}
+            <Dash />
+
+            {/* ── Totals ── */}
+            <div style={{ fontSize: 11 }}>
+                <Row label="Subtotal" value={rs(bill.subtotal)} />
+                {parseFloat(bill.discount) > 0 && (
+                    <Row label="Discount" value={`- ${rs(bill.discount)}`} />
+                )}
+            </div>
+            <div style={{ borderTop: '2px solid #000', marginTop: 4, paddingTop: 4 }}>
+                <Row label="TOTAL" value={rs(bill.total)} bold large />
+            </div>
+
+            {bill.customer && cashPaid < parseFloat(bill.total) && (
+                <div style={{ marginTop: 4, fontSize: 11 }}>
+                    <Row label="Cash Paid" value={rs(cashPaid)} />
+                    <Row label="Balance Due" value={rs(parseFloat(bill.total) - cashPaid)} bold />
                 </div>
             )}
 
-            {/* Footer */}
-            <div style={{ marginTop: 18, borderTop: '1px dashed #aaa', paddingTop: 8, textAlign: 'center', fontSize: 11, color: '#555' }}>
-                Thank you for your purchase! &nbsp;|&nbsp; Please keep this receipt for your records.
+            {/* ── Notes ── */}
+            {bill.notes && (
+                <>
+                    <Dash />
+                    <div style={{ fontSize: 10 }}><strong>Note:</strong> {bill.notes}</div>
+                </>
+            )}
+
+            <Dash />
+
+            {/* ── Footer ── */}
+            <div style={{ textAlign: 'center', fontSize: 10, lineHeight: 1.7 }}>
+                <div>Thank you for your purchase!</div>
+                <div>Please keep this receipt for records.</div>
             </div>
+
+            {/* trailing space for tear-off */}
+            <div style={{ height: 16 }} />
         </div>
     );
 }
@@ -303,7 +329,7 @@ export default function SaleClient({ products, customers }) {
             {/* Print styles */}
             <style>{`
                 @media print {
-                    @page { size: A4 portrait; margin: 0; }
+                    @page { size: 80mm auto; margin: 0; }
                     body * { visibility: hidden !important; }
                     #sale-receipt-printable,
                     #sale-receipt-printable * { visibility: visible !important; }
@@ -311,9 +337,7 @@ export default function SaleClient({ products, customers }) {
                         display: block !important;
                         position: absolute;
                         top: 0; left: 0;
-                        width: 210mm;
-                        min-height: 297mm;
-                        padding: 15mm;
+                        width: 80mm;
                         box-sizing: border-box;
                         background: white;
                     }
