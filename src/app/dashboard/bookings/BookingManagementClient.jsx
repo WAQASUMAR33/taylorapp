@@ -353,7 +353,7 @@ function TailorTicket({ booking, measurements }) {
     const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
     const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
 
-    const cell = { border: '1px solid #000', padding: '3px 6px', fontSize: 11 };
+    const cell = { border: '1px solid #000', padding: '5px 8px', fontSize: 13 };
 
     const getMeasureRows = (src) => [
         ['Lambai',   src?.qameez_lambai],
@@ -396,7 +396,7 @@ function TailorTicket({ booking, measurements }) {
             </div>
 
             {/* Info bar */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 11, border: '1px solid #000' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 13, border: '1px solid #000' }}>
                 <tbody>
                     <tr>
                         <td style={{ ...cell, fontWeight: 700, width: '15%' }}>Customer:</td>
@@ -440,17 +440,17 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* ── Measurements column ── */}
                             <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '3px 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
                                     Measurements — پیمائش
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {measureRows.map(([label, val], i) => (
                                             <tr key={i}>
-                                                <td style={{ padding: '2px 6px', fontSize: 11, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
+                                                <td style={{ padding: '5px 8px', fontSize: 13, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
                                                     {label}:
                                                 </td>
-                                                <td style={{ padding: '2px 4px', fontSize: 11, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
+                                                <td style={{ padding: '5px 6px', fontSize: 13, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
                                                     <span style={{
                                                         display: 'inline-block',
                                                         minWidth: 52,
@@ -469,16 +469,16 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* ── Stitching options column ── */}
                             <div style={{ flex: '0 0 30%', borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '3px 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
                                     Stitching Details
                                 </div>
                                 {Array.from({ length: STITCH_ROWS }, (_, i) => (
                                     <div key={i} style={{
                                         border: '1px solid #000',
                                         margin: '3px 4px',
-                                        padding: '2px 5px',
-                                        fontSize: 11,
-                                        minHeight: 20,
+                                        padding: '5px 7px',
+                                        fontSize: 13,
+                                        minHeight: 28,
                                         fontWeight: stitchBoxes[i] ? 600 : 400,
                                     }}>
                                         {stitchBoxes[i] || ''}
@@ -488,14 +488,14 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* ── Notes column ── */}
                             <div style={{ flex: 1 }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '3px 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
                                     Notes
                                 </div>
                                 <div style={{
                                     border: '1px solid #000',
                                     margin: '4px',
-                                    padding: '4px 6px',
-                                    fontSize: 12,
+                                    padding: '6px 8px',
+                                    fontSize: 13,
                                     minHeight: 120,
                                     fontWeight: 600,
                                     lineHeight: 1.6,
