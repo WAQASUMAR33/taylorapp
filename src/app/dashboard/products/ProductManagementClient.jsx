@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -41,6 +41,26 @@ import {
 } from "lucide-react";
 import JsBarcode from "jsbarcode";
 
+// Generate barcode SVG string using an offscreen element (no DOM ref needed)
+function makeBarcodesvg(value) {
+    try {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        JsBarcode(svg, value, {
+            format: "CODE128",
+            width: 2,
+            height: 55,
+            displayValue: true,
+            fontSize: 11,
+            margin: 5,
+            background: "#ffffff",
+            lineColor: "#000000",
+        });
+        return new XMLSerializer().serializeToString(svg);
+    } catch {
+        return "";
+    }
+}
+
 export default function ProductManagementClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState("");
@@ -71,25 +91,13 @@ export default function ProductManagementClient({ initialProducts }) {
     // ── Barcode print state ──────────────────────────────
     const [printProduct, setPrintProduct] = useState(null);
     const [printQty, setPrintQty] = useState(1);
-    const barcodeRef = useRef(null);
+    const [barcodeSvg, setBarcodeSvg] = useState("");   // serialized SVG string
 
+    // Regenerate barcode SVG whenever the selected product changes
     useEffect(() => {
-        if (!printProduct || !barcodeRef.current) return;
-        try {
-            JsBarcode(barcodeRef.current, printProduct.barcode || printProduct.sku || "NOSKU", {
-                format: "CODE128",
-                width: 1.5,
-                height: 38,
-                displayValue: true,
-                fontSize: 9,
-                margin: 2,
-                textMargin: 1,
-                background: "#ffffff",
-                lineColor: "#000000",
-            });
-        } catch (e) {
-            console.error("Barcode generation failed:", e);
-        }
+        if (!printProduct) { setBarcodeSvg(""); return; }
+        const value = printProduct.barcode || printProduct.sku || "NOSKU";
+        setBarcodeSvg(makeBarcodesvg(value));
     }, [printProduct]);
 
     const handlePrintLabel = (prod) => {
@@ -97,14 +105,16 @@ export default function ProductManagementClient({ initialProducts }) {
         setPrintQty(1);
     };
 
-    const closePrintDialog = () => setPrintProduct(null);
+    const closePrintDialog = () => {
+        setPrintProduct(null);
+        setBarcodeSvg("");
+    };
 
     const handlePrint = () => {
-        const svgEl = barcodeRef.current;
-        if (!svgEl) return;
-
-        // Inline SVG is far more reliable in print popups than data: URLs
-        const svgStr = new XMLSerializer().serializeToString(svgEl);
+        if (!barcodeSvg) {
+            alert("Barcode not ready. Please wait a moment and try again.");
+            return;
+        }
 
         const safeName = (printProduct.name || "")
             .replace(/&/g, "&amp;")
@@ -113,16 +123,16 @@ export default function ProductManagementClient({ initialProducts }) {
         const price = `Rs. ${parseFloat(printProduct.unitPrice || 0).toLocaleString()}`;
 
         const sticker = `
-          <div class="sticker">
-            <div class="brand">Grace Cloth &amp; Tailors</div>
-            <div class="pname">${safeName}</div>
-            <div class="barcode-wrap">${svgStr}</div>
-            <div class="price">${price}</div>
-          </div>`;
+<div class="sticker">
+  <div class="brand">Grace Cloth &amp; Tailors</div>
+  <div class="pname">${safeName}</div>
+  <div class="barcode-wrap">${barcodeSvg}</div>
+  <div class="price">${price}</div>
+</div>`;
 
-        const win = window.open("", "_blank", "width=400,height=300");
+        const win = window.open("", "_blank", "width=500,height=350");
         if (!win) {
-            alert("Popup blocked. Please allow popups for this site.");
+            alert("Popup blocked — please allow popups for this site.");
             return;
         }
 
@@ -130,7 +140,7 @@ export default function ProductManagementClient({ initialProducts }) {
 <html>
 <head>
 <meta charset="utf-8">
-<title>Print Label</title>
+<title>Label</title>
 <style>
   @page { margin: 0; size: 2in 1in; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -143,22 +153,54 @@ export default function ProductManagementClient({ initialProducts }) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2px 4px 1px;
+    padding: 2px 3px;
     overflow: hidden;
     page-break-inside: avoid;
+    break-inside: avoid;
   }
-  .brand { font-size: 6.5pt; font-weight: bold; text-align: center; letter-spacing: 0.2px; line-height: 1.2; }
-  .pname { font-size: 7pt; font-weight: 600; text-align: center; line-height: 1.2; margin-top: 1px; }
-  .barcode-wrap { width: 1.9in; margin: 1px 0; display: flex; align-items: center; justify-content: center; }
-  .barcode-wrap svg { width: 100% !important; height: auto !important; display: block; }
-  .price { font-size: 8.5pt; font-weight: bold; text-align: center; line-height: 1; }
+  .brand {
+    font-size: 6.5pt;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+  }
+  .pname {
+    font-size: 7pt;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 1pt;
+  }
+  .barcode-wrap {
+    width: 1.88in;
+    margin: 1pt 0;
+    display: block;
+    text-align: center;
+  }
+  .barcode-wrap svg {
+    width: 1.88in !important;
+    height: 0.44in !important;
+    display: block;
+  }
+  .price {
+    font-size: 8.5pt;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1;
+    margin-top: 1pt;
+  }
 </style>
 </head>
 <body>
 <div class="page">
-${Array(Math.max(1, printQty)).fill(sticker).join("")}
+${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
 </div>
-<script>window.onload = function() { window.print(); }<\/script>
+<script>
+  window.onload = function () {
+    setTimeout(function () { window.print(); }, 300);
+  };
+<\/script>
 </body>
 </html>`);
         win.document.close();
@@ -396,7 +438,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         Preview — 2&quot; × 1&quot; sticker
                     </Typography>
 
-                    {/* Sticker preview */}
+                    {/* Sticker preview — mirrors exact print layout */}
                     <Box sx={{
                         width: 360,
                         height: 180,
@@ -411,7 +453,8 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         mx: "auto",
                         my: 2,
                         bgcolor: "#fff",
-                        gap: 0.4,
+                        gap: 0.3,
+                        overflow: "hidden",
                     }}>
                         <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: "Arial, sans-serif", letterSpacing: 0.4, color: "#000" }}>
                             Grace Cloth &amp; Tailors
@@ -419,7 +462,19 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         <Typography sx={{ fontSize: 12, fontWeight: 600, fontFamily: "Arial, sans-serif", color: "#000" }}>
                             {printProduct?.name}
                         </Typography>
-                        <svg ref={barcodeRef} style={{ width: "100%", height: 68 }} />
+
+                        {/* Inline SVG barcode preview */}
+                        {barcodeSvg ? (
+                            <Box
+                                sx={{ width: "100%", display: "flex", justifyContent: "center", "& svg": { width: "100% !important", height: "70px !important" } }}
+                                dangerouslySetInnerHTML={{ __html: barcodeSvg }}
+                            />
+                        ) : (
+                            <Box sx={{ height: 70, display: "flex", alignItems: "center" }}>
+                                <Typography variant="caption" color="text.disabled">Generating barcode…</Typography>
+                            </Box>
+                        )}
+
                         <Typography sx={{ fontSize: 13, fontWeight: 700, fontFamily: "Arial, sans-serif", color: "#000" }}>
                             Rs. {parseFloat(printProduct?.unitPrice || 0).toLocaleString()}
                         </Typography>
@@ -453,6 +508,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         variant="contained"
                         startIcon={<Printer size={17} />}
                         onClick={handlePrint}
+                        disabled={!barcodeSvg}
                         sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
                         Print{printQty > 1 ? ` (${printQty} copies)` : ""}
@@ -495,7 +551,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("")}
                         <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth size="small" label="Barcode (Code 128)" name="barcode"
-                                placeholder="Auto-generate or enter manually"
+                                placeholder="Click ↻ to auto-generate, or type manually"
                                 value={formData.barcode}
                                 onChange={handleInputChange}
                                 variant="outlined"
