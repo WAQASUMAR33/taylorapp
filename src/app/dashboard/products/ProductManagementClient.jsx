@@ -144,8 +144,7 @@ export default function ProductManagementClient({ initialProducts }) {
 <style>
   @page { margin: 0; size: 2in 1in; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; background: #fff; }
-  .page { display: flex; flex-wrap: wrap; }
+  html, body { width: 2in; font-family: Arial, Helvetica, sans-serif; background: #fff; }
   .sticker {
     width: 2in;
     height: 1in;
@@ -155,8 +154,12 @@ export default function ProductManagementClient({ initialProducts }) {
     justify-content: center;
     padding: 2px 3px;
     overflow: hidden;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    page-break-after: always;
+    break-after: page;
+  }
+  .sticker:last-child {
+    page-break-after: avoid;
+    break-after: avoid;
   }
   .brand {
     font-size: 6.5pt;
@@ -193,9 +196,7 @@ export default function ProductManagementClient({ initialProducts }) {
 </style>
 </head>
 <body>
-<div class="page">
 ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
-</div>
 <script>
   window.onload = function () {
     setTimeout(function () { window.print(); }, 300);
