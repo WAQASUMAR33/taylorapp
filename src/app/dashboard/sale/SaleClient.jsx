@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
     Box, Button, Typography, TextField, InputAdornment, Autocomplete,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import {
     Search, Plus, Trash2, ShoppingBag, User, Tag, ReceiptText,
-    Minus, BadgePercent, Printer, Wallet,
+    Minus, BadgePercent, Printer, Wallet, ScanLine,
 } from "lucide-react";
 
 // ─── Print Header (same style as bookings) ───────────────────────────────────
@@ -165,6 +165,31 @@ export default function SaleClient({ products, customers }) {
     const [successMessage, setSuccessMessage] = useState("");
     const [lastSavedBill, setLastSavedBill] = useState(null);
 
+    // ── Barcode scanner ──────────────────────────────────
+    const [scanCode, setScanCode] = useState("");
+    const [scanStatus, setScanStatus] = useState(null); // { type, msg }
+    const scanRef = useRef(null);
+
+    const handleScan = (raw) => {
+        const code = raw.trim();
+        if (!code) return;
+        const q = code.toLowerCase();
+        const product = products.find(p =>
+            (p.sku || "").toLowerCase() === q ||
+            (p.barcode || "").toLowerCase() === q
+        );
+        setScanCode("");
+        if (product) {
+            handleAddProduct(product);
+            setScanStatus({ type: "success", msg: `Added: ${product.name}` });
+        } else {
+            setScanStatus({ type: "error", msg: `No product found for "${code}"` });
+        }
+        setTimeout(() => setScanStatus(null), 2500);
+        // keep focus so scanner can fire again immediately
+        setTimeout(() => scanRef.current?.focus(), 50);
+    };
+
     // Add product to cart
     const handleAddProduct = (product) => {
         if (!product) return;
@@ -299,6 +324,49 @@ export default function SaleClient({ products, customers }) {
 
                 {/* ── Left: Product search + Cart ──────────── */}
                 <Grid size={{ xs: 12, lg: 8 }}>
+
+                    {/* ── Barcode scanner input ──────────────────── */}
+                    <Box sx={{ mb: 2 }}>
+                        <TextField
+                            inputRef={scanRef}
+                            fullWidth
+                            size="small"
+                            placeholder="Scan barcode here — or type code and press Enter…"
+                            value={scanCode}
+                            onChange={(e) => setScanCode(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleScan(scanCode);
+                                }
+                            }}
+                            autoFocus
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <ScanLine size={18} style={{ color: "#6366f1" }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                bgcolor: "background.paper",
+                                "& .MuiOutlinedInput-root": {
+                                    borderRadius: 2,
+                                    "& fieldset": { borderColor: "#6366f1", borderWidth: 2 },
+                                    "&:hover fieldset": { borderColor: "#6366f1" },
+                                    "&.Mui-focused fieldset": { borderColor: "#6366f1" },
+                                },
+                            }}
+                        />
+                        {scanStatus && (
+                            <Alert
+                                severity={scanStatus.type === "success" ? "success" : "error"}
+                                sx={{ mt: 1, py: 0.4, borderRadius: 2 }}
+                            >
+                                {scanStatus.msg}
+                            </Alert>
+                        )}
+                    </Box>
 
                     {/* Product search */}
                     <Autocomplete
