@@ -260,35 +260,77 @@ function CustomerBill({ booking }) {
                 </tbody>
             </table>
 
-            {/* Items Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
-                <thead>
-                    <tr>
-                        <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
-                        <th style={thStyle}>Description</th>
-                        <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
-                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
-                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {(booking.items || []).map((item, idx) => {
-                        const unitPr = item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice);
-                        return (
-                            <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
-                                <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
-                                <td style={tdStyle}>
-                                    {item.product?.name && <span style={{ fontWeight: 700 }}>{item.product.name} — </span>}
-                                    {(item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ')}
-                                </td>
-                                <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
-                                <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{unitPr.toLocaleString()}</td>
-                                <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+            {/* Stitching Items Table */}
+            {(() => {
+                const stitchItems = (booking.items || []).filter(item => (item.selectedOptions || []).length > 0);
+                const prodItems = (booking.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+                return (
+                    <>
+                        {stitchItems.length > 0 && (
+                            <>
+                                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Stitching Services</div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
+                                            <th style={thStyle}>Description</th>
+                                            <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
+                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
+                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {stitchItems.map((item, idx) => {
+                                            const unitPr = item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice);
+                                            return (
+                                                <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                                                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
+                                                    <td style={tdStyle}>
+                                                        {item.product?.name && <span style={{ fontWeight: 700 }}>{item.product.name} — </span>}
+                                                        {(item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ')}
+                                                    </td>
+                                                    <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
+                                                    <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{unitPr.toLocaleString()}</td>
+                                                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
+                        {prodItems.length > 0 && (
+                            <>
+                                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4, marginTop: stitchItems.length > 0 ? 8 : 0 }}>Products / Accessories</div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
+                                            <th style={thStyle}>Product</th>
+                                            <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
+                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
+                                            <th style={{ ...thStyle, width: 60, textAlign: 'right' }}>Disc</th>
+                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {prodItems.map((item, idx) => (
+                                            <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
+                                                <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
+                                                <td style={{ ...tdStyle, fontWeight: 700 }}>{item.product?.name || '—'}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{parseFloat(item.unitPrice).toLocaleString()}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'right' }}>{parseFloat(item.discount) > 0 ? `${parseFloat(item.discount)}%` : '—'}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
+                    </>
+                );
+            })()}
 
             {/* Suit Details — single string per suit row, right after items table */}
             {(booking.items || []).some(item => suitDetailValue(item).length > 0) && (
@@ -697,6 +739,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     // Store previous stitching details for reuse
     const [previousStitchingDetails, setPreviousStitchingDetails] = useState(null);
 
+    // Product items added to the bill (non-stitching)
+    const [productItems, setProductItems] = useState([]);
+
 
     // Filter staff customers by accountCategory name (case-insensitive)
     const tailors = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "tailor");
@@ -803,8 +848,44 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
     };
 
+    const handleAddProductItem = () => {
+        setProductItems(prev => [...prev, { id: Date.now(), productId: null, productName: "", quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }]);
+    };
 
-    const totalAmount = cartItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+    const handleRemoveProductItem = (index) => {
+        setProductItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleProductSelect = (index, product) => {
+        setProductItems(prev => {
+            const next = [...prev];
+            if (!product) {
+                next[index] = { ...next[index], productId: null, productName: "", unitPrice: 0, totalPrice: 0 };
+            } else {
+                const qty = parseFloat(next[index].quantity) || 1;
+                const price = parseFloat(product.unitPrice || 0);
+                const disc = parseFloat(next[index].discount) || 0;
+                next[index] = { ...next[index], productId: product.id, productName: product.name, unitPrice: price, totalPrice: qty * price * (1 - disc / 100) };
+            }
+            return next;
+        });
+    };
+
+    const handleProductItemChange = (index, field, value) => {
+        setProductItems(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            const qty = parseFloat(field === 'quantity' ? value : next[index].quantity) || 1;
+            const price = parseFloat(field === 'unitPrice' ? value : next[index].unitPrice) || 0;
+            const disc = parseFloat(field === 'discount' ? value : next[index].discount) || 0;
+            next[index].totalPrice = qty * price * (1 - disc / 100);
+            return next;
+        });
+    };
+
+    const stitchingTotal = cartItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+    const productTotal = productItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+    const totalAmount = stitchingTotal + productTotal;
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
     const balanceAmount = totalAmount - advanceAmount;
 
@@ -813,6 +894,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setError("");
 
         const validItems = cartItems.filter(item => (item.selectedOptionIds || []).length > 0);
+        const validProductItems = productItems.filter(p => p.productId);
 
         if (!formData.customerId) {
             setError("Please select a customer");
@@ -820,8 +902,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             return;
         }
 
-        if (validItems.length === 0) {
-            setError("Please select at least one stitching option");
+        if (validItems.length === 0 && validProductItems.length === 0) {
+            setError("Please select at least one stitching option or add a product");
             setLoading(false);
             return;
         }
@@ -841,41 +923,49 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 advanceAmount,
                 remainingAmount: balanceAmount,
                 notes: formData.notes,
-                items: validItems.map(item => ({
-                    productId: item.productId || null,
-                    quantity: parseInt(item.quantity) || 1,
-                    unitPrice: item.unitPrice || 0,
-                    discount: 0,
-                    totalPrice: item.totalPrice,
-                    selectedOptionIds: item.selectedOptionIds || [],
-                    itemStatus: item.itemStatus || "PENDING",
-                    itemNote: item.itemNote || null,
-                    // Per-Item Stitching Details
-                    cuffType: item.cuffType,
-                    pohnchaType: item.pohnchaType,
-                    gheraType: item.gheraType,
-                    galaType: item.galaType,
-                    galaSize: item.galaSize,
-                    pocketType: item.pocketType,
-                    shalwarType: item.shalwarType,
-                    hasShalwarPocket: item.hasShalwarPocket,
-                    hasFrontPockets: item.hasFrontPockets,
-                    // Measurements
-                    qameez_lambai: item.qameez_lambai,
-                    bazoo: item.bazoo,
-                    teera: item.teera,
-                    galaa: item.galaa,
-                    chaati: item.chaati,
-                    gheera: item.gheera,
-                    kaf: item.kaf,
-                    kandha: item.kandha,
-                    chaati_around: item.chaati_around,
-                    kamar_around: item.kamar_around,
-                    hip_around: item.hip_around,
-                    shalwar_lambai: item.shalwar_lambai,
-                    puhncha: item.puhncha,
-                    shalwar_gheera: item.shalwar_gheera,
-                }))
+                items: [
+                    ...validItems.map(item => ({
+                        productId: item.productId || null,
+                        quantity: parseInt(item.quantity) || 1,
+                        unitPrice: item.unitPrice || 0,
+                        discount: 0,
+                        totalPrice: item.totalPrice,
+                        selectedOptionIds: item.selectedOptionIds || [],
+                        itemStatus: item.itemStatus || "PENDING",
+                        itemNote: item.itemNote || null,
+                        cuffType: item.cuffType,
+                        pohnchaType: item.pohnchaType,
+                        gheraType: item.gheraType,
+                        galaType: item.galaType,
+                        galaSize: item.galaSize,
+                        pocketType: item.pocketType,
+                        shalwarType: item.shalwarType,
+                        hasShalwarPocket: item.hasShalwarPocket,
+                        hasFrontPockets: item.hasFrontPockets,
+                        qameez_lambai: item.qameez_lambai,
+                        bazoo: item.bazoo,
+                        teera: item.teera,
+                        galaa: item.galaa,
+                        chaati: item.chaati,
+                        gheera: item.gheera,
+                        kaf: item.kaf,
+                        kandha: item.kandha,
+                        chaati_around: item.chaati_around,
+                        kamar_around: item.kamar_around,
+                        hip_around: item.hip_around,
+                        shalwar_lambai: item.shalwar_lambai,
+                        puhncha: item.puhncha,
+                        shalwar_gheera: item.shalwar_gheera,
+                    })),
+                    ...validProductItems.map(item => ({
+                        productId: item.productId,
+                        quantity: parseInt(item.quantity) || 1,
+                        unitPrice: parseFloat(item.unitPrice) || 0,
+                        discount: parseFloat(item.discount) || 0,
+                        totalPrice: parseFloat(item.totalPrice) || 0,
+                        selectedOptionIds: [],
+                    })),
+                ]
             };
 
             const isEdit = !!editingBookingId;
@@ -924,7 +1014,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             advanceAmount: booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "",
             notes: booking.notes || "",
         });
-        setCartItems((booking.items || []).map((item, i) => ({
+        const stitchingBookingItems = (booking.items || []).filter(item => (item.selectedOptions || []).length > 0);
+        const productBookingItems = (booking.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+        setCartItems(stitchingBookingItems.length > 0 ? stitchingBookingItems.map((item, i) => ({
             id: i + 1,
             productId: item.productId || "",
             productName: item.product?.name || "",
@@ -960,6 +1052,25 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             shalwar_lambai: item.shalwar_lambai || "",
             puhncha: item.puhncha || "",
             shalwar_gheera: item.shalwar_gheera || "",
+        })) : [{
+            id: 1, productId: "", productName: "",
+            selectedOptionIds: [], unitPrice: 0, quantity: 1, totalPrice: 0,
+            bookingType: "STITCHING", isStitching: true, isCollapsed: false,
+            itemStatus: "PENDING", itemNote: "",
+            cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
+            pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
+            qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
+            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+            hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
+        }]);
+        setProductItems(productBookingItems.map((item, i) => ({
+            id: i + 1,
+            productId: item.productId,
+            productName: item.product?.name || "",
+            quantity: item.quantity || 1,
+            unitPrice: parseFloat(item.unitPrice) || 0,
+            discount: parseFloat(item.discount) || 0,
+            totalPrice: parseFloat(item.totalPrice) || 0,
         })));
         setShowForm(true);
     };
@@ -1007,6 +1118,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
             }
         ]);
+        setProductItems([]);
     };
 
     const handleDelete = async (id) => {
@@ -1582,6 +1694,84 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             sx={{ mt: 1, textTransform: 'none', color: '#8b5cf6', fontWeight: 600 }}>
                             Add New Item
                         </Button>
+                    </Box>
+
+                    {/* ── Products / Accessories ── */}
+                    <Box sx={{ mb: 2 }}>
+                        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #f59e0b', pl: 1.5 }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Products / Accessories</Typography>
+                            <Button startIcon={<Plus size={15} />} onClick={handleAddProductItem} size="small"
+                                sx={{ textTransform: 'none', color: '#f59e0b', fontWeight: 600 }}>
+                                Add Product
+                            </Button>
+                        </Box>
+                        {productItems.length > 0 && (
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow sx={{ bgcolor: '#fef3c7' }}>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Qty</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Unit Price</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Disc %</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total</TableCell>
+                                            <TableCell sx={{ width: 40 }} />
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {productItems.map((item, index) => (
+                                            <TableRow key={item.id} sx={{ '&:hover': { bgcolor: '#fffbeb' } }}>
+                                                <TableCell sx={{ color: '#6b7280', fontWeight: 600 }}>{index + 1}</TableCell>
+                                                <TableCell>
+                                                    <Autocomplete
+                                                        options={products || []}
+                                                        getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ''}` || ""}
+                                                        value={(products || []).find(p => p.id === item.productId) || null}
+                                                        onChange={(_, nv) => handleProductSelect(index, nv)}
+                                                        size="small"
+                                                        renderInput={(params) => (
+                                                            <TextField {...params} size="small" placeholder="Select product"
+                                                                sx={{ minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField type="number" size="small" value={item.quantity}
+                                                        onChange={(e) => handleProductItemChange(index, 'quantity', e.target.value)}
+                                                        inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField type="number" size="small" value={item.unitPrice}
+                                                        onChange={(e) => handleProductItemChange(index, 'unitPrice', e.target.value)}
+                                                        inputProps={{ min: 0, style: { width: 80 } }}
+                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TextField type="number" size="small" value={item.discount}
+                                                        onChange={(e) => handleProductItemChange(index, 'discount', e.target.value)}
+                                                        inputProps={{ min: 0, max: 100, style: { width: 50, textAlign: 'center' } }}
+                                                        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={800} color="#f59e0b">
+                                                        Rs.{parseFloat(item.totalPrice || 0).toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <IconButton size="small" color="error" onClick={() => handleRemoveProductItem(index)}>
+                                                        <Trash2 size={15} />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
                     </Box>
 
                     {/* ── Staff Assignment (multi-select) ── */}
