@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
+        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
 
         if (!name) {
             return NextResponse.json(
@@ -18,6 +18,7 @@ export async function POST(req) {
                 data: {
                     name,
                     fatherName,
+                    measurementNo: measurementNo || null,
                     phone,
                     email,
                     address,

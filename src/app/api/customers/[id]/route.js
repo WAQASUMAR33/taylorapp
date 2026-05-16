@@ -67,7 +67,7 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
-        const { name, fatherName, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
+        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
 
         if (!name) {
             return NextResponse.json(
@@ -106,6 +106,7 @@ export async function PUT(req, { params }) {
                 data: {
                     name,
                     fatherName,
+                    measurementNo: measurementNo !== undefined ? (measurementNo || null) : undefined,
                     phone,
                     email,
                     address,

@@ -98,7 +98,7 @@ export async function GET(req) {
             const booking = await prisma.booking.findUnique({
                 where: { id: parseInt(id) },
                 include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
@@ -118,7 +118,7 @@ export async function GET(req) {
             const bookings = await prisma.booking.findMany({
                 where: { customerId: parseInt(customerId) },
                 include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
@@ -147,7 +147,7 @@ export async function GET(req) {
         const bookings = await prisma.booking.findMany({
             include: {
                 customer: {
-                    select: { id: true, name: true, phone: true, email: true }
+                    select: { id: true, name: true, phone: true, email: true, measurementNo: true }
                 },
                 billingCustomer: BILLING_SELECT,
                 tailor: {
@@ -329,7 +329,7 @@ export async function POST(req) {
                     }
                 },
                 include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true } },
+                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
                     billingCustomer: { select: { id: true, name: true, phone: true } },
                     tailor: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
                     cutter: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
@@ -679,7 +679,7 @@ export async function PUT(req) {
                 data: updateData,
                 include: {
                     customer: {
-                        select: { id: true, name: true, phone: true, email: true }
+                        select: { id: true, name: true, phone: true, email: true, measurementNo: true }
                     },
                     billingCustomer: {
                         select: { id: true, name: true, phone: true }

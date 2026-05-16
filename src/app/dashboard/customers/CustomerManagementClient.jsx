@@ -83,6 +83,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [formData, setFormData] = useState({
         name: "",
         fatherName: "",
+        measurementNo: "",
         phone: "",
         address: "",
         accountCategoryId: getDefaultCategoryId(accountCategories),
@@ -94,6 +95,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         setFormData({
             name: "",
             fatherName: "",
+            measurementNo: "",
             phone: "",
             address: "",
             code: "",
@@ -239,6 +241,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             id: customer.id,
             name: customer.name,
             fatherName: customer.fatherName || "",
+            measurementNo: customer.measurementNo || "",
             phone: customer.phone || "",
             address: customer.address || "",
             code: customer.code || "",
@@ -685,6 +688,20 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 name="fatherName"
                                 placeholder="Enter father's name"
                                 value={formData.fatherName || ""}
+                                onChange={handleInputChange}
+                                variant="outlined"
+                            />
+                        </Grid>
+
+                        {/* Measurement No */}
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Measurement No"
+                                name="measurementNo"
+                                placeholder="e.g. M-001"
+                                value={formData.measurementNo || ""}
                                 onChange={handleInputChange}
                                 variant="outlined"
                             />

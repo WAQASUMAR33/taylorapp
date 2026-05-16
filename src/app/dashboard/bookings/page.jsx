@@ -15,7 +15,7 @@ async function getBookings() {
         const bookings = await prisma.booking.findMany({
             include: {
                 customer: {
-                    select: { id: true, code: true, name: true, phone: true, email: true, address: true }
+                    select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true }
                 },
                 tailor: {
                     select: { id: true, name: true, accountCategory: { select: { name: true } } }

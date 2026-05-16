@@ -124,11 +124,6 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                         <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 60 }}>Delivery</th>
                         <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Tailor</th>
                         <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Suits / Qty</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Suit Status</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 70 }}>Status</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Total</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Advance</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right', width: 55 }}>Balance</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,27 +143,13 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
                                     {(booking.items || []).length} suits / {totalQty} pcs
                                 </td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
-                                    {(booking.items || []).map((item, i) => (
-                                        <span key={i} style={{ display: 'inline-block', marginRight: 3, marginBottom: 2, padding: '1px 4px', borderRadius: 3, fontSize: 9, fontWeight: 700, backgroundColor: (ITEM_STATUS_COLORS[item.itemStatus || 'PENDING'] || '#aaa') + '22', color: ITEM_STATUS_COLORS[item.itemStatus || 'PENDING'] || '#aaa' }}>
-                                            S{i + 1}: {item.itemStatus || 'PENDING'}
-                                        </span>
-                                    ))}
-                                </td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{booking.status}</td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', fontWeight: 700 }}>{parseFloat(booking.totalAmount).toLocaleString()}</td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', color: '#059669', fontWeight: 700 }}>{parseFloat(booking.advanceAmount).toLocaleString()}</td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', textAlign: 'right', color: '#dc2626', fontWeight: 700 }}>{parseFloat(booking.remainingAmount).toLocaleString()}</td>
                             </tr>
                         );
                     })}
                 </tbody>
                 <tfoot>
                     <tr style={{ backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 }}>
-                        <td colSpan={8} style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>TOTAL ({bookings.length} bookings)</td>
-                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalAmount.toLocaleString()}</td>
-                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalAdvance.toLocaleString()}</td>
-                        <td style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>{totalRemaining.toLocaleString()}</td>
+                        <td colSpan={6} style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>TOTAL ({bookings.length} bookings)</td>
                     </tr>
                 </tfoot>
             </table>
@@ -238,7 +219,7 @@ function CustomerBill({ booking }) {
                                 <tbody>
                                     <tr>
                                         <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, width: 80 }}>Bill No:</td>
-                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>#{booking.id}</td>
+                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>#{booking.bookingNumber || booking.id}</td>
                                     </tr>
                                     <tr>
                                         <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2 }}>Date:</td>
@@ -572,6 +553,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [filterDeliveryFrom, setFilterDeliveryFrom] = useState("");
     const [filterDeliveryTo, setFilterDeliveryTo] = useState("");
     const [filterItemStatus, setFilterItemStatus] = useState("");
+    const [filterMeasurementNo, setFilterMeasurementNo] = useState("");
+    const [sortBy, setSortBy] = useState("bookingDate_desc");
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -775,9 +758,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     };
 
     const handleProductChange = (index, productId) => {
+        const newItems = [...cartItems];
+        if (!productId) {
+            newItems[index] = { ...newItems[index], productId: "", productName: "" };
+            setCartItems(newItems);
+            return;
+        }
         const product = (products || []).find(p => p.id === parseInt(productId));
         if (product) {
-            const newItems = [...cartItems];
             const baseItem = {
                 ...newItems[index],
                 productId: product.id,
@@ -1277,14 +1265,37 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const matchesItemStatus = !filterItemStatus ||
             (b.items || []).some(item => (item.itemStatus || "PENDING") === filterItemStatus);
 
-        return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus;
+        const matchesMeasurementNo = !filterMeasurementNo ||
+            (b.customer?.measurementNo || "").toLowerCase().includes(filterMeasurementNo.toLowerCase());
+
+        return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus && matchesMeasurementNo;
     }).sort((a, b) => {
-        const da = a.deliveryDate ? new Date(a.deliveryDate) : null;
-        const db = b.deliveryDate ? new Date(b.deliveryDate) : null;
-        if (!da && !db) return 0;
-        if (!da) return 1;   // no date → bottom
-        if (!db) return -1;
-        return da - db;      // ascending: nearest date first
+        if (sortBy === "bookingNo_asc") {
+            return (parseInt(a.bookingNumber) || a.id) - (parseInt(b.bookingNumber) || b.id);
+        }
+        if (sortBy === "bookingNo_desc") {
+            return (parseInt(b.bookingNumber) || b.id) - (parseInt(a.bookingNumber) || a.id);
+        }
+        if (sortBy === "deliveryDate_desc") {
+            const da = a.deliveryDate ? new Date(a.deliveryDate) : null;
+            const db = b.deliveryDate ? new Date(b.deliveryDate) : null;
+            if (!da && !db) return 0;
+            if (!da) return 1;
+            if (!db) return -1;
+            return db - da;
+        }
+        if (sortBy === "deliveryDate_asc") {
+            const da = a.deliveryDate ? new Date(a.deliveryDate) : null;
+            const db = b.deliveryDate ? new Date(b.deliveryDate) : null;
+            if (!da && !db) return 0;
+            if (!da) return 1;
+            if (!db) return -1;
+            return da - db;
+        }
+        // default: bookingDate_desc
+        const da = a.bookingDate ? new Date(a.bookingDate) : new Date(0);
+        const db = b.bookingDate ? new Date(b.bookingDate) : new Date(0);
+        return db - da;
     });
 
     const getStatusColor = (status) => {
@@ -1465,6 +1476,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: '#f3f4f6' }}>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 200 }}>Product</TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Stitching Options</TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total (Rs.)</TableCell>
                                         <TableCell sx={{ width: 40 }} />
@@ -1475,6 +1487,19 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <React.Fragment key={index}>
                                             <TableRow sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', '& td, & th': { borderBottom: item.bookingType === 'STITCHING' && !item.isCollapsed ? 'none' : undefined } }}>
                                                 <TableCell sx={{ color: '#6b7280', fontWeight: 600, verticalAlign: 'top', pt: 1.5 }}>{index + 1}</TableCell>
+                                                <TableCell sx={{ verticalAlign: 'top', pt: 1, width: 200 }}>
+                                                    <Autocomplete
+                                                        options={products || []}
+                                                        getOptionLabel={(o) => o.name || ""}
+                                                        value={(products || []).find(p => p.id === item.productId) || null}
+                                                        onChange={(_, nv) => handleProductChange(index, nv ? nv.id : "")}
+                                                        size="small"
+                                                        renderInput={(params) => (
+                                                            <TextField {...params} size="small" placeholder="Select product"
+                                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                        )}
+                                                    />
+                                                </TableCell>
                                                 <TableCell sx={{ verticalAlign: 'top', pt: 1 }}>
                                                     {stitchingOptions.length === 0 ? (
                                                         <Typography variant="caption" color="text.disabled">
@@ -2021,6 +2046,28 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     <MenuItem value="DELIVERED">Delivered</MenuItem>
                     <MenuItem value="CANCELLED">Cancelled</MenuItem>
                 </TextField>
+                <TextField
+                    label="Measurement No"
+                    size="small"
+                    value={filterMeasurementNo}
+                    onChange={(e) => setFilterMeasurementNo(e.target.value)}
+                    placeholder="e.g. M-001"
+                    sx={{ width: 155, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                />
+                <TextField
+                    select
+                    label="Sort By"
+                    size="small"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    sx={{ width: 190, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                >
+                    <MenuItem value="bookingDate_desc">Recent Booking Date</MenuItem>
+                    <MenuItem value="deliveryDate_desc">Recent Delivery Date</MenuItem>
+                    <MenuItem value="deliveryDate_asc">Earliest Delivery Date</MenuItem>
+                    <MenuItem value="bookingNo_desc">Booking No (High → Low)</MenuItem>
+                    <MenuItem value="bookingNo_asc">Booking No (Low → High)</MenuItem>
+                </TextField>
                 <Autocomplete
                     options={customers || []}
                     getOptionLabel={(option) => option.name || ""}
@@ -2030,11 +2077,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     sx={{ width: 220, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     renderInput={(params) => <TextField {...params} label="Customer" />}
                 />
-                {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus) && (
+                {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus || filterMeasurementNo) && (
                     <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterDeliveryFrom(""); setFilterDeliveryTo(""); setFilterCustomerId(null); setFilterItemStatus(""); }}
+                        onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterDeliveryFrom(""); setFilterDeliveryTo(""); setFilterCustomerId(null); setFilterItemStatus(""); setFilterMeasurementNo(""); }}
                         sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#6b7280', whiteSpace: 'nowrap' }}
                     >
                         Clear
@@ -2110,7 +2157,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     {/* # Booking No */}
                                     <TableCell>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>
-                                            #{booking.id}
+                                            #{booking.bookingNumber || booking.id}
                                         </Typography>
                                         <Chip
                                             label={booking.bookingType === 'SUIT' ? 'Readymade' : 'Stitching'}
@@ -2142,6 +2189,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <Box>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
+                                                {booking.customer?.measurementNo && (
+                                                    <Typography variant="caption" sx={{ display: 'block', color: '#059669', fontWeight: 600 }}>
+                                                        M# {booking.customer.measurementNo}
+                                                    </Typography>
+                                                )}
                                                 {booking.billingCustomer && booking.billingCustomer.id !== booking.customerId && (
                                                     <Typography variant="caption" sx={{ display: 'block', color: '#8b5cf6', fontWeight: 600 }}>
                                                         Bill: {booking.billingCustomer.name}
