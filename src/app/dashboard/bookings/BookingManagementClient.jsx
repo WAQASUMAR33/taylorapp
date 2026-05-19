@@ -2097,7 +2097,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Tailor</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Cutter</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Suits</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Delivery</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Amount</TableCell>
@@ -2188,22 +2187,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         ) : (
                                             <Typography variant="caption" color="text.disabled">—</Typography>
                                         )}
-                                    </TableCell>
-                                    {/* Suits */}
-                                    <TableCell>
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', display: 'block' }}>
-                                            {(booking.items || []).length} suits / {(booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0)} pcs
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
-                                            {(booking.items || []).map((item, idx) => {
-                                                const sc = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" }[item.itemStatus || "PENDING"] || "#6b7280";
-                                                return (
-                                                    <Chip key={idx} size="small"
-                                                        label={`S${idx + 1}: ${item.itemStatus || "PENDING"}`}
-                                                        sx={{ height: 16, fontSize: '0.6rem', bgcolor: sc + '22', color: sc, fontWeight: 700, borderRadius: 1 }} />
-                                                );
-                                            })}
-                                        </Box>
                                     </TableCell>
                                     {/* Delivery */}
                                     <TableCell>
