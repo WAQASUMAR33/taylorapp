@@ -68,6 +68,36 @@ function StatCard({ icon: Icon, label, value, sub, color, bgColor, trend }) {
     );
 }
 
+// ─── Count card (non-currency) ───────────────────────────────────────────────
+function CountCard({ icon: Icon, label, value, sub, color, bgColor }) {
+    return (
+        <Card variant="outlined" sx={{
+            borderRadius: 3, border: "1px solid #e5e7eb", height: "100%",
+            transition: "box-shadow 0.2s", "&:hover": { boxShadow: "0 8px 24px rgba(0,0,0,0.09)" }
+        }}>
+            <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600}
+                            sx={{ letterSpacing: "0.05em", textTransform: "uppercase", fontSize: "0.7rem" }}>
+                            {label}
+                        </Typography>
+                        <Typography variant="h4" fontWeight={800} sx={{ mt: 0.5, color: color || "#1f2937" }}>
+                            {fmt(value)}
+                        </Typography>
+                        {sub && (
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{sub}</Typography>
+                        )}
+                    </Box>
+                    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: bgColor || "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Icon size={22} color={color || "#6b7280"} />
+                    </Box>
+                </Box>
+            </CardContent>
+        </Card>
+    );
+}
+
 // ─── Staff breakdown row ──────────────────────────────────────────────────────
 function StaffRow({ item, max, color }) {
     const pct = max > 0 ? (item.amount / max) * 100 : 0;
@@ -228,6 +258,30 @@ export default function AnalyticsClient({ employees }) {
 
             {data && (
                 <>
+                    {/* ── Bookings & Suits Count ── */}
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <CountCard
+                                icon={ShoppingBag}
+                                label="Total Bookings"
+                                value={s.bookingCount}
+                                sub="Bookings in selected period"
+                                color="#8b5cf6"
+                                bgColor="#ede9fe"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <CountCard
+                                icon={Scissors}
+                                label="Total Suits"
+                                value={s.suitCount}
+                                sub="Stitching suit pieces"
+                                color="#0891b2"
+                                bgColor="#cffafe"
+                            />
+                        </Grid>
+                    </Grid>
+
                     {/* ── Summary Stats ── */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>

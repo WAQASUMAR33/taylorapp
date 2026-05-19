@@ -302,7 +302,7 @@ function CustomerBill({ booking }) {
                                                 <td style={{ ...tdStyle, fontWeight: 700 }}>{item.product?.name || '—'}</td>
                                                 <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
                                                 <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{parseFloat(item.unitPrice).toLocaleString()}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'right' }}>{parseFloat(item.discount) > 0 ? `${parseFloat(item.discount)}%` : '—'}</td>
+                                                <td style={{ ...tdStyle, textAlign: 'right' }}>{parseFloat(item.discount) > 0 ? `Rs.${parseFloat(item.discount).toLocaleString()}` : '—'}</td>
                                                 <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
                                             </tr>
                                         ))}
@@ -846,8 +846,25 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setProductItems(prev => [...prev, { id: Date.now(), productId: null, productName: "", quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }]);
     };
 
+    const addProductToItems = (product) => {
+        setProductItems(prev => {
+            const existing = prev.find(i => i.productId === product.id);
+            if (existing) {
+                return prev.map(i => {
+                    if (i.productId !== product.id) return i;
+                    const qty = i.quantity + 1;
+                    return { ...i, quantity: qty, totalPrice: qty * parseFloat(i.unitPrice) * (1 - parseFloat(i.discount || 0) / 100) };
+                });
+            }
+            const price = parseFloat(product.unitPrice || 0);
+            return [...prev, { id: Date.now(), productId: product.id, productName: product.name, quantity: 1, unitPrice: price, discount: 0, totalPrice: price }];
+        });
+        setScanStatus({ type: "success", msg: `Added: ${product.name}` });
+        setTimeout(() => setScanStatus(null), 2500);
+    };
+
     const handleBookingScan = (raw) => {
-        const code = raw.trim();
+        const code = (raw || "").trim();
         if (!code) return;
         const q = code.toLowerCase();
         const product = (products || []).find(p =>
@@ -856,23 +873,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         );
         setScanCode("");
         if (product) {
-            setProductItems(prev => {
-                const existing = prev.find(i => i.productId === product.id);
-                if (existing) {
-                    return prev.map(i => {
-                        if (i.productId !== product.id) return i;
-                        const qty = i.quantity + 1;
-                        return { ...i, quantity: qty, totalPrice: qty * parseFloat(i.unitPrice) * (1 - parseFloat(i.discount || 0) / 100) };
-                    });
-                }
-                const price = parseFloat(product.unitPrice || 0);
-                return [...prev, { id: Date.now(), productId: product.id, productName: product.name, quantity: 1, unitPrice: price, discount: 0, totalPrice: price }];
-            });
-            setScanStatus({ type: "success", msg: `Added: ${product.name}` });
+            addProductToItems(product);
         } else {
             setScanStatus({ type: "error", msg: `No product found for "${code}"` });
+            setTimeout(() => setScanStatus(null), 2500);
         }
-        setTimeout(() => setScanStatus(null), 2500);
         setTimeout(() => scanRef.current?.focus(), 50);
     };
 
@@ -889,7 +894,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 const qty = parseFloat(next[index].quantity) || 1;
                 const price = parseFloat(product.unitPrice || 0);
                 const disc = parseFloat(next[index].discount) || 0;
-                next[index] = { ...next[index], productId: product.id, productName: product.name, unitPrice: price, totalPrice: qty * price * (1 - disc / 100) };
+                next[index] = { ...next[index], productId: product.id, productName: product.name, unitPrice: price, totalPrice: Math.max(0, qty * price - disc) };
             }
             return next;
         });
@@ -902,7 +907,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             const qty = parseFloat(field === 'quantity' ? value : next[index].quantity) || 1;
             const price = parseFloat(field === 'unitPrice' ? value : next[index].unitPrice) || 0;
             const disc = parseFloat(field === 'discount' ? value : next[index].discount) || 0;
-            next[index].totalPrice = qty * price * (1 - disc / 100);
+            next[index].totalPrice = Math.max(0, qty * price - disc);
             return next;
         });
     };
@@ -1249,6 +1254,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             (b.customer?.name || "").toLowerCase().includes(q) ||
             (b.customer?.phone || "").toLowerCase().includes(q) ||
             (b.customer?.address || "").toLowerCase().includes(q) ||
+            (b.customer?.measurementNo || "").toLowerCase().includes(q) ||
             (b.id || "").toString().includes(q) ||
             (b.bookingNumber || "").toLowerCase().includes(q);
 
@@ -1297,6 +1303,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const db = b.bookingDate ? new Date(b.bookingDate) : new Date(0);
         return db - da;
     });
+
+    const filteredSuitCount = filteredBookings.reduce((sum, b) =>
+        sum + (b.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseInt(i.quantity) || 1), 0), 0);
 
     const getStatusColor = (status) => {
         const statusObj = BOOKING_STATUSES.find(s => s.value === status);
@@ -1386,8 +1395,33 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                     <Autocomplete
                                         options={customers || []}
                                         getOptionLabel={(option) => option.name || ""}
+                                        filterOptions={(options, { inputValue }) => {
+                                            const q = (inputValue || "").toLowerCase().trim();
+                                            if (!q) return options;
+                                            return options.filter(c =>
+                                                (c.name || "").toLowerCase().includes(q) ||
+                                                (c.measurementNo || "").toLowerCase().includes(q) ||
+                                                (c.phone || "").toLowerCase().includes(q) ||
+                                                (c.address || "").toLowerCase().includes(q)
+                                            );
+                                        }}
                                         value={(customers || []).find(c => c.id === formData.customerId) || null}
                                         onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        renderOption={(props, option) => {
+                                            const { key, ...rest } = props;
+                                            return (
+                                                <li key={key} {...rest}>
+                                                    <Box sx={{ py: 0.3 }}>
+                                                        <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                            {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </li>
+                                            );
+                                        }}
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
@@ -1469,14 +1503,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     {/* ── Items Table ── */}
                     <Box sx={{ mb: 2 }}>
                         <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1.5, borderLeft: '4px solid #8b5cf6', pl: 1.5 }}>
-                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Order Items</Typography>
+                            <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Book Suit</Typography>
                         </Box>
                         <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                             <Table size="small">
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: '#f3f4f6' }}>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: '#374151', width: 200 }}>Product</TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Stitching Options</TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total (Rs.)</TableCell>
                                         <TableCell sx={{ width: 40 }} />
@@ -1487,19 +1520,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         <React.Fragment key={index}>
                                             <TableRow sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', '& td, & th': { borderBottom: item.bookingType === 'STITCHING' && !item.isCollapsed ? 'none' : undefined } }}>
                                                 <TableCell sx={{ color: '#6b7280', fontWeight: 600, verticalAlign: 'top', pt: 1.5 }}>{index + 1}</TableCell>
-                                                <TableCell sx={{ verticalAlign: 'top', pt: 1, width: 200 }}>
-                                                    <Autocomplete
-                                                        options={products || []}
-                                                        getOptionLabel={(o) => o.name || ""}
-                                                        value={(products || []).find(p => p.id === item.productId) || null}
-                                                        onChange={(_, nv) => handleProductChange(index, nv ? nv.id : "")}
-                                                        size="small"
-                                                        renderInput={(params) => (
-                                                            <TextField {...params} size="small" placeholder="Select product"
-                                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
-                                                        )}
-                                                    />
-                                                </TableCell>
                                                 <TableCell sx={{ verticalAlign: 'top', pt: 1 }}>
                                                     {stitchingOptions.length === 0 ? (
                                                         <Typography variant="caption" color="text.disabled">
@@ -1609,143 +1629,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                     </Tooltip>
                                                 </TableCell>
                                             </TableRow>
-                                            {item.bookingType === 'STITCHING' && (
-                                                <TableRow>
-                                                    <TableCell colSpan={7} sx={{ pb: 3, pt: 0, borderBottom: '1px solid rgba(224, 224, 224, 1)' }}>
-                                                        {item.isCollapsed ? (
-                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #e5e7eb', bgcolor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <Typography variant="body2" color="textSecondary"><strong>Stitching Details Saved</strong> for {item.productName || "Product"}</Typography>
-                                                                <Button size="small" onClick={() => { const ni = [...cartItems]; ni[index].isCollapsed = false; setCartItems(ni); }} sx={{ color: '#8b5cf6', textTransform: 'none' }}>Edit</Button>
-                                                            </Box>
-                                                        ) : (
-                                                            <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, border: '1px solid #8b5cf6', bgcolor: '#f5f3ff' }}>
-                                                                {index > 0 && previousStitchingDetails && (
-                                                                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                                                        <Button size="small" variant="outlined"
-                                                                            onClick={() => { const ni = [...cartItems]; ni[index] = { ...ni[index], ...previousStitchingDetails }; setCartItems(ni); }}
-                                                                            sx={{ borderColor: '#8b5cf6', color: '#8b5cf6', textTransform: 'none', '&:hover': { borderColor: '#7c3aed', bgcolor: '#f5f3ff' } }}>
-                                                                            پچھلی تفصیلات
-                                                                        </Button>
-                                                                    </Box>
-                                                                )}
-                                                                <Grid container spacing={2}>
-                                                                    {[
-                                                                        { label: 'کف', field: 'cuffType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double folding', label: 'ڈبل فولڈنگ' }, { value: 'open sleeve', label: 'اوپن آستین' }] },
-                                                                        { label: 'پہنچا', field: 'pohnchaType', opts: [{ value: 'jaali', label: 'جالی کے ساتھ' }, { value: 'karhaai', label: 'کڑھائی' }, { value: 'jaali_karhaai', label: 'جالی و کڑھائی' }, { value: 'saada', label: 'سادہ' }] },
-                                                                        { label: 'دامن (گھیرا)', field: 'gheraType', opts: [{ value: 'seedha', label: 'سیدھا' }, { value: 'gol', label: 'گول' }] },
-                                                                        { label: 'گلا', field: 'galaType', opts: [{ value: 'ban', label: 'بن' }, { value: 'collar', label: 'کالر' }] },
-                                                                        { label: 'جیب', field: 'pocketType', opts: [{ value: 'single', label: 'سنگل' }, { value: 'double', label: 'ڈبل' }] },
-                                                                        { label: 'شلوار کی قسم', field: 'shalwarType', opts: [{ value: 'pajama', label: 'پاجامہ' }, { value: 'shalwar', label: 'شلوار' }, { value: 'trouser', label: 'ٹراؤزر' }] },
-                                                                    ].map(({ label, field, opts }) => (
-                                                                        <Grid key={field} size={{ xs: 12, sm: 4 }}>
-                                                                            <Autocomplete
-                                                                                options={opts}
-                                                                                getOptionLabel={(o) => o.label || ""}
-                                                                                value={opts.find(o => o.value === item[field]) || null}
-                                                                                onChange={(_, nv) => { const ni = [...cartItems]; ni[index][field] = nv ? nv.value : ""; setCartItems(ni); }}
-                                                                                renderInput={(params) => (
-                                                                                    <TextField {...params} label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{label}</span>} size="small" required
-                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
-                                                                                )}
-                                                                            />
-                                                                        </Grid>
-                                                                    ))}
-                                                                    {item.galaType && (
-                                                                        <Grid size={{ xs: 12, sm: 4 }}>
-                                                                            <Autocomplete
-                                                                                options={[13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5].map(s => s.toString())}
-                                                                                value={item.galaSize || null}
-                                                                                onChange={(_, nv) => { const ni = [...cartItems]; ni[index].galaSize = nv || ""; setCartItems(ni); }}
-                                                                                renderInput={(params) => (
-                                                                                    <TextField {...params} label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>گلے کا سائز</span>} size="small" required
-                                                                                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }} />
-                                                                                )}
-                                                                            />
-                                                                        </Grid>
-                                                                    )}
-                                                                    <Grid size={{ xs: 12, sm: 4 }}>
-                                                                        <Box sx={{ display: 'flex', gap: 2, height: '100%', alignItems: 'center' }}>
-                                                                            <FormControlLabel control={<Checkbox size="small" checked={item.hasShalwarPocket} onChange={(e) => { const ni = [...cartItems]; ni[index].hasShalwarPocket = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600} sx={{ fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>شلوار جیب</Typography>} sx={{ m: 0 }} />
-                                                                            <FormControlLabel control={<Checkbox size="small" checked={item.hasFrontPockets} onChange={(e) => { const ni = [...cartItems]; ni[index].hasFrontPockets = e.target.checked; setCartItems(ni); }} />}
-                                                                                label={<Typography variant="caption" fontWeight={600} sx={{ fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>اگلی جیبیں</Typography>} sx={{ m: 0 }} />
-                                                                        </Box>
-                                                                    </Grid>
-                                                                    {/* ── Measurements ── */}
-                                                                    <Grid size={{ xs: 12 }}>
-                                                                        <Divider sx={{ mt: 1, mb: 1.5 }} />
-                                                                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 1.5, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl", letterSpacing: 0 }}>
-                                                                            پیمائش
-                                                                        </Typography>
-                                                                    </Grid>
-                                                                    {/* Qameez (Shirt) */}
-                                                                    <Grid size={{ xs: 12 }}>
-                                                                        <Typography variant="caption" fontWeight={600} color="primary.main" sx={{ display: 'block', mb: 1, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>
-                                                                            قمیض
-                                                                        </Typography>
-                                                                    </Grid>
-                                                                    {[
-                                                                        { name: "qameez_lambai", label: "قمیض لمبائی" },
-                                                                        { name: "bazoo", label: "بازو" },
-                                                                        { name: "teera", label: "تیرہ" },
-                                                                        { name: "galaa", label: "گلا" },
-                                                                        { name: "chaati", label: "چھاتی" },
-                                                                        { name: "gheera", label: "گھیرا" },
-                                                                        { name: "kaf", label: "کف" },
-                                                                        { name: "kandha", label: "کندھا" },
-                                                                        { name: "chaati_around", label: "چھاتی گرد" },
-                                                                        { name: "kamar_around", label: "کمر گرد" },
-                                                                        { name: "hip_around", label: "ہپ گرد" },
-                                                                    ].map(f => (
-                                                                        <Grid key={f.name} size={{ xs: 6, sm: 3 }}>
-                                                                            <TextField
-                                                                                fullWidth size="small" type="text"
-                                                                                label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{f.label}</span>}
-                                                                                value={item[f.name] || ""}
-                                                                                onChange={(e) => { const ni = [...cartItems]; ni[index][f.name] = e.target.value; setCartItems(ni); }}
-                                                                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }}
-                                                                            />
-                                                                        </Grid>
-                                                                    ))}
-                                                                    {/* Shalwar (Trouser) */}
-                                                                    <Grid size={{ xs: 12 }}>
-                                                                        <Typography variant="caption" fontWeight={600} color="primary.main" sx={{ display: 'block', mb: 1, mt: 0.5, fontFamily: "'Noto Nastaliq Urdu', serif", direction: "rtl" }}>
-                                                                            شلوار
-                                                                        </Typography>
-                                                                    </Grid>
-                                                                    {[
-                                                                        { name: "shalwar_lambai", label: "شلوار لمبائی" },
-                                                                        { name: "puhncha", label: "پہنچا" },
-                                                                        { name: "shalwar_gheera", label: "شلوار گھیرا" },
-                                                                    ].map(f => (
-                                                                        <Grid key={f.name} size={{ xs: 6, sm: 3 }}>
-                                                                            <TextField
-                                                                                fullWidth size="small" type="text"
-                                                                                label={<span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.8rem", direction: "rtl" }}>{f.label}</span>}
-                                                                                value={item[f.name] || ""}
-                                                                                onChange={(e) => { const ni = [...cartItems]; ni[index][f.name] = e.target.value; setCartItems(ni); }}
-                                                                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', borderRadius: 2 } }}
-                                                                            />
-                                                                        </Grid>
-                                                                    ))}
-                                                                    <Grid size={{ xs: 12 }}>
-                                                                        <Button variant="contained" size="small" startIcon={<Save size={14} />}
-                                                                            onClick={() => {
-                                                                                const ni = [...cartItems];
-                                                                                ni[index].isCollapsed = true;
-                                                                                setCartItems(ni);
-                                                                                setPreviousStitchingDetails({ cuffType: ni[index].cuffType, pohnchaType: ni[index].pohnchaType, gheraType: ni[index].gheraType, galaType: ni[index].galaType, galaSize: ni[index].galaSize, pocketType: ni[index].pocketType, shalwarType: ni[index].shalwarType, hasShalwarPocket: ni[index].hasShalwarPocket, hasFrontPockets: ni[index].hasFrontPockets });
-                                                                            }}
-                                                                            sx={{ bgcolor: '#8b5cf6', textTransform: 'none', '&:hover': { bgcolor: '#7c3aed' } }}>
-                                                                            تفصیلات محفوظ کریں
-                                                                        </Button>
-                                                                    </Grid>
-                                                                </Grid>
-                                                            </Box>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
                                         </React.Fragment>
                                     ))}
                                 </TableBody>
@@ -1767,33 +1650,77 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             </Button>
                         </Box>
 
-                        {/* Barcode scanner input */}
+                        {/* Barcode scanner / product name filter */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                            <TextField
-                                inputRef={scanRef}
+                            <Autocomplete
+                                freeSolo
                                 size="small"
-                                placeholder="Scan barcode to add product..."
-                                value={scanCode}
-                                onChange={(e) => setScanCode(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleBookingScan(scanCode); }}
-                                autoComplete="off"
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <ScanLine size={16} color="#f59e0b" />
-                                        </InputAdornment>
-                                    ),
+                                options={products || []}
+                                getOptionLabel={(o) => typeof o === 'string' ? o : `${o.name}${o.sku ? ` [${o.sku}]` : ''}`}
+                                filterOptions={(options, { inputValue }) => {
+                                    const q = (inputValue || '').toLowerCase().trim();
+                                    if (!q) return [];
+                                    return options.filter(p =>
+                                        (p.name || '').toLowerCase().includes(q) ||
+                                        (p.sku || '').toLowerCase().includes(q) ||
+                                        (p.barcode || '').toLowerCase().includes(q)
+                                    ).slice(0, 10);
                                 }}
-                                sx={{
-                                    width: 300,
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2,
-                                        bgcolor: 'white',
-                                        '& fieldset': { borderColor: '#f59e0b', borderWidth: 1.5 },
-                                        '&:hover fieldset': { borderColor: '#d97706' },
-                                        '&.Mui-focused fieldset': { borderColor: '#d97706', borderWidth: 2 },
-                                    },
+                                inputValue={scanCode}
+                                onInputChange={(_, val, reason) => { if (reason !== 'reset') setScanCode(val); }}
+                                onChange={(_, value) => {
+                                    if (!value) return;
+                                    if (typeof value === 'object') {
+                                        addProductToItems(value);
+                                        setScanCode('');
+                                        setTimeout(() => scanRef.current?.focus(), 50);
+                                    } else {
+                                        handleBookingScan(value);
+                                    }
                                 }}
+                                renderOption={(props, option) => {
+                                    const { key, ...rest } = props;
+                                    return (
+                                        <li key={key} {...rest}>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                                {option.sku && <Typography variant="caption" color="text.secondary">SKU: {option.sku}</Typography>}
+                                            </Box>
+                                        </li>
+                                    );
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        inputRef={scanRef}
+                                        size="small"
+                                        placeholder="Scan barcode or type product name..."
+                                        autoComplete="off"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && scanCode.trim()) {
+                                                handleBookingScan(scanCode);
+                                            }
+                                        }}
+                                        InputProps={{
+                                            ...params.InputProps,
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <ScanLine size={16} color="#f59e0b" />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'white',
+                                                '& fieldset': { borderColor: '#f59e0b', borderWidth: 1.5 },
+                                                '&:hover fieldset': { borderColor: '#d97706' },
+                                                '&.Mui-focused fieldset': { borderColor: '#d97706', borderWidth: 2 },
+                                            },
+                                        }}
+                                    />
+                                )}
+                                sx={{ width: 340 }}
                             />
                             {scanStatus && (
                                 <Alert severity={scanStatus.type} sx={{ py: 0, px: 1.5, borderRadius: 2, fontSize: '0.8rem' }} variant="filled">
@@ -1811,7 +1738,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Qty</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Unit Price</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Disc %</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Discount</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total</TableCell>
                                             <TableCell sx={{ width: 40 }} />
                                         </TableRow>
@@ -1849,8 +1776,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                                 <TableCell>
                                                     <TextField type="number" size="small" value={item.discount}
                                                         onChange={(e) => handleProductItemChange(index, 'discount', e.target.value)}
-                                                        inputProps={{ min: 0, max: 100, style: { width: 50, textAlign: 'center' } }}
-                                                        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                                                        inputProps={{ min: 0, style: { width: 70 } }}
+                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
                                                 </TableCell>
                                                 <TableCell>
@@ -1979,19 +1906,25 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         <Typography variant="body2" color="text.secondary">Manage all sales orders and bookings</Typography>
                     </Box>
                 </Box>
-                <Chip
-                    label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
-                    sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
-                />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Chip
+                        label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
+                        sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
+                    />
+                    <Chip
+                        label={`${filteredSuitCount} suit${filteredSuitCount !== 1 ? 's' : ''}`}
+                        sx={{ bgcolor: '#cffafe', color: '#0e7490', fontWeight: 600, borderRadius: 2 }}
+                    />
+                </Box>
             </Box>
 
             {/* ── Action Bar ── */}
             <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                 <TextField
-                    placeholder="Search…"
+                    placeholder="Name, phone, city, M#…"
                     variant="outlined"
                     size="small"
-                    sx={{ width: 200, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    sx={{ width: 240, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{ startAdornment: (<InputAdornment position="start"><Search size={16} /></InputAdornment>) }}
@@ -2071,10 +2004,35 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 <Autocomplete
                     options={customers || []}
                     getOptionLabel={(option) => option.name || ""}
+                    filterOptions={(options, { inputValue }) => {
+                        const q = (inputValue || "").toLowerCase().trim();
+                        if (!q) return options;
+                        return options.filter(c =>
+                            (c.name || "").toLowerCase().includes(q) ||
+                            (c.measurementNo || "").toLowerCase().includes(q) ||
+                            (c.phone || "").toLowerCase().includes(q) ||
+                            (c.address || "").toLowerCase().includes(q)
+                        );
+                    }}
                     value={(customers || []).find(c => c.id === filterCustomerId) || null}
                     onChange={(_, newValue) => setFilterCustomerId(newValue ? newValue.id : null)}
                     size="small"
-                    sx={{ width: 220, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    sx={{ width: 260, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    renderOption={(props, option) => {
+                        const { key, ...rest } = props;
+                        return (
+                            <li key={key} {...rest}>
+                                <Box sx={{ py: 0.3 }}>
+                                    <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                        {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                        {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                        {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
+                                    </Box>
+                                </Box>
+                            </li>
+                        );
+                    }}
                     renderInput={(params) => <TextField {...params} label="Customer" />}
                 />
                 {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus || filterMeasurementNo) && (

@@ -59,6 +59,7 @@ export async function GET(req) {
         let totalReceived = 0;
         let totalPending = 0;
         let totalCost = 0;
+        let suitCount = 0;
 
         // Tailor map: tailorId → { name, amount, count }
         const tailorMap = {};
@@ -75,6 +76,10 @@ export async function GET(req) {
             totalReceived += advance;
             totalPending += remaining;
             totalCost += itemCost;
+            // Count stitching suits: items that have no productId are stitching items
+            for (const item of b.items) {
+                if (!item.productId) suitCount += (parseInt(item.quantity) || 1);
+            }
 
             // Tailor breakdown
             if (b.tailor) {
@@ -118,7 +123,8 @@ export async function GET(req) {
                 totalProfit,
                 totalPayable,
                 totalReceivables,
-                bookingCount: bookings.length
+                bookingCount: bookings.length,
+                suitCount
             },
             tailorBreakdown: Object.values(tailorMap).sort((a, b) => b.amount - a.amount),
             cutterBreakdown: Object.values(cutterMap).sort((a, b) => b.amount - a.amount),

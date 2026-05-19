@@ -58,6 +58,13 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [categories, setCategories] = useState(accountCategories);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState(null);
+    const [filterMeasurementNo, setFilterMeasurementNo] = useState("");
+
+    // Ledger dialog state
+    const [ledgerOpen, setLedgerOpen] = useState(false);
+    const [ledgerCustomer, setLedgerCustomer] = useState(null);
+    const [ledgerEntries, setLedgerEntries] = useState([]);
+    const [ledgerLoading, setLedgerLoading] = useState(false);
 
     // Quick Add Category State
     const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
@@ -279,13 +286,125 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
+    const handlePrintLedger = () => {
+        if (!ledgerCustomer) return;
+        const balance = parseFloat(ledgerCustomer.balance || 0);
+        const balanceLabel = Math.abs(balance).toFixed(2) + (balance > 0 ? " Cr" : balance < 0 ? " Dr" : "");
+
+        let running = 0;
+        const rows = ledgerEntries.map((entry, idx) => {
+            const amt = parseFloat(entry.amount || 0);
+            if (entry.type === "DEBIT") running += amt;
+            else running -= amt;
+            const runLabel = "Rs. " + Math.abs(running).toFixed(2) + (running > 0 ? " Cr" : running < 0 ? " Dr" : "");
+            const date = new Date(entry.entryDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+            return `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${date}</td>
+                    <td>${entry.description || "—"}</td>
+                    <td class="amount">${entry.type === "DEBIT" ? "Rs. " + amt.toFixed(2) : "—"}</td>
+                    <td class="amount">${entry.type === "CREDIT" ? "Rs. " + amt.toFixed(2) : "—"}</td>
+                    <td class="amount ${running >= 0 ? "cr" : "dr"}">${runLabel}</td>
+                </tr>`;
+        }).join("");
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Ledger — ${ledgerCustomer.name}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+  .header { text-align: center; border-bottom: 2px solid #111; pb: 8px; margin-bottom: 16px; }
+  .shop-name { font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+  .shop-sub { font-size: 12px; color: #555; margin-top: 2px; }
+  .customer-info { margin-bottom: 12px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; display: flex; justify-content: space-between; }
+  .customer-info div { line-height: 1.7; }
+  .label { font-weight: 600; color: #555; margin-right: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { background: #f3f4f6; font-weight: 700; padding: 7px 10px; text-align: left; border: 1px solid #ddd; font-size: 11px; text-transform: uppercase; }
+  td { padding: 6px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .amount { text-align: right; white-space: nowrap; }
+  .cr { color: #15803d; font-weight: 700; }
+  .dr { color: #b91c1c; font-weight: 700; }
+  .footer { margin-top: 16px; display: flex; justify-content: flex-end; }
+  .closing { border: 1px solid #111; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 700; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="shop-name">GRACE TAILORS</div>
+    <div class="shop-sub">Customer Account Ledger</div>
+  </div>
+  <div class="customer-info">
+    <div>
+      <span class="label">Customer:</span>${ledgerCustomer.name}<br/>
+      ${ledgerCustomer.phone ? `<span class="label">Phone:</span>${ledgerCustomer.phone}<br/>` : ""}
+      ${ledgerCustomer.address ? `<span class="label">Address:</span>${ledgerCustomer.address}` : ""}
+    </div>
+    <div>
+      ${ledgerCustomer.measurementNo ? `<span class="label">M#:</span>${ledgerCustomer.measurementNo}<br/>` : ""}
+      <span class="label">Print Date:</span>${new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}<br/>
+      <span class="label">Closing Balance:</span><span class="${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</span>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:36px">#</th>
+        <th style="width:100px">Date</th>
+        <th>Description</th>
+        <th class="amount" style="width:120px">Debit</th>
+        <th class="amount" style="width:120px">Credit</th>
+        <th class="amount" style="width:130px">Balance</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">
+    <div class="closing">Closing Balance: <span class="${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</span></div>
+  </div>
+</body>
+</html>`;
+
+        const win = window.open("", "_blank", "width=900,height=700");
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 400);
+    };
+
+    const handleOpenLedger = async (customer) => {
+        setLedgerCustomer(customer);
+        setLedgerEntries([]);
+        setLedgerOpen(true);
+        setLedgerLoading(true);
+        try {
+            const res = await fetch(`/api/ledger?customerId=${customer.id}`);
+            const data = await res.json();
+            setLedgerEntries(Array.isArray(data) ? data : []);
+        } catch {
+            setLedgerEntries([]);
+        } finally {
+            setLedgerLoading(false);
+        }
+    };
+
     const filteredCustomers = (customers || []).filter((customer) => {
         const query = (searchQuery || "").toLowerCase();
-        const matchesSearch =
+        const matchesSearch = !query ||
             (customer.name || "").toLowerCase().includes(query) ||
-            (customer.phone || "").includes(searchQuery || "");
+            (customer.phone || "").toLowerCase().includes(query) ||
+            (customer.address || "").toLowerCase().includes(query) ||
+            (customer.measurementNo || "").toLowerCase().includes(query);
         const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
-        return matchesSearch && matchesCategory;
+        const matchesMeasurementNo = !filterMeasurementNo ||
+            (customer.measurementNo || "").toLowerCase().includes(filterMeasurementNo.toLowerCase());
+        return matchesSearch && matchesCategory && matchesMeasurementNo;
     });
 
     const customerCategories = (categories || []).filter(
@@ -394,7 +513,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             >
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ flex: 1 }}>
                     <TextField
-                        placeholder="Search customer..."
+                        placeholder="Name, phone, address, M#…"
                         variant="outlined"
                         size="small"
                         value={searchQuery}
@@ -406,15 +525,30 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                 </InputAdornment>
                             ),
                         }}
-                        sx={{ minWidth: 300, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                        sx={{ minWidth: 260, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    />
+                    <TextField
+                        placeholder="Filter by M#…"
+                        variant="outlined"
+                        size="small"
+                        value={filterMeasurementNo}
+                        onChange={(e) => setFilterMeasurementNo(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Ruler size={16} />
+                                </InputAdornment>
+                            ),
+                        }}
+                        sx={{ width: 180, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                     />
                     <Autocomplete
                         options={customerCategories}
                         getOptionLabel={(option) => option.name || ""}
                         value={filterCategory}
                         onChange={(e, newValue) => setFilterCategory(newValue)}
-                        sx={{ minWidth: 300 }}
-                        ListboxProps={{ style: { minWidth: 300 } }}
+                        sx={{ minWidth: 220 }}
+                        ListboxProps={{ style: { minWidth: 220 } }}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -445,6 +579,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     <TableHead sx={{ bgcolor: "action.hover" }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Customer</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>M#</TableCell>
                             <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Balance</TableCell>
                             <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Phone</TableCell>
                             <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Address</TableCell>
@@ -492,13 +627,26 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                         </Box>
                                     </TableCell>
 
+                                    {/* Measurement No */}
+                                    <TableCell>
+                                        {customer.measurementNo ? (
+                                            <Chip
+                                                label={customer.measurementNo}
+                                                size="small"
+                                                icon={<Ruler size={12} />}
+                                                sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, fontSize: '0.75rem' }}
+                                            />
+                                        ) : (
+                                            <Typography variant="body2" color="text.disabled">—</Typography>
+                                        )}
+                                    </TableCell>
+
                                     {/* Balance */}
                                     <TableCell>
                                         <Tooltip title="View Ledger">
                                             <Box
-                                                component={Link}
-                                                href={`/dashboard/ledger?customerId=${customer.id}`}
-                                                sx={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 0.5 }}
+                                                onClick={() => handleOpenLedger(customer)}
+                                                sx={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 0.5, width: "fit-content" }}
                                             >
                                                 <Typography
                                                     variant="body2"
@@ -581,7 +729,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                                     <Users size={40} color="#d1d5db" />
                                     <Typography color="text.secondary" sx={{ mt: 1 }}>
                                         No customers found.
@@ -868,6 +1016,118 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
                         {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Create Category"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Ledger Dialog ─────────────────────────────── */}
+            <Dialog
+                open={ledgerOpen}
+                onClose={() => setLedgerOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <Box>
+                            <Typography variant="h6" fontWeight={700}>{ledgerCustomer?.name} — Ledger</Typography>
+                            <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
+                                {ledgerCustomer?.phone && (
+                                    <Typography variant="caption" color="text.secondary">{ledgerCustomer.phone}</Typography>
+                                )}
+                                <Typography variant="caption" fontWeight={700}
+                                    sx={{ color: parseFloat(ledgerCustomer?.balance || 0) >= 0 ? "success.main" : "error.main" }}>
+                                    Balance: Rs. {Math.abs(parseFloat(ledgerCustomer?.balance || 0)).toFixed(2)}
+                                    {parseFloat(ledgerCustomer?.balance || 0) > 0 ? " (Cr)" : parseFloat(ledgerCustomer?.balance || 0) < 0 ? " (Dr)" : ""}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <IconButton size="small" onClick={() => setLedgerOpen(false)}><X size={18} /></IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 0 }}>
+                    {ledgerLoading ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : ledgerEntries.length === 0 ? (
+                        <Box sx={{ textAlign: "center", py: 6 }}>
+                            <BookText size={36} color="#d1d5db" />
+                            <Typography color="text.secondary" sx={{ mt: 1 }}>No ledger entries found.</Typography>
+                        </Box>
+                    ) : (
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "action.hover" }}>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 700, py: 1.5 }}>#</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>Debit</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>Credit</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>Balance</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {(() => {
+                                        let running = 0;
+                                        return ledgerEntries.map((entry, idx) => {
+                                            const amt = parseFloat(entry.amount || 0);
+                                            if (entry.type === "DEBIT") running += amt;
+                                            else running -= amt;
+                                            return (
+                                                <TableRow key={entry.id} hover>
+                                                    <TableCell sx={{ color: "#6b7280" }}>{idx + 1}</TableCell>
+                                                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                                                        {new Date(entry.entryDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2">{entry.description || "—"}</Typography>
+                                                    </TableCell>
+                                                    <TableCell sx={{ textAlign: "right" }}>
+                                                        {entry.type === "DEBIT" ? (
+                                                            <Typography variant="body2" fontWeight={600} color="error.main">
+                                                                Rs. {amt.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            </Typography>
+                                                        ) : "—"}
+                                                    </TableCell>
+                                                    <TableCell sx={{ textAlign: "right" }}>
+                                                        {entry.type === "CREDIT" ? (
+                                                            <Typography variant="body2" fontWeight={600} color="success.main">
+                                                                Rs. {amt.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            </Typography>
+                                                        ) : "—"}
+                                                    </TableCell>
+                                                    <TableCell sx={{ textAlign: "right" }}>
+                                                        <Typography variant="body2" fontWeight={700}
+                                                            sx={{ color: running >= 0 ? "success.main" : "error.main" }}>
+                                                            Rs. {Math.abs(running).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            {running > 0 ? " Cr" : running < 0 ? " Dr" : ""}
+                                                        </Typography>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        });
+                                    })()}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button onClick={() => setLedgerOpen(false)} variant="outlined" color="inherit" sx={{ borderRadius: 2, textTransform: "none" }}>
+                        Close
+                    </Button>
+                    <Button
+                        onClick={handlePrintLedger}
+                        variant="contained"
+                        disabled={ledgerLoading || ledgerEntries.length === 0}
+                        sx={{ borderRadius: 2, textTransform: "none", bgcolor: "#1e293b", "&:hover": { bgcolor: "#0f172a" } }}
+                    >
+                        Print Ledger
                     </Button>
                 </DialogActions>
             </Dialog>

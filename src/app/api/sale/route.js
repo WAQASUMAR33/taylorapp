@@ -45,6 +45,25 @@ export async function POST(req) {
                 include: { items: { include: { product: true } }, customer: true },
             });
 
+            // Decrement stock for each sold item
+            for (const item of items) {
+                const pid = parseInt(item.productId);
+                const qty = parseInt(item.quantity);
+                if (!pid || !qty) continue;
+                await tx.product.update({
+                    where: { id: pid },
+                    data: { quantity: { decrement: qty } },
+                });
+                await tx.stockmovement.create({
+                    data: {
+                        productId: pid,
+                        type: "OUT",
+                        quantity: qty,
+                        notes: `Sale: ${billNumber}`,
+                    },
+                });
+            }
+
             // If customer selected: handle partial payment
             if (customerId) {
                 const cashPaidAmt = Math.min(Math.max(parseFloat(cashPaid) || 0, 0), total);
