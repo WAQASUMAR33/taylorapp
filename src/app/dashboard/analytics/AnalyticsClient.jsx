@@ -11,7 +11,7 @@ import {
     BarChart3, TrendingUp, TrendingDown, DollarSign, Users,
     Scissors, Calendar, RefreshCw, Filter, ShoppingBag,
     ArrowUpRight, ArrowDownRight, Clock, CheckCircle, AlertCircle,
-    Package, Wallet, CreditCard, Receipt
+    Package, Wallet, CreditCard, Receipt, Tag
 } from "lucide-react";
 
 // ─── colour palette helpers ──────────────────────────────────────────────────
@@ -285,9 +285,17 @@ export default function AnalyticsClient({ employees }) {
                     {/* ── Summary Stats ── */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <StatCard icon={ShoppingBag} label="Total Bookings" value={s.totalBookingAmount}
+                            <StatCard icon={ShoppingBag} label="Total Revenue" value={s.totalBookingAmount}
                                 sub={`${s.bookingCount} orders`} color="#8b5cf6" bgColor="#ede9fe"
                                 trend={profitMargin} />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <StatCard icon={Scissors} label="Stitching Revenue" value={s.stitchingRevenue}
+                                sub={`${s.suitCount} suit pieces`} color="#0891b2" bgColor="#cffafe" />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <StatCard icon={Tag} label="Clothing Revenue" value={s.productRevenue}
+                                sub="Products / accessories" color="#b45309" bgColor="#fef3c7" />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={CheckCircle} label="Amount Received" value={s.totalReceived}
