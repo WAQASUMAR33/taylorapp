@@ -116,7 +116,7 @@ function ExpandableRow({ bill }) {
                                             <TableCell sx={{ py: 0.5, fontSize: "0.8rem" }} align="right">{fmt(item.unitPrice)}</TableCell>
                                             <TableCell sx={{ py: 0.5, fontSize: "0.8rem" }} align="right">
                                                 {parseFloat(item.discount) > 0
-                                                    ? <Typography variant="caption" color="error.main">{parseFloat(item.discount)}%</Typography>
+                                                    ? <Typography variant="caption" color="error.main">− {fmt(item.discount)}</Typography>
                                                     : "—"}
                                             </TableCell>
                                             <TableCell sx={{ py: 0.5, fontSize: "0.8rem", fontWeight: 700 }} align="right">{fmt(item.total)}</TableCell>
@@ -161,9 +161,10 @@ export default function SaleListClient({ initialBills }) {
         return initialBills.filter((bill) => {
             const q = search.toLowerCase();
             const matchSearch = !q ||
-                bill.billNumber.toLowerCase().includes(q) ||
+                (bill.billNumber || "").toLowerCase().includes(q) ||
                 (bill.customer?.name || "").toLowerCase().includes(q) ||
-                (bill.customer?.phone || "").includes(q);
+                (bill.customer?.phone || "").includes(q) ||
+                (bill.items || []).some(i => (i.product?.name || "").toLowerCase().includes(q));
 
             const billDate = new Date(bill.createdAt);
             const from = dateFrom ? new Date(dateFrom + "T00:00:00") : null;
@@ -194,7 +195,7 @@ export default function SaleListClient({ initialBills }) {
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {[
                     { label: "Total Revenue", value: fmt(stats.totalRevenue), icon: <TrendingUp size={22} />, color: "#2563eb", bg: "#eff6ff" },
-                    { label: "Total Bills", value: stats.count, icon: <ReceiptText size={22} />, color: "#7c3aed", bg: "#f5f3ff" },
+                    { label: "Total Bookings", value: stats.count, icon: <ReceiptText size={22} />, color: "#7c3aed", bg: "#f5f3ff" },
                     { label: "Avg Bill Value", value: fmt(stats.avgBill), icon: <ShoppingBag size={22} />, color: "#059669", bg: "#ecfdf5" },
                     { label: "Total Discount", value: fmt(stats.totalDiscount), icon: <BadgePercent size={22} />, color: "#dc2626", bg: "#fef2f2" },
                     { label: "Items Sold", value: stats.totalItems, icon: <ShoppingBag size={20} />, color: "#d97706", bg: "#fffbeb" },
@@ -224,7 +225,7 @@ export default function SaleListClient({ initialBills }) {
             <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, p: 2, mb: 3 }}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }} flexWrap="wrap">
                     <TextField
-                        placeholder="Search bill no. or customer…"
+                        placeholder="Search booking no., customer or product…"
                         size="small"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -281,7 +282,7 @@ export default function SaleListClient({ initialBills }) {
                     <Table>
                         <TableHead>
                             <TableRow sx={{ bgcolor: "action.hover" }}>
-                                <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Bill #</TableCell>
+                                <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Booking #</TableCell>
                                 <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Date & Time</TableCell>
                                 <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Customer</TableCell>
                                 <TableCell sx={{ fontWeight: 700, py: 1.5 }} align="center">Items</TableCell>
@@ -298,7 +299,7 @@ export default function SaleListClient({ initialBills }) {
                                     <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                                         <ReceiptText size={40} color="#d1d5db" />
                                         <Typography color="text.secondary" sx={{ mt: 1 }}>
-                                            {hasFilters ? "No bills match your filters." : "No bills recorded yet."}
+                                            {hasFilters ? "No sales match your filters." : "No product sales recorded yet."}
                                         </Typography>
                                     </TableCell>
                                 </TableRow>
@@ -310,7 +311,7 @@ export default function SaleListClient({ initialBills }) {
                 {filtered.length > 0 && (
                     <Box sx={{ px: 3, py: 1.5, borderTop: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "action.hover" }}>
                         <Typography variant="caption" color="text.secondary">
-                            Showing {filtered.length} of {initialBills.length} bill{initialBills.length !== 1 ? "s" : ""}
+                            Showing {filtered.length} of {initialBills.length} booking{initialBills.length !== 1 ? "s" : ""} with product sales
                         </Typography>
                         <Typography variant="body2" fontWeight={700} color="success.main">
                             Total: {fmt(stats.totalRevenue)}
