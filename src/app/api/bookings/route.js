@@ -710,7 +710,7 @@ export async function PUT(req) {
     } catch (error) {
         console.error("Failed to update booking:", error);
         return NextResponse.json(
-            { error: "Failed to update booking" },
+            { error: "Failed to update booking: " + error.message },
             { status: 500 }
         );
     }

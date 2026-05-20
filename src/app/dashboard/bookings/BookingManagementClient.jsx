@@ -922,7 +922,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setLoading(true);
         setError("");
 
-        const validItems = cartItems.filter(item => (item.selectedOptionIds || []).length > 0);
+        // In edit mode include all stitching items; in create mode only those with selectedOptionIds
+        const validItems = editingBookingId
+            ? cartItems.filter(item => item.isStitching)
+            : cartItems.filter(item => (item.selectedOptionIds || []).length > 0);
         const validProductItems = productItems.filter(p => p.productId);
 
         if (!formData.customerId) {
@@ -932,7 +935,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
 
         if (validItems.length === 0 && validProductItems.length === 0) {
-            setError("Please select at least one stitching option or add a product");
+            setError("Please add at least one stitching suit or product");
             setLoading(false);
             return;
         }
@@ -1043,8 +1046,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             advanceAmount: booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "",
             notes: booking.notes || "",
         });
-        const stitchingBookingItems = (booking.items || []).filter(item => (item.selectedOptions || []).length > 0);
-        const productBookingItems = (booking.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+        const stitchingBookingItems = (booking.items || []).filter(item => !item.productId);
+        const productBookingItems = (booking.items || []).filter(item => !!item.productId);
         setCartItems(stitchingBookingItems.length > 0 ? stitchingBookingItems.map((item, i) => ({
             id: i + 1,
             productId: item.productId || "",
