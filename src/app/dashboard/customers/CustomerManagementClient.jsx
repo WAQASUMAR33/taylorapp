@@ -309,65 +309,148 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 </tr>`;
         }).join("");
 
+        const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
+        const totalDebit = ledgerEntries.reduce((s, e) => e.type === "DEBIT" ? s + parseFloat(e.amount || 0) : s, 0);
+        const totalCredit = ledgerEntries.reduce((s, e) => e.type === "CREDIT" ? s + parseFloat(e.amount || 0) : s, 0);
+
         const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>Ledger — ${ledgerCustomer.name}</title>
+<title>Account Ledger — ${ledgerCustomer.name}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
-  .header { text-align: center; border-bottom: 2px solid #111; pb: 8px; margin-bottom: 16px; }
-  .shop-name { font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-  .shop-sub { font-size: 12px; color: #555; margin-top: 2px; }
-  .customer-info { margin-bottom: 12px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; display: flex; justify-content: space-between; }
-  .customer-info div { line-height: 1.7; }
-  .label { font-weight: 600; color: #555; margin-right: 4px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-  th { background: #f3f4f6; font-weight: 700; padding: 7px 10px; text-align: left; border: 1px solid #ddd; font-size: 11px; text-transform: uppercase; }
-  td { padding: 6px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
-  tr:nth-child(even) td { background: #fafafa; }
-  .amount { text-align: right; white-space: nowrap; }
+  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; padding: 30px 36px; }
+
+  /* ── TOP HEADER ── */
+  .page-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 3px solid #1e293b; margin-bottom: 20px; }
+  .brand { display: flex; flex-direction: column; }
+  .shop-name { font-size: 28px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #1e293b; line-height: 1; }
+  .shop-tagline { font-size: 11px; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
+  .shop-contact { text-align: right; font-size: 11px; color: #475569; line-height: 1.8; }
+  .doc-title { text-align: center; flex: 1; }
+  .doc-title-text { font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #1e293b; border: 2px solid #1e293b; display: inline-block; padding: 4px 18px; border-radius: 3px; }
+
+  /* ── CUSTOMER INFO BOX ── */
+  .info-section { display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; margin-bottom: 18px; gap: 20px; }
+  .info-block { display: flex; flex-direction: column; gap: 3px; }
+  .info-block .row { display: flex; gap: 6px; align-items: baseline; }
+  .info-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; min-width: 72px; }
+  .info-value { font-size: 12px; font-weight: 600; color: #1e293b; }
+  .balance-box { align-self: center; text-align: right; padding: 10px 16px; border-radius: 6px; border: 2px solid; }
+  .balance-box.cr { border-color: #15803d; background: #f0fdf4; }
+  .balance-box.dr { border-color: #b91c1c; background: #fef2f2; }
+  .balance-box .bal-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .balance-box .bal-amount { font-size: 18px; font-weight: 900; margin-top: 2px; }
+  .balance-box.cr .bal-label, .balance-box.cr .bal-amount { color: #15803d; }
+  .balance-box.dr .bal-label, .balance-box.dr .bal-amount { color: #b91c1c; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  thead tr { background: #1e293b; }
+  thead th { color: #fff; font-weight: 700; padding: 8px 10px; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #1e293b; }
+  thead th.amount { text-align: right; }
+  tbody td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: middle; color: #374151; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  tbody tr:hover td { background: #eff6ff; }
+  td.amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.mono { font-family: monospace; color: #64748b; font-size: 11px; }
   .cr { color: #15803d; font-weight: 700; }
   .dr { color: #b91c1c; font-weight: 700; }
-  .footer { margin-top: 16px; display: flex; justify-content: flex-end; }
-  .closing { border: 1px solid #111; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 700; }
-  @media print { body { padding: 12px; } }
+
+  /* ── TOTALS ROW ── */
+  .totals-row td { background: #f1f5f9 !important; font-weight: 700; border-top: 2px solid #1e293b; font-size: 11.5px; }
+
+  /* ── FOOTER ── */
+  .page-footer { margin-top: 28px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sig-block { text-align: center; }
+  .sig-line { width: 160px; border-top: 1.5px solid #475569; margin: 0 auto 4px; }
+  .sig-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .print-note { font-size: 9.5px; color: #94a3b8; text-align: right; }
+
+  @media print {
+    body { padding: 18px 24px; }
+    @page { size: A4; margin: 12mm; }
+    tbody tr:hover td { background: inherit; }
+  }
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="shop-name">GRACE TAILORS</div>
-    <div class="shop-sub">Customer Account Ledger</div>
-  </div>
-  <div class="customer-info">
-    <div>
-      <span class="label">Customer:</span>${ledgerCustomer.name}<br/>
-      ${ledgerCustomer.phone ? `<span class="label">Phone:</span>${ledgerCustomer.phone}<br/>` : ""}
-      ${ledgerCustomer.address ? `<span class="label">Address:</span>${ledgerCustomer.address}` : ""}
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="brand">
+      <div class="shop-name">Grace Tailors</div>
+      <div class="shop-tagline">Premium Stitching &amp; Tailoring Services</div>
     </div>
-    <div>
-      ${ledgerCustomer.measurementNo ? `<span class="label">M#:</span>${ledgerCustomer.measurementNo}<br/>` : ""}
-      <span class="label">Print Date:</span>${new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}<br/>
-      <span class="label">Closing Balance:</span><span class="${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</span>
+    <div class="doc-title">
+      <div class="doc-title-text">Account Ledger</div>
+    </div>
+    <div class="shop-contact">
+      <strong>Grace Tailors</strong><br/>
+      Print Date: ${printDate}
     </div>
   </div>
+
+  <!-- CUSTOMER INFO -->
+  <div class="info-section">
+    <div style="display:flex; gap:40px; flex:1;">
+      <div class="info-block">
+        <div class="row"><span class="info-label">Customer</span><span class="info-value">${ledgerCustomer.name}</span></div>
+        ${ledgerCustomer.phone ? `<div class="row"><span class="info-label">Phone</span><span class="info-value">${ledgerCustomer.phone}</span></div>` : ""}
+        ${ledgerCustomer.address ? `<div class="row"><span class="info-label">Address</span><span class="info-value">${ledgerCustomer.address}</span></div>` : ""}
+      </div>
+      <div class="info-block">
+        ${ledgerCustomer.measurementNo ? `<div class="row"><span class="info-label">M. No</span><span class="info-value">${ledgerCustomer.measurementNo}</span></div>` : ""}
+        <div class="row"><span class="info-label">Entries</span><span class="info-value">${ledgerEntries.length}</span></div>
+        <div class="row"><span class="info-label">Period</span><span class="info-value">${ledgerEntries.length ? new Date(ledgerEntries[ledgerEntries.length - 1].entryDate).toLocaleDateString("en-PK", { day:"2-digit", month:"short", year:"numeric" }) + " – " + new Date(ledgerEntries[0].entryDate).toLocaleDateString("en-PK", { day:"2-digit", month:"short", year:"numeric" }) : "—"}</span></div>
+      </div>
+    </div>
+    <div class="balance-box ${balance >= 0 ? "cr" : "dr"}">
+      <div class="bal-label">Closing Balance</div>
+      <div class="bal-amount">Rs. ${balanceLabel}</div>
+    </div>
+  </div>
+
+  <!-- LEDGER TABLE -->
   <table>
     <thead>
       <tr>
-        <th style="width:36px">#</th>
-        <th style="width:100px">Date</th>
+        <th style="width:34px">#</th>
+        <th style="width:96px">Date</th>
         <th>Description</th>
-        <th class="amount" style="width:120px">Debit</th>
-        <th class="amount" style="width:120px">Credit</th>
-        <th class="amount" style="width:130px">Balance</th>
+        <th class="amount" style="width:110px">Debit (Dr)</th>
+        <th class="amount" style="width:110px">Credit (Cr)</th>
+        <th class="amount" style="width:120px">Balance</th>
       </tr>
     </thead>
-    <tbody>${rows}</tbody>
+    <tbody>
+      ${rows}
+      <tr class="totals-row">
+        <td colspan="3" style="text-align:right; text-transform:uppercase; letter-spacing:0.5px; font-size:10.5px;">Total</td>
+        <td class="amount dr">Rs. ${totalDebit.toFixed(2)}</td>
+        <td class="amount cr">Rs. ${totalCredit.toFixed(2)}</td>
+        <td class="amount ${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</td>
+      </tr>
+    </tbody>
   </table>
-  <div class="footer">
-    <div class="closing">Closing Balance: <span class="${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</span></div>
+
+  <!-- PAGE FOOTER -->
+  <div class="page-footer">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared By</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Authorized By</div>
+    </div>
+    <div class="print-note">
+      This is a computer-generated ledger.<br/>
+      Printed on ${printDate} &nbsp;|&nbsp; Grace Tailors
+    </div>
   </div>
+
 </body>
 </html>`;
 

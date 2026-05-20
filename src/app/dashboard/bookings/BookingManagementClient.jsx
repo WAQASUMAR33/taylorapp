@@ -2097,6 +2097,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Tailor</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Cutter</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Items</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Delivery</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }} align="right">Amount</TableCell>
@@ -2187,6 +2188,32 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                                         ) : (
                                             <Typography variant="caption" color="text.disabled">—</Typography>
                                         )}
+                                    </TableCell>
+                                    {/* Items */}
+                                    <TableCell>
+                                        {(() => {
+                                            const stitchItems = (booking.items || []).filter(i => !i.productId);
+                                            const prodItems = (booking.items || []).filter(i => !!i.productId);
+                                            const stitchQty = stitchItems.reduce((s, i) => s + (parseInt(i.quantity) || 1), 0);
+                                            const prodQty = prodItems.reduce((s, i) => s + (parseInt(i.quantity) || 1), 0);
+                                            return (
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+                                                    {stitchQty > 0 && (
+                                                        <Chip size="small"
+                                                            label={`${stitchQty} Suit${stitchQty > 1 ? 's' : ''}`}
+                                                            sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ede9fe', color: '#6d28d9', borderRadius: 1 }} />
+                                                    )}
+                                                    {prodQty > 0 && (
+                                                        <Chip size="small"
+                                                            label={`${prodQty} Product${prodQty > 1 ? 's' : ''}`}
+                                                            sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#dbeafe', color: '#1d4ed8', borderRadius: 1 }} />
+                                                    )}
+                                                    {stitchQty === 0 && prodQty === 0 && (
+                                                        <Typography variant="caption" color="text.disabled">—</Typography>
+                                                    )}
+                                                </Box>
+                                            );
+                                        })()}
                                     </TableCell>
                                     {/* Delivery */}
                                     <TableCell>
