@@ -13,14 +13,10 @@ export default async function PurchasesPage() {
         orderBy: { name: "asc" },
     });
 
-    // Fetch suppliers (customers in the 'Supplier' category)
+    // Fetch all customers as potential suppliers
     const suppliers = await prisma.customer.findMany({
-        where: {
-            accountCategory: {
-                name: "Supplier"
-            }
-        },
         orderBy: { name: "asc" },
+        include: { accountCategory: { select: { name: true } } },
     });
 
     // Fetch banks
@@ -60,6 +56,8 @@ export default async function PurchasesPage() {
     const serializedSuppliers = suppliers.map(s => ({
         id: s.id,
         name: s.name,
+        phone: s.phone || null,
+        category: s.accountCategory?.name || null,
     }));
 
     const serializedBanks = banks.map(b => ({

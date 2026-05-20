@@ -330,12 +330,30 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                 size="small"
                                 options={suppliers || []}
                                 getOptionLabel={(o) => o.name || ""}
+                                filterOptions={(opts, { inputValue }) => {
+                                    const q = inputValue.toLowerCase();
+                                    return opts.filter(o =>
+                                        (o.name || "").toLowerCase().includes(q) ||
+                                        (o.phone || "").toLowerCase().includes(q) ||
+                                        (o.category || "").toLowerCase().includes(q)
+                                    );
+                                }}
                                 value={(suppliers || []).find(s => s.id === formData.supplierId) || null}
                                 onChange={(_, v) => setFormData(p => ({ ...p, supplierId: v ? v.id : "" }))}
-                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                componentsProps={{ paper: { sx: { minWidth: 320 } } }}
                                 sx={{ minWidth: 300 }}
+                                renderOption={(props, o) => (
+                                    <li {...props} key={o.id}>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>{o.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {[o.category, o.phone].filter(Boolean).join(' · ')}
+                                            </Typography>
+                                        </Box>
+                                    </li>
+                                )}
                                 renderInput={(params) => (
-                                    <TextField {...params} label="Supplier" required variant="outlined" />
+                                    <TextField {...params} label="Supplier / Account" required variant="outlined" />
                                 )}
                             />
                         </Grid>
