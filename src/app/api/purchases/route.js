@@ -38,7 +38,8 @@ export async function POST(req) {
                 },
                 include: {
                     items: { include: { product: true } },
-                    payments: { include: { bank: true } }
+                    payments: { include: { bank: true } },
+                    supplierRel: true
                 }
             });
 

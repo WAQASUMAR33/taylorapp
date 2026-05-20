@@ -75,14 +75,14 @@ export default async function PurchasesPage() {
             ...item,
             unitCost: item.unitCost.toString(),
             totalCost: item.totalCost.toString(),
-            product: {
+            product: item.product ? {
                 ...item.product,
                 cuttingCost: item.product.cuttingCost ? item.product.cuttingCost.toString() : "0",
                 stitchingCost: item.product.stitchingCost ? item.product.stitchingCost.toString() : "0",
                 materialCost: item.product.materialCost ? item.product.materialCost.toString() : "0",
                 costPrice: item.product.costPrice ? item.product.costPrice.toString() : "0",
                 unitPrice: item.product.unitPrice ? item.product.unitPrice.toString() : "0",
-            }
+            } : null,
         })),
         payments: purchase.payments.map(payload => ({
             ...payload,

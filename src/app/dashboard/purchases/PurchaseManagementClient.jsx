@@ -173,8 +173,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
 
     const filtered = (purchases || []).filter(p => {
         const q = searchQuery.toLowerCase();
+        const supplierName = p.supplierRel?.name || p.supplier || "";
         return (p.invoiceNumber || "").toLowerCase().includes(q) ||
-            (p.supplier?.name || "").toLowerCase().includes(q);
+            supplierName.toLowerCase().includes(q);
     });
 
     /* ── render ──────────────────────────────────────── */
@@ -224,7 +225,8 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                         <TableBody>
                             {filtered.length > 0 ? (
                                 filtered.map((purchase) => {
-                                    const isPaid = parseFloat(purchase.paidAmount) >= parseFloat(purchase.totalAmount);
+                                    const totalPaid = (purchase.payments || []).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+                                    const isPaid = totalPaid >= parseFloat(purchase.totalAmount);
                                     return (
                                         <TableRow
                                             key={purchase.id}
