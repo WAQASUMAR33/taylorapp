@@ -441,8 +441,8 @@ function TailorTicket({ booking, measurements }) {
                 </tbody>
             </table>
 
-            {/* Per-suit block */}
-            {(booking.items || []).map((item, idx) => {
+            {/* Per-suit block — stitching items only (no product items) */}
+            {(booking.items || []).filter(item => !item.productId).map((item, idx) => {
                 const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
                 const src = hasItemMeasure ? item : measurements;
                 const measureRows = getMeasureRows(src);
