@@ -45,7 +45,6 @@ const navItems = [
     { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
 
-    { name: "Sale", href: "/dashboard/sale", icon: ShoppingBag, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Sale History", href: "/dashboard/sale-list", icon: ClipboardList, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
