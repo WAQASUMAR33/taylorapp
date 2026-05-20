@@ -648,6 +648,146 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPrintDialogOpen(true);
     };
 
+    const openStitchingTicketWindow = (booking, measurements) => {
+        if (!booking) return;
+        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+        const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
+        const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
+
+        const measureFields = [
+            ['Lambai',   'qameez_lambai'],
+            ['Bazoo',    'bazoo'],
+            ['Teera',    'teera'],
+            ['Galla',    'galaa'],
+            ['Chatti',   'chaati'],
+            ['Kamar',    'kamar_around'],
+            ['Ghera',    'gheera'],
+            ['Shalwar',  'shalwar_lambai'],
+            ['Poncha',   'puhncha'],
+            ['Kaf',      'kaf'],
+            ['Kandha',   'kandha'],
+            ['Hip',      'hip_around'],
+            ['S. Ghera', 'shalwar_gheera'],
+            ['Chaati A', 'chaati_around'],
+        ];
+
+        const stitchingItems = (booking.items || []).filter(item => !item.productId);
+
+        const itemsHtml = stitchingItems.map((item, idx) => {
+            const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
+            const src = hasItemMeasure ? item : (measurements || {});
+            const measureRowsHtml = measureFields.map(([label, key]) => {
+                const val = src[key];
+                return `<tr>
+                    <td class="ml">${label}:</td>
+                    <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                </tr>`;
+            }).join('');
+            const emptyBoxes = Array.from({ length: 8 }, () => `<div class="sbox"></div>`).join('');
+            return `
+            <div class="suit">
+                <div class="suit-hdr">
+                    <span>Suit ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
+                    <span>Qty: ${item.quantity || 1}</span>
+                </div>
+                <div class="suit-body">
+                    <div class="col-meas">
+                        <div class="col-hdr">Measurements — پیمائش</div>
+                        <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                    </div>
+                    <div class="col-stitch">
+                        <div class="col-hdr">Stitching Details</div>
+                        ${emptyBoxes}
+                    </div>
+                    <div class="col-notes">
+                        <div class="col-hdr">Notes</div>
+                        <div class="nbox">${item.itemNote || ''}</div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        const orderNoteHtml = booking.notes
+            ? `<div class="order-note"><strong>Order Note:</strong> ${booking.notes}</div>`
+            : `<div class="order-note"><strong>Order Note:</strong></div>`;
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Tailor Ticket — ${booking.bookingNumber || booking.id}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
+.hdr{border-bottom:3px solid #1a1a2e;padding-bottom:8px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.hdr img{width:64px;height:64px;object-fit:contain}
+.hdr-text{flex:1;text-align:center}
+.hdr-text h1{font-size:20px;font-weight:900;letter-spacing:1px;color:#1a1a2e;text-transform:uppercase}
+.hdr-text .tagline{font-size:11px;color:#555;font-style:italic;margin-top:2px}
+.hdr-text .phone{font-size:11px;color:#222;margin-top:3px}
+.hdr-text .address{font-size:10px;color:#444;margin-top:2px}
+.title{text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 8px}
+.info-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid #000;margin-bottom:8px}
+.info-table td{border:1px solid #000;padding:6px 8px}
+.suit{border:1px solid #000;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
+.suit-hdr{background:#1a1a2e;color:#fff;padding:3px 8px;font-weight:700;font-size:11px;display:flex;justify-content:space-between}
+.suit-body{display:flex}
+.col-meas{flex:0 0 42%;border-right:1px solid #000}
+.col-stitch{flex:0 0 30%;border-right:1px solid #000}
+.col-notes{flex:1}
+.col-hdr{background:#f0f0f0;padding:4px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
+.mt{width:100%;border-collapse:collapse}
+.ml{padding:6px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
+.mv{padding:6px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
+.ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:underline}
+.sbox{border:1px solid #000;margin:4px 5px;padding:7px 8px;min-height:34px}
+.nbox{border:1px solid #000;margin:5px;padding:8px;min-height:110px;font-size:13px;white-space:pre-wrap}
+.order-note{border:1px solid #000;padding:4px 8px;font-size:11px;margin-top:4px}
+@media print{body{padding:0}@page{size:A4 portrait;margin:10mm}}
+</style>
+</head>
+<body>
+<div class="hdr">
+    <img src="/logo.png" alt="Logo"/>
+    <div class="hdr-text">
+        <h1>Grace Cloth and Tailors</h1>
+        <div class="tagline">Where Style Meets Perfection</div>
+        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
+        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+    </div>
+</div>
+<div class="title">Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی</div>
+<table class="info-table">
+    <tbody>
+        <tr>
+            <td style="font-weight:700;width:15%">Customer:</td>
+            <td style="font-weight:700;width:25%">${booking.customer?.name || ''}</td>
+            <td style="font-weight:700;width:12%">Booking #:</td>
+            <td style="font-weight:800;color:#1a1a2e;width:18%">${booking.bookingNumber || booking.id}</td>
+            <td style="font-weight:700;width:10%">Date:</td>
+            <td style="width:20%">${fmt(booking.bookingDate)}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:700">Tailor:</td>
+            <td>${tailors || '—'}</td>
+            <td style="font-weight:700">Cutter:</td>
+            <td>${cutters || '—'}</td>
+            <td style="font-weight:700">Delivery:</td>
+            <td>${fmt(booking.deliveryDate)}</td>
+        </tr>
+    </tbody>
+</table>
+${itemsHtml}
+${orderNoteHtml}
+<script>window.onload=()=>{window.print()}<\/script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+    };
+
     const handlePrintConfirm = async (type) => {
         setPrintDialogOpen(false);
 
@@ -666,8 +806,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             return;
         }
 
-        if (type === 'STITCHING' && tempPrintBooking?.customerId) {
-            await fetchMeasurements(tempPrintBooking.customerId);
+        if (type === 'STITCHING') {
+            const measurements = tempPrintBooking?.customerId
+                ? await fetchMeasurements(tempPrintBooking.customerId)
+                : null;
+            openStitchingTicketWindow(tempPrintBooking, measurements);
+            return;
         }
 
         setPrintType(type);

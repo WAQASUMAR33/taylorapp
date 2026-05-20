@@ -623,7 +623,7 @@ export async function PUT(req) {
                     const createdItem = await tx.booking_item.create({
                         data: {
                             bookingId: parseInt(id),
-                            ...(pid ? { product: { connect: { id: pid } } } : {}),
+                            ...(pid ? { productId: pid } : {}),
                             quantity: parseInt(item.quantity) || 1,
                             unitPrice: parseFloat(item.unitPrice || 0),
                             totalPrice: parseFloat(item.totalPrice || 0),
