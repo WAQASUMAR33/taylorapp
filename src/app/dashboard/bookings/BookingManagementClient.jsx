@@ -441,14 +441,11 @@ function TailorTicket({ booking, measurements }) {
                 </tbody>
             </table>
 
-            {/* Per-suit block — stitching items only (no product items) */}
-            {(booking.items || []).filter(item => !item.productId).map((item, idx) => {
+            {/* Per-suit block — first stitching item only */}
+            {(booking.items || []).filter(item => !item.productId).slice(0, 1).map((item, idx) => {
                 const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
                 const src = hasItemMeasure ? item : measurements;
                 const measureRows = getMeasureRows(src);
-                const stitchBoxes = getStitchingBoxes(item);
-                // pad stitching boxes to at least 8 rows so the column has height
-                const STITCH_ROWS = Math.max(stitchBoxes.length, 8);
 
                 return (
                     <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
@@ -471,10 +468,10 @@ function TailorTicket({ booking, measurements }) {
                                     <tbody>
                                         {measureRows.map(([label, val], i) => (
                                             <tr key={i}>
-                                                <td style={{ padding: '8px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
+                                                <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
                                                     {label}:
                                                 </td>
-                                                <td style={{ padding: '8px 8px', fontSize: 15, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
+                                                <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
                                                     <span style={{
                                                         display: 'inline-block',
                                                         minWidth: 60,
@@ -496,17 +493,14 @@ function TailorTicket({ booking, measurements }) {
                                 <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
                                     Stitching Details
                                 </div>
-                                {Array.from({ length: STITCH_ROWS }, (_, i) => (
+                                {Array.from({ length: 8 }, (_, i) => (
                                     <div key={i} style={{
                                         border: '1px solid #000',
                                         margin: '4px 5px',
-                                        padding: '8px 9px',
+                                        padding: '10px 9px',
                                         fontSize: 15,
-                                        minHeight: 36,
-                                        fontWeight: stitchBoxes[i] ? 600 : 400,
-                                    }}>
-                                        {stitchBoxes[i] || ''}
-                                    </div>
+                                        minHeight: 44,
+                                    }} />
                                 ))}
                             </div>
 
@@ -520,7 +514,7 @@ function TailorTicket({ booking, measurements }) {
                                     margin: '5px',
                                     padding: '8px 10px',
                                     fontSize: 15,
-                                    minHeight: 120,
+                                    minHeight: 150,
                                     fontWeight: 600,
                                     lineHeight: 1.6,
                                     whiteSpace: 'pre-wrap',
@@ -575,21 +569,94 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [isBulkPrint, setIsBulkPrint] = useState(false);
     const [bulkPrintBookings, setBulkPrintBookings] = useState([]);
 
-    // List print state
-    const [printListBookings, setPrintListBookings] = useState([]);
 
     const handlePrintList = () => {
-        const prev = document.title;
-        document.title = '';
-        setPrintListBookings([]);
-        setTimeout(() => {
-            setPrintListBookings(filteredBookings);
-            setTimeout(() => {
-                window.print();
-                document.title = prev;
-                setTimeout(() => setPrintListBookings([]), 1000);
-            }, 400);
-        }, 50);
+        const bookings = filteredBookings;
+        if (bookings.length === 0) return;
+        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+        const dateFrom = filterDateFrom || filterDeliveryFrom || null;
+        const dateTo = filterDateTo || filterDeliveryTo || null;
+
+        const rowsHtml = bookings.map((booking, idx) => {
+            const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
+            const totalQty = (booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+            const bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff';
+            return `<tr style="background:${bg}">
+                <td style="border:1px solid #ddd;padding:4px 6px;font-weight:700;color:#7c3aed">#${booking.bookingNumber || booking.id}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">
+                    <div style="font-weight:700">${booking.customer?.name || ''}</div>
+                    ${booking.customer?.phone ? `<div style="color:#555;font-size:10px">${booking.customer.phone}</div>` : ''}
+                </td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.bookingDate)}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.deliveryDate)}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${tailorNames || '—'}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${(booking.items || []).length} suits / ${totalQty} pcs</td>
+            </tr>`;
+        }).join('');
+
+        const periodHtml = (dateFrom || dateTo)
+            ? `<div style="text-align:center;font-size:11px;color:#555;margin-bottom:6px">Period: ${dateFrom ? fmt(dateFrom) : '—'} to ${dateTo ? fmt(dateTo) : '—'}</div>`
+            : '';
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Booking List Report</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:11px}
+.hdr{border-bottom:3px solid #1a1a2e;padding-bottom:8px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.hdr img{width:56px;height:56px;object-fit:contain}
+.hdr-text{flex:1;text-align:center}
+.hdr-text h1{font-size:20px;font-weight:900;letter-spacing:1px;color:#1a1a2e;text-transform:uppercase}
+.hdr-text .tagline{font-size:11px;color:#555;font-style:italic;margin-top:2px}
+.hdr-text .phone{font-size:11px;color:#222;margin-top:3px}
+.hdr-text .address{font-size:10px;color:#444;margin-top:2px}
+table{width:100%;border-collapse:collapse}
+thead tr{background:#1a1a2e;color:#fff}
+th{border:1px solid #555;padding:5px 6px;text-align:left}
+tfoot tr{background:#1a1a2e;color:#fff;font-weight:700}
+tfoot td{border:1px solid #555;padding:5px 6px;text-align:right}
+@media print{body{padding:0}@page{size:A4 portrait;margin:10mm}}
+</style>
+</head>
+<body>
+<div class="hdr">
+    <img src="/logo.png" alt="Logo"/>
+    <div class="hdr-text">
+        <h1>Grace Cloth and Tailors</h1>
+        <div class="tagline">Where Style Meets Perfection</div>
+        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
+        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+    </div>
+</div>
+<div style="text-align:center;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:8px 0">Booking List Report</div>
+${periodHtml}
+<div style="text-align:center;font-size:11px;color:#555;margin-bottom:10px">Total Bookings: <strong>${bookings.length}</strong></div>
+<table>
+    <thead>
+        <tr>
+            <th style="width:60px">#</th>
+            <th>Customer</th>
+            <th style="width:70px">Date</th>
+            <th style="width:70px">Delivery</th>
+            <th>Tailor</th>
+            <th style="width:80px">Suits / Qty</th>
+        </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+        <tr><td colspan="6">TOTAL (${bookings.length} bookings)</td></tr>
+    </tfoot>
+</table>
+<script>window.onload=()=>{window.print()}<\/script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
     };
 
     // Inline staff edit state
@@ -648,11 +715,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPrintDialogOpen(true);
     };
 
-    const openStitchingTicketWindow = (booking, measurements) => {
-        if (!booking) return;
+    const openStitchingTicketWindow = (bookingOrBookings, measurements) => {
+        const bookingList = Array.isArray(bookingOrBookings) ? bookingOrBookings : [bookingOrBookings];
+        if (bookingList.length === 0) return;
+
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
-        const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
-        const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
 
         const measureFields = [
             ['Lambai',   'qameez_lambai'],
@@ -671,51 +738,88 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             ['Chaati A', 'chaati_around'],
         ];
 
-        const stitchingItems = (booking.items || []).filter(item => !item.productId);
 
-        const itemsHtml = stitchingItems.map((item, idx) => {
-            const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
-            const src = hasItemMeasure ? item : (measurements || {});
-            const measureRowsHtml = measureFields.map(([label, key]) => {
-                const val = src[key];
-                return `<tr>
-                    <td class="ml">${label}:</td>
-                    <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
-                </tr>`;
+        const buildBookingHtml = (booking, meas) => {
+            const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
+            const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
+            const stitchingItems = (booking.items || []).filter(item => !item.productId).slice(0, 1);
+
+            const itemsHtml = stitchingItems.map((item, idx) => {
+                const hasItemMeasure = item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati;
+                const src = hasItemMeasure ? item : (meas || {});
+                const measureRowsHtml = measureFields.map(([label, key]) => {
+                    const val = src[key];
+                    return `<tr>
+                        <td class="ml">${label}:</td>
+                        <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                    </tr>`;
+                }).join('');
+                const emptyBoxesHtml = Array.from({ length: 8 }, () => `<div class="sbox"></div>`).join('');
+                return `
+                <div class="suit">
+                    <div class="suit-hdr">
+                        <span>Suit ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
+                        <span>Qty: ${item.quantity || 1}</span>
+                    </div>
+                    <div class="suit-body">
+                        <div class="col-meas">
+                            <div class="col-hdr">Measurements — پیمائش</div>
+                            <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                        </div>
+                        <div class="col-stitch">
+                            <div class="col-hdr">Stitching Details</div>
+                            ${emptyBoxesHtml}
+                        </div>
+                        <div class="col-notes">
+                            <div class="col-hdr">Notes</div>
+                            <div class="nbox">${item.itemNote || ''}</div>
+                        </div>
+                    </div>
+                </div>`;
             }).join('');
-            const emptyBoxes = Array.from({ length: 8 }, () => `<div class="sbox"></div>`).join('');
-            return `
-            <div class="suit">
-                <div class="suit-hdr">
-                    <span>Suit ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
-                    <span>Qty: ${item.quantity || 1}</span>
-                </div>
-                <div class="suit-body">
-                    <div class="col-meas">
-                        <div class="col-hdr">Measurements — پیمائش</div>
-                        <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
-                    </div>
-                    <div class="col-stitch">
-                        <div class="col-hdr">Stitching Details</div>
-                        ${emptyBoxes}
-                    </div>
-                    <div class="col-notes">
-                        <div class="col-hdr">Notes</div>
-                        <div class="nbox">${item.itemNote || ''}</div>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
 
-        const orderNoteHtml = booking.notes
-            ? `<div class="order-note"><strong>Order Note:</strong> ${booking.notes}</div>`
-            : `<div class="order-note"><strong>Order Note:</strong></div>`;
+            const orderNoteHtml = booking.notes
+                ? `<div class="order-note"><strong>Order Note:</strong> ${booking.notes}</div>`
+                : `<div class="order-note"><strong>Order Note:</strong></div>`;
+
+            return `
+            <div class="booking-block">
+                <table class="info-table">
+                    <tbody>
+                        <tr>
+                            <td style="font-weight:700;width:15%">Customer:</td>
+                            <td style="font-weight:700;width:25%">${booking.customer?.name || ''}</td>
+                            <td style="font-weight:700;width:12%">Booking #:</td>
+                            <td style="font-weight:800;color:#1a1a2e;width:18%">${booking.bookingNumber || booking.id}</td>
+                            <td style="font-weight:700;width:10%">Date:</td>
+                            <td style="width:20%">${fmt(booking.bookingDate)}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight:700">Tailor:</td>
+                            <td>${tailors || '—'}</td>
+                            <td style="font-weight:700">Cutter:</td>
+                            <td>${cutters || '—'}</td>
+                            <td style="font-weight:700">Delivery:</td>
+                            <td>${fmt(booking.deliveryDate)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                ${itemsHtml}
+                ${orderNoteHtml}
+            </div>`;
+        };
+
+        const title = bookingList.length === 1
+            ? `Tailor Ticket — ${bookingList[0].bookingNumber || bookingList[0].id}`
+            : `Tailor Tickets — ${bookingList.length} Bookings`;
+
+        const allBookingsHtml = bookingList.map(b => buildBookingHtml(b, measurements)).join('');
 
         const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>Tailor Ticket — ${booking.bookingNumber || booking.id}</title>
+<title>${title}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
@@ -726,23 +830,25 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .hdr-text .tagline{font-size:11px;color:#555;font-style:italic;margin-top:2px}
 .hdr-text .phone{font-size:11px;color:#222;margin-top:3px}
 .hdr-text .address{font-size:10px;color:#444;margin-top:2px}
-.title{text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 8px}
+.title{text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 10px}
 .info-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid #000;margin-bottom:8px}
 .info-table td{border:1px solid #000;padding:6px 8px}
+.booking-block{margin-bottom:20px;padding-top:8px;border-top:2px solid #1a1a2e}
+.booking-block:first-child{border-top:none;padding-top:0}
 .suit{border:1px solid #000;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
-.suit-hdr{background:#1a1a2e;color:#fff;padding:3px 8px;font-weight:700;font-size:11px;display:flex;justify-content:space-between}
+.suit-hdr{background:#1a1a2e;color:#fff;padding:4px 8px;font-weight:700;font-size:12px;display:flex;justify-content:space-between}
 .suit-body{display:flex}
 .col-meas{flex:0 0 42%;border-right:1px solid #000}
 .col-stitch{flex:0 0 30%;border-right:1px solid #000}
 .col-notes{flex:1}
-.col-hdr{background:#f0f0f0;padding:4px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
+.col-hdr{background:#f0f0f0;padding:5px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
 .mt{width:100%;border-collapse:collapse}
-.ml{padding:6px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
-.mv{padding:6px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
+.ml{padding:10px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
+.mv{padding:10px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:underline}
-.sbox{border:1px solid #000;margin:4px 5px;padding:7px 8px;min-height:34px}
-.nbox{border:1px solid #000;margin:5px;padding:8px;min-height:110px;font-size:13px;white-space:pre-wrap}
-.order-note{border:1px solid #000;padding:4px 8px;font-size:11px;margin-top:4px}
+.sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
+.nbox{border:1px solid #000;margin:5px;padding:8px;min-height:140px;font-size:13px;white-space:pre-wrap}
+.order-note{border:1px solid #000;padding:5px 8px;font-size:11px;margin-top:4px}
 @media print{body{padding:0}@page{size:A4 portrait;margin:10mm}}
 </style>
 </head>
@@ -757,28 +863,7 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
     </div>
 </div>
 <div class="title">Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی</div>
-<table class="info-table">
-    <tbody>
-        <tr>
-            <td style="font-weight:700;width:15%">Customer:</td>
-            <td style="font-weight:700;width:25%">${booking.customer?.name || ''}</td>
-            <td style="font-weight:700;width:12%">Booking #:</td>
-            <td style="font-weight:800;color:#1a1a2e;width:18%">${booking.bookingNumber || booking.id}</td>
-            <td style="font-weight:700;width:10%">Date:</td>
-            <td style="width:20%">${fmt(booking.bookingDate)}</td>
-        </tr>
-        <tr>
-            <td style="font-weight:700">Tailor:</td>
-            <td>${tailors || '—'}</td>
-            <td style="font-weight:700">Cutter:</td>
-            <td>${cutters || '—'}</td>
-            <td style="font-weight:700">Delivery:</td>
-            <td>${fmt(booking.deliveryDate)}</td>
-        </tr>
-    </tbody>
-</table>
-${itemsHtml}
-${orderNoteHtml}
+${allBookingsHtml}
 <script>window.onload=()=>{window.print()}<\/script>
 </body>
 </html>`;
@@ -798,6 +883,10 @@ ${orderNoteHtml}
         if (isBulkPrint) {
             const selected = filteredBookings.filter(b => selectedIds.has(b.id));
             setIsBulkPrint(false);
+            if (type === 'STITCHING') {
+                openStitchingTicketWindow(selected, null);
+                return;
+            }
             setPrintType(type);
             setTimeout(() => {
                 setBulkPrintBookings(selected);
@@ -2661,7 +2750,7 @@ ${orderNoteHtml}
             {/* ═══════════════════════════════════════════════
                 PRINT LAYOUTS — hidden on screen, shown on print
             ═══════════════════════════════════════════════ */}
-            {(printBooking || bulkPrintBookings.length > 0 || printListBookings.length > 0) && (
+            {(printBooking || bulkPrintBookings.length > 0) && (
                 <div id="printable-section" style={{ display: 'none' }}>
                     {/* Single booking print */}
                     {printBooking && (
@@ -2681,16 +2770,6 @@ ${orderNoteHtml}
                             }
                         </div>
                     ))}
-                    {/* List print */}
-                    {printListBookings.length > 0 && (
-                        <div className="print-page">
-                            <BookingListPrint
-                                bookings={printListBookings}
-                                dateFrom={filterDateFrom || filterDeliveryFrom || null}
-                                dateTo={filterDateTo || filterDeliveryTo || null}
-                            />
-                        </div>
-                    )}
                 </div>
             )}
 

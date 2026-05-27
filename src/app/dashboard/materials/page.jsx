@@ -3,6 +3,8 @@ import MaterialManagementClient from "./MaterialManagementClient";
 import { Box, Typography } from "@mui/material";
 import { Boxes } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
     title: "Material Stock | GRACE TAILORS",
 };
