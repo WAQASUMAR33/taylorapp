@@ -57,22 +57,33 @@ export default function MaterialManagementClient({ initialMaterials }) {
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
     const [formData, setFormData] = useState({ title: "", quantity: "", price: "" });
+    const [formError, setFormError] = useState("");
 
     const [stockFormData, setStockFormData] = useState({ materialId: "", addQuantity: "" });
+    const [stockLoading, setStockLoading] = useState(false);
+    const [stockError, setStockError] = useState("");
 
     // Out Stock dialog states
     const [outStockDialogOpen, setOutStockDialogOpen] = useState(false);
     const [outStockFormData, setOutStockFormData] = useState({ materialId: "", outQuantity: "", description: "" });
+    const [outStockLoading, setOutStockLoading] = useState(false);
+    const [outStockError, setOutStockError] = useState("");
 
     /* ── helpers ──────────────────────────────────────── */
 
+    const normalizeMaterial = (m) => ({
+        ...m,
+        quantity: parseFloat(m.quantity),
+        price: parseFloat(m.price),
+    });
+
     const resetForm = () => {
         setFormData({ title: "", quantity: "", price: "" });
-        setError("");
+        setFormError("");
     };
 
-    const resetStockForm = () => setStockFormData({ materialId: "", addQuantity: "" });
-    const resetOutStockForm = () => setOutStockFormData({ materialId: "", outQuantity: "", description: "" });
+    const resetStockForm = () => { setStockFormData({ materialId: "", addQuantity: "" }); setStockError(""); };
+    const resetOutStockForm = () => { setOutStockFormData({ materialId: "", outQuantity: "", description: "" }); setOutStockError(""); };
 
     const currentMaterial = materials.find(
         (m) => m.id === parseInt(stockFormData.materialId)
@@ -105,7 +116,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
     const handleSubmit = async () => {
         setLoading(true);
-        setError("");
+        setFormError("");
         try {
             const isEditing = !!formData.id;
             const url = isEditing ? `/api/materials/${formData.id}` : "/api/materials";
@@ -122,14 +133,14 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 throw new Error(data.error || `Failed to ${isEditing ? "update" : "create"} material`);
             }
 
-            const saved = await response.json();
+            const saved = normalizeMaterial(await response.json());
             setMaterials((prev) =>
                 isEditing ? prev.map((m) => (m.id === saved.id ? saved : m)) : [saved, ...prev]
             );
             setSuccessMessage(`Material ${isEditing ? "updated" : "added"} successfully!`);
             handleClose();
         } catch (err) {
-            setError(err.message);
+            setFormError(err.message);
         } finally {
             setLoading(false);
         }
@@ -159,14 +170,19 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
     const handleStockSubmit = async () => {
         if (!stockFormData.materialId || !stockFormData.addQuantity) {
-            setError("Please fill all fields");
+            setStockError("Please select a material and enter quantity.");
             return;
         }
-        setLoading(true);
-        setError("");
+        const addQty = parseFloat(stockFormData.addQuantity);
+        if (isNaN(addQty) || addQty <= 0) {
+            setStockError("Add quantity must be greater than zero.");
+            return;
+        }
+        setStockLoading(true);
+        setStockError("");
         try {
             if (!currentMaterial) throw new Error("Material not found");
-            const newQty = parseFloat(currentMaterial.quantity) + parseFloat(stockFormData.addQuantity);
+            const newQty = parseFloat(currentMaterial.quantity) + addQty;
 
             const res = await fetch(`/api/materials/${stockFormData.materialId}`, {
                 method: "PUT",
@@ -182,39 +198,39 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 throw new Error(errorData.error || "Stock update failed");
             }
 
-            const updated = await res.json();
+            const updated = normalizeMaterial(await res.json());
             setMaterials((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
             setSuccessMessage("Stock updated successfully!");
             setStockDialogOpen(false);
             resetStockForm();
         } catch (err) {
-            setError(err.message);
+            setStockError(err.message);
         } finally {
-            setLoading(false);
+            setStockLoading(false);
         }
     };
 
     const handleOutStockSubmit = async () => {
         if (!outStockFormData.materialId || !outStockFormData.outQuantity) {
-            setError("Please select a material and enter quantity");
+            setOutStockError("Please select a material and enter quantity.");
             return;
         }
         const outQty = parseFloat(outStockFormData.outQuantity);
-        if (outQty <= 0) {
-            setError("Out quantity must be greater than zero");
+        if (isNaN(outQty) || outQty <= 0) {
+            setOutStockError("Out quantity must be greater than zero.");
             return;
         }
         if (!outCurrentMaterial) {
-            setError("Material not found");
+            setOutStockError("Material not found.");
             return;
         }
         const currentQty = parseFloat(outCurrentMaterial.quantity);
         if (outQty > currentQty) {
-            setError(`Cannot remove more than available stock (${currentQty} units)`);
+            setOutStockError(`Cannot remove more than available stock (${currentQty} units).`);
             return;
         }
-        setLoading(true);
-        setError("");
+        setOutStockLoading(true);
+        setOutStockError("");
         try {
             const newQty = currentQty - outQty;
             const res = await fetch(`/api/materials/${outStockFormData.materialId}`, {
@@ -231,15 +247,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 throw new Error(errorData.error || "Stock out failed");
             }
 
-            const updated = await res.json();
+            const updated = normalizeMaterial(await res.json());
             setMaterials((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
             setSuccessMessage("Stock out recorded successfully!");
             setOutStockDialogOpen(false);
             resetOutStockForm();
         } catch (err) {
-            setError(err.message);
+            setOutStockError(err.message);
         } finally {
-            setLoading(false);
+            setOutStockLoading(false);
         }
     };
 
@@ -431,14 +447,14 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 </DialogTitle>
 
                 <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
-                    {error && (
+                    {formError && (
                         <Alert
                             severity="error"
                             variant="filled"
-                            onClose={() => setError("")}
+                            onClose={() => setFormError("")}
                             sx={{ mb: 2.5, borderRadius: 2 }}
                         >
-                            {error}
+                            {formError}
                         </Alert>
                     )}
 
@@ -520,7 +536,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
             {/* ── Add Stock Dialog ────────────────────────── */}
             <Dialog
                 open={stockDialogOpen}
-                onClose={() => { setStockDialogOpen(false); resetStockForm(); setError(""); }}
+                onClose={() => { setStockDialogOpen(false); resetStockForm(); }}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}
@@ -530,14 +546,14 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 </DialogTitle>
 
                 <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
-                    {error && (
+                    {stockError && (
                         <Alert
                             severity="error"
                             variant="filled"
-                            onClose={() => setError("")}
+                            onClose={() => setStockError("")}
                             sx={{ mb: 2.5, borderRadius: 2 }}
                         >
-                            {error}
+                            {stockError}
                         </Alert>
                     )}
 
@@ -548,6 +564,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 size="small"
                                 options={materials}
                                 getOptionLabel={(option) => option.title || ""}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
                                 value={currentMaterial || null}
                                 onChange={(_, newValue) =>
                                     setStockFormData({ ...stockFormData, materialId: newValue ? newValue.id.toString() : "" })
@@ -617,10 +634,10 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     <Button
-                        onClick={() => { setStockDialogOpen(false); resetStockForm(); setError(""); }}
+                        onClick={() => { setStockDialogOpen(false); resetStockForm(); }}
                         variant="outlined"
                         color="inherit"
-                        disabled={loading}
+                        disabled={stockLoading}
                         startIcon={<XIcon size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
@@ -630,11 +647,11 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         variant="contained"
                         color="warning"
                         onClick={handleStockSubmit}
-                        disabled={loading || !stockFormData.materialId || !stockFormData.addQuantity}
-                        startIcon={loading ? null : <History size={17} />}
+                        disabled={stockLoading || !stockFormData.materialId || !stockFormData.addQuantity}
+                        startIcon={stockLoading ? null : <History size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "Update Stock"}
+                        {stockLoading ? <CircularProgress size={20} color="inherit" /> : "Update Stock"}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -642,7 +659,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
             {/* ── Out Stock Dialog ────────────────────────── */}
             <Dialog
                 open={outStockDialogOpen}
-                onClose={() => { setOutStockDialogOpen(false); resetOutStockForm(); setError(""); }}
+                onClose={() => { setOutStockDialogOpen(false); resetOutStockForm(); }}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}
@@ -655,14 +672,14 @@ export default function MaterialManagementClient({ initialMaterials }) {
                 </DialogTitle>
 
                 <DialogContent sx={{ pt: "24px !important", pb: 3 }}>
-                    {error && (
+                    {outStockError && (
                         <Alert
                             severity="error"
                             variant="filled"
-                            onClose={() => setError("")}
+                            onClose={() => setOutStockError("")}
                             sx={{ mb: 2.5, borderRadius: 2 }}
                         >
-                            {error}
+                            {outStockError}
                         </Alert>
                     )}
 
@@ -673,6 +690,7 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                 size="small"
                                 options={materials}
                                 getOptionLabel={(option) => option.title || ""}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
                                 value={outCurrentMaterial || null}
                                 onChange={(_, newValue) =>
                                     setOutStockFormData({ ...outStockFormData, materialId: newValue ? newValue.id.toString() : "" })
@@ -756,10 +774,10 @@ export default function MaterialManagementClient({ initialMaterials }) {
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     <Button
-                        onClick={() => { setOutStockDialogOpen(false); resetOutStockForm(); setError(""); }}
+                        onClick={() => { setOutStockDialogOpen(false); resetOutStockForm(); }}
                         variant="outlined"
                         color="inherit"
-                        disabled={loading}
+                        disabled={outStockLoading}
                         startIcon={<XIcon size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
@@ -770,15 +788,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         color="error"
                         onClick={handleOutStockSubmit}
                         disabled={
-                            loading ||
+                            outStockLoading ||
                             !outStockFormData.materialId ||
                             !outStockFormData.outQuantity ||
                             parseFloat(outTotalQty) < 0
                         }
-                        startIcon={loading ? null : <TrendingDown size={17} />}
+                        startIcon={outStockLoading ? null : <TrendingDown size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : "Confirm Out Stock"}
+                        {outStockLoading ? <CircularProgress size={20} color="inherit" /> : "Confirm Out Stock"}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -884,6 +902,23 @@ export default function MaterialManagementClient({ initialMaterials }) {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* ── Error Snackbar (delete / view errors) ───── */}
+            <Snackbar
+                open={!!error}
+                autoHideDuration={4000}
+                onClose={() => setError("")}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            >
+                <Alert
+                    onClose={() => setError("")}
+                    severity="error"
+                    variant="filled"
+                    sx={{ width: "100%", borderRadius: 2 }}
+                >
+                    {error}
+                </Alert>
+            </Snackbar>
 
             {/* ── Success Snackbar ────────────────────────── */}
             <Snackbar
