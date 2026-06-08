@@ -23,6 +23,7 @@ import {
     ShoppingBag,
     ClipboardList,
     TrendingDown,
+    Receipt,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -50,6 +51,7 @@ const navItems = [
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
     { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, roles: ["ADMIN", "MANAGER"] },
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
+    { name: "Expenses", href: "/dashboard/expenses", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Orders", href: "/dashboard/stitching-orders", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },

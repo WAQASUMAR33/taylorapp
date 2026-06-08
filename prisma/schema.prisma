@@ -19,6 +19,21 @@ model user {
   permissions  Json?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  expenses     expense[]
+}
+
+model expense {
+  id          Int      @id @default(autoincrement())
+  title       String
+  date        DateTime
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?  @db.Text
+  addedBy     Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  addedByUser user?    @relation(fields: [addedBy], references: [id])
+
+  @@index([addedBy], map: "expense_addedBy_fkey")
 }
 
 
