@@ -15,4 +15,4 @@ jobs:
         uses: hostinger/deploy-action@v1
         with:
           api-key: ${{ secrets.HOSTINGER_API_KEY }}
-          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          virtual-machine: ${{ secrets.HOSTINGER_VM_ID }}
