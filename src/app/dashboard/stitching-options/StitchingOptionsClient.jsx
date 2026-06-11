@@ -29,11 +29,15 @@ export default function StitchingOptionsClient({ initialOptions }) {
     const [editingOption, setEditingOption] = useState(null); // null = new, object = edit
     const [formName, setFormName] = useState("");
     const [formPrice, setFormPrice] = useState("");
+    const [formStitchingCost, setFormStitchingCost] = useState("");
+    const [formMaterialCost, setFormMaterialCost] = useState("");
 
     const openNewDialog = () => {
         setEditingOption(null);
         setFormName("");
         setFormPrice("");
+        setFormStitchingCost("");
+        setFormMaterialCost("");
         setError("");
         setDialogOpen(true);
     };
@@ -42,6 +46,8 @@ export default function StitchingOptionsClient({ initialOptions }) {
         setEditingOption(opt);
         setFormName(opt.name);
         setFormPrice(String(parseFloat(opt.price)));
+        setFormStitchingCost(opt.stitching_cost !== undefined && opt.stitching_cost !== null ? String(parseFloat(opt.stitching_cost)) : "0");
+        setFormMaterialCost(opt.material_cost !== undefined && opt.material_cost !== null ? String(parseFloat(opt.material_cost)) : "0");
         setError("");
         setDialogOpen(true);
     };
@@ -50,13 +56,28 @@ export default function StitchingOptionsClient({ initialOptions }) {
         setDialogOpen(false);
         setFormName("");
         setFormPrice("");
+        setFormStitchingCost("");
+        setFormMaterialCost("");
         setError("");
     };
 
     const handleSave = async () => {
+        const parsedPrice = parseFloat(formPrice);
         if (!formName.trim()) { setError("Name is required"); return; }
-        if (formPrice === "" || isNaN(parseFloat(formPrice)) || parseFloat(formPrice) < 0) {
+        if (formPrice === "" || isNaN(parsedPrice) || parsedPrice < 0) {
             setError("A valid price is required");
+            return;
+        }
+
+        const parsedStitchingCost = formStitchingCost === "" ? 0 : parseFloat(formStitchingCost);
+        if (isNaN(parsedStitchingCost) || parsedStitchingCost < 0) {
+            setError("A valid stitching cost is required");
+            return;
+        }
+
+        const parsedMaterialCost = formMaterialCost === "" ? 0 : parseFloat(formMaterialCost);
+        if (isNaN(parsedMaterialCost) || parsedMaterialCost < 0) {
+            setError("A valid material cost is required");
             return;
         }
 
@@ -64,14 +85,25 @@ export default function StitchingOptionsClient({ initialOptions }) {
         setError("");
         try {
             const isEdit = !!editingOption;
+            const bodyData = isEdit
+                ? {
+                    id: editingOption.id,
+                    name: formName,
+                    price: parsedPrice,
+                    stitching_cost: parsedStitchingCost,
+                    material_cost: parsedMaterialCost
+                }
+                : {
+                    name: formName,
+                    price: parsedPrice,
+                    stitching_cost: parsedStitchingCost,
+                    material_cost: parsedMaterialCost
+                };
+
             const res = await fetch("/api/stitching-options", {
                 method: isEdit ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(
-                    isEdit
-                        ? { id: editingOption.id, name: formName, price: parseFloat(formPrice) }
-                        : { name: formName, price: parseFloat(formPrice) }
-                )
+                body: JSON.stringify(bodyData)
             });
             if (!res.ok) {
                 const d = await res.json();
@@ -139,6 +171,8 @@ export default function StitchingOptionsClient({ initialOptions }) {
                         <TableRow sx={{ bgcolor: "#f8fafc" }}>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>#</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Option Name</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Stitching Cost (Rs.)</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Material Cost (Rs.)</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Price (Rs.)</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Actions</TableCell>
                         </TableRow>
@@ -146,7 +180,7 @@ export default function StitchingOptionsClient({ initialOptions }) {
                     <TableBody>
                         {options.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "#9ca3af" }}>
                                     <Scissors size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
                                     <Typography variant="body2">No stitching options yet. Add your first one.</Typography>
                                 </TableCell>
@@ -157,6 +191,20 @@ export default function StitchingOptionsClient({ initialOptions }) {
                                     <TableCell sx={{ color: "#6b7280", fontWeight: 600 }}>{idx + 1}</TableCell>
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={600}>{opt.name}</Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Chip
+                                            label={`Rs. ${parseFloat(opt.stitching_cost || 0).toLocaleString()}`}
+                                            size="small"
+                                            sx={{ bgcolor: "#f5f3ff", color: "#7c3aed", fontWeight: 700, borderRadius: 1.5 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Chip
+                                            label={`Rs. ${parseFloat(opt.material_cost || 0).toLocaleString()}`}
+                                            size="small"
+                                            sx={{ bgcolor: "#eff6ff", color: "#2563eb", fontWeight: 700, borderRadius: 1.5 }}
+                                        />
                                     </TableCell>
                                     <TableCell align="right">
                                         <Chip
@@ -210,6 +258,30 @@ export default function StitchingOptionsClient({ initialOptions }) {
                             onChange={(e) => setFormName(e.target.value)}
                             sx={FIELD_SX}
                             autoFocus
+                            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                        />
+                        <TextField
+                            label="Stitching Cost"
+                            placeholder="0"
+                            fullWidth
+                            size="small"
+                            type="number"
+                            value={formStitchingCost}
+                            onChange={(e) => setFormStitchingCost(e.target.value)}
+                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                            sx={FIELD_SX}
+                            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                        />
+                        <TextField
+                            label="Material Cost"
+                            placeholder="0"
+                            fullWidth
+                            size="small"
+                            type="number"
+                            value={formMaterialCost}
+                            onChange={(e) => setFormMaterialCost(e.target.value)}
+                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                            sx={FIELD_SX}
                             onKeyDown={(e) => e.key === "Enter" && handleSave()}
                         />
                         <TextField

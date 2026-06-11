@@ -15,12 +15,17 @@ export async function GET() {
 
 export async function POST(req) {
     try {
-        const { name, price } = await req.json();
+        const { name, price, stitching_cost, material_cost } = await req.json();
         if (!name || price === undefined || price === null) {
             return NextResponse.json({ error: "Name and price are required" }, { status: 400 });
         }
         const option = await prisma.stitching_option.create({
-            data: { name: name.trim(), price: parseFloat(price) }
+            data: {
+                name: name.trim(),
+                price: parseFloat(price),
+                stitching_cost: stitching_cost !== undefined && stitching_cost !== null ? parseFloat(stitching_cost) : 0,
+                material_cost: material_cost !== undefined && material_cost !== null ? parseFloat(material_cost) : 0
+            }
         });
         return NextResponse.json(option, { status: 201 });
     } catch (error) {
@@ -31,13 +36,15 @@ export async function POST(req) {
 
 export async function PUT(req) {
     try {
-        const { id, name, price, isActive } = await req.json();
+        const { id, name, price, stitching_cost, material_cost, isActive } = await req.json();
         if (!id) {
             return NextResponse.json({ error: "ID is required" }, { status: 400 });
         }
         const data = {};
         if (name !== undefined) data.name = name.trim();
         if (price !== undefined) data.price = parseFloat(price);
+        if (stitching_cost !== undefined) data.stitching_cost = parseFloat(stitching_cost);
+        if (material_cost !== undefined) data.material_cost = parseFloat(material_cost);
         if (isActive !== undefined) data.isActive = isActive;
 
         const option = await prisma.stitching_option.update({

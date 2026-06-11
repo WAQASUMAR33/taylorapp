@@ -11,11 +11,17 @@ export async function GET(req) {
 
         const where = {};
 
+        // Build date filter
+        let fromDate = null;
+        let toDate = null;
         if (from || to) {
             where.bookingDate = {};
-            if (from) where.bookingDate.gte = new Date(from);
+            if (from) {
+                fromDate = new Date(from);
+                where.bookingDate.gte = fromDate;
+            }
             if (to) {
-                const toDate = new Date(to);
+                toDate = new Date(to);
                 toDate.setHours(23, 59, 59, 999);
                 where.bookingDate.lte = toDate;
             }
@@ -23,7 +29,7 @@ export async function GET(req) {
         if (tailorId) where.tailorId = parseInt(tailorId);
         if (cutterId) where.cutterId = parseInt(cutterId);
 
-        // --- Bookings with full relations ---
+        // --- Bookings with full relations including stitching options ---
         const bookings = await prisma.booking.findMany({
             where,
             include: {
@@ -32,12 +38,34 @@ export async function GET(req) {
                 cutter: { select: { id: true, name: true } },
                 items: {
                     include: {
-                        product: { select: { id: true, name: true, sku: true } }
+                        product: { select: { id: true, name: true, sku: true } },
+                        selectedOptions: {
+                            include: {
+                                stitchingOption: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        stitching_cost: true,
+                                        material_cost: true,
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
             orderBy: { bookingDate: "desc" }
         });
+
+        // --- Expenses between dates ---
+        const expenseWhere = {};
+        if (fromDate || toDate) {
+            expenseWhere.date = {};
+            if (fromDate) expenseWhere.date.gte = fromDate;
+            if (toDate) expenseWhere.date.lte = toDate;
+        }
+        const expenses = await prisma.expense.findMany({ where: expenseWhere });
+        const totalExpenses = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
         // --- Purchases (for payables) ---
         const purchases = await prisma.purchase.findMany({
@@ -60,8 +88,17 @@ export async function GET(req) {
         let totalPending = 0;
         let totalCost = 0;
         let suitCount = 0;
-        let stitchingRevenue = 0;
-        let productRevenue = 0;
+        let stitchingRevenue = 0;   // total stitchingCost charged to customer
+        let productRevenue = 0;     // total unitPrice for cloth items
+
+        // Stitching profit breakdown
+        let totalStitchingCostCharged = 0;  // sum of stitchingCost from booking_items (revenue)
+        let totalActualStitchingCost = 0;   // sum of stitching_cost from stitching_options
+        let totalActualMaterialCost = 0;    // sum of material_cost from stitching_options
+
+        // Cloth profit breakdown
+        let totalClothUnitPrice = 0;        // sum of unitPrice * quantity for cloth items
+        let totalClothCostPrice = 0;        // sum of costPrice * quantity for cloth items
 
         // Tailor map: tailorId → { name, amount, count }
         const tailorMap = {};
@@ -78,14 +115,34 @@ export async function GET(req) {
             totalReceived += advance;
             totalPending += remaining;
             totalCost += itemCost;
-            // Count stitching suits and split revenue
+
+            // Process each item
             for (const item of b.items) {
                 const itemTotal = parseFloat(item.totalPrice) || 0;
+                const qty = parseInt(item.quantity) || 1;
+
                 if (!item.productId) {
-                    suitCount += (parseInt(item.quantity) || 1);
+                    // ── Stitching item ──
+                    suitCount += qty;
                     stitchingRevenue += itemTotal;
+
+                    // Stitching cost charged to customer (revenue side)
+                    totalStitchingCostCharged += (parseFloat(item.stitchingCost) || 0) * qty;
+
+                    // Actual costs from linked stitching options
+                    if (item.selectedOptions && item.selectedOptions.length > 0) {
+                        for (const opt of item.selectedOptions) {
+                            if (opt.stitchingOption) {
+                                totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
+                                totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
+                            }
+                        }
+                    }
                 } else {
+                    // ── Cloth / product item ──
                     productRevenue += itemTotal;
+                    totalClothUnitPrice += (parseFloat(item.unitPrice) || 0) * qty;
+                    totalClothCostPrice += (parseFloat(item.costPrice) || 0) * qty;
                 }
             }
 
@@ -107,6 +164,15 @@ export async function GET(req) {
                 cutterMap[b.cutterId].count += 1;
             }
         }
+
+        // ── Stitching Profit = total stitchingCost (charged) - (actual stitching cost + actual material cost) ──
+        const stitchingProfit = totalStitchingCostCharged - (totalActualStitchingCost + totalActualMaterialCost);
+
+        // ── Cloth Profit = total unitPrice - (total costPrice + total expenses) ──
+        const clothProfit = totalClothUnitPrice - (totalClothCostPrice + totalExpenses);
+
+        // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
+        const overallShopProfit = stitchingProfit + clothProfit;
 
         const totalProfit = totalBookingAmount - totalCost;
 
@@ -134,7 +200,19 @@ export async function GET(req) {
                 bookingCount: bookings.length,
                 suitCount,
                 stitchingRevenue,
-                productRevenue
+                productRevenue,
+                // Stitching profit breakdown
+                totalStitchingCostCharged,
+                totalActualStitchingCost,
+                totalActualMaterialCost,
+                stitchingProfit,
+                // Cloth profit breakdown
+                totalClothUnitPrice,
+                totalClothCostPrice,
+                totalExpenses,
+                clothProfit,
+                // Overall shop profit
+                overallShopProfit,
             },
             tailorBreakdown: Object.values(tailorMap).sort((a, b) => b.amount - a.amount),
             cutterBreakdown: Object.values(cutterMap).sort((a, b) => b.amount - a.amount),

@@ -35,7 +35,6 @@ import {
     Trash2,
     Search,
     Plus,
-    Printer,
     Save,
     X,
     TrendingUp,
@@ -178,118 +177,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
 
     const balance = totals.debit - totals.credit;
 
-    const handlePrintLedger = () => {
-        const sortedEntries = filteredEntries
-            .slice()
-            .sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
 
-        let running = 0;
-        const rows = sortedEntries.map((entry) => {
-            const debitAmt = entry.type === "DEBIT" ? parseFloat(entry.amount) : 0;
-            const creditAmt = entry.type === "CREDIT" ? parseFloat(entry.amount) : 0;
-            const preBalance = running;
-            running += debitAmt - creditAmt;
-            return { entry, debitAmt, creditAmt, preBalance, currentBal: running };
-        });
-
-        const fmt = (n) => `Rs. ${n.toLocaleString()}`;
-        const dateLabel = (d) => new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
-
-        const filterInfo = [
-            filterCustomer ? `Account: ${filterCustomer.name}` : null,
-            dateFrom ? `From: ${dateLabel(dateFrom)}` : null,
-            dateTo ? `To: ${dateLabel(dateTo)}` : null,
-        ].filter(Boolean).join("   |   ");
-
-        const tableRows = rows.map(({ entry, debitAmt, creditAmt, preBalance, currentBal }) => `
-            <tr>
-                <td>#${entry.id}</td>
-                <td>${entry.customer?.name || "—"}${entry.customer?.code ? `<br><small>${entry.customer.code}</small>` : ""}</td>
-                <td>${dateLabel(entry.entryDate)}${entry.description ? `<br><small>${entry.description}</small>` : ""}</td>
-                <td class="num">${fmt(preBalance)}</td>
-                <td class="num debit">${debitAmt > 0 ? fmt(debitAmt) : "—"}</td>
-                <td class="num credit">${creditAmt > 0 ? fmt(creditAmt) : "—"}</td>
-                <td class="num ${currentBal >= 0 ? "pos" : "neg"}">${fmt(currentBal)}</td>
-            </tr>`).join("");
-
-        const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>Ledger Report</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
-  .header { text-align: center; margin-bottom: 18px; }
-  .header h1 { font-size: 20px; font-weight: 700; }
-  .header p { color: #555; margin-top: 4px; font-size: 11px; }
-  .summary { display: flex; gap: 16px; margin-bottom: 18px; }
-  .summary-card { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px 14px; }
-  .summary-card .label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: .5px; }
-  .summary-card .value { font-size: 16px; font-weight: 700; margin-top: 3px; }
-  .debit-card .value { color: #2563eb; }
-  .credit-card .value { color: #dc2626; }
-  .balance-card .value { color: #16a34a; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #f3f4f6; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; padding: 8px 10px; border: 1px solid #e5e7eb; }
-  td { padding: 7px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
-  td small { color: #666; font-size: 10px; }
-  tr:nth-child(even) { background: #f9fafb; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .debit { color: #2563eb; font-weight: 600; }
-  .credit { color: #dc2626; font-weight: 600; }
-  .pos { color: #16a34a; font-weight: 700; }
-  .neg { color: #dc2626; font-weight: 700; }
-  .footer { margin-top: 20px; font-size: 10px; color: #888; text-align: right; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <div class="header">
-    <h1>Taylor — Ledger Report</h1>
-    <p>Printed on ${new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}${filterInfo ? `&nbsp;&nbsp;|&nbsp;&nbsp;${filterInfo}` : ""}</p>
-    <p>${sortedEntries.length} entr${sortedEntries.length === 1 ? "y" : "ies"}</p>
-  </div>
-
-  <div class="summary">
-    <div class="summary-card debit-card">
-      <div class="label">Total Debit</div>
-      <div class="value">${fmt(totals.debit)}</div>
-    </div>
-    <div class="summary-card credit-card">
-      <div class="label">Total Credit</div>
-      <div class="value">${fmt(totals.credit)}</div>
-    </div>
-    <div class="summary-card balance-card">
-      <div class="label">${filterCustomer ? `${filterCustomer.name} — Balance` : "Current Balance"}</div>
-      <div class="value" style="color:${balance >= 0 ? "#16a34a" : "#dc2626"}">${fmt(balance)}</div>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Ref #</th>
-        <th>Account</th>
-        <th>Date / Description</th>
-        <th class="num">Prev Balance</th>
-        <th class="num">Debit</th>
-        <th class="num">Credit</th>
-        <th class="num">Balance</th>
-      </tr>
-    </thead>
-    <tbody>${tableRows}</tbody>
-  </table>
-
-  <div class="footer">Generated by Taylor Management System</div>
-  <script>window.onload = () => { window.print(); }<\/script>
-</body>
-</html>`;
-
-        const win = window.open("", "_blank");
-        win.document.write(html);
-        win.document.close();
-    };
 
     /* ── render ──────────────────────────────────────── */
 
@@ -418,15 +306,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                             </Button>
                         )}
                     </Box>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Printer size={18} />}
-                        onClick={handlePrintLedger}
-                        disabled={filteredEntries.length === 0}
-                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3, flexShrink: 0 }}
-                    >
-                        Print Ledger
-                    </Button>
+
                     <Button
                         variant="contained"
                         startIcon={<Plus size={18} />}
@@ -550,11 +430,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                                     </TableCell>
                                                     <TableCell align="right">
                                                         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                                                            <Tooltip title="Print Entry">
-                                                                <IconButton size="small" color="primary" onClick={() => window.print()}>
-                                                                    <Printer size={17} />
-                                                                </IconButton>
-                                                            </Tooltip>
+
                                                             <Tooltip title="Delete Entry">
                                                                 <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
                                                                     <Trash2 size={17} />

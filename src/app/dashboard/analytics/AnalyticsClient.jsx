@@ -342,7 +342,270 @@ export default function AnalyticsClient({ employees }) {
                         </Grid>
                     </Grid>
 
+                    {/* ── Stitching & Cloth Profit Breakdown ── */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                        {/* Stitching Profit Card */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card variant="outlined" sx={{
+                                borderRadius: 3, border: "1px solid #e5e7eb", height: "100%",
+                                background: "linear-gradient(135deg, #f0fdfa 0%, #f0f9ff 100%)"
+                            }}>
+                                <Box sx={{
+                                    p: 2, display: "flex", alignItems: "center", gap: 1.5,
+                                    borderBottom: "1px solid #e5e7eb", bgcolor: "rgba(8,145,178,0.06)"
+                                }}>
+                                    <Box sx={{ p: 1, bgcolor: "#cffafe", borderRadius: 1.5, display: "flex" }}>
+                                        <Scissors size={18} color="#0891b2" />
+                                    </Box>
+                                    <Typography variant="subtitle1" fontWeight={800} color="#0e7490">
+                                        Stitching Profit
+                                    </Typography>
+                                    <Chip size="small" label={`${s.suitCount} suits`}
+                                        sx={{ ml: "auto", bgcolor: "#cffafe", color: "#0e7490", fontWeight: 700, fontSize: "0.7rem" }} />
+                                </Box>
+                                <CardContent sx={{ p: 2.5 }}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                                        {/* Revenue */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#0891b2" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Stitching Charged
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#0891b2">
+                                                Rs. {fmt(s.totalStitchingCostCharged)}
+                                            </Typography>
+                                        </Box>
+                                        {/* Actual Stitching Cost */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#dc2626" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Actual Stitching Cost
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#dc2626">
+                                                - Rs. {fmt(s.totalActualStitchingCost)}
+                                            </Typography>
+                                        </Box>
+                                        {/* Material Cost */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#d97706" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Material Cost
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#d97706">
+                                                - Rs. {fmt(s.totalActualMaterialCost)}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 0.5 }} />
+                                        {/* Net Profit */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color="#1f2937">
+                                                Net Stitching Profit
+                                            </Typography>
+                                            <Typography variant="h6" fontWeight={800}
+                                                sx={{ color: (s.stitchingProfit || 0) >= 0 ? "#059669" : "#dc2626" }}>
+                                                Rs. {fmt(s.stitchingProfit)}
+                                            </Typography>
+                                        </Box>
+                                        {s.totalStitchingCostCharged > 0 && (
+                                            <Box sx={{ mt: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                                                    Profit Margin: {((s.stitchingProfit / s.totalStitchingCostCharged) * 100).toFixed(1)}%
+                                                </Typography>
+                                                <LinearProgress variant="determinate"
+                                                    value={Math.min(Math.abs((s.stitchingProfit / s.totalStitchingCostCharged) * 100), 100)}
+                                                    sx={{
+                                                        mt: 0.5, height: 6, borderRadius: 3, bgcolor: "#f3f4f6",
+                                                        "& .MuiLinearProgress-bar": {
+                                                            bgcolor: (s.stitchingProfit || 0) >= 0 ? "#0891b2" : "#dc2626", borderRadius: 3
+                                                        }
+                                                    }} />
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
 
+                        {/* Cloth Profit Card */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card variant="outlined" sx={{
+                                borderRadius: 3, border: "1px solid #e5e7eb", height: "100%",
+                                background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 30%, #fff7ed 100%)"
+                            }}>
+                                <Box sx={{
+                                    p: 2, display: "flex", alignItems: "center", gap: 1.5,
+                                    borderBottom: "1px solid #e5e7eb", bgcolor: "rgba(180,83,9,0.06)"
+                                }}>
+                                    <Box sx={{ p: 1, bgcolor: "#fef3c7", borderRadius: 1.5, display: "flex" }}>
+                                        <ShoppingBag size={18} color="#b45309" />
+                                    </Box>
+                                    <Typography variant="subtitle1" fontWeight={800} color="#92400e">
+                                        Cloth Profit
+                                    </Typography>
+                                </Box>
+                                <CardContent sx={{ p: 2.5 }}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                                        {/* Revenue */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#b45309" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Unit Price (Revenue)
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#b45309">
+                                                Rs. {fmt(s.totalClothUnitPrice)}
+                                            </Typography>
+                                        </Box>
+                                        {/* Cost Price */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#dc2626" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Cost Price
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#dc2626">
+                                                - Rs. {fmt(s.totalClothCostPrice)}
+                                            </Typography>
+                                        </Box>
+                                        {/* Expenses */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#d97706" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Expenses
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#d97706">
+                                                - Rs. {fmt(s.totalExpenses)}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 0.5 }} />
+                                        {/* Net Profit */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color="#1f2937">
+                                                Net Cloth Profit
+                                            </Typography>
+                                            <Typography variant="h6" fontWeight={800}
+                                                sx={{ color: (s.clothProfit || 0) >= 0 ? "#059669" : "#dc2626" }}>
+                                                Rs. {fmt(s.clothProfit)}
+                                            </Typography>
+                                        </Box>
+                                        {s.totalClothUnitPrice > 0 && (
+                                            <Box sx={{ mt: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                                                    Profit Margin: {((s.clothProfit / s.totalClothUnitPrice) * 100).toFixed(1)}%
+                                                </Typography>
+                                                <LinearProgress variant="determinate"
+                                                    value={Math.min(Math.abs((s.clothProfit / s.totalClothUnitPrice) * 100), 100)}
+                                                    sx={{
+                                                        mt: 0.5, height: 6, borderRadius: 3, bgcolor: "#f3f4f6",
+                                                        "& .MuiLinearProgress-bar": {
+                                                            bgcolor: (s.clothProfit || 0) >= 0 ? "#b45309" : "#dc2626", borderRadius: 3
+                                                        }
+                                                    }} />
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+
+                    {/* ── Overall Shop Profit ── */}
+                    <Card variant="outlined" sx={{
+                        mb: 3, borderRadius: 3, border: "1px solid #e5e7eb", overflow: "hidden",
+                        background: (s.overallShopProfit || 0) >= 0
+                            ? "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 40%, #f0fdf4 100%)"
+                            : "linear-gradient(135deg, #fef2f2 0%, #fee2e2 40%, #fff1f2 100%)"
+                    }}>
+                        <Box sx={{
+                            p: 2, display: "flex", alignItems: "center", gap: 1.5,
+                            borderBottom: "1px solid",
+                            borderColor: (s.overallShopProfit || 0) >= 0 ? "#a7f3d0" : "#fecaca",
+                            bgcolor: (s.overallShopProfit || 0) >= 0 ? "rgba(5,150,105,0.06)" : "rgba(220,38,38,0.06)"
+                        }}>
+                            <Box sx={{
+                                p: 1.2, borderRadius: 2, display: "flex",
+                                bgcolor: (s.overallShopProfit || 0) >= 0 ? "#d1fae5" : "#fee2e2"
+                            }}>
+                                <DollarSign size={22} color={(s.overallShopProfit || 0) >= 0 ? "#059669" : "#dc2626"} />
+                            </Box>
+                            <Typography variant="h6" fontWeight={800}
+                                color={(s.overallShopProfit || 0) >= 0 ? "#065f46" : "#991b1b"}>
+                                Overall Shop Profit
+                            </Typography>
+                        </Box>
+                        <CardContent sx={{ p: 3 }}>
+                            <Grid container spacing={3} alignItems="center">
+                                {/* Stitching Profit Summary */}
+                                <Grid size={{ xs: 12, sm: 4 }}>
+                                    <Box sx={{ textAlign: "center" }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 0.5 }}>
+                                            <Scissors size={16} color="#0891b2" />
+                                            <Typography variant="caption" fontWeight={700} color="#0e7490"
+                                                sx={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.7rem" }}>
+                                                Stitching Profit
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="h5" fontWeight={800}
+                                            sx={{ color: (s.stitchingProfit || 0) >= 0 ? "#0891b2" : "#dc2626" }}>
+                                            Rs. {fmt(s.stitchingProfit)}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+
+                                {/* Plus sign */}
+                                <Grid size={{ xs: 12, sm: 1 }} sx={{ display: "flex", justifyContent: "center" }}>
+                                    <Typography variant="h5" fontWeight={800} color="#9ca3af">+</Typography>
+                                </Grid>
+
+                                {/* Cloth Profit Summary */}
+                                <Grid size={{ xs: 12, sm: 4 }}>
+                                    <Box sx={{ textAlign: "center" }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 0.5 }}>
+                                            <ShoppingBag size={16} color="#b45309" />
+                                            <Typography variant="caption" fontWeight={700} color="#92400e"
+                                                sx={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.7rem" }}>
+                                                Cloth Profit
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="h5" fontWeight={800}
+                                            sx={{ color: (s.clothProfit || 0) >= 0 ? "#b45309" : "#dc2626" }}>
+                                            Rs. {fmt(s.clothProfit)}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+
+                                {/* Equals sign */}
+                                <Grid size={{ xs: 12, sm: 3 }}>
+                                    <Box sx={{
+                                        textAlign: "center", py: 1.5, px: 2, borderRadius: 3,
+                                        bgcolor: (s.overallShopProfit || 0) >= 0 ? "rgba(5,150,105,0.1)" : "rgba(220,38,38,0.1)",
+                                        border: "2px solid",
+                                        borderColor: (s.overallShopProfit || 0) >= 0 ? "#059669" : "#dc2626"
+                                    }}>
+                                        <Typography variant="caption" fontWeight={700}
+                                            sx={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.65rem" }}
+                                            color={(s.overallShopProfit || 0) >= 0 ? "#065f46" : "#991b1b"}>
+                                            Net Shop Profit
+                                        </Typography>
+                                        <Typography variant="h4" fontWeight={900}
+                                            sx={{ color: (s.overallShopProfit || 0) >= 0 ? "#059669" : "#dc2626" }}>
+                                            Rs. {fmt(s.overallShopProfit)}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                        </CardContent>
+                    </Card>
 
                     {/* ── Bookings Table ── */}
                     <Card variant="outlined" sx={{ borderRadius: 3, border: "1px solid #e5e7eb" }}>

@@ -118,12 +118,15 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                 <thead>
                     <tr style={{ backgroundColor: '#1a1a2e', color: 'white' }}>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 28 }}>#</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Customer</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 60 }}>Date</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: 60 }}>Delivery</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Tailor</th>
-                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left' }}>Suits / Qty</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '10%' }}>Booking No</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '12%' }}>Customer Name</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '15%' }}>Address</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '10%' }}>Measurement No</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '9%' }}>Booking Date</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '9%' }}>Delivery Date</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '10%' }}>Tailor Name</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '10%' }}>Suit Qty</th>
+                        <th style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'left', width: '15%' }}>Notes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -132,16 +135,18 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                         const totalQty = (booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
                         return (
                             <tr key={booking.id} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontWeight: 700, color: '#7c3aed' }}>#{booking.id}</td>
-                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
-                                    <div style={{ fontWeight: 700 }}>{booking.customer?.name}</div>
-                                    {booking.customer?.phone && <div style={{ color: '#555' }}>{booking.customer.phone}</div>}
-                                </td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontWeight: 700, color: '#7c3aed' }}>#{booking.bookingNumber || booking.id}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontWeight: 600 }}>{booking.customer?.name || '—'}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{booking.customer?.address || '—'}</td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{booking.customer?.measurementNo || '—'}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{fmt(booking.bookingDate)}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{fmt(booking.deliveryDate)}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{tailorNames || '—'}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
                                     {(booking.items || []).length} suits / {totalQty} pcs
+                                </td>
+                                <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontSize: '9px' }}>
+                                    {booking.notes || '—'}
                                 </td>
                             </tr>
                         );
@@ -149,7 +154,7 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                 </tbody>
                 <tfoot>
                     <tr style={{ backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 }}>
-                        <td colSpan={6} style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>TOTAL ({bookings.length} bookings)</td>
+                        <td colSpan={9} style={{ border: '1px solid #555', padding: '4px 6px', textAlign: 'right' }}>TOTAL ({bookings.length} bookings)</td>
                     </tr>
                 </tfoot>
             </table>
@@ -380,31 +385,31 @@ function TailorTicket({ booking, measurements }) {
     const cell = { border: '1px solid #000', padding: '8px 10px', fontSize: 15 };
 
     const getMeasureRows = (src) => [
-        ['Lambai',   src?.qameez_lambai],
-        ['Bazoo',    src?.bazoo],
-        ['Teera',    src?.teera],
-        ['Galla',    src?.galaa],
-        ['Chatti',   src?.chaati],
-        ['Kamar',    src?.kamar_around],
-        ['Ghera',    src?.gheera],
-        ['Shalwar',  src?.shalwar_lambai],
-        ['Poncha',   src?.puhncha],
-        ['Kaf',      src?.kaf],
-        ['Kandha',   src?.kandha],
-        ['Hip',      src?.hip_around],
+        ['Lambai', src?.qameez_lambai],
+        ['Bazoo', src?.bazoo],
+        ['Teera', src?.teera],
+        ['Galla', src?.galaa],
+        ['Chatti', src?.chaati],
+        ['Kamar', src?.kamar_around],
+        ['Ghera', src?.gheera],
+        ['Shalwar', src?.shalwar_lambai],
+        ['Poncha', src?.puhncha],
+        ['Kaf', src?.kaf],
+        ['Kandha', src?.kandha],
+        ['Hip', src?.hip_around],
         ['S. Ghera', src?.shalwar_gheera],
         ['Chaati A', src?.chaati_around],
     ];
 
     const getStitchingBoxes = (item) => {
         const boxes = [];
-        if (item.galaType)     boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
-        if (item.cuffType)     boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
-        if (item.pohnchaType)  boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
-        if (item.gheraType)    boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
-        if (item.pocketType)   boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
-        if (item.shalwarType)  boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
-        if (item.hasFrontPockets)  boxes.push('Front Pockets');
+        if (item.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
+        if (item.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
+        if (item.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
+        if (item.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
+        if (item.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+        if (item.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
+        if (item.hasFrontPockets) boxes.push('Front Pockets');
         if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
         (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
         return boxes;
@@ -423,12 +428,14 @@ function TailorTicket({ booking, measurements }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 15, border: '1px solid #000' }}>
                 <tbody>
                     <tr>
-                        <td style={{ ...cell, fontWeight: 700, width: '15%' }}>Customer:</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '25%', fontSize: 13 }}>{booking.customer?.name}</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '12%' }}>Booking #:</td>
-                        <td style={{ ...cell, width: '18%', fontWeight: 800, color: '#1a1a2e' }}>{booking.bookingNumber || booking.id}</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '10%' }}>Date:</td>
-                        <td style={{ ...cell, width: '20%' }}>{fmt(booking.bookingDate)}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '13%' }}>Customer:</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '22%', fontSize: 13 }}>{booking.customer?.name}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '11%' }}>Meas. No:</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '14%' }}>{booking.customer?.measurementNo || '—'}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '10%' }}>Booking #:</td>
+                        <td style={{ ...cell, width: '15%', fontWeight: 800, color: '#1a1a2e' }}>{booking.bookingNumber || booking.id}</td>
+                        <td style={{ ...cell, fontWeight: 700, width: '7%' }}>Date:</td>
+                        <td style={{ ...cell, width: '8%' }}>{fmt(booking.bookingDate)}</td>
                     </tr>
                     <tr>
                         <td style={{ ...cell, fontWeight: 700 }}>Tailor:</td>
@@ -521,6 +528,21 @@ function TailorTicket({ booking, measurements }) {
                                 }}>
                                     {item.itemNote || ''}
                                 </div>
+                                {measurements?.notes && (
+                                    <div style={{
+                                        borderTop: '1px dashed #999',
+                                        margin: '0 5px 5px 5px',
+                                        padding: '6px 10px',
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
+                                        color: '#333',
+                                    }}>
+                                        <span style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Meas. Notes: </span>
+                                        {measurements.notes}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -583,14 +605,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             const bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff';
             return `<tr style="background:${bg}">
                 <td style="border:1px solid #ddd;padding:4px 6px;font-weight:700;color:#7c3aed">#${booking.bookingNumber || booking.id}</td>
-                <td style="border:1px solid #ddd;padding:4px 6px">
-                    <div style="font-weight:700">${booking.customer?.name || ''}</div>
-                    ${booking.customer?.phone ? `<div style="color:#555;font-size:10px">${booking.customer.phone}</div>` : ''}
-                </td>
+                <td style="border:1px solid #ddd;padding:4px 6px;font-weight:600">${booking.customer?.name || '—'}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${booking.customer?.address || '—'}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${booking.customer?.measurementNo || '—'}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.bookingDate)}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.deliveryDate)}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${tailorNames || '—'}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${(booking.items || []).length} suits / ${totalQty} pcs</td>
+                <td style="border:1px solid #ddd;padding:4px 6px;font-size:10px">${booking.notes || '—'}</td>
             </tr>`;
         }).join('');
 
@@ -637,17 +659,20 @@ ${periodHtml}
 <table>
     <thead>
         <tr>
-            <th style="width:60px">#</th>
-            <th>Customer</th>
-            <th style="width:70px">Date</th>
-            <th style="width:70px">Delivery</th>
-            <th>Tailor</th>
-            <th style="width:80px">Suits / Qty</th>
+            <th style="width:10%">Booking No</th>
+            <th style="width:12%">Customer Name</th>
+            <th style="width:15%">Address</th>
+            <th style="width:10%">Measurement No</th>
+            <th style="width:9%">Booking Date</th>
+            <th style="width:9%">Delivery Date</th>
+            <th style="width:10%">Tailor Name</th>
+            <th style="width:10%">Suit Qty</th>
+            <th style="width:15%">Notes</th>
         </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
     <tfoot>
-        <tr><td colspan="6">TOTAL (${bookings.length} bookings)</td></tr>
+        <tr><td colspan="9">TOTAL (${bookings.length} bookings)</td></tr>
     </tfoot>
 </table>
 <script>window.onload=()=>{window.print()}<\/script>
@@ -722,18 +747,18 @@ ${periodHtml}
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
         const measureFields = [
-            ['Lambai',   'qameez_lambai'],
-            ['Bazoo',    'bazoo'],
-            ['Teera',    'teera'],
-            ['Galla',    'galaa'],
-            ['Chatti',   'chaati'],
-            ['Kamar',    'kamar_around'],
-            ['Ghera',    'gheera'],
-            ['Shalwar',  'shalwar_lambai'],
-            ['Poncha',   'puhncha'],
-            ['Kaf',      'kaf'],
-            ['Kandha',   'kandha'],
-            ['Hip',      'hip_around'],
+            ['Lambai', 'qameez_lambai'],
+            ['Bazoo', 'bazoo'],
+            ['Teera', 'teera'],
+            ['Galla', 'galaa'],
+            ['Chatti', 'chaati'],
+            ['Kamar', 'kamar_around'],
+            ['Ghera', 'gheera'],
+            ['Shalwar', 'shalwar_lambai'],
+            ['Poncha', 'puhncha'],
+            ['Kaf', 'kaf'],
+            ['Kandha', 'kandha'],
+            ['Hip', 'hip_around'],
             ['S. Ghera', 'shalwar_gheera'],
             ['Chaati A', 'chaati_around'],
         ];
@@ -773,6 +798,7 @@ ${periodHtml}
                         <div class="col-notes">
                             <div class="col-hdr">Notes</div>
                             <div class="nbox">${item.itemNote || ''}</div>
+                            ${meas?.notes ? `<div class="meas-note"><span class="meas-note-label">Meas. Notes: </span>${meas.notes}</div>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -787,12 +813,14 @@ ${periodHtml}
                 <table class="info-table">
                     <tbody>
                         <tr>
-                            <td style="font-weight:700;width:15%">Customer:</td>
-                            <td style="font-weight:700;width:25%">${booking.customer?.name || ''}</td>
-                            <td style="font-weight:700;width:12%">Booking #:</td>
-                            <td style="font-weight:800;color:#1a1a2e;width:18%">${booking.bookingNumber || booking.id}</td>
-                            <td style="font-weight:700;width:10%">Date:</td>
-                            <td style="width:20%">${fmt(booking.bookingDate)}</td>
+                            <td style="font-weight:700;width:13%">Customer:</td>
+                            <td style="font-weight:700;width:22%">${booking.customer?.name || ''}</td>
+                            <td style="font-weight:700;width:11%">Meas. No:</td>
+                            <td style="font-weight:700;width:14%">${booking.customer?.measurementNo || '—'}</td>
+                            <td style="font-weight:700;width:10%">Booking #:</td>
+                            <td style="font-weight:800;color:#1a1a2e;width:15%">${booking.bookingNumber || booking.id}</td>
+                            <td style="font-weight:700;width:7%">Date:</td>
+                            <td style="width:8%">${fmt(booking.bookingDate)}</td>
                         </tr>
                         <tr>
                             <td style="font-weight:700">Tailor:</td>
@@ -1498,11 +1526,11 @@ ${allBookingsHtml}
 
         const bDate = b.bookingDate ? b.bookingDate.slice(0, 10) : "";
         const matchesFrom = !filterDateFrom || bDate >= filterDateFrom;
-        const matchesTo   = !filterDateTo   || bDate <= filterDateTo;
+        const matchesTo = !filterDateTo || bDate <= filterDateTo;
 
         const dDate = b.deliveryDate ? b.deliveryDate.slice(0, 10) : "";
         const matchesDeliveryFrom = !filterDeliveryFrom || dDate >= filterDeliveryFrom;
-        const matchesDeliveryTo   = !filterDeliveryTo   || dDate <= filterDeliveryTo;
+        const matchesDeliveryTo = !filterDeliveryTo || dDate <= filterDeliveryTo;
 
         const matchesItemStatus = !filterItemStatus ||
             (b.items || []).some(item => (item.itemStatus || "PENDING") === filterItemStatus);
@@ -2410,7 +2438,7 @@ ${allBookingsHtml}
                                             </Box>
                                             <Tooltip title="Edit Staff">
                                                 <IconButton size="small" sx={{ color: '#9ca3af', p: 0.25 }} onClick={() => handleOpenStaffEdit(booking)}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                                                 </IconButton>
                                             </Tooltip>
                                         </Box>
@@ -2679,32 +2707,32 @@ ${allBookingsHtml}
                                             const statusColors = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" };
                                             const sc = statusColors[item.itemStatus || "PENDING"] || "#6b7280";
                                             return (
-                                            <TableRow key={idx}>
-                                                <TableCell sx={{ fontWeight: 600, verticalAlign: 'top' }}>{item.product?.name}</TableCell>
-                                                <TableCell>
-                                                    {(item.selectedOptions || []).length > 0 ? (
-                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                            {item.selectedOptions.map(so => (
-                                                                <Chip key={so.id} size="small"
-                                                                    label={`${so.stitchingOption?.name} – Rs.${parseFloat(so.price).toLocaleString()}`}
-                                                                    sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontSize: '0.7rem', height: 20 }} />
-                                                            ))}
-                                                        </Box>
-                                                    ) : (
-                                                        <Typography variant="caption" color="text.disabled">No options</Typography>
-                                                    )}
-                                                    {item.itemNote && (
-                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontStyle: 'italic' }}>
-                                                            Note: {item.itemNote}
-                                                        </Typography>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip size="small" label={item.itemStatus || "PENDING"}
-                                                        sx={{ bgcolor: sc + '22', color: sc, fontWeight: 700, fontSize: '0.7rem', height: 20 }} />
-                                                </TableCell>
-                                                <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
-                                            </TableRow>
+                                                <TableRow key={idx}>
+                                                    <TableCell sx={{ fontWeight: 600, verticalAlign: 'top' }}>{item.product?.name}</TableCell>
+                                                    <TableCell>
+                                                        {(item.selectedOptions || []).length > 0 ? (
+                                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                                {item.selectedOptions.map(so => (
+                                                                    <Chip key={so.id} size="small"
+                                                                        label={`${so.stitchingOption?.name} – Rs.${parseFloat(so.price).toLocaleString()}`}
+                                                                        sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontSize: '0.7rem', height: 20 }} />
+                                                                ))}
+                                                            </Box>
+                                                        ) : (
+                                                            <Typography variant="caption" color="text.disabled">No options</Typography>
+                                                        )}
+                                                        {item.itemNote && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                                                                Note: {item.itemNote}
+                                                            </Typography>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip size="small" label={item.itemStatus || "PENDING"}
+                                                            sx={{ bgcolor: sc + '22', color: sc, fontWeight: 700, fontSize: '0.7rem', height: 20 }} />
+                                                    </TableCell>
+                                                    <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
+                                                </TableRow>
                                             );
                                         })}
                                     </TableBody>

@@ -65,6 +65,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
     const [ledgerCustomer, setLedgerCustomer] = useState(null);
     const [ledgerEntries, setLedgerEntries] = useState([]);
     const [ledgerLoading, setLedgerLoading] = useState(false);
+    const [ledgerDateFrom, setLedgerDateFrom] = useState("");
+    const [ledgerDateTo, setLedgerDateTo] = useState("");
 
     // Quick Add Category State
     const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
@@ -288,30 +290,79 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
 
     const handlePrintLedger = () => {
         if (!ledgerCustomer) return;
-        const balance = parseFloat(ledgerCustomer.balance || 0);
-        const balanceLabel = Math.abs(balance).toFixed(2) + (balance > 0 ? " Cr" : balance < 0 ? " Dr" : "");
 
-        let running = 0;
-        const rows = ledgerEntries.map((entry, idx) => {
+        // Calculate opening balance
+        let openingBalance = 0;
+        const sortedAllEntries = ledgerEntries.slice().sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
+
+        if (ledgerDateFrom) {
+            sortedAllEntries.forEach(entry => {
+                const entryDay = entry.entryDate ? new Date(entry.entryDate).toISOString().split("T")[0] : "";
+                if (entryDay < ledgerDateFrom) {
+                    const amt = parseFloat(entry.amount || 0);
+                    if (entry.type === "DEBIT") openingBalance += amt;
+                    else openingBalance -= amt;
+                }
+            });
+        }
+
+        // Filter and sort for the active period
+        const filtered = ledgerEntries.filter(entry => {
+            const entryDay = entry.entryDate ? new Date(entry.entryDate).toISOString().split("T")[0] : "";
+            const matchesFrom = !ledgerDateFrom || entryDay >= ledgerDateFrom;
+            const matchesTo = !ledgerDateTo || entryDay <= ledgerDateTo;
+            return matchesFrom && matchesTo;
+        });
+        const sortedFiltered = filtered.slice().sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
+
+        let running = openingBalance;
+        const fmt = (n) => "Rs. " + Math.abs(n).toFixed(2) + (n > 0 ? " Cr" : n < 0 ? " Dr" : "");
+        const fmtAmt = (n) => "Rs. " + n.toFixed(2);
+        const dateLabel = (d) => new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+
+        let rowsHtml = "";
+
+        // If there's an opening balance date, add the Brought Forward row
+        if (ledgerDateFrom) {
+            rowsHtml += `
+                <tr class="opening-row" style="background-color: #f1f5f9; font-style: italic; font-weight: bold;">
+                    <td>—</td>
+                    <td>${dateLabel(ledgerDateFrom)}</td>
+                    <td>Opening Balance (Brought Forward)</td>
+                    <td class="amount">—</td>
+                    <td class="amount">—</td>
+                    <td class="amount ${openingBalance >= 0 ? "cr" : "dr"}">${fmt(openingBalance)}</td>
+                </tr>`;
+        }
+
+        rowsHtml += sortedFiltered.map((entry, idx) => {
             const amt = parseFloat(entry.amount || 0);
             if (entry.type === "DEBIT") running += amt;
             else running -= amt;
-            const runLabel = "Rs. " + Math.abs(running).toFixed(2) + (running > 0 ? " Cr" : running < 0 ? " Dr" : "");
-            const date = new Date(entry.entryDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+            const runLabel = fmt(running);
+            const date = dateLabel(entry.entryDate);
             return `
                 <tr>
                     <td>${idx + 1}</td>
                     <td>${date}</td>
                     <td>${entry.description || "—"}</td>
-                    <td class="amount">${entry.type === "DEBIT" ? "Rs. " + amt.toFixed(2) : "—"}</td>
-                    <td class="amount">${entry.type === "CREDIT" ? "Rs. " + amt.toFixed(2) : "—"}</td>
+                    <td class="amount">${entry.type === "DEBIT" ? fmtAmt(amt) : "—"}</td>
+                    <td class="amount">${entry.type === "CREDIT" ? fmtAmt(amt) : "—"}</td>
                     <td class="amount ${running >= 0 ? "cr" : "dr"}">${runLabel}</td>
                 </tr>`;
         }).join("");
 
         const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
-        const totalDebit = ledgerEntries.reduce((s, e) => e.type === "DEBIT" ? s + parseFloat(e.amount || 0) : s, 0);
-        const totalCredit = ledgerEntries.reduce((s, e) => e.type === "CREDIT" ? s + parseFloat(e.amount || 0) : s, 0);
+        const totalDebit = sortedFiltered.reduce((s, e) => e.type === "DEBIT" ? s + parseFloat(e.amount || 0) : s, 0);
+        const totalCredit = sortedFiltered.reduce((s, e) => e.type === "CREDIT" ? s + parseFloat(e.amount || 0) : s, 0);
+        const finalBalance = running;
+        const balanceLabel = fmt(finalBalance);
+
+        // Period string
+        const periodStr = [
+            ledgerDateFrom ? `From: ${dateLabel(ledgerDateFrom)}` : null,
+            ledgerDateTo ? `To: ${dateLabel(ledgerDateTo)}` : null,
+        ].filter(Boolean).join("  –  ") || "All Time";
 
         const html = `<!DOCTYPE html>
 <html>
@@ -402,13 +453,13 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
       </div>
       <div class="info-block">
         ${ledgerCustomer.measurementNo ? `<div class="row"><span class="info-label">M. No</span><span class="info-value">${ledgerCustomer.measurementNo}</span></div>` : ""}
-        <div class="row"><span class="info-label">Entries</span><span class="info-value">${ledgerEntries.length}</span></div>
-        <div class="row"><span class="info-label">Period</span><span class="info-value">${ledgerEntries.length ? new Date(ledgerEntries[ledgerEntries.length - 1].entryDate).toLocaleDateString("en-PK", { day:"2-digit", month:"short", year:"numeric" }) + " – " + new Date(ledgerEntries[0].entryDate).toLocaleDateString("en-PK", { day:"2-digit", month:"short", year:"numeric" }) : "—"}</span></div>
+        <div class="row"><span class="info-label">Entries</span><span class="info-value">${sortedFiltered.length}</span></div>
+        <div class="row"><span class="info-label">Period</span><span class="info-value">${periodStr}</span></div>
       </div>
     </div>
-    <div class="balance-box ${balance >= 0 ? "cr" : "dr"}">
+    <div class="balance-box ${finalBalance >= 0 ? "cr" : "dr"}">
       <div class="bal-label">Closing Balance</div>
-      <div class="bal-amount">Rs. ${balanceLabel}</div>
+      <div class="bal-amount">${balanceLabel}</div>
     </div>
   </div>
 
@@ -425,12 +476,12 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
       </tr>
     </thead>
     <tbody>
-      ${rows}
+      ${rowsHtml}
       <tr class="totals-row">
         <td colspan="3" style="text-align:right; text-transform:uppercase; letter-spacing:0.5px; font-size:10.5px;">Total</td>
         <td class="amount dr">Rs. ${totalDebit.toFixed(2)}</td>
         <td class="amount cr">Rs. ${totalCredit.toFixed(2)}</td>
-        <td class="amount ${balance >= 0 ? "cr" : "dr"}">Rs. ${balanceLabel}</td>
+        <td class="amount ${finalBalance >= 0 ? "cr" : "dr"}">${balanceLabel}</td>
       </tr>
     </tbody>
   </table>
@@ -466,6 +517,8 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         setLedgerEntries([]);
         setLedgerOpen(true);
         setLedgerLoading(true);
+        setLedgerDateFrom("");
+        setLedgerDateTo("");
         try {
             const res = await fetch(`/api/ledger?customerId=${customer.id}`);
             const data = await res.json();
@@ -517,6 +570,27 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         { bg: "warning.light", color: "warning.main" },
         { bg: "secondary.light", color: "secondary.main" },
     ];
+
+    // Calculate ledger filters and opening balance
+    const sortedAllLedgerEntries = ledgerEntries.slice().sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
+    let openingBalance = 0;
+    if (ledgerDateFrom) {
+        sortedAllLedgerEntries.forEach(entry => {
+            const entryDay = entry.entryDate ? new Date(entry.entryDate).toISOString().split("T")[0] : "";
+            if (entryDay < ledgerDateFrom) {
+                const amt = parseFloat(entry.amount || 0);
+                if (entry.type === "DEBIT") openingBalance += amt;
+                else openingBalance -= amt;
+            }
+        });
+    }
+
+    const sortedFilteredEntries = ledgerEntries.filter(entry => {
+        const entryDay = entry.entryDate ? new Date(entry.entryDate).toISOString().split("T")[0] : "";
+        const matchesFrom = !ledgerDateFrom || entryDay >= ledgerDateFrom;
+        const matchesTo = !ledgerDateTo || entryDay <= ledgerDateTo;
+        return matchesFrom && matchesTo;
+    }).sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>
@@ -1131,14 +1205,56 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 0 }}>
+                    {/* Date Filters Bar */}
+                    <Box sx={{ display: "flex", gap: 2, p: 2, borderBottom: "1px solid", borderColor: "divider", flexWrap: "wrap", alignItems: "center" }}>
+                        <TextField
+                            size="small"
+                            type="date"
+                            label="From Date"
+                            value={ledgerDateFrom}
+                            onChange={(e) => setLedgerDateFrom(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            sx={{ minWidth: 150 }}
+                        />
+                        <TextField
+                            size="small"
+                            type="date"
+                            label="To Date"
+                            value={ledgerDateTo}
+                            onChange={(e) => setLedgerDateTo(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            sx={{ minWidth: 150 }}
+                            inputProps={{ min: ledgerDateFrom || undefined }}
+                        />
+                        {(ledgerDateFrom || ledgerDateTo) && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="inherit"
+                                onClick={() => {
+                                    setLedgerDateFrom("");
+                                    setLedgerDateTo("");
+                                }}
+                                sx={{ borderRadius: 2, textTransform: "none" }}
+                            >
+                                Clear Dates
+                            </Button>
+                        )}
+                        {!ledgerLoading && (
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: "auto" }}>
+                                Showing {sortedFilteredEntries.length} of {ledgerEntries.length} entries
+                            </Typography>
+                        )}
+                    </Box>
+
                     {ledgerLoading ? (
                         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
                             <CircularProgress />
                         </Box>
-                    ) : ledgerEntries.length === 0 ? (
+                    ) : sortedFilteredEntries.length === 0 ? (
                         <Box sx={{ textAlign: "center", py: 6 }}>
                             <BookText size={36} color="#d1d5db" />
-                            <Typography color="text.secondary" sx={{ mt: 1 }}>No ledger entries found.</Typography>
+                            <Typography color="text.secondary" sx={{ mt: 1 }}>No ledger entries found in this period.</Typography>
                         </Box>
                     ) : (
                         <TableContainer>
@@ -1154,9 +1270,28 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
+                                    {/* Optional Opening Balance Row */}
+                                    {ledgerDateFrom && (
+                                        <TableRow sx={{ bgcolor: "action.selected", fontStyle: "italic" }}>
+                                            <TableCell sx={{ color: "#6b7280" }}></TableCell>
+                                            <TableCell sx={{ whiteSpace: "nowrap" }}>
+                                                {new Date(ledgerDateFrom).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}
+                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>Opening Balance (Brought Forward)</TableCell>
+                                            <TableCell sx={{ textAlign: "right" }}></TableCell>
+                                            <TableCell sx={{ textAlign: "right" }}></TableCell>
+                                            <TableCell sx={{ textAlign: "right" }}>
+                                                <Typography variant="body2" fontWeight={700}
+                                                    sx={{ color: openingBalance >= 0 ? "success.main" : "error.main" }}>
+                                                    Rs. {Math.abs(openingBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    {openingBalance > 0 ? " Cr" : openingBalance < 0 ? " Dr" : ""}
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                     {(() => {
-                                        let running = 0;
-                                        return ledgerEntries.map((entry, idx) => {
+                                        let running = openingBalance;
+                                        return sortedFilteredEntries.map((entry, idx) => {
                                             const amt = parseFloat(entry.amount || 0);
                                             if (entry.type === "DEBIT") running += amt;
                                             else running -= amt;
@@ -1207,7 +1342,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     <Button
                         onClick={handlePrintLedger}
                         variant="contained"
-                        disabled={ledgerLoading || ledgerEntries.length === 0}
+                        disabled={ledgerLoading || sortedFilteredEntries.length === 0}
                         sx={{ borderRadius: 2, textTransform: "none", bgcolor: "#1e293b", "&:hover": { bgcolor: "#0f172a" } }}
                     >
                         Print Ledger
