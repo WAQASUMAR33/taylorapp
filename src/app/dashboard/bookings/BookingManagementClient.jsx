@@ -168,14 +168,6 @@ function CustomerBill({ booking }) {
     const billingCust = booking.billingCustomer || booking.customer;
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
-    const suitDetailLabel = {
-        cuffType: 'Cuff Style',
-        pohnchaType: 'Bottom Style',
-        gheraType: 'Daman',
-        galaType: 'Collar / Gala',
-        pocketType: 'Pocket',
-        shalwarType: 'Shalwar Type',
-    };
     const suitDetailValue = (item) => {
         const rows = [];
         if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
@@ -190,186 +182,247 @@ function CustomerBill({ booking }) {
         return rows;
     };
 
-    const tdStyle = { border: '1px solid #ccc', padding: '5px 8px', fontSize: 12 };
-    const thStyle = { ...tdStyle, backgroundColor: '#1a1a2e', color: 'white', fontWeight: 700 };
-
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            <PrintHeader />
+            {/* Dynamic CSS override for printing 80mm POS Receipt */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                    @page {
+                        size: 80mm auto !important;
+                        margin: 0 !important;
+                    }
+                    html, body {
+                        width: 80mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                    }
+                    #printable-section {
+                        width: 80mm !important;
+                        margin: 0 !important;
+                        padding: 4mm 3mm !important;
+                        box-sizing: border-box !important;
+                    }
+                    #printable-section .print-page {
+                        width: 100% !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        margin-bottom: 0 !important;
+                    }
+                }
+            `}} />
 
-            {/* Title */}
-            <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 15, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
-                Customer Bill / Invoice
+            {/* Custom POS Header */}
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <img src="/logo.png" alt="Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                    <div style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px', color: '#000', textTransform: 'uppercase' }}>
+                        Grace Cloth and Tailors
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginTop: '-2px' }}>
+                        Where Style Meets Perfection
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#000', marginTop: '2px' }}>
+                        📞 03006284318 | 03186284318
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#333' }}>
+                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
+                    </div>
+                </div>
+                <div style={{ borderBottom: '1px dashed #000', margin: '8px 0 6px 0' }} />
+                <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Customer Bill / Invoice
+                </div>
+                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0 8px 0' }} />
             </div>
 
-            {/* Customer + Booking info row */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
-                <tbody>
-                    <tr>
-                        <td style={{ border: '1px solid #ddd', padding: '8px 12px', verticalAlign: 'top', width: '50%' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Customer Details</div>
-                            <div style={{ fontSize: 13, fontWeight: 700 }}>{booking.customer?.name}</div>
-                            {(booking.customer?.code || booking.customer?.id) && (
-                                <div style={{ fontSize: 12, color: '#555' }}>ID: {booking.customer.code || booking.customer.id}</div>
-                            )}
-                            <div style={{ fontSize: 12 }}>Ph: {booking.customer?.phone || '—'}</div>
-                            <div style={{ fontSize: 12 }}>{booking.customer?.address || '—'}</div>
-                            {billingCust?.id !== booking.customer?.id && (
-                                <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Billing: {billingCust?.name}</div>
-                            )}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px 12px', verticalAlign: 'top', width: '50%' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Booking Details</div>
-                            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2, width: 80 }}>Bill No:</td>
-                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>#{booking.bookingNumber || booking.id}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2 }}>Date:</td>
-                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.bookingDate)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontSize: 12, fontWeight: 600, paddingBottom: 2 }}>Delivery:</td>
-                                        <td style={{ fontSize: 12, paddingBottom: 2 }}>{fmt(booking.deliveryDate)}</td>
-                                    </tr>
-                                    {booking.trialDate && (
-                                        <tr>
-                                            <td style={{ fontSize: 12, fontWeight: 600 }}>Trial:</td>
-                                            <td style={{ fontSize: 12 }}>{fmt(booking.trialDate)}</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            {/* Booking & Customer details */}
+            <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                        <tr>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', width: '45%', fontWeight: '600' }}>Bill No:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>#{booking.bookingNumber || booking.id}</td>
+                        </tr>
+                        <tr>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Booking Date:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{fmt(booking.bookingDate)}</td>
+                        </tr>
+                        <tr>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Delivery Date:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{fmt(booking.deliveryDate)}</td>
+                        </tr>
+                        {booking.trialDate && (
+                            <tr>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Trial Date:</td>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{fmt(booking.trialDate)}</td>
+                            </tr>
+                        )}
+                        <tr style={{ borderTop: '1px dotted #ccc' }}>
+                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', fontWeight: '600' }}>Customer:</td>
+                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>{booking.customer?.name}</td>
+                        </tr>
+                        {booking.customer?.phone && (
+                            <tr>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Phone:</td>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{booking.customer.phone}</td>
+                            </tr>
+                        )}
+                        {booking.customer?.address && (
+                            <tr>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9px' }}>{booking.customer.address}</td>
+                            </tr>
+                        )}
+                        {booking.customer?.measurementNo && (
+                            <tr>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Measurement No:</td>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{booking.customer.measurementNo}</td>
+                            </tr>
+                        )}
+                        {billingCust?.id !== booking.customer?.id && (
+                            <tr>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Billing Party:</td>
+                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{billingCust?.name}</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0' }} />
+            </div>
 
-            {/* Stitching Items Table */}
+            {/* Items Section */}
             {(() => {
                 const stitchItems = (booking.items || []).filter(item => (item.selectedOptions || []).length > 0);
                 const prodItems = (booking.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+                const allItems = [...stitchItems, ...prodItems];
+                
+                if (allItems.length === 0) return null;
+
                 return (
-                    <>
-                        {stitchItems.length > 0 && (
-                            <>
-                                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>Stitching Services</div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
-                                            <th style={thStyle}>Description</th>
-                                            <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
-                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
-                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
+                    <div style={{ marginBottom: '8px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px dashed #000' }}>
+                                    <th style={{ textAlign: 'left', padding: '4px 0', fontSize: '10px', fontWeight: 'bold' }}>Description</th>
+                                    <th style={{ textAlign: 'center', padding: '4px 0', fontSize: '10px', fontWeight: 'bold', width: '30px' }}>Qty</th>
+                                    <th style={{ textAlign: 'right', padding: '4px 0', fontSize: '10px', fontWeight: 'bold', width: '70px' }}>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {allItems.map((item, idx) => {
+                                    const isStitch = (item.selectedOptions || []).length > 0;
+                                    const unitPr = isStitch
+                                        ? (item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice))
+                                        : parseFloat(item.unitPrice);
+                                    
+                                    const description = isStitch
+                                        ? <>
+                                            {item.product?.name && <strong style={{ display: 'block' }}>{item.product.name}</strong>}
+                                            <span style={{ fontSize: '9px', color: '#444' }}>
+                                                {(item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ')}
+                                            </span>
+                                          </>
+                                        : <strong>{item.product?.name || 'Product'}</strong>;
+                                    
+                                    return (
+                                        <tr key={idx} style={{ borderBottom: '1px dotted #ddd' }}>
+                                            <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', lineHeight: '1.3' }}>
+                                                {description}
+                                                {!isStitch && parseFloat(item.discount || 0) > 0 && (
+                                                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic' }}>
+                                                        Disc: Rs. {parseFloat(item.discount).toLocaleString()}
+                                                    </div>
+                                                )}
+                                                {item.quantity > 1 && (
+                                                    <div style={{ fontSize: '9px', color: '#666' }}>
+                                                        {item.quantity} x Rs. {unitPr.toLocaleString()}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', textAlign: 'center' }}>
+                                                {item.quantity || 1}
+                                            </td>
+                                            <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>
+                                                Rs. {parseFloat(item.totalPrice).toLocaleString()}
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {stitchItems.map((item, idx) => {
-                                            const unitPr = item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice);
-                                            return (
-                                                <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
-                                                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
-                                                    <td style={tdStyle}>
-                                                        {item.product?.name && <span style={{ fontWeight: 700 }}>{item.product.name} — </span>}
-                                                        {(item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ')}
-                                                    </td>
-                                                    <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
-                                                    <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{unitPr.toLocaleString()}</td>
-                                                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </>
-                        )}
-                        {prodItems.length > 0 && (
-                            <>
-                                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555', marginBottom: 4, marginTop: stitchItems.length > 0 ? 8 : 0 }}>Products / Accessories</div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
-                                            <th style={thStyle}>Product</th>
-                                            <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>Qty</th>
-                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Unit Price</th>
-                                            <th style={{ ...thStyle, width: 60, textAlign: 'right' }}>Disc</th>
-                                            <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {prodItems.map((item, idx) => (
-                                            <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
-                                                <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
-                                                <td style={{ ...tdStyle, fontWeight: 700 }}>{item.product?.name || '—'}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity || 1}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'right' }}>Rs.{parseFloat(item.unitPrice).toLocaleString()}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'right' }}>{parseFloat(item.discount) > 0 ? `Rs.${parseFloat(item.discount).toLocaleString()}` : '—'}</td>
-                                                <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(item.totalPrice).toLocaleString()}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </>
-                        )}
-                    </>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 );
             })()}
 
-            {/* Suit Details — single string per suit row, right after items table */}
-            {(booking.items || []).some(item => suitDetailValue(item).length > 0) && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
-                    <thead>
-                        <tr>
-                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
-                            <th style={thStyle}>Suit Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(booking.items || []).map((item, idx) => {
-                            const details = suitDetailValue(item);
-                            if (details.length === 0) return null;
-                            const detailStr = details.map(([label, val]) => `${label}: ${val}`).join('  |  ');
-                            return (
-                                <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : 'white' }}>
-                                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
-                                    <td style={{ ...tdStyle, fontSize: 11 }}>{detailStr}</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            )}
+            {/* Suit Details Section */}
+            {(() => {
+                const itemsWithDetails = (booking.items || []).filter(item => suitDetailValue(item).length > 0);
+                if (itemsWithDetails.length === 0) return null;
 
-            {/* Totals */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                <table style={{ borderCollapse: 'collapse', width: '45%' }}>
+                return (
+                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            Suit Details:
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                {itemsWithDetails.map((item, idx) => {
+                                    const details = suitDetailValue(item);
+                                    return (
+                                        <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
+                                            <td style={{ padding: '4px 0', fontSize: '9px', lineHeight: '1.4' }}>
+                                                <span style={{ fontWeight: 'bold' }}>Suit #{idx + 1}: </span>
+                                                {details.map(([label, val]) => `${label}: ${val}`).join('  |  ')}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })()}
+
+            {/* Totals Section */}
+            <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
-                        <tr>
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>Total Amount</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>Rs.{parseFloat(booking.totalAmount).toLocaleString()}</td>
+                        <tr style={{ borderTop: '1px dashed #000' }}>
+                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
+                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                Rs. {parseFloat(booking.totalAmount).toLocaleString()}
+                            </td>
                         </tr>
                         <tr>
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>Advance Paid</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', color: '#059669', fontWeight: 700 }}>Rs.{parseFloat(booking.advanceAmount).toLocaleString()}</td>
+                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Paid:</td>
+                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
+                                Rs. {parseFloat(booking.advanceAmount).toLocaleString()}
+                            </td>
                         </tr>
-                        <tr style={{ backgroundColor: '#fff3f3' }}>
-                            <td style={{ ...tdStyle, fontWeight: 700, fontSize: 13 }}>Balance Due</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 900, fontSize: 13, color: '#dc2626' }}>Rs.{parseFloat(booking.remainingAmount).toLocaleString()}</td>
+                        <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
+                            <td style={{ padding: '6px 0', fontSize: '11px' }}>Balance Due:</td>
+                            <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
+                                Rs. {parseFloat(booking.remainingAmount).toLocaleString()}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            {/* Booking note */}
+            {/* Booking Note */}
             {booking.notes && (
-                <div style={{ border: '1px dashed #aaa', borderRadius: 4, padding: '5px 10px', marginBottom: 10, fontSize: 12 }}>
+                <div style={{ border: '1px dotted #aaa', borderRadius: '4px', padding: '4px 6px', margin: '8px 0', fontSize: '9px', lineHeight: '1.3' }}>
                     <strong>Note:</strong> {booking.notes}
                 </div>
             )}
+
+            {/* Footer */}
+            <div style={{ textAlign: 'center', marginTop: '12px', marginBottom: '6px', fontSize: '9px', color: '#555' }}>
+                <div style={{ borderBottom: '1px dashed #000', marginBottom: '6px' }} />
+                <div>Thank you for choosing Grace Cloth and Tailors!</div>
+                <div style={{ fontStyle: 'italic', marginTop: '2px' }}>Software by Antigravity AI</div>
+            </div>
 
         </div>
     );
