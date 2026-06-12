@@ -862,7 +862,17 @@ ${periodHtml}
                 : `<div class="order-note"><strong>Order Note:</strong></div>`;
 
             return `
-            <div class="booking-block">
+            <div class="booking-page">
+                <div class="hdr">
+                    <img src="/logo.png" alt="Logo"/>
+                    <div class="hdr-text">
+                        <h1>Grace Cloth and Tailors</h1>
+                        <div class="tagline">Where Style Meets Perfection</div>
+                        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
+                        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+                    </div>
+                </div>
+                <div class="title">Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی</div>
                 <table class="info-table">
                     <tbody>
                         <tr>
@@ -914,8 +924,17 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .title{text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 10px}
 .info-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid #000;margin-bottom:8px}
 .info-table td{border:1px solid #000;padding:6px 8px}
-.booking-block{margin-bottom:20px;padding-top:8px;border-top:2px solid #1a1a2e}
-.booking-block:first-child{border-top:none;padding-top:0}
+.booking-page{
+    page-break-after:always;
+    break-after:page;
+    page-break-inside:avoid;
+    width:100%;
+    margin-bottom:30px;
+}
+.booking-page:last-child{
+    page-break-after:auto;
+    break-after:auto;
+}
 .suit{border:1px solid #000;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
 .suit-hdr{background:#1a1a2e;color:#fff;padding:4px 8px;font-weight:700;font-size:12px;display:flex;justify-content:space-between}
 .suit-body{display:flex}
@@ -930,20 +949,13 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
 .nbox{border:1px solid #000;margin:5px;padding:8px;min-height:140px;font-size:13px;white-space:pre-wrap}
 .order-note{border:1px solid #000;padding:5px 8px;font-size:11px;margin-top:4px}
-@media print{body{padding:0}@page{size:A4 portrait;margin:10mm}}
+@media print{
+    body{padding:0}
+    @page{size:A4 portrait;margin:10mm}
+}
 </style>
 </head>
 <body>
-<div class="hdr">
-    <img src="/logo.png" alt="Logo"/>
-    <div class="hdr-text">
-        <h1>Grace Cloth and Tailors</h1>
-        <div class="tagline">Where Style Meets Perfection</div>
-        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
-        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
-    </div>
-</div>
-<div class="title">Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی</div>
 ${allBookingsHtml}
 <script>window.onload=()=>{window.print()}<\/script>
 </body>
