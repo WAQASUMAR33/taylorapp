@@ -143,7 +143,7 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{fmt(booking.deliveryDate)}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>{tailorNames || '—'}</td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px' }}>
-                                    {(booking.items || []).length} suits / {totalQty} pcs
+                                    {totalQty}
                                 </td>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontSize: '9px' }}>
                                     {booking.notes || '—'}
@@ -611,7 +611,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.bookingDate)}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${fmt(booking.deliveryDate)}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${tailorNames || '—'}</td>
-                <td style="border:1px solid #ddd;padding:4px 6px">${(booking.items || []).length} suits / ${totalQty} pcs</td>
+                <td style="border:1px solid #ddd;padding:4px 6px">${totalQty}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px;font-size:10px">${booking.notes || '—'}</td>
             </tr>`;
         }).join('');
