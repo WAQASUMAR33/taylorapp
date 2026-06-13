@@ -2025,11 +2025,6 @@ ${allBookingsHtml}
                                         size="small"
                                         placeholder="Scan barcode or type product name..."
                                         autoComplete="off"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && scanCode.trim()) {
-                                                handleBookingScan(scanCode);
-                                            }
-                                        }}
                                         InputProps={{
                                             ...params.InputProps,
                                             startAdornment: (
