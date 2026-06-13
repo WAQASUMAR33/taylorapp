@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import prisma from "@/lib/prisma";
 import PurchaseManagementClient from "./PurchaseManagementClient";
 import { Container, Box, Typography } from "@mui/material";

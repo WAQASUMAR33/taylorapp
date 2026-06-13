@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import prisma from "@/lib/prisma";
 import StockOutRecordsClient from "./StockOutRecordsClient";
 import { Box, Typography } from "@mui/material";
