@@ -126,17 +126,18 @@ export async function GET(req) {
                     suitCount += qty;
                     stitchingRevenue += itemTotal;
 
-                    // Stitching cost charged to customer (revenue side)
-                    totalStitchingCostCharged += (parseFloat(item.stitchingCost) || 0) * qty;
-
-                    // Actual costs from linked stitching options
+                    // Sum of stitching option prices charged to customer (revenue side)
+                    // and actual costs from linked options
                     if (item.selectedOptions && item.selectedOptions.length > 0) {
                         for (const opt of item.selectedOptions) {
+                            totalStitchingCostCharged += (parseFloat(opt.price) || 0) * qty;
                             if (opt.stitchingOption) {
                                 totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
                                 totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
                             }
                         }
+                    } else {
+                        totalStitchingCostCharged += itemTotal;
                     }
                 } else {
                     // ── Cloth / product item ──
@@ -165,7 +166,7 @@ export async function GET(req) {
             }
         }
 
-        // ── Stitching Profit = total stitchingCost (charged) - (actual stitching cost + actual material cost) ──
+        // ── Stitching Profit = total stitching price (charged) - (actual stitching cost + actual material cost) ──
         const stitchingProfit = totalStitchingCostCharged - (totalActualStitchingCost + totalActualMaterialCost);
 
         // ── Cloth Profit = total unitPrice - (total costPrice + total expenses) ──
@@ -174,7 +175,8 @@ export async function GET(req) {
         // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
         const overallShopProfit = stitchingProfit + clothProfit;
 
-        const totalProfit = totalBookingAmount - totalCost;
+        const totalCost = totalClothCostPrice + totalActualStitchingCost + totalActualMaterialCost;
+        const totalProfit = overallShopProfit;
 
         // --- Payables from purchases ---
         let totalPayable = 0;
