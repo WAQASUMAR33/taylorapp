@@ -175,7 +175,7 @@ export async function GET(req) {
         // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
         const overallShopProfit = stitchingProfit + clothProfit;
 
-        const totalCost = totalClothCostPrice + totalActualStitchingCost + totalActualMaterialCost;
+        totalCost = totalClothCostPrice + totalActualStitchingCost + totalActualMaterialCost;
         const totalProfit = overallShopProfit;
 
         // --- Payables from purchases ---
