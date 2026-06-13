@@ -536,6 +536,22 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                     {successMessage}
                 </Alert>
             </Snackbar>
+
+            {/* Error snackbar */}
+            <Snackbar
+                open={Boolean(error) && !showForm}
+                autoHideDuration={5000}
+                onClose={() => setError("")}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            >
+                <Alert
+                    onClose={() => setError("")}
+                    severity="error"
+                    sx={{ width: "100%" }}
+                >
+                    {error}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

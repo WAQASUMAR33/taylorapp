@@ -3,7 +3,8 @@ import prisma from "@/lib/prisma";
 
 export async function PUT(req, { params }) {
     try {
-        const id = parseInt(params.id);
+        const resolvedParams = await params;
+        const id = parseInt(resolvedParams.id);
         const body = await req.json();
         const { title, date, amount, description } = body;
 
@@ -42,7 +43,8 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const id = parseInt(params.id);
+        const resolvedParams = await params;
+        const id = parseInt(resolvedParams.id);
 
         await prisma.expense.delete({ where: { id } });
 

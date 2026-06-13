@@ -17,17 +17,22 @@ export async function GET(req) {
         if (from || to) {
             where.bookingDate = {};
             if (from) {
-                fromDate = new Date(from);
+                fromDate = new Date(`${from}T00:00:00.000Z`);
                 where.bookingDate.gte = fromDate;
             }
             if (to) {
-                toDate = new Date(to);
-                toDate.setHours(23, 59, 59, 999);
+                toDate = new Date(`${to}T23:59:59.999Z`);
                 where.bookingDate.lte = toDate;
             }
         }
         if (tailorId) where.tailorId = parseInt(tailorId);
         if (cutterId) where.cutterId = parseInt(cutterId);
+
+        // Ignore cancelled stitching bookings in analytics
+        where.NOT = {
+            bookingType: "STITCHING",
+            status: "CANCELLED",
+        };
 
         // --- Bookings with full relations including stitching options ---
         const bookings = await prisma.booking.findMany({

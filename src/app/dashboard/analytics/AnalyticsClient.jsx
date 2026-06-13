@@ -315,6 +315,10 @@ export default function AnalyticsClient({ employees }) {
                                 color="#6b7280" bgColor="#f3f4f6" />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <StatCard icon={Receipt} label="Total Expenses" value={s.totalExpenses}
+                                color="#dc2626" bgColor="#fee2e2" />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <StatCard icon={Wallet} label="Total Receivables" value={s.totalReceivables}
                                 sub="From customer balances" color="#2563eb" bgColor="#dbeafe" />
                         </Grid>
