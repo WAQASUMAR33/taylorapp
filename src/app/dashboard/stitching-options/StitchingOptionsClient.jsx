@@ -173,7 +173,7 @@ export default function StitchingOptionsClient({ initialOptions }) {
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Option Name</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Stitching Cost (Rs.)</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Material Cost (Rs.)</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Price (Rs.)</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Stitching Price (Rs.)</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -285,7 +285,7 @@ export default function StitchingOptionsClient({ initialOptions }) {
                             onKeyDown={(e) => e.key === "Enter" && handleSave()}
                         />
                         <TextField
-                            label="Price"
+                            label="Stitching Price"
                             placeholder="0"
                             fullWidth
                             size="small"

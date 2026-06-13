@@ -75,16 +75,47 @@ async function getProducts() {
     }
 }
 
-async function getEmployees() {
+async function getStaffCustomers() {
     try {
-        const employees = await prisma.employee.findMany({
+        const staff = await prisma.customer.findMany({
+            where: {
+                accountCategory: {
+                    name: { in: ["Tailor", "Cutter", "tailor", "cutter", "TAILOR", "CUTTER"] }
+                }
+            },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, accountCategory: { select: { name: true } } }
+        });
+        return JSON.parse(JSON.stringify(staff));
+    } catch (error) {
+        console.error("Database error fetching staff customers:", error);
+        return [];
+    }
+}
+
+async function getStitchingOptions() {
+    try {
+        const options = await prisma.stitching_option.findMany({
+            where: { isActive: true },
+            orderBy: { createdAt: "asc" }
+        });
+        return JSON.parse(JSON.stringify(options));
+    } catch (error) {
+        console.error("Database error fetching stitching options:", error);
+        return [];
+    }
+}
+
+async function getBanks() {
+    try {
+        const banks = await prisma.bank.findMany({
             where: { isActive: true },
             orderBy: { name: "asc" },
-            select: { id: true, name: true, role: true }
+            select: { id: true, name: true, accountNumber: true, branch: true }
         });
-        return employees;
+        return JSON.parse(JSON.stringify(banks));
     } catch (error) {
-        console.error("Database error fetching employees:", error);
+        console.error("Database error fetching banks:", error);
         return [];
     }
 }
@@ -93,7 +124,9 @@ export default async function StitchingOrdersPage() {
     const bookings = await getBookings();
     const customers = await getCustomers();
     const products = await getProducts();
-    const employees = await getEmployees();
+    const employees = await getStaffCustomers();
+    const stitchingOptions = await getStitchingOptions();
+    const banks = await getBanks();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -136,6 +169,8 @@ export default async function StitchingOrdersPage() {
                     customers={customers}
                     products={products}
                     employees={employees}
+                    stitchingOptions={stitchingOptions}
+                    banks={banks}
                 />
             </Box>
         </Box>
