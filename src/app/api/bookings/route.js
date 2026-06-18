@@ -298,6 +298,7 @@ export async function POST(req) {
                                 cuttingCost: product?.cuttingCost ? parseFloat(product.cuttingCost) : null,
                                 stitchingCost: product?.stitchingCost ? parseFloat(product.stitchingCost) : null,
                                 // Stitching Details
+                                stitchingType: item.stitchingType || "SUIT",
                                 cuffType: item.cuffType,
                                 pohnchaType: item.pohnchaType,
                                 gheraType: item.gheraType,
@@ -324,6 +325,12 @@ export async function POST(req) {
                                 kamar_around: item.kamar_around || null,
                                 hip_around: item.hip_around || null,
                                 kandha: item.kandha || null,
+                                wskot_lambai: item.wskot_lambai || null,
+                                wskot_teera: item.wskot_teera || null,
+                                wskot_gala: item.wskot_gala || null,
+                                wskot_chaati: item.wskot_chaati || null,
+                                wskot_kamar: item.wskot_kamar || null,
+                                wskot_hip: item.wskot_hip || null,
                             };
                         })
                     }
@@ -643,6 +650,7 @@ export async function PUT(req) {
                             hasFrontPockets: item.hasFrontPockets || false,
                             itemStatus: item.itemStatus || "PENDING",
                             itemNote: item.itemNote || null,
+                            stitchingType: item.stitchingType || "SUIT",
                             qameez_lambai: item.qameez_lambai || null,
                             bazoo: item.bazoo || null,
                             teera: item.teera || null,
@@ -657,6 +665,12 @@ export async function PUT(req) {
                             kamar_around: item.kamar_around || null,
                             hip_around: item.hip_around || null,
                             kandha: item.kandha || null,
+                            wskot_lambai: item.wskot_lambai || null,
+                            wskot_teera: item.wskot_teera || null,
+                            wskot_gala: item.wskot_gala || null,
+                            wskot_chaati: item.wskot_chaati || null,
+                            wskot_kamar: item.wskot_kamar || null,
+                            wskot_hip: item.wskot_hip || null,
                         }
                     });
 

@@ -369,6 +369,7 @@ model booking_item {
   stitchingCost Decimal? @db.Decimal(10, 2)
 
   // Stitching Details
+  stitchingType    String?        @default("SUIT")
   cuffType         String?
   pohnchaType      String?
   gheraType        String?
@@ -398,6 +399,12 @@ model booking_item {
   kamar_around   String?
   hip_around     String?
   kandha         String?
+  wskot_lambai   String?
+  wskot_teera    String?
+  wskot_gala     String?
+  wskot_chaati   String?
+  wskot_kamar    String?
+  wskot_hip      String?
 
   booking          booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   product          product? @relation(fields: [productId], references: [id])
