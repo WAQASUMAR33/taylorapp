@@ -13,123 +13,133 @@ export async function POST(req) {
             );
         }
 
-        // Fetch existing codes, phones, and categories to perform efficient matching
-        const existingCustomers = await prisma.customer.findMany({
-            select: { code: true, phone: true }
-        });
-        const existingCodes = new Set(
-            existingCustomers.map(c => c.code?.toLowerCase().trim()).filter(Boolean)
-        );
-        const existingPhones = new Set(
-            existingCustomers.map(c => c.phone?.toLowerCase().trim()).filter(Boolean)
-        );
-
+        // 1. Resolve and pre-create categories in bulk
         const dbCategories = await prisma.accountCategory.findMany();
         const categoriesMap = new Map(
             dbCategories.map(c => [c.name.toLowerCase().trim(), c.id])
         );
 
+        const inputCategories = Array.from(new Set(
+            customers.map(c => c.category?.toString().trim()).filter(Boolean)
+        ));
+        
+        const missingCategories = inputCategories.filter(
+            cat => !categoriesMap.has(cat.toLowerCase())
+        );
+
+        if (missingCategories.length > 0) {
+            await prisma.accountCategory.createMany({
+                data: missingCategories.map(name => ({ name })),
+                skipDuplicates: true
+            });
+            // Re-fetch category mappings
+            const updatedDbCategories = await prisma.accountCategory.findMany();
+            updatedDbCategories.forEach(c => categoriesMap.set(c.name.toLowerCase().trim(), c.id));
+        }
+
+        // 2. Prepare customer records list
+        const customersToInsert = [];
+        const uniqueBatchPrefix = `TEMP-IMP-${Date.now()}`;
         let successCount = 0;
         let skippedCount = 0;
         const skippedDetails = [];
 
-        // Process imports in a transaction to ensure integrity
-        const result = await prisma.$transaction(async (tx) => {
-            const importedList = [];
-
-            for (const cust of customers) {
-                const name = cust.name?.toString().trim();
-                const code = cust.code?.toString().trim() || "";
-                const phone = cust.phone?.toString().trim() || "";
-                const email = cust.email?.toString().trim() || "";
-                const address = cust.address?.toString().trim() || "";
-                const fatherName = cust.fatherName?.toString().trim() || "";
-                const measurementNo = cust.measurementNo?.toString().trim() || "";
-                const category = cust.category?.toString().trim() || "";
-                const notes = cust.notes?.toString().trim() || "";
-                const openingBalance = parseFloat(cust.balance) || 0;
-
-                // 1. Validation: Name is required
-                if (!name) {
-                    skippedCount++;
-                    skippedDetails.push({ name: "Unnamed Row", reason: "Missing Name field" });
-                    continue;
-                }
-
-
-                // 3. Validation: Phone must be unique (if provided)
-                if (phone && existingPhones.has(phone.toLowerCase())) {
-                    skippedCount++;
-                    skippedDetails.push({ name, phone, reason: `Phone number "${phone}" already exists` });
-                    continue;
-                }
-
-                // 4. Resolve account category
-                let accountCategoryId = null;
-                if (category) {
-                    const key = category.toLowerCase();
-                    if (categoriesMap.has(key)) {
-                        accountCategoryId = categoriesMap.get(key);
-                    } else {
-                        // Create the category on the fly if it doesn't exist
-                        const newCat = await tx.accountCategory.create({
-                            data: { name: category }
-                        });
-                        categoriesMap.set(key, newCat.id);
-                        accountCategoryId = newCat.id;
-                    }
-                }
-
-                const resolvedCode = code || null;
-                if (phone) existingPhones.add(phone.toLowerCase());
-
-                // 5. Create customer
-                const newCustomer = await tx.customer.create({
-                    data: {
-                        name,
-                        code: resolvedCode,
-                        phone: phone || null,
-                        email: email || null,
-                        address: address || null,
-                        fatherName: fatherName || null,
-                        measurementNo: measurementNo || null,
-                        accountCategoryId,
-                        notes: notes || null,
-                        balance: 0, // set by ledger opening entry if non-zero
-                    }
-                });
-
-                // 6. Handle opening balance and ledger entry
-                if (openingBalance !== 0) {
-                    await tx.ledgerentry.create({
-                        data: {
-                            customerId: newCustomer.id,
-                            type: openingBalance > 0 ? "DEBIT" : "CREDIT",
-                            amount: Math.abs(openingBalance),
-                            description: "Opening Balance",
-                            entryDate: new Date(),
-                        }
-                    });
-
-                    await tx.customer.update({
-                        where: { id: newCustomer.id },
-                        data: { balance: openingBalance }
-                    });
-                }
-
-                successCount++;
-                importedList.push(newCustomer);
+        customers.forEach((cust, idx) => {
+            const name = cust.name?.toString().trim();
+            if (!name) {
+                skippedCount++;
+                skippedDetails.push({ name: "Unnamed Row", reason: "Missing Name field" });
+                return;
             }
 
-            return importedList;
+            const code = cust.code?.toString().trim() || null;
+            // Generate a temporary code if none is provided to match auto-increment IDs later
+            const resolvedCode = code || `${uniqueBatchPrefix}-${idx}`;
+            const balance = parseFloat(cust.balance) || 0;
+            const category = cust.category?.toString().trim() || "";
+            const accountCategoryId = category ? categoriesMap.get(category.toLowerCase()) : null;
+
+            customersToInsert.push({
+                name,
+                code: resolvedCode,
+                phone: cust.phone?.toString().trim() || null,
+                email: cust.email?.toString().trim() || null,
+                address: cust.address?.toString().trim() || null,
+                fatherName: cust.fatherName?.toString().trim() || null,
+                measurementNo: cust.measurementNo?.toString().trim() || null,
+                accountCategoryId,
+                notes: cust.notes?.toString().trim() || null,
+                balance: balance,
+            });
+            successCount++;
+        });
+
+        if (customersToInsert.length === 0) {
+            return NextResponse.json({
+                success: true,
+                imported: 0,
+                skipped: skippedCount,
+                skippedDetails
+            });
+        }
+
+        // 3. Batch insert using transaction for database integrity
+        const totalImported = await prisma.$transaction(async (tx) => {
+            // A. Create customers in bulk
+            await tx.customer.createMany({
+                data: customersToInsert
+            });
+
+            // B. Fetch generated auto-increment IDs using the lookups
+            const insertedCodes = customersToInsert.map(c => c.code);
+            const dbCustomers = await tx.customer.findMany({
+                where: { code: { in: insertedCodes } },
+                select: { id: true, code: true }
+            });
+            const dbCustomersMap = new Map(dbCustomers.map(c => [c.code, c.id]));
+
+            // C. Create ledger entries for opening balances in bulk
+            const ledgerEntriesToInsert = [];
+            customersToInsert.forEach(cust => {
+                const balance = parseFloat(cust.balance) || 0;
+                if (balance !== 0) {
+                    const dbId = dbCustomersMap.get(cust.code);
+                    if (dbId) {
+                        ledgerEntriesToInsert.push({
+                            customerId: dbId,
+                            type: balance > 0 ? "DEBIT" : "CREDIT",
+                            amount: Math.abs(balance),
+                            description: "Opening Balance",
+                            entryDate: new Date(),
+                        });
+                    }
+                }
+            });
+
+            if (ledgerEntriesToInsert.length > 0) {
+                await tx.ledgerentry.createMany({
+                    data: ledgerEntriesToInsert
+                });
+            }
+
+            // D. Set the temporary codes back to null
+            const tempCodes = insertedCodes.filter(c => c.startsWith("TEMP-IMP-"));
+            if (tempCodes.length > 0) {
+                await tx.customer.updateMany({
+                    where: { code: { in: tempCodes } },
+                    data: { code: null }
+                });
+            }
+
+            return dbCustomers.length;
         }, {
-            maxWait: 10000,
+            maxWait: 15000,
             timeout: 60000
         });
 
         return NextResponse.json({
             success: true,
-            imported: successCount,
+            imported: totalImported,
             skipped: skippedCount,
             skippedDetails
         });
@@ -137,7 +147,7 @@ export async function POST(req) {
     } catch (error) {
         console.error("Error importing customers:", error);
         return NextResponse.json(
-            { error: "Internal Server Error during customer import" },
+            { error: "Internal Server Error during customer import: " + error.message },
             { status: 500 }
         );
     }
