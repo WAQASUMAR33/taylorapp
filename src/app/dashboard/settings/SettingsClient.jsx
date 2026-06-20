@@ -27,6 +27,7 @@ import {
     TableHead,
     TableRow,
     Paper,
+    Avatar,
 } from "@mui/material";
 import { 
     AlertTriangle, 
