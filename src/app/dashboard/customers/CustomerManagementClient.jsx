@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
     Table,
@@ -36,6 +36,8 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    TablePagination,
+    LinearProgress,
 } from "@mui/material";
 import {
     Edit,
@@ -53,12 +55,89 @@ import {
     X,
 } from "lucide-react";
 
-export default function CustomerManagementClient({ initialCustomers, accountCategories }) {
+export default function CustomerManagementClient({ initialCustomers, initialTotalCount, accountCategories }) {
     const [customers, setCustomers] = useState(initialCustomers);
     const [categories, setCategories] = useState(accountCategories);
+    const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
+    const [listLoading, setListLoading] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [filterCategory, setFilterCategory] = useState(null);
     const [filterMeasurementNo, setFilterMeasurementNo] = useState("");
+    const [debouncedMeasurementNo, setDebouncedMeasurementNo] = useState("");
+
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(0); // Reset to first page on search change
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // Debounce measurement filter
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedMeasurementNo(filterMeasurementNo);
+            setPage(0); // Reset to first page on measurement filter change
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [filterMeasurementNo]);
+
+    // Reset page on category filter change
+    useEffect(() => {
+        setPage(0);
+    }, [filterCategory]);
+
+    // Paginated fetching effect
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            setListLoading(true);
+            try {
+                const queryParams = new URLSearchParams({
+                    page: (page + 1).toString(),
+                    limit: rowsPerPage.toString(),
+                    search: debouncedSearch,
+                    categoryId: filterCategory ? filterCategory.id.toString() : "",
+                    measurementNo: debouncedMeasurementNo,
+                });
+                const res = await fetch(`/api/customers?${queryParams.toString()}`);
+                if (res.ok && active) {
+                    const data = await res.json();
+                    setCustomers(data.customers || []);
+                    setTotalCount(data.totalCount || 0);
+                }
+            } catch (err) {
+                console.error("Error fetching customers:", err);
+            } finally {
+                if (active) setListLoading(false);
+            }
+        };
+
+        // Skip fetch on initial mount if page=0 and no filters, as initialCustomers is already populated.
+        const isInitial = page === 0 && rowsPerPage === 50 && !debouncedSearch && !filterCategory && !debouncedMeasurementNo;
+        if (!isInitial || refreshTrigger > 0) {
+            load();
+        }
+
+        return () => {
+            active = false;
+        };
+    }, [page, rowsPerPage, debouncedSearch, filterCategory, debouncedMeasurementNo, refreshTrigger]);
+
+    const handlePageChange = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleRowsPerPageChange = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     // Ledger dialog state
     const [ledgerOpen, setLedgerOpen] = useState(false);
@@ -201,10 +280,37 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             };
 
             if (isEditing) {
+                const oldCustomer = customers.find((c) => c.id === savedCustomer.id);
+                if (oldCustomer && oldCustomer.accountCategoryId !== savedCustomer.accountCategoryId) {
+                    setCategories((prev) => prev.map((cat) => {
+                        if (cat.id === oldCustomer.accountCategoryId) {
+                            return { ...cat, _count: { ...cat._count, customers: Math.max(0, (cat._count?.customers || 0) - 1) } };
+                        }
+                        if (cat.id === savedCustomer.accountCategoryId) {
+                            return { ...cat, _count: { ...cat._count, customers: (cat._count?.customers || 0) + 1 } };
+                        }
+                        return cat;
+                    }));
+                }
                 setCustomers((prev) => prev.map((c) => (c.id === savedCustomer.id ? customerWithRelations : c)));
                 setSuccessMessage("Customer updated successfully!");
             } else {
-                setCustomers((prev) => [customerWithRelations, ...prev]);
+                setTotalCount((prev) => prev + 1);
+                if (savedCustomer.accountCategoryId) {
+                    setCategories((prev) => prev.map((cat) => {
+                        if (cat.id === savedCustomer.accountCategoryId) {
+                            return { ...cat, _count: { ...cat._count, customers: (cat._count?.customers || 0) + 1 } };
+                        }
+                        return cat;
+                    }));
+                }
+                setCustomers((prev) => {
+                    const list = [customerWithRelations, ...prev];
+                    if (list.length > rowsPerPage) {
+                        list.pop();
+                    }
+                    return list;
+                });
                 setSuccessMessage("Customer added successfully!");
             }
 
@@ -281,8 +387,22 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                 throw new Error(data.error || "Failed to delete customer");
             }
 
+            const deletedCustomer = customers.find((c) => c.id === customerId);
+            if (deletedCustomer) {
+                setTotalCount((prev) => Math.max(0, prev - 1));
+                if (deletedCustomer.accountCategoryId) {
+                    setCategories((prev) => prev.map((cat) => {
+                        if (cat.id === deletedCustomer.accountCategoryId) {
+                            return { ...cat, _count: { ...cat._count, customers: Math.max(0, (cat._count?.customers || 0) - 1) } };
+                        }
+                        return cat;
+                    }));
+                }
+            }
+
             setCustomers((prev) => prev.filter((c) => c.id !== customerId));
             setSuccessMessage("Customer deleted successfully!");
+            setRefreshTrigger((prev) => prev + 1);
         } catch (err) {
             setError(err.message);
         }
@@ -530,18 +650,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
         }
     };
 
-    const filteredCustomers = (customers || []).filter((customer) => {
-        const query = (searchQuery || "").toLowerCase();
-        const matchesSearch = !query ||
-            (customer.name || "").toLowerCase().includes(query) ||
-            (customer.phone || "").toLowerCase().includes(query) ||
-            (customer.address || "").toLowerCase().includes(query) ||
-            (customer.measurementNo || "").toLowerCase().includes(query);
-        const matchesCategory = !filterCategory || customer.accountCategoryId === filterCategory.id;
-        const matchesMeasurementNo = !filterMeasurementNo ||
-            (customer.measurementNo || "").toLowerCase().includes(filterMeasurementNo.toLowerCase());
-        return matchesSearch && matchesCategory && matchesMeasurementNo;
-    });
+    const filteredCustomers = customers || [];
 
     const customerCategories = (categories || []).filter(
         (cat) =>
@@ -549,18 +658,9 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             !(cat.name || "").toLowerCase().includes("tailor")
     );
 
-    const filteredInitialCustomers = (customers || []).filter((c) => {
-        const cat = (categories || []).find((cat) => cat.id === c.accountCategoryId);
-        return (
-            !cat ||
-            (!(cat.name || "").toLowerCase().includes("cutter") &&
-                !(cat.name || "").toLowerCase().includes("tailor"))
-        );
-    });
-
     const categoryStats = customerCategories.map((cat) => ({
         ...cat,
-        count: filteredInitialCustomers.filter((c) => c.accountCategoryId === cat.id).length,
+        count: cat._count?.customers || 0,
     }));
 
     const statColors = [
@@ -615,7 +715,7 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                             </Typography>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
                                 <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                                    {filteredInitialCustomers.length}
+                                    {totalCount}
                                 </Typography>
                                 <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", p: 1, borderRadius: 2 }}>
                                     <Users size={22} color="white" />
@@ -730,8 +830,13 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
             <TableContainer
                 component={Paper}
                 elevation={0}
-                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden", position: "relative" }}
             >
+                {listLoading && (
+                    <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}>
+                        <LinearProgress sx={{ height: 3 }} />
+                    </Box>
+                )}
                 <Table>
                     <TableHead sx={{ bgcolor: "action.hover" }}>
                         <TableRow>
@@ -897,6 +1002,21 @@ export default function CustomerManagementClient({ initialCustomers, accountCate
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <TablePagination
+                component="div"
+                count={totalCount}
+                page={page}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+                rowsPerPageOptions={[25, 50, 100]}
+                sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                }}
+            />
 
             {/* ── Add / Edit Customer Dialog ────────────────── */}
             <Dialog

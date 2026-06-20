@@ -10,14 +10,52 @@ export const metadata = {
 };
 
 export default async function CustomersPage() {
+    const where = {
+        AND: [
+            {
+                OR: [
+                    { accountCategory: null },
+                    {
+                        accountCategory: {
+                            name: {
+                                not: { contains: "cutter" }
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                OR: [
+                    { accountCategory: null },
+                    {
+                        accountCategory: {
+                            name: {
+                                not: { contains: "tailor" }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    };
+
     const customers = await prisma.customer.findMany({
+        where,
         include: {
             accountCategory: true
         },
         orderBy: { createdAt: "desc" },
+        take: 50,
     });
 
+    const totalCount = await prisma.customer.count({ where });
+
     const accountCategories = await prisma.accountCategory.findMany({
+        include: {
+            _count: {
+                select: { customers: true }
+            }
+        },
         orderBy: { name: "asc" },
     });
 
@@ -48,7 +86,7 @@ export default async function CustomersPage() {
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{
+                     <Box sx={{
                         p: 1.5,
                         bgcolor: 'primary.light',
                         borderRadius: 3,
@@ -72,6 +110,7 @@ export default async function CustomersPage() {
 
             <CustomerManagementClient
                 initialCustomers={serializedCustomers}
+                initialTotalCount={totalCount}
                 accountCategories={serializedCategories}
             />
         </Box>

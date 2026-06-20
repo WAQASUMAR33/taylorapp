@@ -70,15 +70,86 @@ export async function POST(req) {
     }
 }
 
-export async function GET() {
+export async function GET(req) {
     try {
-        const customers = await prisma.customer.findMany({
-            include: {
-                accountCategory: true
-            },
-            orderBy: { createdAt: "desc" },
-        });
-        return NextResponse.json(customers);
+        const { searchParams } = new URL(req.url);
+        const page = searchParams.get("page") || "1";
+        const limit = searchParams.get("limit") || "50";
+        const search = searchParams.get("search") || "";
+        const categoryId = searchParams.get("categoryId") || "";
+        const measurementNo = searchParams.get("measurementNo") || "";
+
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 50;
+        const skip = (pageNum - 1) * limitNum;
+
+        // Base where condition to exclude cutters and tailors
+        const where = {
+            AND: [
+                {
+                    OR: [
+                        { accountCategory: null },
+                        {
+                            accountCategory: {
+                                name: {
+                                    not: { contains: "cutter" }
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    OR: [
+                        { accountCategory: null },
+                        {
+                            accountCategory: {
+                                name: {
+                                    not: { contains: "tailor" }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        if (search) {
+            where.AND.push({
+                OR: [
+                    { name: { contains: search } },
+                    { phone: { contains: search } },
+                    { address: { contains: search } },
+                    { measurementNo: { contains: search } }
+                ]
+            });
+        }
+
+        if (categoryId) {
+            where.AND.push({
+                accountCategoryId: parseInt(categoryId)
+            });
+        }
+
+        if (measurementNo) {
+            where.AND.push({
+                measurementNo: { contains: measurementNo }
+            });
+        }
+
+        const [customers, totalCount] = await Promise.all([
+            prisma.customer.findMany({
+                where,
+                include: {
+                    accountCategory: true
+                },
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limitNum,
+            }),
+            prisma.customer.count({ where })
+        ]);
+
+        return NextResponse.json({ customers, totalCount });
     } catch (error) {
         console.error("Failed to fetch customers:", error);
         return NextResponse.json(
