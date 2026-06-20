@@ -56,12 +56,6 @@ export async function POST(req) {
                     continue;
                 }
 
-                // 2. Validation: Code must be unique
-                if (code && existingCodes.has(code.toLowerCase())) {
-                    skippedCount++;
-                    skippedDetails.push({ name, code, reason: `Customer Code "${code}" already exists` });
-                    continue;
-                }
 
                 // 3. Validation: Phone must be unique (if provided)
                 if (phone && existingPhones.has(phone.toLowerCase())) {
@@ -86,11 +80,7 @@ export async function POST(req) {
                     }
                 }
 
-                // Generate a unique code if none is provided
-                const resolvedCode = code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`;
-
-                // Add to local sets so duplicate rows in the *same* Excel file are caught
-                if (code) existingCodes.add(code.toLowerCase());
+                const resolvedCode = code || null;
                 if (phone) existingPhones.add(phone.toLowerCase());
 
                 // 5. Create customer

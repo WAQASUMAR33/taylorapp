@@ -52,7 +52,7 @@ model accountCategory {
 
 model customer {
   id                Int              @id @default(autoincrement())
-  code              String?          @unique(map: "Customer_code_key")
+  code              String?
   name              String
   phone             String?
   email             String?
