@@ -38,7 +38,6 @@ import {
     CheckCircle,
     Trash2
 } from "lucide-react";
-import * as XLSX from "xlsx";
 
 const DB_TABLE_GROUPS = [
     {
@@ -191,7 +190,8 @@ export default function SettingsClient() {
 
     // ── Tab 1 Handlers ────────────────────────────────────────────────
 
-    const handleDownloadTemplate = () => {
+    const handleDownloadTemplate = async () => {
+        const XLSX = await import("xlsx");
         // Create headers array
         const headers = [
             [
@@ -251,8 +251,9 @@ export default function SettingsClient() {
         setImportFile(file);
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
+                const XLSX = await import("xlsx");
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: "array" });
                 const firstSheetName = workbook.SheetNames[0];
