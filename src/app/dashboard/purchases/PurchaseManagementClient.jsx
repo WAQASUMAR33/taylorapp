@@ -127,9 +127,9 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                 totalAmount: calcGrandTotal().toString(),
                 items: formData.items.map(item => ({
                     productId: parseInt(item.productId),
-                    quantity: parseInt(item.quantity),
+                    quantity: parseFloat(item.quantity),
                     unitCost: parseFloat(item.costPrice).toString(),
-                    totalCost: (parseInt(item.quantity) * parseFloat(item.costPrice)).toString(),
+                    totalCost: (parseFloat(item.quantity) * parseFloat(item.costPrice)).toString(),
                 })),
                 payments: formData.payments.map(p => ({ ...p, amount: p.amount.toString() })),
             };
@@ -427,6 +427,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
                                                     label="Qty"
                                                     value={item.quantity}
                                                     onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                                                    inputProps={{ step: "any", min: 0.01 }}
                                                     variant="outlined"
                                                 />
                                             </TableCell>

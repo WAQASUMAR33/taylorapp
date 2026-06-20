@@ -598,6 +598,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                 placeholder="0"
                                 value={formData.quantity}
                                 onChange={handleInputChange}
+                                inputProps={{ step: "any", min: 0 }}
                                 variant="outlined"
                             />
                         </Grid>

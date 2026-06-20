@@ -124,7 +124,7 @@ export async function GET(req) {
             // Process each item
             for (const item of b.items) {
                 const itemTotal = parseFloat(item.totalPrice) || 0;
-                const qty = parseInt(item.quantity) || 1;
+                const qty = parseFloat(item.quantity) || 1;
 
                 if (!item.productId) {
                     // ── Stitching item ──

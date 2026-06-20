@@ -22,7 +22,7 @@ export async function POST(req) {
                     items: {
                         create: items.map(item => ({
                             productId: parseInt(item.productId),
-                            quantity: parseInt(item.quantity) || 1,
+                            quantity: parseFloat(item.quantity) || 1,
                             unitCost: parseFloat(item.unitCost) || 0,
                             totalCost: parseFloat(item.totalCost) || 0
                         }))
@@ -46,7 +46,7 @@ export async function POST(req) {
             // 2. Update stock and movements in parallel
             await Promise.all(items.map(async (item) => {
                 const pId = parseInt(item.productId);
-                const qty = parseInt(item.quantity) || 1;
+                const qty = parseFloat(item.quantity) || 1;
                 const uCost = parseFloat(item.unitCost) || 0;
 
                 await tx.product.update({

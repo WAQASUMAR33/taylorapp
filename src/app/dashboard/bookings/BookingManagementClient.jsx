@@ -1461,7 +1461,7 @@ ${allBookingsHtml}
             const opt = options.find(o => o.id === id);
             return sum + (opt ? parseFloat(opt.price) : 0);
         }, 0);
-        return unitPrice * (parseInt(item.quantity) || 1);
+        return unitPrice * (parseFloat(item.quantity) || 1);
     };
 
     const calculateUnitPrice = (item, opts) => {
@@ -1479,15 +1479,16 @@ ${allBookingsHtml}
         const exists = ids.includes(optionId);
         item.selectedOptionIds = exists ? ids.filter(id => id !== optionId) : [...ids, optionId];
         item.unitPrice = calculateUnitPrice(item, stitchingOptions);
-        item.totalPrice = item.unitPrice * (parseInt(item.quantity) || 1);
+        item.totalPrice = item.unitPrice * (parseFloat(item.quantity) || 1);
         setCartItems(newItems);
     };
 
     const handleQuantityChange = (itemIndex, qty) => {
         const newItems = [...cartItems];
         const item = newItems[itemIndex];
-        item.quantity = Math.max(1, parseInt(qty) || 1);
-        item.totalPrice = calculateUnitPrice(item, stitchingOptions) * item.quantity;
+        item.quantity = qty;
+        const parsedQty = parseFloat(qty) || 1;
+        item.totalPrice = calculateUnitPrice(item, stitchingOptions) * parsedQty;
         setCartItems(newItems);
     };
 
@@ -1647,7 +1648,7 @@ ${allBookingsHtml}
                 items: [
                     ...validItems.map(item => ({
                         productId: item.productId || null,
-                        quantity: parseInt(item.quantity) || 1,
+                        quantity: parseFloat(item.quantity) || 1,
                         unitPrice: item.unitPrice || 0,
                         discount: 0,
                         totalPrice: item.totalPrice,
@@ -1680,7 +1681,7 @@ ${allBookingsHtml}
                     })),
                     ...validProductItems.map(item => ({
                         productId: item.productId,
-                        quantity: parseInt(item.quantity) || 1,
+                        quantity: parseFloat(item.quantity) || 1,
                         unitPrice: parseFloat(item.unitPrice) || 0,
                         discount: parseFloat(item.discount) || 0,
                         totalPrice: parseFloat(item.totalPrice) || 0,
@@ -2010,7 +2011,7 @@ ${allBookingsHtml}
     });
 
     const filteredSuitCount = filteredBookings.reduce((sum, b) =>
-        sum + (b.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseInt(i.quantity) || 1), 0), 0);
+        sum + (b.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0), 0);
 
     const getStatusColor = (status) => {
         const statusObj = BOOKING_STATUSES.find(s => s.value === status);
@@ -2287,7 +2288,7 @@ ${allBookingsHtml}
                                                             type="number"
                                                             value={item.quantity || 1}
                                                             onChange={(e) => handleQuantityChange(index, e.target.value)}
-                                                            inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
+                                                            inputProps={{ min: 0.01, step: "any", style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
                                                             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.85rem' } }}
                                                         />
                                                         {(item.quantity || 1) > 1 && (
@@ -2486,7 +2487,7 @@ ${allBookingsHtml}
                                                 <TableCell>
                                                     <TextField type="number" size="small" value={item.quantity}
                                                         onChange={(e) => handleProductItemChange(index, 'quantity', e.target.value)}
-                                                        inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
+                                                        inputProps={{ min: 0.01, step: "any", style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
                                                 </TableCell>
                                                 <TableCell>
@@ -2917,9 +2918,9 @@ ${allBookingsHtml}
                                         {(() => {
                                             const stitchItems = (booking.items || []).filter(i => !i.productId);
                                             const prodItems = (booking.items || []).filter(i => !!i.productId);
-                                            const suitsQty = stitchItems.filter(i => i.stitchingType !== "WAISTCOAT").reduce((s, i) => s + (parseInt(i.quantity) || 1), 0);
-                                            const wskotsQty = stitchItems.filter(i => i.stitchingType === "WAISTCOAT").reduce((s, i) => s + (parseInt(i.quantity) || 1), 0);
-                                            const prodQty = prodItems.reduce((s, i) => s + (parseInt(i.quantity) || 1), 0);
+                                            const suitsQty = stitchItems.filter(i => i.stitchingType !== "WAISTCOAT").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                            const wskotsQty = stitchItems.filter(i => i.stitchingType === "WAISTCOAT").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                            const prodQty = prodItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
                                             return (
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
                                                     {suitsQty > 0 && (

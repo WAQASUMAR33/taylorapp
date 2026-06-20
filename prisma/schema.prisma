@@ -154,7 +154,7 @@ model product {
   name          String
   description   String?
   categoryId    Int?
-  quantity      Int             @default(0)
+  quantity      Decimal         @default(0.00) @db.Decimal(10, 2)
   costPrice     Decimal?        @db.Decimal(10, 2)
   unitPrice     Decimal?        @db.Decimal(10, 2)
   createdAt     DateTime        @default(now())
@@ -191,7 +191,7 @@ model purchase_item {
   id         Int      @id @default(autoincrement())
   purchaseId Int
   productId  Int
-  quantity   Int
+  quantity   Decimal  @db.Decimal(10, 2)
   unitCost   Decimal  @db.Decimal(10, 2)
   totalCost  Decimal  @db.Decimal(10, 2)
   product    product  @relation(fields: [productId], references: [id])
@@ -261,7 +261,7 @@ model bill_item {
   id        Int     @id @default(autoincrement())
   billId    Int
   productId Int
-  quantity  Int
+  quantity  Decimal @db.Decimal(10, 2)
   unitPrice Decimal @db.Decimal(10, 2)
   discount  Decimal @default(0.00) @db.Decimal(10, 2)
   total     Decimal @db.Decimal(10, 2)
@@ -297,7 +297,7 @@ model stockmovement {
   productId Int
   userId    Int?
   type      stockmovement_type
-  quantity  Int
+  quantity  Decimal            @db.Decimal(10, 2)
   unitCost  Decimal?           @db.Decimal(10, 2)
   notes     String?
   movedAt   DateTime           @default(now())
@@ -358,7 +358,7 @@ model booking_item {
   id            Int      @id @default(autoincrement())
   bookingId     Int
   productId     Int?
-  quantity      Int
+  quantity      Decimal  @db.Decimal(10, 2)
   unitPrice     Decimal  @db.Decimal(10, 2)
   totalPrice    Decimal  @db.Decimal(10, 2)
   createdAt     DateTime @default(now())

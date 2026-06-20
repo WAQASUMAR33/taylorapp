@@ -289,7 +289,7 @@ export async function POST(req) {
                             const product = pid ? productsMap.get(pid) : null;
                             return {
                                 ...(pid ? { product: { connect: { id: pid } } } : {}),
-                                quantity: parseInt(item.quantity) || 1,
+                                quantity: parseFloat(item.quantity) || 1,
                                 unitPrice: parseFloat(item.unitPrice || item.totalPrice || 0),
                                 totalPrice: parseFloat(item.totalPrice || 0),
                                 discount: parseFloat(item.discount || 0),
@@ -374,7 +374,7 @@ export async function POST(req) {
             for (const item of items) {
                 if (!item.productId) continue;
                 const productId = parseInt(item.productId);
-                const quantity = parseInt(item.quantity);
+                const quantity = parseFloat(item.quantity);
 
                 // Update product stock
                 await tx.product.update({
@@ -631,7 +631,7 @@ export async function PUT(req) {
                         data: {
                             bookingId: parseInt(id),
                             ...(pid ? { productId: pid } : {}),
-                            quantity: parseInt(item.quantity) || 1,
+                            quantity: parseFloat(item.quantity) || 1,
                             unitPrice: parseFloat(item.unitPrice || 0),
                             totalPrice: parseFloat(item.totalPrice || 0),
                             discount: parseFloat(item.discount || 0),
