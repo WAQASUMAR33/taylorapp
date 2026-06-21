@@ -3271,7 +3271,13 @@ ${allBookingsHtml}
                         boxSizing: 'border-box !important',
                         backgroundColor: 'white',
                     },
-                    '#printable-section *': { visibility: 'visible' },
+                    '#printable-section *': {
+                        visibility: 'visible',
+                        color: (printType === 'BILL' || printType === 'MERGED_BILL') ? '#000000 !important' : 'inherit',
+                        fontWeight: (printType === 'BILL' || printType === 'MERGED_BILL') ? 'bold !important' : 'inherit',
+                        borderColor: (printType === 'BILL' || printType === 'MERGED_BILL') ? '#000000 !important' : 'inherit',
+                        fontFamily: (printType === 'BILL' || printType === 'MERGED_BILL') ? 'Arial, Helvetica, sans-serif !important' : 'inherit',
+                    },
                     '#printable-section .print-page': {
                         width: '100% !important',
                         pageBreakAfter: 'always',
