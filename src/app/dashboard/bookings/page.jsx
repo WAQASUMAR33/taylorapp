@@ -53,6 +53,7 @@ async function getCustomers() {
     try {
         const customers = await prisma.customer.findMany({
             orderBy: { name: "asc" },
+            take: 100,
             select: { id: true, name: true, phone: true, address: true, measurementNo: true }
         });
         return customers;

@@ -890,6 +890,64 @@ function TailorTicket({ booking, measurements }) {
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
     const stitchingOptions = initialStitchingOptions || [];
+    
+    // Helper to merge initial customers with any customer references inside the bookings list
+    const getInitialCustomerOptions = () => {
+        const customerMap = new Map();
+        if (Array.isArray(customers)) {
+            customers.forEach(c => {
+                if (c && c.id) customerMap.set(c.id, c);
+            });
+        }
+        if (Array.isArray(initialBookings)) {
+            initialBookings.forEach(b => {
+                if (b.customer && b.customer.id) {
+                    customerMap.set(b.customer.id, b.customer);
+                }
+                if (b.billingCustomer && b.billingCustomer.id) {
+                    customerMap.set(b.billingCustomer.id, b.billingCustomer);
+                }
+            });
+        }
+        return Array.from(customerMap.values());
+    };
+
+    const [customerOptions, setCustomerOptions] = useState(getInitialCustomerOptions);
+    const [customerSearchInput, setCustomerSearchInput] = useState("");
+    const [searchingCustomers, setSearchingCustomers] = useState(false);
+
+    const handleSearchCustomers = async (query) => {
+        if (!query.trim()) return;
+        try {
+            setSearchingCustomers(true);
+            const res = await fetch(`/api/customers?search=${encodeURIComponent(query)}&limit=100`);
+            if (res.ok) {
+                const data = await res.json();
+                const fetched = data.customers || [];
+                
+                setCustomerOptions(prev => {
+                    const map = new Map(prev.map(c => [c.id, c]));
+                    fetched.forEach(c => {
+                        if (c && c.id) map.set(c.id, c);
+                    });
+                    return Array.from(map.values());
+                });
+            }
+        } catch (err) {
+            console.error("Failed to search customers:", err);
+        } finally {
+            setSearchingCustomers(false);
+        }
+    };
+
+    React.useEffect(() => {
+        if (!customerSearchInput.trim()) return;
+        const timer = setTimeout(() => {
+            handleSearchCustomers(customerSearchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [customerSearchInput]);
+
     const [bookings, setBookings] = useState(Array.isArray(initialBookings) ? initialBookings : []);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCustomerId, setFilterCustomerId] = useState(null);
@@ -1358,7 +1416,7 @@ ${allBookingsHtml}
     const cutters = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "cutter");
 
     const handleCustomerChange = async (customerId) => {
-        const customer = (customers || []).find(c => c.id === parseInt(customerId));
+        const customer = (customerOptions || []).find(c => c.id === parseInt(customerId));
         if (customer) {
             setFormData(prev => ({
                 ...prev,
@@ -2046,7 +2104,7 @@ ${allBookingsHtml}
                                 {/* Customer autocomplete — full width */}
                                 <Grid size={{ xs: 12 }}>
                                     <Autocomplete
-                                        options={customers || []}
+                                        options={customerOptions}
                                         getOptionLabel={(option) => option.name || ""}
                                         filterOptions={(options, { inputValue }) => {
                                             const q = (inputValue || "").toLowerCase().trim();
@@ -2058,8 +2116,14 @@ ${allBookingsHtml}
                                                 (c.address || "").toLowerCase().includes(q)
                                             );
                                         }}
-                                        value={(customers || []).find(c => c.id === formData.customerId) || null}
+                                        value={(customerOptions || []).find(c => c.id === formData.customerId) || null}
                                         onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        onInputChange={(event, newInputValue, reason) => {
+                                            if (reason === "input") {
+                                                setCustomerSearchInput(newInputValue);
+                                            }
+                                        }}
+                                        loading={searchingCustomers}
                                         renderOption={(props, option) => {
                                             const { key, ...rest } = props;
                                             return (
@@ -2087,6 +2151,12 @@ ${allBookingsHtml}
                                                     startAdornment: (
                                                         <><InputAdornment position="start"><User size={16} color="#9ca3af" /></InputAdornment>{params.InputProps.startAdornment}</>
                                                     ),
+                                                    endAdornment: (
+                                                        <>
+                                                            {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                                            {params.InputProps.endAdornment}
+                                                        </>
+                                                    )
                                                 }}
                                                 sx={{ minWidth: 300, ...FIELD_SX }}
                                             />
@@ -2131,10 +2201,41 @@ ${allBookingsHtml}
                                 {!formData.sameBilling && (
                                     <Grid size={{ xs: 12 }}>
                                         <Autocomplete
-                                            options={customers || []}
+                                            options={customerOptions}
                                             getOptionLabel={(option) => option.name || ""}
-                                            value={(customers || []).find(c => c.id === formData.billingCustomerId) || null}
+                                            filterOptions={(options, { inputValue }) => {
+                                                const q = (inputValue || "").toLowerCase().trim();
+                                                if (!q) return options;
+                                                return options.filter(c =>
+                                                    (c.name || "").toLowerCase().includes(q) ||
+                                                    (c.measurementNo || "").toLowerCase().includes(q) ||
+                                                    (c.phone || "").toLowerCase().includes(q) ||
+                                                    (c.address || "").toLowerCase().includes(q)
+                                                );
+                                            }}
+                                            value={(customerOptions || []).find(c => c.id === formData.billingCustomerId) || null}
                                             onChange={(_, newValue) => setFormData(prev => ({ ...prev, billingCustomerId: newValue ? newValue.id : "" }))}
+                                            onInputChange={(event, newInputValue, reason) => {
+                                                if (reason === "input") {
+                                                    setCustomerSearchInput(newInputValue);
+                                                }
+                                            }}
+                                            loading={searchingCustomers}
+                                            renderOption={(props, option) => {
+                                                const { key, ...rest } = props;
+                                                return (
+                                                    <li key={key} {...rest}>
+                                                        <Box sx={{ py: 0.3 }}>
+                                                            <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                                            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                                {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                                {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
+                                                            </Box>
+                                                        </Box>
+                                                    </li>
+                                                );
+                                            }}
                                             renderInput={(params) => (
                                                 <TextField
                                                     {...params}
@@ -2143,6 +2244,15 @@ ${allBookingsHtml}
                                                     fullWidth
                                                     required
                                                     placeholder="Select who will be billed"
+                                                    InputProps={{
+                                                        ...params.InputProps,
+                                                        endAdornment: (
+                                                            <>
+                                                                {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                                                {params.InputProps.endAdornment}
+                                                            </>
+                                                        )
+                                                    }}
                                                     sx={FIELD_SX}
                                                 />
                                             )}
@@ -2673,7 +2783,7 @@ ${allBookingsHtml}
                     <MenuItem value="bookingNo_asc">Booking No (Low → High)</MenuItem>
                 </TextField>
                 <Autocomplete
-                    options={customers || []}
+                    options={customerOptions}
                     getOptionLabel={(option) => option.name || ""}
                     filterOptions={(options, { inputValue }) => {
                         const q = (inputValue || "").toLowerCase().trim();
@@ -2685,8 +2795,14 @@ ${allBookingsHtml}
                             (c.address || "").toLowerCase().includes(q)
                         );
                     }}
-                    value={(customers || []).find(c => c.id === filterCustomerId) || null}
+                    value={(customerOptions || []).find(c => c.id === filterCustomerId) || null}
                     onChange={(_, newValue) => setFilterCustomerId(newValue ? newValue.id : null)}
+                    onInputChange={(event, newInputValue, reason) => {
+                        if (reason === "input") {
+                            setCustomerSearchInput(newInputValue);
+                        }
+                    }}
+                    loading={searchingCustomers}
                     size="small"
                     sx={{ width: 260, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
                     renderOption={(props, option) => {
@@ -2704,7 +2820,21 @@ ${allBookingsHtml}
                             </li>
                         );
                     }}
-                    renderInput={(params) => <TextField {...params} label="Customer" />}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Customer"
+                            InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                    <>
+                                        {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                    </>
+                                )
+                            }}
+                        />
+                    )}
                 />
                 {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus || filterMeasurementNo) && (
                     <Button
