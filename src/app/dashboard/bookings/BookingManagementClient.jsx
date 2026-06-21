@@ -184,33 +184,7 @@ function CustomerBill({ booking }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            {/* Dynamic CSS override for printing 80mm POS Receipt */}
-            <style dangerouslySetInnerHTML={{ __html: `
-                @media print {
-                    @page {
-                        size: 80mm auto !important;
-                        margin: 0 !important;
-                    }
-                    html, body {
-                        width: 80mm !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #fff !important;
-                    }
-                    #printable-section {
-                        width: 80mm !important;
-                        margin: 0 !important;
-                        padding: 4mm 3mm !important;
-                        box-sizing: border-box !important;
-                    }
-                    #printable-section .print-page {
-                        width: 100% !important;
-                        page-break-after: always !important;
-                        break-after: page !important;
-                        margin-bottom: 0 !important;
-                    }
-                }
-            `}} />
+            {/* Dynamic printing styles handled by GlobalStyles below */}
 
             {/* Custom POS Header */}
             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
@@ -313,8 +287,8 @@ function CustomerBill({ booking }) {
                                 {allItems.map((item, idx) => {
                                     const isStitch = (item.selectedOptions || []).length > 0;
                                     const unitPr = isStitch
-                                        ? (item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice))
-                                        : parseFloat(item.unitPrice);
+                                        ? (item.quantity > 1 ? parseFloat(item.totalPrice || 0) / item.quantity : parseFloat(item.totalPrice || 0))
+                                        : parseFloat(item.unitPrice || 0);
                                     
                                     const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
                                     const itemType = isWskot ? "Waistcoat" : "Suit";
@@ -333,7 +307,7 @@ function CustomerBill({ booking }) {
                                                 {description}
                                                 {!isStitch && parseFloat(item.discount || 0) > 0 && (
                                                     <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic' }}>
-                                                        Disc: Rs. {parseFloat(item.discount).toLocaleString()}
+                                                        Disc: Rs. {parseFloat(item.discount || 0).toLocaleString()}
                                                     </div>
                                                 )}
                                                 {item.quantity > 1 && (
@@ -346,7 +320,7 @@ function CustomerBill({ booking }) {
                                                 {item.quantity || 1}
                                             </td>
                                             <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>
-                                                Rs. {parseFloat(item.totalPrice).toLocaleString()}
+                                                Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                     );
@@ -395,19 +369,19 @@ function CustomerBill({ booking }) {
                         <tr style={{ borderTop: '1px dashed #000' }}>
                             <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
                             <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
-                                Rs. {parseFloat(booking.totalAmount).toLocaleString()}
+                                Rs. {parseFloat(booking.totalAmount || 0).toLocaleString()}
                             </td>
                         </tr>
                         <tr>
                             <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Paid:</td>
                             <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
-                                Rs. {parseFloat(booking.advanceAmount).toLocaleString()}
+                                Rs. {parseFloat(booking.advanceAmount || 0).toLocaleString()}
                             </td>
                         </tr>
                         <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
                             <td style={{ padding: '6px 0', fontSize: '11px' }}>Balance Due:</td>
                             <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
-                                Rs. {parseFloat(booking.remainingAmount).toLocaleString()}
+                                Rs. {parseFloat(booking.remainingAmount || 0).toLocaleString()}
                             </td>
                         </tr>
                     </tbody>
@@ -481,33 +455,6 @@ function MergedCustomerBill({ bookings }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            <style dangerouslySetInnerHTML={{ __html: `
-                @media print {
-                    @page {
-                        size: 80mm auto !important;
-                        margin: 0 !important;
-                    }
-                    html, body {
-                        width: 80mm !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #fff !important;
-                    }
-                    #printable-section {
-                        width: 80mm !important;
-                        margin: 0 !important;
-                        padding: 4mm 3mm !important;
-                        box-sizing: border-box !important;
-                    }
-                    #printable-section .print-page {
-                        width: 100% !important;
-                        page-break-after: always !important;
-                        break-after: page !important;
-                        margin-bottom: 0 !important;
-                    }
-                }
-            `}} />
-
             {/* Custom POS Header */}
             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
@@ -614,8 +561,8 @@ function MergedCustomerBill({ bookings }) {
                             return allItems.map((item, idx) => {
                                 const isStitch = (item.selectedOptions || []).length > 0;
                                 const unitPr = isStitch
-                                    ? (item.quantity > 1 ? parseFloat(item.totalPrice) / item.quantity : parseFloat(item.totalPrice))
-                                    : parseFloat(item.unitPrice);
+                                    ? (item.quantity > 1 ? parseFloat(item.totalPrice || 0) / item.quantity : parseFloat(item.totalPrice || 0))
+                                    : parseFloat(item.unitPrice || 0);
                                 
                                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
                                 const itemType = isWskot ? "Waistcoat" : "Suit";
@@ -637,7 +584,7 @@ function MergedCustomerBill({ bookings }) {
                                             </div>
                                             {!isStitch && parseFloat(item.discount || 0) > 0 && (
                                                 <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic' }}>
-                                                    Disc: Rs. {parseFloat(item.discount).toLocaleString()}
+                                                    Disc: Rs. {parseFloat(item.discount || 0).toLocaleString()}
                                                 </div>
                                             )}
                                             {item.quantity > 1 && (
@@ -650,7 +597,7 @@ function MergedCustomerBill({ bookings }) {
                                             {item.quantity || 1}
                                         </td>
                                         <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>
-                                            Rs. {parseFloat(item.totalPrice).toLocaleString()}
+                                            Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}
                                         </td>
                                     </tr>
                                 );
@@ -3297,8 +3244,20 @@ ${allBookingsHtml}
 
             <GlobalStyles styles={{
                 '@media print': {
-                    '@page': { size: 'A4 portrait', margin: '10mm', marginTop: '0mm', marginBottom: '0mm' },
-                    'html, body': { margin: '0 !important', padding: '0 !important', height: 'auto !important', overflow: 'visible !important' },
+                    '@page': {
+                        size: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm auto' : 'A4 portrait',
+                        margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0' : '10mm',
+                        marginTop: '0mm',
+                        marginBottom: '0mm'
+                    },
+                    'html, body': {
+                        width: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm !important' : 'auto !important',
+                        margin: '0 !important',
+                        padding: '0 !important',
+                        height: 'auto !important',
+                        overflow: 'visible !important',
+                        backgroundColor: 'white !important',
+                    },
                     'body *': { visibility: 'hidden' },
                     '#printable-section': {
                         display: 'block !important',
@@ -3306,22 +3265,26 @@ ${allBookingsHtml}
                         position: 'absolute',
                         left: 0,
                         top: 0,
-                        width: '100%',
+                        width: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm !important' : '100%',
+                        margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0 !important' : '0',
+                        padding: (printType === 'BILL' || printType === 'MERGED_BILL') ? '4mm 3mm !important' : '0',
+                        boxSizing: 'border-box !important',
                         backgroundColor: 'white',
                     },
                     '#printable-section *': { visibility: 'visible' },
                     '#printable-section .print-page': {
+                        width: '100% !important',
                         pageBreakAfter: 'always',
                         breakAfter: 'page',
                         pageBreakInside: 'avoid',
-                        width: '100%',
+                        marginBottom: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0 !important' : 'auto',
                     },
                     '#printable-section .print-page:last-child': {
                         pageBreakAfter: 'auto',
                         breakAfter: 'auto',
                     },
                     '#printable-section table': {
-                        tableLayout: 'fixed',
+                        tableLayout: (printType === 'BILL' || printType === 'MERGED_BILL') ? 'auto !important' : 'fixed',
                         width: '100% !important',
                         wordBreak: 'break-word',
                     },
