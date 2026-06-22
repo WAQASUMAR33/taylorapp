@@ -29,6 +29,10 @@ import {
     Paper,
     Avatar,
     IconButton,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from "@mui/material";
 import { 
     AlertTriangle, 
@@ -73,6 +77,19 @@ const DB_TABLE_GROUPS = [
     }
 ];
 
+const DB_COLUMNS = [
+    { key: "name", label: "Name", required: true, possibleHeaders: ["name", "customername", "fullname"] },
+    { key: "code", label: "Code", required: false, possibleHeaders: ["code", "customercode", "id", "customerid"] },
+    { key: "phone", label: "Phone", required: false, possibleHeaders: ["phone", "phonenumber", "cell", "mobile"] },
+    { key: "email", label: "Email", required: false, possibleHeaders: ["email", "emailaddress"] },
+    { key: "address", label: "Address", required: false, possibleHeaders: ["address", "homeaddress", "location"] },
+    { key: "fatherName", label: "Father Name", required: false, possibleHeaders: ["fathername", "father"] },
+    { key: "measurementNo", label: "Measurement No", required: false, possibleHeaders: ["measurementno", "measurementnumber", "measurement", "measno"] },
+    { key: "category", label: "Category", required: false, possibleHeaders: ["category", "customercategory", "accountcategory", "group"] },
+    { key: "balance", label: "Balance", required: false, possibleHeaders: ["balance", "openingbalance", "amount", "outstanding"] },
+    { key: "notes", label: "Notes", required: false, possibleHeaders: ["notes", "note", "remarks", "description"] },
+];
+
 export default function SettingsClient() {
     const [tabIndex, setTabIndex] = useState(0);
 
@@ -87,6 +104,9 @@ export default function SettingsClient() {
     // ── Tab 1: Excel Import state ──────────────────────────────────────
     const [importFile, setImportFile] = useState(null);
     const [parsedData, setParsedData] = useState([]);
+    const [rawRows, setRawRows] = useState([]);
+    const [excelHeaders, setExcelHeaders] = useState([]);
+    const [columnMapping, setColumnMapping] = useState({});
     const [isDragOver, setIsDragOver] = useState(false);
     const [importLoading, setImportLoading] = useState(false);
     const [importError, setImportError] = useState("");
@@ -246,6 +266,35 @@ export default function SettingsClient() {
         XLSX.writeFile(wb, "customers_import_template.xlsx");
     };
 
+    const applyMapping = (rows, mapping) => {
+        return rows.map(row => {
+            const getVal = (dbKey) => {
+                const excelHeader = mapping[dbKey];
+                return excelHeader ? row[excelHeader] : undefined;
+            };
+
+            return {
+                name: getVal("name"),
+                code: getVal("code"),
+                phone: getVal("phone"),
+                email: getVal("email"),
+                address: getVal("address"),
+                fatherName: getVal("fatherName"),
+                measurementNo: getVal("measurementNo"),
+                category: getVal("category"),
+                balance: getVal("balance"),
+                notes: getVal("notes")
+            };
+        });
+    };
+
+    const handleMappingChange = (dbKey, excelHeader) => {
+        const updatedMapping = { ...columnMapping, [dbKey]: excelHeader };
+        setColumnMapping(updatedMapping);
+        const updatedParsedData = applyMapping(rawRows, updatedMapping);
+        setParsedData(updatedParsedData);
+    };
+
     const processExcelFile = (file) => {
         if (!file) return;
         setImportError("");
@@ -262,46 +311,43 @@ export default function SettingsClient() {
                 const worksheet = workbook.Sheets[firstSheetName];
                 
                 // Parse rows into JSON format
-                const rawRows = XLSX.utils.sheet_to_json(worksheet);
-                if (rawRows.length === 0) {
+                const rawRowsData = XLSX.utils.sheet_to_json(worksheet);
+                if (rawRowsData.length === 0) {
                     throw new Error("The uploaded Excel sheet contains no data.");
                 }
 
-                // Map header variations to standardized properties
-                const formattedRows = rawRows.map(row => {
-                    // Utility to find value ignoring case & underscores/spaces
-                    const getVal = (possibleKeys) => {
-                        const key = Object.keys(row).find(k => 
-                            possibleKeys.includes(k.toLowerCase().trim().replace(/[\s_]+/g, ""))
-                        );
-                        return key ? row[key] : undefined;
-                    };
-
-                    return {
-                        name: getVal(["name", "customername", "fullname"]),
-                        code: getVal(["code", "customercode", "id", "customerid"]),
-                        phone: getVal(["phone", "phonenumber", "cell", "mobile"]),
-                        email: getVal(["email", "emailaddress"]),
-                        address: getVal(["address", "homeaddress", "location"]),
-                        fatherName: getVal(["fathername", "father"]),
-                        measurementNo: getVal(["measurementno", "measurementnumber", "measurement", "measno"]),
-                        category: getVal(["category", "customercategory", "accountcategory", "group"]),
-                        balance: getVal(["balance", "openingbalance", "amount", "outstanding"]),
-                        notes: getVal(["notes", "note", "remarks", "description"])
-                    };
+                // Detect headers from raw rows
+                const headers = [];
+                rawRowsData.forEach(row => {
+                    Object.keys(row).forEach(k => {
+                        if (!headers.includes(k)) {
+                            headers.push(k);
+                        }
+                    });
                 });
 
-                // Simple client side validation: check for Name presence
-                const invalidRows = formattedRows.filter(r => !r.name);
-                if (invalidRows.length === formattedRows.length) {
-                    throw new Error("Could not find any rows with a valid 'Name' column header. Please verify your file column headers match the template.");
-                }
+                // Initialize mapping with smart guessing
+                const initialMapping = {};
+                DB_COLUMNS.forEach(col => {
+                    const matchedHeader = headers.find(h => 
+                        col.possibleHeaders.includes(h.toLowerCase().trim().replace(/[\s_]+/g, ""))
+                    );
+                    initialMapping[col.key] = matchedHeader || "";
+                });
 
+                const formattedRows = applyMapping(rawRowsData, initialMapping);
+
+                setRawRows(rawRowsData);
+                setExcelHeaders(headers);
+                setColumnMapping(initialMapping);
                 setParsedData(formattedRows);
             } catch (err) {
                 setImportError(err.message || "Failed to parse the Excel file.");
                 setImportFile(null);
                 setParsedData([]);
+                setRawRows([]);
+                setExcelHeaders([]);
+                setColumnMapping({});
             }
         };
         reader.readAsArrayBuffer(file);
@@ -335,6 +381,9 @@ export default function SettingsClient() {
     const handleClearImport = () => {
         setImportFile(null);
         setParsedData([]);
+        setRawRows([]);
+        setExcelHeaders([]);
+        setColumnMapping({});
         setImportError("");
         setImportResult(null);
     };
@@ -357,6 +406,9 @@ export default function SettingsClient() {
             setImportResult(data);
             setSuccess(`Successfully imported ${data.imported} customer(s).`);
             setParsedData([]);
+            setRawRows([]);
+            setExcelHeaders([]);
+            setColumnMapping({});
             setImportFile(null);
         } catch (err) {
             setImportError(err.message);
@@ -691,12 +743,65 @@ export default function SettingsClient() {
                                 </CardContent>
                             </Card>
 
+                            {/* Column Mapping Section */}
+                            {importFile && excelHeaders.length > 0 && (
+                                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, mb: 3 }}>
+                                    <CardContent sx={{ p: 3 }}>
+                                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                                            Column Mapping
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3 }}>
+                                            Map Excel columns to Database customer columns. Ensure the required <strong>Name</strong> column is mapped correctly.
+                                        </Typography>
+
+                                        <Grid container spacing={2}>
+                                            {DB_COLUMNS.map((col) => {
+                                                const currentMapping = columnMapping[col.key] || "";
+                                                return (
+                                                    <Grid item xs={12} sm={6} key={col.key}>
+                                                        <FormControl fullWidth size="small" required={col.required}>
+                                                            <InputLabel id={`mapping-select-label-${col.key}`}>
+                                                                {col.label} {col.required && "*"}
+                                                            </InputLabel>
+                                                            <Select
+                                                                labelId={`mapping-select-label-${col.key}`}
+                                                                id={`mapping-select-${col.key}`}
+                                                                value={currentMapping}
+                                                                label={`${col.label} ${col.required ? "*" : ""}`}
+                                                                onChange={(e) => handleMappingChange(col.key, e.target.value)}
+                                                                sx={{ borderRadius: 2 }}
+                                                            >
+                                                                {!col.required && (
+                                                                    <MenuItem value="">
+                                                                        <em>Skip (Do not import)</em>
+                                                                    </MenuItem>
+                                                                )}
+                                                                {excelHeaders.map((header) => (
+                                                                    <MenuItem key={header} value={header}>
+                                                                        {header}
+                                                                    </MenuItem>
+                                                                ))}
+                                                            </Select>
+                                                        </FormControl>
+                                                    </Grid>
+                                                );
+                                            })}
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             {/* Excel Data Preview Table */}
                             {parsedData.length > 0 && (
                                 <Box>
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, px: 0.5 }}>
                                         Previewing Data ({parsedData.length} rows)
                                     </Typography>
+                                    {!columnMapping.name && (
+                                        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+                                            Please map the <strong>Name</strong> field to enable importing.
+                                        </Alert>
+                                    )}
                                     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 300, mb: 3 }}>
                                         <Table size="small" stickyHeader>
                                             <TableHead>
@@ -753,7 +858,7 @@ export default function SettingsClient() {
                                             color="primary"
                                             startIcon={importLoading ? null : <CheckCircle size={16} />}
                                             onClick={handleConfirmImport}
-                                            disabled={importLoading}
+                                            disabled={importLoading || !columnMapping.name}
                                             sx={{ borderRadius: 2, textTransform: "none", px: 4 }}
                                         >
                                             {importLoading ? <CircularProgress size={20} color="inherit" /> : "Confirm & Import to Database"}
