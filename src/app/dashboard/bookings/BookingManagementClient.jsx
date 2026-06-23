@@ -2355,8 +2355,8 @@ ${allBookingsHtml}
                                                             </Typography>
                                                         )}
                                                     </Box>
-                                                    {/* Item Status & Note */}
-                                                    <Box sx={{ display: 'flex', gap: 1.5, mt: 1, alignItems: 'flex-start' }}>
+                                                    {/* Item Status */}
+                                                    <Box sx={{ mt: 1 }}>
                                                         <TextField
                                                             select
                                                             size="small"
@@ -2383,21 +2383,6 @@ ${allBookingsHtml}
                                                                 </MenuItem>
                                                             ))}
                                                         </TextField>
-                                                        <TextField
-                                                            size="small"
-                                                            label="Note"
-                                                            multiline
-                                                            minRows={1}
-                                                            maxRows={4}
-                                                            value={item.itemNote || ""}
-                                                            onChange={(e) => {
-                                                                const ni = [...cartItems];
-                                                                ni[index].itemNote = e.target.value;
-                                                                setCartItems(ni);
-                                                            }}
-                                                            placeholder="Add a note for this suit..."
-                                                            sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.8rem' } }}
-                                                        />
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell sx={{ verticalAlign: 'top', pt: 1.5 }}>
@@ -2646,7 +2631,7 @@ ${allBookingsHtml}
                                 </Box>
                                 <Grid container spacing={2}>
                                     <Grid size={{ xs: 6 }}>
-                                        <TextField fullWidth size="small" label="Advance Amount" required
+                                        <TextField fullWidth size="small" label="Advance Amount" required disabled
                                             value={formData.advanceAmount}
                                             onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}

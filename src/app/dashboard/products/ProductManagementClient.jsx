@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
     Box,
     Button,
@@ -62,6 +63,9 @@ function makeBarcodesvg(value) {
 }
 
 export default function ProductManagementClient({ initialProducts }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -328,7 +332,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                 <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Code / Barcode</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Cost Price</TableCell>
+                                {isAdmin && <TableCell sx={{ fontWeight: 700 }}>Cost Price</TableCell>}
                                 <TableCell sx={{ fontWeight: 700 }}>Sale Price</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                             </TableRow>
@@ -377,11 +381,13 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                                 {prod.quantity} units
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" fontWeight={500}>
-                                                Rs. {parseFloat(prod.costPrice || 0).toLocaleString()}
-                                            </Typography>
-                                        </TableCell>
+                                        {isAdmin && (
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={500}>
+                                                    Rs. {parseFloat(prod.costPrice || 0).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                        )}
                                         <TableCell>
                                             <Typography variant="body2" fontWeight={700} color="success.main">
                                                 Rs. {parseFloat(prod.unitPrice || 0).toLocaleString()}
@@ -410,7 +416,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                    <TableCell colSpan={isAdmin ? 6 : 5} align="center" sx={{ py: 8 }}>
                                         <Package size={40} color="#d1d5db" />
                                         <Typography color="text.secondary" sx={{ mt: 1.5 }}>No products found.</Typography>
                                     </TableCell>
@@ -572,17 +578,19 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                 }}
                             />
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 4 }}>
-                            <TextField
-                                fullWidth size="small" label="Cost Price" name="costPrice" type="number"
-                                placeholder="0.00"
-                                value={formData.costPrice}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 4 }}>
+                        {isAdmin && (
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                <TextField
+                                    fullWidth size="small" label="Cost Price" name="costPrice" type="number"
+                                    placeholder="0.00"
+                                    value={formData.costPrice}
+                                    onChange={handleInputChange}
+                                    variant="outlined"
+                                    InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                />
+                            </Grid>
+                        )}
+                        <Grid size={{ xs: 12, sm: isAdmin ? 4 : 6 }}>
                             <TextField
                                 fullWidth size="small" label="Sale Price" name="unitPrice" type="number" required
                                 placeholder="0.00"
@@ -592,7 +600,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                 InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                             />
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 4 }}>
+                        <Grid size={{ xs: 12, sm: isAdmin ? 4 : 6 }}>
                             <TextField
                                 fullWidth size="small" label="Stock Quantity" name="quantity" type="number"
                                 placeholder="0"
