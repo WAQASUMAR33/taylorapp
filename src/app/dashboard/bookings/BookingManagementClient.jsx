@@ -1370,7 +1370,8 @@ ${allBookingsHtml}
         tailorIds: [],
         cutterIds: [],
         advanceAmount: "",
-        notes: ""
+        notes: "",
+        discount: ""
     });
 
     // Set today's date client-side only to avoid SSR hydration mismatch
@@ -1548,7 +1549,7 @@ ${allBookingsHtml}
                 return prev.map(i => {
                     if (i.productId !== product.id) return i;
                     const qty = i.quantity + 1;
-                    return { ...i, quantity: qty, totalPrice: qty * parseFloat(i.unitPrice) * (1 - parseFloat(i.discount || 0) / 100) };
+                    return { ...i, quantity: qty, totalPrice: qty * parseFloat(i.unitPrice) };
                 });
             }
             const price = parseFloat(product.unitPrice || 0);
@@ -1588,8 +1589,7 @@ ${allBookingsHtml}
             } else {
                 const qty = parseFloat(next[index].quantity) || 1;
                 const price = parseFloat(product.unitPrice || 0);
-                const disc = parseFloat(next[index].discount) || 0;
-                next[index] = { ...next[index], productId: product.id, productName: product.name, unitPrice: price, totalPrice: Math.max(0, qty * price - disc) };
+                next[index] = { ...next[index], productId: product.id, productName: product.name, unitPrice: price, totalPrice: qty * price };
             }
             return next;
         });
@@ -1601,15 +1601,31 @@ ${allBookingsHtml}
             next[index] = { ...next[index], [field]: value };
             const qty = parseFloat(field === 'quantity' ? value : next[index].quantity) || 1;
             const price = parseFloat(field === 'unitPrice' ? value : next[index].unitPrice) || 0;
-            const disc = parseFloat(field === 'discount' ? value : next[index].discount) || 0;
-            next[index].totalPrice = Math.max(0, qty * price - disc);
+            next[index].totalPrice = qty * price;
             return next;
         });
     };
 
-    const stitchingTotal = cartItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-    const productTotal = productItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-    const totalAmount = stitchingTotal + productTotal;
+    // Calculate subtotals
+    const stitchingSubtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+    const productSubtotal = productItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+    const totalSubtotal = stitchingSubtotal + productSubtotal;
+
+    // Apply global discount based on rules:
+    // 1. stitching and products both -> apply discount on product only
+    // 2. stitching only -> apply discount on stitching only
+    // 3. products only -> apply discount on product only
+    const globalDiscountInput = parseFloat(formData.discount) || 0;
+    let appliedDiscount = 0;
+    if (stitchingSubtotal > 0 && productSubtotal > 0) {
+        appliedDiscount = Math.min(globalDiscountInput, productSubtotal);
+    } else if (stitchingSubtotal > 0) {
+        appliedDiscount = Math.min(globalDiscountInput, stitchingSubtotal);
+    } else if (productSubtotal > 0) {
+        appliedDiscount = Math.min(globalDiscountInput, productSubtotal);
+    }
+
+    const totalAmount = Math.max(0, totalSubtotal - appliedDiscount);
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
     const balanceAmount = totalAmount - advanceAmount;
 
@@ -1636,6 +1652,80 @@ ${allBookingsHtml}
         }
 
         try {
+            // Recalculate subtotal for discount target determination
+            const subStitching = validItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+            const subProduct = validProductItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+
+            const discountInput = parseFloat(formData.discount) || 0;
+            let submitDiscount = 0;
+            let discountTarget = null; // 'PRODUCTS' or 'STITCHING'
+
+            if (subStitching > 0 && subProduct > 0) {
+                submitDiscount = Math.min(discountInput, subProduct);
+                discountTarget = 'PRODUCTS';
+            } else if (subStitching > 0) {
+                submitDiscount = Math.min(discountInput, subStitching);
+                discountTarget = 'STITCHING';
+            } else if (subProduct > 0) {
+                submitDiscount = Math.min(discountInput, subProduct);
+                discountTarget = 'PRODUCTS';
+            }
+
+            // Distribute discount proportionally
+            let finalStitchingItems = validItems.map(item => ({
+                ...item,
+                discount: 0,
+                totalPrice: parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)
+            }));
+
+            let finalProductItems = validProductItems.map(item => ({
+                ...item,
+                discount: 0,
+                totalPrice: parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)
+            }));
+
+            if (submitDiscount > 0) {
+                if (discountTarget === 'PRODUCTS') {
+                    let remainingDiscount = submitDiscount;
+                    let remainingSubtotal = subProduct;
+                    finalProductItems = finalProductItems.map((item, idx) => {
+                        const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                        let itemDisc = 0;
+                        if (idx === finalProductItems.length - 1) {
+                            itemDisc = remainingDiscount;
+                        } else {
+                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
+                            remainingDiscount -= itemDisc;
+                            remainingSubtotal -= itemSub;
+                        }
+                        return {
+                            ...item,
+                            discount: itemDisc,
+                            totalPrice: Math.max(0, itemSub - itemDisc)
+                        };
+                    });
+                } else if (discountTarget === 'STITCHING') {
+                    let remainingDiscount = submitDiscount;
+                    let remainingSubtotal = subStitching;
+                    finalStitchingItems = finalStitchingItems.map((item, idx) => {
+                        const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                        let itemDisc = 0;
+                        if (idx === finalStitchingItems.length - 1) {
+                            itemDisc = remainingDiscount;
+                        } else {
+                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
+                            remainingDiscount -= itemDisc;
+                            remainingSubtotal -= itemSub;
+                        }
+                        return {
+                            ...item,
+                            discount: itemDisc,
+                            totalPrice: Math.max(0, itemSub - itemDisc)
+                        };
+                    });
+                }
+            }
+
             const payload = {
                 customerId: formData.customerId,
                 billingCustomerId: (!formData.sameBilling && formData.billingCustomerId) ? formData.billingCustomerId : null,
@@ -1651,11 +1741,11 @@ ${allBookingsHtml}
                 remainingAmount: balanceAmount,
                 notes: formData.notes,
                 items: [
-                    ...validItems.map(item => ({
+                    ...finalStitchingItems.map(item => ({
                         productId: item.productId || null,
                         quantity: parseFloat(item.quantity) || 1,
                         unitPrice: item.unitPrice || 0,
-                        discount: 0,
+                        discount: item.discount || 0,
                         totalPrice: item.totalPrice,
                         selectedOptionIds: item.selectedOptionIds || [],
                         itemStatus: item.itemStatus || "PENDING",
@@ -1684,7 +1774,7 @@ ${allBookingsHtml}
                         puhncha: item.puhncha,
                         shalwar_gheera: item.shalwar_gheera,
                     })),
-                    ...validProductItems.map(item => ({
+                    ...finalProductItems.map(item => ({
                         productId: item.productId,
                         quantity: parseFloat(item.quantity) || 1,
                         unitPrice: parseFloat(item.unitPrice) || 0,
@@ -2504,7 +2594,6 @@ ${allBookingsHtml}
                                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Qty</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Unit Price</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Discount</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total</TableCell>
                                             <TableCell sx={{ width: 40 }} />
                                         </TableRow>
@@ -2536,13 +2625,6 @@ ${allBookingsHtml}
                                                     <TextField type="number" size="small" value={item.unitPrice}
                                                         onChange={(e) => handleProductItemChange(index, 'unitPrice', e.target.value)}
                                                         inputProps={{ min: 0, style: { width: 80 } }}
-                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField type="number" size="small" value={item.discount}
-                                                        onChange={(e) => handleProductItemChange(index, 'discount', e.target.value)}
-                                                        inputProps={{ min: 0, style: { width: 70 } }}
                                                         InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
                                                 </TableCell>
@@ -2624,20 +2706,31 @@ ${allBookingsHtml}
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2 }}>
+                                {/* Subtotal row */}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="body2" fontWeight={600} color="text.secondary">Subtotal</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="text.secondary">Rs.&nbsp;{totalSubtotal.toFixed(0)}</Typography>
+                                </Box>
                                 {/* Total row */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid #d1fae5' }}>
                                     <Typography variant="body2" fontWeight={600} color="text.secondary">Total Amount</Typography>
                                     <Typography variant="h6" fontWeight={800} color="#059669">Rs.&nbsp;{totalAmount.toFixed(0)}</Typography>
                                 </Box>
                                 <Grid container spacing={2}>
-                                    <Grid size={{ xs: 6 }}>
-                                        <TextField fullWidth size="small" label="Advance Amount" required disabled
-                                            value={formData.advanceAmount}
-                                            onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
+                                    <Grid size={{ xs: 4 }}>
+                                        <TextField fullWidth size="small" label="Bill Discount"
+                                            value={formData.discount}
+                                            onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={FIELD_SX} />
                                     </Grid>
-                                    <Grid size={{ xs: 6 }}>
+                                    <Grid size={{ xs: 4 }}>
+                                        <TextField fullWidth size="small" label="Advance Amount" required disabled
+                                            value={formData.advanceAmount}
+                                            InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                            sx={DISABLED_SX} />
+                                    </Grid>
+                                    <Grid size={{ xs: 4 }}>
                                         <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={{ '& .MuiOutlinedInput-root': { bgcolor: balanceAmount > 0 ? '#fee2e2' : '#f0fdf4', borderRadius: 2, '& .MuiInputBase-input': { fontWeight: 800, color: balanceAmount > 0 ? '#b91c1c' : '#059669', textAlign: 'center' } } }} />
