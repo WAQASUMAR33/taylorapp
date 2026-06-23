@@ -613,8 +613,35 @@ export async function PUT(req) {
 
             // 5. Replace booking items if provided
             if (Array.isArray(items) && items.length > 0) {
+                // A. Revert stock and log movements for existing items in this booking
+                const priorItems = await tx.booking_item.findMany({
+                    where: { bookingId: parseInt(id) }
+                });
+
+                for (const priorItem of priorItems) {
+                    if (!priorItem.productId) continue;
+                    
+                    await tx.product.update({
+                        where: { id: priorItem.productId },
+                        data: {
+                            quantity: { increment: priorItem.quantity }
+                        }
+                    });
+
+                    await tx.stockmovement.create({
+                        data: {
+                            productId: priorItem.productId,
+                            type: 'IN',
+                            quantity: priorItem.quantity,
+                            notes: `Booking Update Reversal: ${currentBooking.bookingNumber}`
+                        }
+                    });
+                }
+
+                // B. Delete existing items
                 await tx.booking_item.deleteMany({ where: { bookingId: parseInt(id) } });
 
+                // C. Recreate new items
                 const productIds = items.map(i => parseInt(i.productId)).filter(Boolean);
                 const products = productIds.length > 0 ? await tx.product.findMany({
                     where: { id: { in: productIds } },
@@ -678,6 +705,26 @@ export async function PUT(req) {
                         const validOptions = await tx.stitching_option.findMany({ where: { id: { in: selectedOptionIds } }, select: { id: true, price: true } });
                         await tx.booking_item_stitching_option.createMany({
                             data: validOptions.map(opt => ({ bookingItemId: createdItem.id, stitchingOptionId: opt.id, price: opt.price }))
+                        });
+                    }
+
+                    // D. Decrement stock and log movements for new items
+                    if (pid) {
+                        const quantity = parseFloat(item.quantity) || 1;
+                        await tx.product.update({
+                            where: { id: pid },
+                            data: {
+                                quantity: { decrement: quantity }
+                            }
+                        });
+
+                        await tx.stockmovement.create({
+                            data: {
+                                productId: pid,
+                                type: 'OUT',
+                                quantity: quantity,
+                                notes: `Booking Update: ${currentBooking.bookingNumber}`
+                            }
                         });
                     }
                 }
@@ -775,6 +822,7 @@ export async function DELETE(req) {
 
             // 3. Revert Stock
             for (const item of booking.items) {
+                if (!item.productId) continue;
                 await tx.product.update({
                     where: { id: item.productId },
                     data: { quantity: { increment: item.quantity } }
