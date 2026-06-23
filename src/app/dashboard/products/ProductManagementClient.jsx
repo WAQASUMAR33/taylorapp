@@ -69,6 +69,10 @@ export default function ProductManagementClient({ initialProducts }) {
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Calculate total stock cost price and retail sale price
+    const totalStockCost = (products || []).reduce((sum, p) => sum + (parseFloat(p.costPrice || 0) * parseFloat(p.quantity || 0)), 0);
+    const totalStockSale = (products || []).reduce((sum, p) => sum + (parseFloat(p.unitPrice || 0) * parseFloat(p.quantity || 0)), 0);
+
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedProdId, setSelectedProdId] = useState(null);
@@ -297,6 +301,53 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>
+
+            {isAdmin && (
+                <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Card sx={{
+                            p: 3,
+                            background: "linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)",
+                            color: "white",
+                            borderRadius: 3,
+                            boxShadow: "0 10px 40px rgba(139, 92, 246, 0.15)",
+                        }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Box>
+                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        Total Stock Price (Cost Value)
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
+                                        Rs. {totalStockCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Box>
+                                <Package size={36} style={{ opacity: 0.8 }} />
+                            </Box>
+                        </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Card sx={{
+                            p: 3,
+                            background: "linear-gradient(135deg, #34d399 0%, #059669 100%)",
+                            color: "white",
+                            borderRadius: 3,
+                            boxShadow: "0 10px 40px rgba(5, 150, 105, 0.15)",
+                        }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Box>
+                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        Total Stock Sale Price (Retail Value)
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
+                                        Rs. {totalStockSale.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Box>
+                                <Tag size={36} style={{ opacity: 0.8 }} />
+                            </Box>
+                        </Card>
+                    </Grid>
+                </Grid>
+            )}
 
             {/* ── Action bar ─────────────────────────────────── */}
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
