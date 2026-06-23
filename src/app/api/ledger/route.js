@@ -1,42 +1,190 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// GET - Fetch all ledger entries
+// GET - Fetch paginated and filtered ledger entries
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const customerId = searchParams.get("customerId");
+        const page = searchParams.get("page") || "1";
+        const limit = searchParams.get("limit") || "50";
+        const search = searchParams.get("search") || "";
+        const customerId = searchParams.get("customerId") || "";
+        const dateFrom = searchParams.get("dateFrom") || "";
+        const dateTo = searchParams.get("dateTo") || "";
 
-        let ledgerEntries;
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 50;
+        const skip = (pageNum - 1) * limitNum;
+
+        // Base where filter
+        const where = {
+            customer: {
+                name: { not: "Cash Account" }
+            }
+        };
 
         if (customerId) {
-            // Fetch ledger entries for a specific customer
-            ledgerEntries = await prisma.ledgerentry.findMany({
-                where: { customerId: parseInt(customerId) },
-                include: {
-                    customer: true,
-                    purchase: true,
-                },
-                orderBy: [
-                    { entryDate: "asc" },
-                    { id: "asc" }
-                ],
-            });
-        } else {
-            // Fetch all ledger entries
-            ledgerEntries = await prisma.ledgerentry.findMany({
-                include: {
-                    customer: true,
-                    purchase: true,
-                },
-                orderBy: [
-                    { entryDate: "asc" },
-                    { id: "asc" }
-                ],
-            });
+            where.customerId = parseInt(customerId);
         }
 
-        return NextResponse.json(ledgerEntries);
+        if (dateFrom || dateTo) {
+            where.entryDate = {};
+            if (dateFrom) {
+                where.entryDate.gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                toDate.setHours(23, 59, 59, 999);
+                where.entryDate.lte = toDate;
+            }
+        }
+
+        if (search) {
+            const searchOr = [
+                { description: { contains: search } },
+                {
+                    customer: {
+                        OR: [
+                            { name: { contains: search } },
+                            { phone: { contains: search } },
+                            { address: { contains: search } },
+                            { measurementNo: { contains: search } }
+                        ]
+                    }
+                }
+            ];
+
+            const searchId = parseInt(search);
+            if (!isNaN(searchId)) {
+                searchOr.push({ id: searchId });
+            }
+
+            where.AND = [
+                { OR: searchOr }
+            ];
+        }
+
+        // Fetch paginated entries and total count
+        const [entries, totalCount] = await Promise.all([
+            prisma.ledgerentry.findMany({
+                where,
+                include: {
+                    customer: true,
+                    purchase: true,
+                },
+                orderBy: [
+                    { entryDate: "asc" },
+                    { id: "asc" }
+                ],
+                skip,
+                take: limitNum,
+            }),
+            prisma.ledgerentry.count({ where })
+        ]);
+
+        // Calculate total debit and credit matching current filter (across all pages)
+        const [debitSum, creditSum] = await Promise.all([
+            prisma.ledgerentry.aggregate({
+                where: { ...where, type: "DEBIT" },
+                _sum: { amount: true }
+            }),
+            prisma.ledgerentry.aggregate({
+                where: { ...where, type: "CREDIT" },
+                _sum: { amount: true }
+            })
+        ]);
+
+        const totals = {
+            debit: parseFloat(debitSum._sum.amount || 0),
+            credit: parseFloat(creditSum._sum.amount || 0)
+        };
+
+        // Calculate initial balance (running balance of all matching entries before current page)
+        let initialBalance = 0;
+        if (entries.length > 0) {
+            const firstEntry = entries[0];
+            const priorWhere = {
+                customer: {
+                    name: { not: "Cash Account" }
+                }
+            };
+
+            if (customerId) {
+                priorWhere.customerId = parseInt(customerId);
+            }
+
+            if (search) {
+                const searchOr = [
+                    { description: { contains: search } },
+                    {
+                        customer: {
+                            OR: [
+                                { name: { contains: search } },
+                                { phone: { contains: search } },
+                                { address: { contains: search } },
+                                { measurementNo: { contains: search } }
+                            ]
+                        }
+                    }
+                ];
+
+                const searchId = parseInt(search);
+                if (!isNaN(searchId)) {
+                    searchOr.push({ id: searchId });
+                }
+
+                priorWhere.AND = [
+                    { OR: searchOr }
+                ];
+            }
+
+            priorWhere.AND = priorWhere.AND || [];
+            priorWhere.AND.push({
+                OR: [
+                    { entryDate: { lt: firstEntry.entryDate } },
+                    {
+                        AND: [
+                            { entryDate: firstEntry.entryDate },
+                            { id: { lt: firstEntry.id } }
+                        ]
+                    }
+                ]
+            });
+
+            const [priorDebit, priorCredit] = await Promise.all([
+                prisma.ledgerentry.aggregate({
+                    where: { ...priorWhere, type: "DEBIT" },
+                    _sum: { amount: true }
+                }),
+                prisma.ledgerentry.aggregate({
+                    where: { ...priorWhere, type: "CREDIT" },
+                    _sum: { amount: true }
+                })
+            ]);
+
+            initialBalance = parseFloat(priorDebit._sum.amount || 0) - parseFloat(priorCredit._sum.amount || 0);
+        }
+
+        // Serialize decimal values for clean delivery
+        const serializedEntries = entries.map(entry => ({
+            ...entry,
+            amount: entry.amount.toString(),
+            customer: entry.customer ? {
+                ...entry.customer,
+                balance: entry.customer.balance ? parseFloat(entry.customer.balance.toString()) : 0
+            } : null,
+            purchase: entry.purchase ? {
+                ...entry.purchase,
+                totalAmount: entry.purchase.totalAmount.toString()
+            } : null
+        }));
+
+        return NextResponse.json({
+            entries: serializedEntries,
+            totalCount,
+            totals,
+            initialBalance
+        });
     } catch (error) {
         console.error("Failed to fetch ledger entries:", error);
         return NextResponse.json(

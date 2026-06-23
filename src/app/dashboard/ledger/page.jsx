@@ -11,38 +11,90 @@ export const metadata = {
 };
 
 export default async function LedgerPage() {
-    const [ledgerEntries, customers] = await Promise.all([
-        prisma.ledgerentry.findMany({
-            where: {
-                customer: {
-                    NOT: { name: 'Cash Account' }
-                }
-            },
-            include: {
-                customer: true,
-                purchase: true,
-            },
-            orderBy: { entryDate: "asc" },
+    // 1. Fetch initial 50 ledger entries
+    const initialEntries = await prisma.ledgerentry.findMany({
+        where: {
+            customer: {
+                name: { not: "Cash Account" }
+            }
+        },
+        include: {
+            customer: true,
+            purchase: true,
+        },
+        orderBy: [
+            { entryDate: "asc" },
+            { id: "asc" }
+        ],
+        take: 50,
+    });
+
+    // 2. Fetch count of all matching entries
+    const totalCount = await prisma.ledgerentry.count({
+        where: {
+            customer: {
+                name: { not: "Cash Account" }
+            }
+        }
+    });
+
+    // 3. Calculate initial totals (debit & credit)
+    const [debitSum, creditSum] = await Promise.all([
+        prisma.ledgerentry.aggregate({
+            where: { customer: { name: { not: "Cash Account" } }, type: "DEBIT" },
+            _sum: { amount: true }
         }),
-        prisma.customer.findMany({
-            where: {
-                NOT: { name: 'Cash Account' }
-            },
-            include: {
-                accountCategory: true
-            },
-            orderBy: { name: "asc" },
-        }),
+        prisma.ledgerentry.aggregate({
+            where: { customer: { name: { not: "Cash Account" } }, type: "CREDIT" },
+            _sum: { amount: true }
+        })
     ]);
 
-    // Filter out employee categories (Cutter, Tailor)
-    const filteredCustomersForList = customers.filter(c => {
-        const catName = c.accountCategory?.name?.toLowerCase() || "";
-        return !catName.includes("cutter") && !catName.includes("tailor");
+    const initialTotals = {
+        debit: parseFloat(debitSum._sum.amount || 0),
+        credit: parseFloat(creditSum._sum.amount || 0)
+    };
+
+    // 4. Fetch initial 50 customers to populate dropdowns initially (excluding cutter & tailor)
+    const initialCustomers = await prisma.customer.findMany({
+        where: {
+            NOT: { name: 'Cash Account' },
+            AND: [
+                {
+                    OR: [
+                        { accountCategory: null },
+                        {
+                            accountCategory: {
+                                name: {
+                                    not: { contains: "cutter" }
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    OR: [
+                        { accountCategory: null },
+                        {
+                            accountCategory: {
+                                name: {
+                                    not: { contains: "tailor" }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        include: {
+            accountCategory: true
+        },
+        orderBy: { name: "asc" },
+        take: 50,
     });
 
     // Serialize Decimal fields
-    const serializedEntries = ledgerEntries.map(entry => ({
+    const serializedEntries = initialEntries.map(entry => ({
         ...entry,
         amount: entry.amount.toString(),
         customer: entry.customer ? {
@@ -55,7 +107,7 @@ export default async function LedgerPage() {
         } : null
     }));
 
-    const serializedCustomers = filteredCustomersForList.map(customer => ({
+    const serializedCustomers = initialCustomers.map(customer => ({
         ...customer,
         balance: customer.balance ? parseFloat(customer.balance.toString()) : 0
     }));
@@ -96,7 +148,12 @@ export default async function LedgerPage() {
             </Box>
 
             <Suspense fallback={<div>Loading...</div>}>
-                <LedgerManagementClient initialEntries={serializedEntries} customers={serializedCustomers} />
+                <LedgerManagementClient 
+                    initialEntries={serializedEntries} 
+                    initialCustomers={serializedCustomers}
+                    initialTotalCount={totalCount}
+                    initialTotals={initialTotals}
+                />
             </Suspense>
         </Box>
     );

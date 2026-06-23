@@ -49,28 +49,39 @@ const ENTRY_TYPES = [
     { label: "Credit (Payable)", value: "CREDIT" },
 ];
 
-export default function LedgerManagementClient({ initialEntries, customers }) {
+export default function LedgerManagementClient({ 
+    initialEntries, 
+    initialCustomers, 
+    initialTotalCount, 
+    initialTotals 
+}) {
     const searchParams = useSearchParams();
     const customerIdParam = searchParams.get("customerId");
 
     const [entries, setEntries] = useState(initialEntries);
+    const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
+    const [totals, setTotals] = useState(initialTotals || { debit: 0, credit: 0 });
+    const [initialBalance, setInitialBalance] = useState(0);
+
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(50);
+
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [filterCustomer, setFilterCustomer] = useState(null);
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
 
-    // Auto-filter if customerId passed via URL
-    useEffect(() => {
-        if (customerIdParam && customers.length > 0) {
-            const c = customers.find(c => c.id === parseInt(customerIdParam));
-            if (c) setFilterCustomer(c);
-        }
-    }, [customerIdParam, customers]);
+    const [customerOptions, setCustomerOptions] = useState(initialCustomers);
+    const [customerSearchInput, setCustomerSearchInput] = useState("");
+    const [searchingCustomers, setSearchingCustomers] = useState(false);
+    const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [showForm, setShowForm] = useState(false);
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
 
     const [formData, setFormData] = useState({
         customerId: "",
@@ -80,7 +91,123 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
     });
 
     // Derived: selected customer object for the form
-    const selectedFormCustomer = customers.find(c => c.id === formData.customerId) || null;
+    const selectedFormCustomer = customerOptions.find(c => c.id === formData.customerId) || null;
+
+    // Handle debouncing for ledger search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Handle debouncing for customer search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedCustomerSearch(customerSearchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [customerSearchInput]);
+
+    // Fetch matching customers for dropdown options
+    useEffect(() => {
+        const searchCustomers = async () => {
+            if (!debouncedCustomerSearch.trim()) return;
+            setSearchingCustomers(true);
+            try {
+                const res = await fetch(`/api/customers?search=${encodeURIComponent(debouncedCustomerSearch)}&limit=50`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const fetched = data.customers || [];
+                    setCustomerOptions(prev => {
+                        const map = new Map(prev.map(c => [c.id, c]));
+                        fetched.forEach(c => {
+                            if (c && c.id) {
+                                map.set(c.id, {
+                                    ...c,
+                                    balance: c.balance ? parseFloat(c.balance.toString()) : 0
+                                });
+                            }
+                        });
+                        return Array.from(map.values());
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to search customers:", err);
+            } finally {
+                setSearchingCustomers(false);
+            }
+        };
+        searchCustomers();
+    }, [debouncedCustomerSearch]);
+
+    // Auto-filter if customerId passed via URL
+    useEffect(() => {
+        if (customerIdParam) {
+            const existing = customerOptions.find(c => c.id === parseInt(customerIdParam));
+            if (existing) {
+                setFilterCustomer(existing);
+            } else {
+                const fetchCustomer = async () => {
+                    try {
+                        const res = await fetch(`/api/customers/${customerIdParam}`);
+                        if (res.ok) {
+                            const c = await res.json();
+                            if (c) {
+                                const formatted = {
+                                    ...c,
+                                    balance: c.balance ? parseFloat(c.balance.toString()) : 0
+                                };
+                                setCustomerOptions(prev => [...prev, formatted]);
+                                setFilterCustomer(formatted);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Failed to fetch customer for URL param:", err);
+                    }
+                };
+                fetchCustomer();
+            }
+        }
+    }, [customerIdParam]);
+
+    // Fetch ledger entries based on current filters, page, and limit
+    useEffect(() => {
+        const fetchEntries = async () => {
+            setLoading(true);
+            try {
+                const params = new URLSearchParams();
+                params.append("page", page.toString());
+                params.append("limit", limit.toString());
+                if (debouncedSearch) params.append("search", debouncedSearch);
+                if (filterCustomer) params.append("customerId", filterCustomer.id.toString());
+                if (dateFrom) params.append("dateFrom", dateFrom);
+                if (dateTo) params.append("dateTo", dateTo);
+
+                const res = await fetch(`/api/ledger?${params.toString()}`);
+                if (!res.ok) throw new Error("Failed to fetch ledger entries");
+                
+                const data = await res.json();
+                setEntries(data.entries);
+                setTotalCount(data.totalCount);
+                setTotals(data.totals);
+                setInitialBalance(data.initialBalance);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load ledger data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEntries();
+    }, [page, limit, debouncedSearch, filterCustomer?.id, dateFrom, dateTo, refetchTrigger]);
+
+    // Reset page to 1 on filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [filterCustomer, dateFrom, dateTo]);
 
     /* ── helpers ──────────────────────────────────────── */
 
@@ -107,14 +234,7 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                 throw new Error(data.error || "Failed to create ledger entry");
             }
 
-            const savedEntry = await res.json();
-            const newEntry = {
-                ...savedEntry,
-                amount: savedEntry.amount.toString(),
-                customer: customers.find(c => c.id === savedEntry.customerId) || null,
-            };
-
-            setEntries(prev => [...prev, newEntry]);
+            setRefetchTrigger(prev => prev + 1);
             setSuccessMessage("Entry saved successfully!");
             setShowForm(false);
         } catch (err) {
@@ -129,33 +249,12 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
         try {
             const res = await fetch(`/api/ledger?id=${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Failed to delete ledger entry");
-            setEntries(prev => prev.filter(e => e.id !== id));
+            setRefetchTrigger(prev => prev + 1);
             setSuccessMessage("Ledger entry deleted successfully!");
         } catch (err) {
             alert(err.message);
         }
     };
-
-    /* ── filtering & totals ──────────────────────────── */
-
-    const filteredEntries = entries.filter(entry => {
-        const q = (searchQuery || "").toLowerCase();
-        const matchesSearch =
-            (entry.description || "").toLowerCase().includes(q) ||
-            (entry.customer?.name || "").toLowerCase().includes(q) ||
-            (entry.customer?.code || "").toLowerCase().includes(q) ||
-            entry.id.toString().includes(searchQuery);
-        const matchesCustomer = !filterCustomer || entry.customerId === filterCustomer.id;
-
-        // Date range filter — compare date strings directly (YYYY-MM-DD)
-        const entryDay = entry.entryDate
-            ? new Date(entry.entryDate).toISOString().split("T")[0]
-            : "";
-        const matchesFrom = !dateFrom || entryDay >= dateFrom;
-        const matchesTo = !dateTo || entryDay <= dateTo;
-
-        return matchesSearch && matchesCustomer && matchesFrom && matchesTo;
-    });
 
     const hasActiveFilters = searchQuery || filterCustomer || dateFrom || dateTo;
 
@@ -164,16 +263,8 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
         setFilterCustomer(null);
         setDateFrom("");
         setDateTo("");
+        setPage(1);
     };
-
-    const totals = filteredEntries.reduce(
-        (acc, e) => {
-            if (e.type === "DEBIT") acc.debit += parseFloat(e.amount);
-            else acc.credit += parseFloat(e.amount);
-            return acc;
-        },
-        { debit: 0, credit: 0 }
-    );
 
     const balance = totals.debit - totals.credit;
 
@@ -274,14 +365,34 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         />
                         <Autocomplete
                             size="small"
-                            options={customers}
+                            options={customerOptions}
                             getOptionLabel={(o) => o.name || ""}
                             value={filterCustomer}
                             onChange={(_, v) => setFilterCustomer(v)}
+                            onInputChange={(event, newInputValue, reason) => {
+                                if (reason === "input") {
+                                    setCustomerSearchInput(newInputValue);
+                                }
+                            }}
+                            loading={searchingCustomers}
+                            filterOptions={(options) => options}
                             componentsProps={{ paper: { sx: { minWidth: 300 } } }}
                             sx={{ minWidth: 240 }}
                             renderInput={(params) => (
-                                <TextField {...params} label="Filter by Account" variant="outlined" />
+                                <TextField 
+                                    {...params} 
+                                    label="Filter by Account" 
+                                    variant="outlined" 
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        )
+                                    }}
+                                />
                             )}
                         />
                         {filterCustomer && (
@@ -316,9 +427,9 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         New Entry
                     </Button>
                 </Box>
-                {(dateFrom || dateTo) && (
+                {(dateFrom || dateTo || searchQuery || filterCustomer) && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                        Showing {filteredEntries.length} entr{filteredEntries.length === 1 ? "y" : "ies"}
+                        Found {totalCount} matching ledger entr{totalCount === 1 ? "y" : "ies"}
                         {dateFrom && ` from ${new Date(dateFrom).toLocaleDateString()}`}
                         {dateTo && ` to ${new Date(dateTo).toLocaleDateString()}`}
                     </Typography>
@@ -341,11 +452,11 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                             </TableRow>
                         </TableHead>
-                        <TableBody>
-                            {filteredEntries.length > 0 ? (
+                        <TableBody sx={{ opacity: loading ? 0.6 : 1, transition: "opacity 0.2s" }}>
+                            {entries.length > 0 ? (
                                 (() => {
-                                    let running = 0;
-                                    return filteredEntries
+                                    let running = initialBalance;
+                                    return entries
                                         .slice()
                                         .sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id)
                                         .map((entry) => {
@@ -445,16 +556,69 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                                        <BookText size={40} color="#d1d5db" />
-                                        <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-                                            No ledger entries found.
-                                        </Typography>
+                                        {loading ? (
+                                            <CircularProgress size={30} />
+                                        ) : (
+                                            <>
+                                                <BookText size={40} color="#d1d5db" />
+                                                <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+                                                    No ledger entries found.
+                                                </Typography>
+                                            </>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
                 </TableContainer>
+
+                {/* Pagination Controls */}
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderTop: "1px solid", borderColor: "divider", flexWrap: "wrap", gap: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Showing {entries.length > 0 ? (page - 1) * limit + 1 : 0} to{" "}
+                        {Math.min(page * limit, totalCount)} of {totalCount} entries
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={page === 1 || loading}
+                            onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                            sx={{ borderRadius: 1.5, textTransform: "none" }}
+                        >
+                            Previous
+                        </Button>
+                        <Typography variant="body2" sx={{ mx: 1, fontWeight: 600 }}>
+                            Page {page} of {Math.ceil(totalCount / limit) || 1}
+                        </Typography>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={page >= Math.ceil(totalCount / limit) || loading}
+                            onClick={() => setPage(prev => prev + 1)}
+                            sx={{ borderRadius: 1.5, textTransform: "none" }}
+                        >
+                            Next
+                        </Button>
+                        <TextField
+                            select
+                            size="small"
+                            value={limit}
+                            onChange={(e) => {
+                                setLimit(parseInt(e.target.value));
+                                setPage(1);
+                            }}
+                            sx={{ ml: 2, width: 80, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                            SelectProps={{ native: true }}
+                        >
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                            <option value={200}>200</option>
+                        </TextField>
+                    </Box>
+                </Box>
             </Card>
 
             {/* ── New Entry Dialog ───────────────────────── */}
@@ -481,14 +645,35 @@ export default function LedgerManagementClient({ initialEntries, customers }) {
                         <Grid size={{ xs: 4 }}>
                             <Autocomplete
                                 size="small"
-                                options={customers}
+                                options={customerOptions}
                                 getOptionLabel={(o) => `${o.name || ""}${o.code ? ` (${o.code})` : ""}`}
                                 value={selectedFormCustomer}
                                 onChange={(_, v) => setFormData(p => ({ ...p, customerId: v?.id || "" }))}
+                                onInputChange={(event, newInputValue, reason) => {
+                                    if (reason === "input") {
+                                        setCustomerSearchInput(newInputValue);
+                                    }
+                                }}
+                                loading={searchingCustomers}
+                                filterOptions={(options) => options}
                                 componentsProps={{ paper: { sx: { minWidth: 300 } } }}
                                 sx={{ minWidth: 300 }}
                                 renderInput={(params) => (
-                                    <TextField {...params} label="Account" required variant="outlined" />
+                                    <TextField 
+                                        {...params} 
+                                        label="Account" 
+                                        required 
+                                        variant="outlined"
+                                        InputProps={{
+                                            ...params.InputProps,
+                                            endAdornment: (
+                                                <>
+                                                    {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                                    {params.InputProps.endAdornment}
+                                                </>
+                                            )
+                                        }}
+                                    />
                                 )}
                             />
                         </Grid>
