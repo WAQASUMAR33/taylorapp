@@ -54,13 +54,30 @@ export const authOptions = {
             if (user) {
                 token.role = user.role;
                 token.id = user.id;
+                token.name = user.name;
+            } else if (!token.role && token.sub) {
+                try {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { id: parseInt(token.sub) },
+                    });
+                    if (dbUser) {
+                        token.role = dbUser.role;
+                        token.id = dbUser.id.toString();
+                        token.name = dbUser.fullName;
+                    }
+                } catch (error) {
+                    console.error("Error fetching user in jwt callback", error);
+                }
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                session.user.role = token.role;
+                session.user.role = token.role || "STAFF"; // Fallback to avoid empty sidebar
                 session.user.id = token.id;
+                if (token.name) {
+                    session.user.name = token.name;
+                }
             }
             return session;
         },
