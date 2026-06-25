@@ -19,7 +19,8 @@ model user {
   permissions  Json?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  expenses     expense[]
+  expenses              expense[]
+  stitchingExpenses     stitchingExpense[]
 
   @@map("user")
 }
@@ -459,6 +460,34 @@ model materialmovement {
   material   material              @relation(fields: [materialId], references: [id], map: "materialMovement_materialId_fkey")
 
   @@index([materialId], map: "MaterialMovement_materialId_fkey")
+}
+
+model stitchingExpenseTitle {
+  id        Int                @id @default(autoincrement())
+  name      String             @unique
+  isActive  Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  expenses  stitchingExpense[]
+
+  @@map("stitchingexpensetitle")
+}
+
+model stitchingExpense {
+  id          Int                    @id @default(autoincrement())
+  titleId     Int
+  date        DateTime
+  amount      Decimal                @db.Decimal(10, 2)
+  description String?                @db.Text
+  addedBy     Int?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  title       stitchingExpenseTitle   @relation(fields: [titleId], references: [id])
+  addedByUser user?                  @relation(fields: [addedBy], references: [id])
+
+  @@index([titleId], map: "stitchingexpense_titleId_fkey")
+  @@index([addedBy], map: "stitchingexpense_addedBy_fkey")
+  @@map("stitchingexpense")
 }
 
 enum order_status {

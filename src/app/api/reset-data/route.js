@@ -26,6 +26,8 @@ const ALLOWED_TABLES = [
     "accountcategory",
     "category",
     "expense",
+    "stitchingexpense",
+    "stitchingexpensetitle",
     "stitching_option"
 ];
 

@@ -52,6 +52,8 @@ const navItems = [
     { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, roles: ["ADMIN", "MANAGER"] },
     { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
     { name: "Expenses", href: "/dashboard/expenses", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
+    { name: "Stitching Expenses", href: "/dashboard/stitching-expenses", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
+    { name: "Stitching Expense Titles", href: "/dashboard/stitching-expense-titles", icon: Tags, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Orders", href: "/dashboard/stitching-orders", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },
