@@ -17,7 +17,7 @@ export default async function SaleListPage() {
             items: { some: { productId: { not: null } } }
         },
         include: {
-            customer: { select: { id: true, name: true, phone: true } },
+            customer: { select: { id: true, name: true, phone: true, address: true } },
             items: {
                 where: { productId: { not: null } },
                 include: {

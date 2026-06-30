@@ -61,7 +61,10 @@ function ExpandableRow({ bill }) {
                         <Box>
                             <Typography variant="body2" fontWeight={600}>{bill.customer.name}</Typography>
                             {bill.customer.phone && (
-                                <Typography variant="caption" color="text.secondary">{bill.customer.phone}</Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">{bill.customer.phone}</Typography>
+                            )}
+                            {bill.customer.address && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: "italic", mt: 0.2 }}>{bill.customer.address}</Typography>
                             )}
                         </Box>
                     ) : (
@@ -164,6 +167,7 @@ export default function SaleListClient({ initialBills }) {
                 (bill.billNumber || "").toLowerCase().includes(q) ||
                 (bill.customer?.name || "").toLowerCase().includes(q) ||
                 (bill.customer?.phone || "").includes(q) ||
+                (bill.customer?.address || "").toLowerCase().includes(q) ||
                 (bill.items || []).some(i => (i.product?.name || "").toLowerCase().includes(q));
 
             const billDate = new Date(bill.createdAt);
