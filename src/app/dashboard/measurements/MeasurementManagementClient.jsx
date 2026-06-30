@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, IconButton, Avatar, Box, Typography, TextField,
@@ -53,6 +53,22 @@ const EMPTY_FORM = {
     kamar_around: "", hip_around: "", kandha: "",
     wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
     wskot_kamar: "", wskot_hip: "",
+};
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const formatDate = (dateInput) => {
+    if (!dateInput) return "—";
+    try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return "—";
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = MONTH_NAMES[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    } catch {
+        return "—";
+    }
 };
 
 // ── Shared measurement field renderer ───────────────────────────────────────
@@ -367,7 +383,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         const printWindow = window.open("", "_blank");
         const customerName = measurement.customer?.name || "N/A";
         const customerPhone = measurement.customer?.phone || "N/A";
-        const date = new Date(measurement.takenAt).toLocaleDateString();
+        const date = formatDate(measurement.takenAt);
         const unit = measurement.unit || "in";
 
         const row = (label, value) => value
@@ -500,7 +516,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                                                 <Calendar size={14} color="#9ca3af" />
                                                 <Typography variant="body2">
-                                                    {m.takenAt ? new Date(m.takenAt).toLocaleDateString() : "N/A"}
+                                                    {m.takenAt ? formatDate(m.takenAt) : "N/A"}
                                                 </Typography>
                                             </Box>
                                         </TableCell>
@@ -813,7 +829,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                     <Paper key={item.id} variant="outlined" sx={{ p: 1.5, bgcolor: "background.paper", display: "flex", flexDirection: "column", gap: 1 }}>
                                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                             <Typography variant="body2" fontWeight={700}>
-                                                                {new Date(item.takenAt).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}
+                                                                {formatDate(item.takenAt)}
                                                             </Typography>
                                                             <Typography variant="caption" color="primary.main" fontWeight={600} sx={{ textTransform: "uppercase" }}>
                                                                 Unit: {item.unit}
