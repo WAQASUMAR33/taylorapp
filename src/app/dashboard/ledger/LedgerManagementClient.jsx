@@ -328,6 +328,7 @@ export default function LedgerManagementClient({
 
     const clearFilters = () => {
         setSearchQuery("");
+        setDebouncedSearch("");
         setFilterCustomer(null);
         setDateFrom("");
         setDateTo("");

@@ -676,6 +676,17 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         }
     };
 
+    const hasActiveFilters = searchQuery || filterCategory || filterMeasurementNo;
+
+    const clearFilters = () => {
+        setSearchQuery("");
+        setDebouncedSearch("");
+        setFilterMeasurementNo("");
+        setDebouncedMeasurementNo("");
+        setFilterCategory(null);
+        setPage(0);
+    };
+
     const filteredCustomers = customers || [];
 
     const customerCategories = (categories || []).filter(
@@ -878,6 +889,18 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             <MenuItem value="desc">Z to A (Descending)</MenuItem>
                         </Select>
                     </FormControl>
+                    {hasActiveFilters && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="inherit"
+                            startIcon={<X size={15} />}
+                            onClick={clearFilters}
+                            sx={{ borderRadius: 2, textTransform: "none", height: 40 }}
+                        >
+                            Clear
+                        </Button>
+                    )}
                 </Stack>
                 <Button
                     variant="contained"
