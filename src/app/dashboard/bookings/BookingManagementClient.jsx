@@ -1224,19 +1224,15 @@ ${periodHtml}
                     ['Hip', 'wskot_hip'],
                 ] : [
                     ['Lambai', 'qameez_lambai'],
-                    ['Bazoo', 'bazoo'],
                     ['Teera', 'teera'],
-                    ['Galla', 'galaa'],
-                    ['Chatti', 'chaati'],
-                    ['Kamar', 'kamar_around'],
-                    ['Ghera', 'gheera'],
-                    ['Shalwar', 'shalwar_lambai'],
-                    ['Poncha', 'puhncha'],
-                    ['Kaf', 'kaf'],
-                    ['Kandha', 'kandha'],
-                    ['Hip', 'hip_around'],
-                    ['S. Ghera', 'shalwar_gheera'],
+                    ['Bazu', 'bazoo'],
                     ['Chaati A', 'chaati_around'],
+                    ['Ghera A', 'gheera'],
+                    ['Galla', 'galaa'],
+                    ['Shalwar Lambai', 'shalwar_lambai'],
+                    ['Poncha', 'puhncha'],
+                    ['Shalwar', 'shalwar_gheera'],
+                    ['Ghera', 'hip_around'],
                 ];
 
                 const measureRowsHtml = measureFields.map(([label, key]) => {
@@ -1247,10 +1243,22 @@ ${periodHtml}
                     </tr>`;
                 }).join('');
 
-                const boxes = getStitchingBoxes(item);
-                const boxesHtml = Array.from({ length: Math.max(8, boxes.length) }, (_, i) => {
-                    const val = boxes[i] || '';
-                    return `<div class="sbox" style="${val ? 'font-weight:bold;font-size:12px;background:#f9fafb;display:flex;align-items:center;justify-content:center;border:1px solid #000;margin:3px;padding:6px;min-height:36px;text-align:center;' : 'border:1px solid #000;margin:3px;min-height:36px;'}">${val}</div>`;
+                const stitchBoxes = isWskot ? [] : [
+                    `Kandha${src.kandha ? `: ${src.kandha}` : ''}`,
+                    `Chaati${src.chaati ? `: ${src.chaati}` : ''}`,
+                    `Qamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                    `Ghera${src.gheera ? `: ${src.gheera}` : ''}`,
+                    `Kaf${src.kaf ? `: ${src.kaf}` : ''}`,
+                ];
+                
+                const options = getStitchingBoxes(item);
+                options.forEach(opt => {
+                    stitchBoxes.push(opt);
+                });
+
+                const boxesHtml = Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
+                    const val = stitchBoxes[i] || '';
+                    return `<div class="sbox" style="border:1px solid #000;margin:3px;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val}</div>`;
                 }).join('');
 
                 return `
@@ -1261,12 +1269,35 @@ ${periodHtml}
                     </div>
                     <div class="suit-body">
                         <div class="col-meas">
-                            <div class="col-hdr">Measurements — پیمائش</div>
-                            <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                            <div>
+                                <div class="col-hdr">Measurements — پیمائش</div>
+                                <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                            </div>
+                            ${!isWskot ? `
+                            <div class="pockets-section" style="border-top:1px solid #000;padding:6px;background:#fcfcfc;">
+                                <div style="text-align:center;font-weight:700;font-size:11px;margin-bottom:4px;color:#333;">Pockets</div>
+                                <table style="width:100%;border-collapse:collapse;text-align:center;font-size:10px;border:1px solid #000;">
+                                    <thead>
+                                        <tr style="background:#f0f0f0;">
+                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">F</th>
+                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">Side</th>
+                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">Shalwar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${item.pocketType === 'single' ? '1' : item.pocketType === 'double' ? '2' : (item.hasFrontPockets ? '1' : '')}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;"></td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${item.hasShalwarPocket ? '1' : ''}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            ` : ''}
                         </div>
                         <div class="col-stitch">
                             <div class="col-hdr">Stitching Details</div>
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);padding:4px;">
+                            <div style="display:flex;flex-direction:column;padding:4px;">
                                 ${boxesHtml}
                             </div>
                         </div>
@@ -1364,13 +1395,13 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .suit{border:1px solid #000;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
 .suit-hdr{background:#1a1a2e;color:#fff;padding:4px 8px;font-weight:700;font-size:12px;display:flex;justify-content:space-between}
 .suit-body{display:flex}
-.col-meas{flex:0 0 42%;border-right:1px solid #000}
+.col-meas{flex:0 0 42%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-stitch{flex:0 0 30%;border-right:1px solid #000}
 .col-notes{flex:1}
 .col-hdr{background:#f0f0f0;padding:5px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
 .mt{width:100%;border-collapse:collapse}
-.ml{padding:10px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
-.mv{padding:10px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
+.ml{padding:6px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
+.mv{padding:6px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:underline}
 .sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
 .nbox{border:1px solid #000;margin:5px;padding:8px;min-height:140px;font-size:13px;white-space:pre-wrap}
