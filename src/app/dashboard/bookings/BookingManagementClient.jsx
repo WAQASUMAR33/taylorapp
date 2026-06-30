@@ -1036,6 +1036,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const dateFrom = filterDateFrom || filterDeliveryFrom || null;
         const dateTo = filterDateTo || filterDeliveryTo || null;
 
+        const totalSuitsSum = bookings.reduce((sum, booking) => {
+            const qty = (booking.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+            return sum + qty;
+        }, 0);
+
         const rowsHtml = bookings.map((booking, idx) => {
             const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
             const totalQty = (booking.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
@@ -1109,7 +1114,11 @@ ${periodHtml}
     </thead>
     <tbody>${rowsHtml}</tbody>
     <tfoot>
-        <tr><td colspan="9">TOTAL (${bookings.length} bookings)</td></tr>
+        <tr style="background:#1a1a2e;color:#fff;font-weight:700;">
+            <td colspan="7" style="border:1px solid #555;padding:5px 6px;text-align:right;">TOTAL (${bookings.length} bookings):</td>
+            <td style="border:1px solid #555;padding:5px 6px;text-align:left;">${totalSuitsSum}</td>
+            <td style="border:1px solid #555;padding:5px 6px;"></td>
+        </tr>
     </tfoot>
 </table>
 <script>window.onload=()=>{window.print()}<\/script>
