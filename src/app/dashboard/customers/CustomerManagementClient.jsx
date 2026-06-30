@@ -841,6 +841,43 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             />
                         )}
                     />
+                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel id="sort-by-label">Sort By</InputLabel>
+                        <Select
+                            labelId="sort-by-label"
+                            label="Sort By"
+                            value={sortBy}
+                            onChange={(e) => {
+                                setSortBy(e.target.value);
+                                setPage(0);
+                            }}
+                            sx={{ borderRadius: 2, bgcolor: "background.paper" }}
+                        >
+                            <MenuItem value="createdAt">Date Created</MenuItem>
+                            <MenuItem value="name">Name</MenuItem>
+                            <MenuItem value="fatherName">Father's Name</MenuItem>
+                            <MenuItem value="measurementNo">Measurement No</MenuItem>
+                            <MenuItem value="balance">Balance</MenuItem>
+                            <MenuItem value="phone">Phone</MenuItem>
+                            <MenuItem value="address">Address</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 150 }}>
+                        <InputLabel id="sort-order-label">Sort Order</InputLabel>
+                        <Select
+                            labelId="sort-order-label"
+                            label="Sort Order"
+                            value={sortOrder}
+                            onChange={(e) => {
+                                setSortOrder(e.target.value);
+                                setPage(0);
+                            }}
+                            sx={{ borderRadius: 2, bgcolor: "background.paper" }}
+                        >
+                            <MenuItem value="asc">A to Z (Ascending)</MenuItem>
+                            <MenuItem value="desc">Z to A (Descending)</MenuItem>
+                        </Select>
+                    </FormControl>
                 </Stack>
                 <Button
                     variant="contained"
