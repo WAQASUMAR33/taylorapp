@@ -180,7 +180,7 @@ export default function SaleListClient({ initialBills }) {
         const totalRevenue = filtered.reduce((s, b) => s + parseFloat(b.total || 0), 0);
         const totalDiscount = filtered.reduce((s, b) => s + parseFloat(b.discount || 0), 0);
         const totalSubtotal = filtered.reduce((s, b) => s + parseFloat(b.subtotal || 0), 0);
-        const totalItems = filtered.reduce((s, b) => s + (b.items?.reduce((si, i) => si + i.quantity, 0) || 0), 0);
+        const totalItems = filtered.reduce((s, b) => s + (b.items?.reduce((si, i) => si + parseFloat(i.quantity || 0), 0) || 0), 0);
         const uniqueCustomers = new Set(filtered.filter(b => b.customerId).map(b => b.customerId)).size;
         const avgBill = filtered.length > 0 ? totalRevenue / filtered.length : 0;
         return { totalRevenue, totalDiscount, totalSubtotal, totalItems, uniqueCustomers, avgBill, count: filtered.length };

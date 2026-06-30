@@ -32,7 +32,7 @@ export default async function SaleListPage() {
     const bills = bookings.map((b) => {
         const items = b.items.map((i) => ({
             id: i.id,
-            quantity: i.quantity,
+            quantity: parseFloat(i.quantity.toString()),
             unitPrice: parseFloat(i.unitPrice.toString()),
             discount: parseFloat((i.discount || 0).toString()),
             total: parseFloat(i.totalPrice.toString()),
