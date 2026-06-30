@@ -56,7 +56,6 @@ const navItems = [
     { name: "Stitching Expense Titles", href: "/dashboard/stitching-expense-titles", icon: Tags, roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stitching Orders", href: "/dashboard/stitching-orders", icon: Scissors, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Stitching Option Pricing", href: "/dashboard/stitching-options", icon: SlidersHorizontal, roles: ["ADMIN", "MANAGER"] },
     { name: "User Management", href: "/dashboard/users", icon: Settings, roles: ["ADMIN"] },
     { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal, roles: ["ADMIN"] },
