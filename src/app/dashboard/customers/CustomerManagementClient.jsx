@@ -38,6 +38,7 @@ import {
     MenuItem,
     TablePagination,
     LinearProgress,
+    TableSortLabel,
 } from "@mui/material";
 import {
     Edit,
@@ -69,6 +70,17 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [filterCategory, setFilterCategory] = useState(null);
     const [filterMeasurementNo, setFilterMeasurementNo] = useState("");
     const [debouncedMeasurementNo, setDebouncedMeasurementNo] = useState("");
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState("createdAt");
+    const [sortOrder, setSortOrder] = useState("desc");
+
+    const handleRequestSort = (property) => {
+        const isAsc = sortBy === property && sortOrder === "asc";
+        setSortOrder(isAsc ? "desc" : "asc");
+        setSortBy(property);
+        setPage(0); // Reset page to first page when sort changes
+    };
 
     // Debounce search query
     useEffect(() => {
@@ -105,6 +117,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     search: debouncedSearch,
                     categoryId: filterCategory ? filterCategory.id.toString() : "",
                     measurementNo: debouncedMeasurementNo,
+                    sortBy,
+                    sortOrder,
                 });
                 const res = await fetch(`/api/customers?${queryParams.toString()}`);
                 if (res.ok && active) {
@@ -120,7 +134,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         };
 
         // Skip fetch on initial mount if page=0 and no filters, as initialCustomers is already populated.
-        const isInitial = page === 0 && rowsPerPage === 50 && !debouncedSearch && !filterCategory && !debouncedMeasurementNo;
+        const isInitial = page === 0 && rowsPerPage === 50 && !debouncedSearch && !filterCategory && !debouncedMeasurementNo && sortBy === "createdAt" && sortOrder === "desc";
         if (!isInitial || refreshTrigger > 0) {
             load();
         }
@@ -128,7 +142,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         return () => {
             active = false;
         };
-    }, [page, rowsPerPage, debouncedSearch, filterCategory, debouncedMeasurementNo, refreshTrigger]);
+    }, [page, rowsPerPage, debouncedSearch, filterCategory, debouncedMeasurementNo, sortBy, sortOrder, refreshTrigger]);
 
     const handlePageChange = (event, newPage) => {
         setPage(newPage);
@@ -370,41 +384,53 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setShowForm(true);
     };
 
-    const handleDelete = async (customerId) => {
-        if (!confirm("Are you sure you want to delete this customer?")) return;
+    // Secure delete dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState(null);
+    const [confirmName, setConfirmName] = useState("");
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleOpenDeleteDialog = (customer) => {
+        setCustomerToDelete(customer);
+        setConfirmName("");
+        setDeleteDialogOpen(true);
+    };
+
+    const handlePermanentDelete = async () => {
+        if (!customerToDelete || confirmName.trim() !== customerToDelete.name.trim()) return;
+        setDeleteLoading(true);
         setError("");
 
         try {
-            const response = await fetch(`/api/customers/${customerId}`, { method: "DELETE" });
+            const response = await fetch(`/api/customers/${customerToDelete.id}?cascade=true`, {
+                method: "DELETE",
+            });
 
             if (!response.ok) {
                 const data = await response.json();
-                if (response.status === 404) {
-                    setCustomers((prev) => prev.filter((c) => c.id !== customerId));
-                    setSuccessMessage("Customer was already deleted.");
-                    return;
-                }
                 throw new Error(data.error || "Failed to delete customer");
             }
 
-            const deletedCustomer = customers.find((c) => c.id === customerId);
-            if (deletedCustomer) {
-                setTotalCount((prev) => Math.max(0, prev - 1));
-                if (deletedCustomer.accountCategoryId) {
-                    setCategories((prev) => prev.map((cat) => {
-                        if (cat.id === deletedCustomer.accountCategoryId) {
-                            return { ...cat, _count: { ...cat._count, customers: Math.max(0, (cat._count?.customers || 0) - 1) } };
-                        }
-                        return cat;
-                    }));
-                }
+            setTotalCount((prev) => Math.max(0, prev - 1));
+            if (customerToDelete.accountCategoryId) {
+                setCategories((prev) => prev.map((cat) => {
+                    if (cat.id === customerToDelete.accountCategoryId) {
+                        return { ...cat, _count: { ...cat._count, customers: Math.max(0, (cat._count?.customers || 0) - 1) } };
+                    }
+                    return cat;
+                }));
             }
 
-            setCustomers((prev) => prev.filter((c) => c.id !== customerId));
+            setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
             setSuccessMessage("Customer deleted successfully!");
+            setDeleteDialogOpen(false);
+            setCustomerToDelete(null);
+            setConfirmName("");
             setRefreshTrigger((prev) => prev + 1);
         } catch (err) {
             setError(err.message);
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -768,7 +794,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                 justifyContent="space-between"
                 sx={{ mb: 3 }}
             >
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ flex: 1 }}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ flex: 1, flexWrap: "wrap" }}>
                     <TextField
                         placeholder="Name, phone, address, M#…"
                         variant="outlined"
@@ -777,7 +803,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         onChange={(e) => setSearchQuery(e.target.value)}
                         InputProps={{
                             startAdornment: (
-                                <InputAdornment position="start">
+                                <InputAdornment position="start" sx={{ color: "text.secondary", mr: 1 }}>
                                     <Search size={18} />
                                 </InputAdornment>
                             ),
@@ -792,7 +818,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         onChange={(e) => setFilterMeasurementNo(e.target.value)}
                         InputProps={{
                             startAdornment: (
-                                <InputAdornment position="start">
+                                <InputAdornment position="start" sx={{ color: "text.secondary", mr: 1 }}>
                                     <Ruler size={16} />
                                 </InputAdornment>
                             ),
@@ -840,11 +866,60 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                 <Table>
                     <TableHead sx={{ bgcolor: "action.hover" }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>M#</TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Balance</TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Phone</TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Address</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "name"}
+                                    direction={sortBy === "name" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("name")}
+                                >
+                                    Customer
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "fatherName"}
+                                    direction={sortBy === "fatherName" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("fatherName")}
+                                >
+                                    Father's Name
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "measurementNo"}
+                                    direction={sortBy === "measurementNo" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("measurementNo")}
+                                >
+                                    M#
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "balance"}
+                                    direction={sortBy === "balance" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("balance")}
+                                >
+                                    Balance
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "phone"}
+                                    direction={sortBy === "phone" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("phone")}
+                                >
+                                    Phone
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                                <TableSortLabel
+                                    active={sortBy === "address"}
+                                    direction={sortBy === "address" ? sortOrder : "asc"}
+                                    onClick={() => handleRequestSort("address")}
+                                >
+                                    Address
+                                </TableSortLabel>
+                            </TableCell>
                             <TableCell sx={{ fontWeight: 700, py: 1.5 }} align="center">Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -875,11 +950,6 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                 <Typography variant="subtitle2" fontWeight={600}>
                                                     {customer.name}
                                                 </Typography>
-                                                {customer.fatherName && (
-                                                    <Typography variant="caption" color="text.secondary" display="block">
-                                                        S/O: {customer.fatherName}
-                                                    </Typography>
-                                                )}
                                                 <Chip
                                                     label={customer.accountCategory?.name || "N/A"}
                                                     size="small"
@@ -887,6 +957,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                 />
                                             </Box>
                                         </Box>
+                                    </TableCell>
+
+                                    {/* Father's Name */}
+                                    <TableCell>
+                                        <Typography variant="body2">{customer.fatherName || "—"}</Typography>
                                     </TableCell>
 
                                     {/* Measurement No */}
@@ -981,7 +1056,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete">
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(customer.id)}>
+                                                <IconButton size="small" color="error" onClick={() => handleOpenDeleteDialog(customer)}>
                                                     <Trash2 size={17} />
                                                 </IconButton>
                                             </Tooltip>
@@ -991,7 +1066,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                                     <Users size={40} color="#d1d5db" />
                                     <Typography color="text.secondary" sx={{ mt: 1 }}>
                                         No customers found.
@@ -1293,6 +1368,61 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
                         {newCatLoading ? <CircularProgress size={20} color="inherit" /> : "Create Category"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Secure Delete Customer Dialog ─────────────────── */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", color: "error.main" }}>
+                    Permanently Delete Profile
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                    <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+                        This action is permanent and cannot be undone. All related measurements, bookings, bills, orders, and ledger records will be deleted.
+                    </Alert>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                        Please type the customer's name <strong>{customerToDelete?.name}</strong> to confirm.
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Type customer name to confirm"
+                        value={confirmName}
+                        onChange={(e) => setConfirmName(e.target.value)}
+                        disabled={deleteLoading}
+                        variant="outlined"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && confirmName.trim() === customerToDelete?.name?.trim() && !deleteLoading) {
+                                handlePermanentDelete();
+                            }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={deleteLoading}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handlePermanentDelete}
+                        disabled={confirmName.trim() !== customerToDelete?.name?.trim() || deleteLoading}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        {deleteLoading ? <CircularProgress size={20} color="inherit" /> : "Permanently Delete"}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -12,6 +12,68 @@ export async function DELETE(req, { params }) {
             );
         }
 
+        const { searchParams } = new URL(req.url);
+        const cascade = searchParams.get("cascade") === "true";
+
+        if (cascade) {
+            await prisma.$transaction(async (tx) => {
+                const customerIdInt = parseInt(id);
+
+                // 1. Delete stitching options mapping for booking items
+                // Get all bookings for this customer
+                const bookings = await tx.booking.findMany({
+                    where: { customerId: customerIdInt },
+                    select: { id: true }
+                });
+                const bookingIds = bookings.map(b => b.id);
+
+                if (bookingIds.length > 0) {
+                    // Delete booking item stitching options
+                    await tx.booking_item_stitching_option.deleteMany({
+                        where: {
+                            bookingItem: {
+                                bookingId: { in: bookingIds }
+                            }
+                        }
+                    });
+                    // Delete booking items
+                    await tx.booking_item.deleteMany({
+                        where: { bookingId: { in: bookingIds } }
+                    });
+                    // Delete booking staff
+                    await tx.booking_staff.deleteMany({
+                        where: { bookingId: { in: bookingIds } }
+                    });
+                }
+
+                // Delete measurements
+                await tx.measurement.deleteMany({ where: { customerId: customerIdInt } });
+
+                // Delete ledger entries
+                await tx.ledgerentry.deleteMany({ where: { customerId: customerIdInt } });
+
+                // Delete bookings
+                await tx.booking.deleteMany({ where: { customerId: customerIdInt } });
+
+                // Delete bills (this will also delete bill items if schema has Cascade)
+                // Wait, bill_item has Cascade onDelete in relation to bill
+                await tx.bill.deleteMany({ where: { customerId: customerIdInt } });
+
+                // Delete orders
+                await tx.order.deleteMany({ where: { customerId: customerIdInt } });
+
+                // Delete purchases where customer is the supplier
+                await tx.purchase.deleteMany({ where: { supplierId: customerIdInt } });
+
+                // Finally delete the customer
+                await tx.customer.delete({
+                    where: { id: customerIdInt },
+                });
+            });
+
+            return NextResponse.json({ message: "Customer and all related records deleted successfully" });
+        }
+
         // Check for related records that prevent deletion
         const customer = await prisma.customer.findUnique({
             where: { id: parseInt(id) },
@@ -76,6 +138,22 @@ export async function PUT(req, { params }) {
             );
         }
 
+        const trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
+        if (trimmedMeasurementNo) {
+            const existingMeasurementNo = await prisma.customer.findFirst({
+                where: {
+                    measurementNo: trimmedMeasurementNo,
+                    id: { not: parseInt(id) }
+                }
+            });
+            if (existingMeasurementNo) {
+                return NextResponse.json(
+                    { error: `Measurement Number '${trimmedMeasurementNo}' is already assigned to customer '${existingMeasurementNo.name}'` },
+                    { status: 400 }
+                );
+            }
+        }
+
         const updatedCustomer = await prisma.$transaction(async (tx) => {
             const existingCustomer = await tx.customer.findUnique({
                 where: { id: parseInt(id) }
@@ -106,7 +184,7 @@ export async function PUT(req, { params }) {
                 data: {
                     name,
                     fatherName,
-                    measurementNo: measurementNo !== undefined ? (measurementNo || null) : undefined,
+                    measurementNo: trimmedMeasurementNo,
                     phone,
                     email,
                     address,

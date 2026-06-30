@@ -13,12 +13,27 @@ export async function POST(req) {
             );
         }
 
+        const trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
+        if (trimmedMeasurementNo) {
+            const existingMeasurementNo = await prisma.customer.findFirst({
+                where: {
+                    measurementNo: trimmedMeasurementNo,
+                }
+            });
+            if (existingMeasurementNo) {
+                return NextResponse.json(
+                    { error: `Measurement Number '${trimmedMeasurementNo}' is already assigned to customer '${existingMeasurementNo.name}'` },
+                    { status: 400 }
+                );
+            }
+        }
+
         const customer = await prisma.$transaction(async (tx) => {
             const newCustomer = await tx.customer.create({
                 data: {
                     name,
                     fatherName,
-                    measurementNo: measurementNo || null,
+                    measurementNo: trimmedMeasurementNo,
                     phone,
                     email,
                     address,
@@ -78,10 +93,20 @@ export async function GET(req) {
         const search = searchParams.get("search") || "";
         const categoryId = searchParams.get("categoryId") || "";
         const measurementNo = searchParams.get("measurementNo") || "";
+        const sortBy = searchParams.get("sortBy") || "createdAt";
+        const sortOrder = searchParams.get("sortOrder") || "desc";
 
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 50;
         const skip = (pageNum - 1) * limitNum;
+
+        // Validate sortBy
+        const allowedSortFields = ["name", "fatherName", "measurementNo", "balance", "phone", "address", "createdAt"];
+        const orderField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+        const orderDirection = sortOrder === "asc" ? "asc" : "desc";
+
+        const orderBy = {};
+        orderBy[orderField] = orderDirection;
 
         // Base where condition to exclude cutters and tailors
         const where = {
@@ -142,7 +167,7 @@ export async function GET(req) {
                 include: {
                     accountCategory: true
                 },
-                orderBy: { createdAt: "desc" },
+                orderBy,
                 skip,
                 take: limitNum,
             }),
