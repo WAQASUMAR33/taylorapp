@@ -275,6 +275,7 @@ export async function POST(req) {
                     totalAmount: parseFloat(totalAmount),
                     advanceAmount: parseFloat(advanceAmount || 0),
                     remainingAmount: parseFloat(remainingAmount || totalAmount),
+                    billStatus: parseFloat(remainingAmount || totalAmount) <= 0 ? "Clear Bill" : "Partial Pending",
                     notes,
                     status: "PENDING",
                     staff: {
@@ -734,6 +735,7 @@ export async function PUT(req) {
             updateData.totalAmount = newTotal;
             updateData.advanceAmount = newAdvance;
             updateData.remainingAmount = newTotal - newAdvance;
+            updateData.billStatus = (newTotal - newAdvance) <= 0 ? "Clear Bill" : "Partial Pending";
 
             return await tx.booking.update({
                 where: { id: parseInt(id) },

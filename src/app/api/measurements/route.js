@@ -14,15 +14,64 @@ export async function GET(req) {
             return NextResponse.json(measurements);
         }
 
-        const measurements = await prisma.measurement.findMany({
-            include: {
-                customer: {
-                    select: { name: true, phone: true }
-                }
-            },
-            orderBy: { takenAt: "desc" },
-        });
-        return NextResponse.json(measurements);
+        const page = searchParams.get("page") || "1";
+        const limit = searchParams.get("limit") || "50";
+        const search = searchParams.get("search") || "";
+
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 50;
+        const skip = (pageNum - 1) * limitNum;
+
+        const where = {};
+
+        if (search) {
+            where.customer = {
+                OR: [
+                    { name: { contains: search } },
+                    { phone: { contains: search } },
+                    { address: { contains: search } },
+                    { measurementNo: { contains: search } },
+                    { fatherName: { contains: search } },
+                    { code: { contains: search } },
+                    {
+                        bookings: {
+                            some: {
+                                bookingNumber: { contains: search }
+                            }
+                        }
+                    }
+                ]
+            };
+        }
+
+        const [measurements, totalCount] = await Promise.all([
+            prisma.measurement.findMany({
+                where,
+                include: {
+                    customer: {
+                        select: {
+                            id: true,
+                            name: true,
+                            phone: true,
+                            fatherName: true,
+                            measurementNo: true,
+                            code: true,
+                            address: true,
+                            balance: true,
+                            accountCategory: {
+                                select: { name: true }
+                            }
+                        }
+                    }
+                },
+                orderBy: { takenAt: "desc" },
+                skip,
+                take: limitNum,
+            }),
+            prisma.measurement.count({ where })
+        ]);
+
+        return NextResponse.json({ measurements, totalCount });
     } catch (error) {
         console.error("Failed to fetch measurements:", error);
         return NextResponse.json(

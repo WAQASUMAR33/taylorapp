@@ -132,7 +132,7 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
                 <tbody>
                     {bookings.map((booking, idx) => {
                         const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
-                        const totalQty = (booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+                        const totalQty = (booking.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
                         return (
                             <tr key={booking.id} style={{ backgroundColor: idx % 2 === 0 ? '#f9f9f9' : 'white' }}>
                                 <td style={{ border: '1px solid #ddd', padding: '3px 6px', fontWeight: 700, color: '#7c3aed' }}>#{booking.bookingNumber || booking.id}</td>
@@ -242,12 +242,10 @@ function CustomerBill({ booking }) {
                                 <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{booking.customer.phone}</td>
                             </tr>
                         )}
-                        {booking.customer?.address && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9px' }}>{booking.customer.address}</td>
-                            </tr>
-                        )}
+                        <tr>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9.5px', fontWeight: '500' }}>{booking.customer?.address || '—'}</td>
+                        </tr>
                         {booking.customer?.measurementNo && (
                             <tr>
                                 <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Measurement No:</td>
@@ -513,12 +511,10 @@ function MergedCustomerBill({ bookings }) {
                                 <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{customer.phone}</td>
                             </tr>
                         )}
-                        {customer && customer.address && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9px' }}>{customer.address}</td>
-                            </tr>
-                        )}
+                        <tr>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9.5px', fontWeight: '500' }}>{customer ? (customer.address || '—') : 'Multiple Addresses'}</td>
+                        </tr>
                         {customer && customer.measurementNo && (
                             <tr>
                                 <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Measurement No:</td>
@@ -963,6 +959,60 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
+    // Payment Modal State
+    const [payDialogOpen, setPayDialogOpen] = useState(false);
+    const [payBooking, setPayBooking] = useState(null);
+    const [payReceived, setPayReceived] = useState("");
+    const [paying, setPaying] = useState(false);
+
+    const handleOpenPayDialog = (booking) => {
+        setPayBooking(booking);
+        setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
+        setPayDialogOpen(true);
+    };
+
+    const handlePaySubmit = async (workflow) => {
+        if (!payBooking) return;
+        setPaying(true);
+        setError("");
+        try {
+            const amount = parseFloat(payReceived) || 0;
+            if (amount < 0) {
+                throw new Error("Payment amount cannot be negative");
+            }
+            if (workflow === "FULL_PAY" && amount < parseFloat(payBooking.remainingAmount)) {
+                throw new Error("Full pay requires paying the entire remaining amount");
+            }
+
+            const res = await fetch("/api/bookings/pay", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    bookingId: payBooking.id,
+                    paymentAmount: amount,
+                    workflow
+                })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to process payment");
+            }
+
+            // Refresh bookings
+            const refreshRes = await fetch("/api/bookings");
+            const refreshed = await refreshRes.json();
+            setBookings(Array.isArray(refreshed) ? refreshed : []);
+
+            setSuccessMessage("Payment processed successfully!");
+            setPayDialogOpen(false);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setPaying(false);
+        }
+    };
+
     // View Modal State
     const [viewOpen, setViewOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -988,7 +1038,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
         const rowsHtml = bookings.map((booking, idx) => {
             const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
-            const totalQty = (booking.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+            const totalQty = (booking.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
             const bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff';
             return `<tr style="background:${bg}">
                 <td style="border:1px solid #ddd;padding:4px 6px;font-weight:700;color:#7c3aed">#${booking.bookingNumber || booking.id}</td>
@@ -1142,7 +1192,21 @@ ${periodHtml}
         const buildBookingHtml = (booking, meas) => {
             const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
             const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
-            const stitchingItems = (booking.items || []).filter(item => !item.productId).slice(0, 1);
+            const stitchingItems = (booking.items || []).filter(item => !item.productId);
+
+            const getStitchingBoxes = (item) => {
+                const boxes = [];
+                if (item.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
+                if (item.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
+                if (item.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
+                if (item.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
+                if (item.pocketType) boxes.push(item.pocketType === 'single' ? 'Pocket: Single' : 'Pocket: Double');
+                if (item.shalwarType) boxes.push(item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar');
+                if (item.hasFrontPockets) boxes.push('Front Pockets');
+                if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
+                (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
+                return boxes;
+            };
 
             const itemsHtml = stitchingItems.map((item, idx) => {
                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
@@ -1182,9 +1246,15 @@ ${periodHtml}
                         <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
                     </tr>`;
                 }).join('');
-                const emptyBoxesHtml = Array.from({ length: 8 }, () => `<div class="sbox"></div>`).join('');
+
+                const boxes = getStitchingBoxes(item);
+                const boxesHtml = Array.from({ length: Math.max(8, boxes.length) }, (_, i) => {
+                    const val = boxes[i] || '';
+                    return `<div class="sbox" style="${val ? 'font-weight:bold;font-size:12px;background:#f9fafb;display:flex;align-items:center;justify-content:center;border:1px solid #000;margin:3px;padding:6px;min-height:36px;text-align:center;' : 'border:1px solid #000;margin:3px;min-height:36px;'}">${val}</div>`;
+                }).join('');
+
                 return `
-                <div class="suit">
+                <div class="suit" style="margin-top:10px;">
                     <div class="suit-hdr">
                         <span>${isWskot ? 'Waistcoat' : 'Suit'} ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
                         <span>Qty: ${item.quantity || 1}</span>
@@ -1196,7 +1266,9 @@ ${periodHtml}
                         </div>
                         <div class="col-stitch">
                             <div class="col-hdr">Stitching Details</div>
-                            ${emptyBoxesHtml}
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);padding:4px;">
+                                ${boxesHtml}
+                            </div>
                         </div>
                         <div class="col-notes">
                             <div class="col-hdr">Notes</div>
@@ -1237,11 +1309,15 @@ ${periodHtml}
                         </tr>
                         <tr>
                             <td style="font-weight:700">Tailor:</td>
-                            <td>${tailors || '—'}</td>
+                            <td colspan="2">${tailors || '—'}</td>
                             <td style="font-weight:700">Cutter:</td>
-                            <td>${cutters || '—'}</td>
+                            <td colspan="2">${cutters || '—'}</td>
                             <td style="font-weight:700">Delivery:</td>
                             <td>${fmt(booking.deliveryDate)}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight:700">Address:</td>
+                            <td colspan="7">${booking.customer?.address || '—'}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -2725,10 +2801,11 @@ ${allBookingsHtml}
                                             sx={FIELD_SX} />
                                     </Grid>
                                     <Grid size={{ xs: 4 }}>
-                                        <TextField fullWidth size="small" label="Advance Amount" required disabled
+                                        <TextField fullWidth size="small" label="Advance Amount" required
                                             value={formData.advanceAmount}
+                                            onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                            sx={DISABLED_SX} />
+                                            sx={FIELD_SX} />
                                     </Grid>
                                     <Grid size={{ xs: 4 }}>
                                         <TextField fullWidth size="small" label="Remaining Amount" value={balanceAmount.toFixed(0)} disabled
@@ -2745,9 +2822,126 @@ ${allBookingsHtml}
     );
     // --- end formDialog ---
 
+    const paymentDialog = payBooking && (
+        <Dialog 
+            open={payDialogOpen} 
+            onClose={() => !paying && setPayDialogOpen(false)}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 3 } }}
+        >
+            <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
+                Receive Bill Payment
+            </DialogTitle>
+            <DialogContent sx={{ pt: 2.5 }}>
+                {error && (
+                    <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+                
+                <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2, mb: 2.5 }}>
+                    <Grid container spacing={1.5}>
+                        <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">BOOKING NO</Typography>
+                            <Typography variant="body2" fontWeight={700}>#{payBooking.bookingNumber || payBooking.id}</Typography>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">CUSTOMER</Typography>
+                            <Typography variant="body2" fontWeight={700}>{payBooking.customer?.name}</Typography>
+                        </Grid>
+                        
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">TOTAL AMOUNT</Typography>
+                            <Typography variant="body2" fontWeight={600}>Rs. {parseFloat(payBooking.totalAmount || 0).toLocaleString()}</Typography>
+                        </Grid>
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">DISCOUNT</Typography>
+                            <Typography variant="body2" fontWeight={600} color="error.main">
+                                Rs. {(payBooking.items || []).reduce((s, i) => s + parseFloat(i.discount || 0), 0).toLocaleString()}
+                            </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">ADVANCE PAID</Typography>
+                            <Typography variant="body2" fontWeight={600} color="success.main">Rs. {parseFloat(payBooking.advanceAmount || 0).toLocaleString()}</Typography>
+                        </Grid>
+                        
+                        <Grid size={{ xs: 12 }}>
+                            <Divider sx={{ my: 0.5 }} />
+                        </Grid>
+                        
+                        <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="text.primary">Current Balance Due:</Typography>
+                            <Typography variant="subtitle1" fontWeight={800} color="#b91c1c">
+                                Rs. {parseFloat(payBooking.remainingAmount || 0).toLocaleString()}
+                            </Typography>
+                        </Grid>
+                    </Grid>
+                </Box>
+
+                <TextField
+                    fullWidth
+                    label="Payment Amount Received"
+                    type="number"
+                    size="small"
+                    value={payReceived}
+                    onChange={(e) => setPayReceived(e.target.value)}
+                    InputProps={{
+                        startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
+                    }}
+                    sx={{ mb: 1 }}
+                />
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    <Button 
+                        fullWidth 
+                        variant="contained" 
+                        color="success" 
+                        disabled={paying}
+                        onClick={() => handlePaySubmit("FULL_PAY")}
+                        sx={{ textTransform: 'none', borderRadius: 2 }}
+                    >
+                        Full Pay
+                    </Button>
+                    <Button 
+                        fullWidth 
+                        variant="outlined" 
+                        color="success" 
+                        disabled={paying}
+                        onClick={() => handlePaySubmit("LESS_PAY")}
+                        sx={{ textTransform: 'none', borderRadius: 2 }}
+                    >
+                        Less Pay & Clear
+                    </Button>
+                </Box>
+                <Button 
+                    fullWidth 
+                    variant="contained" 
+                    color="primary" 
+                    disabled={paying}
+                    onClick={() => handlePaySubmit("PARTIAL_PAY")}
+                    sx={{ textTransform: 'none', borderRadius: 2 }}
+                >
+                    Partial Pay
+                </Button>
+                <Button 
+                    fullWidth 
+                    variant="text" 
+                    disabled={paying}
+                    onClick={() => setPayDialogOpen(false)}
+                    sx={{ textTransform: 'none', borderRadius: 2, color: 'text.secondary' }}
+                >
+                    Cancel
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+
     return (
         <Box sx={{ width: '100%', p: 3 }}>
             {formDialog}
+            {paymentDialog}
 
             {/* ── Page Header ── */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -3128,9 +3322,35 @@ ${allBookingsHtml}
                                     </TableCell>
                                     {/* Amount */}
                                     <TableCell align="right">
-                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>Rs.&nbsp;{parseFloat(booking.totalAmount).toFixed(0)}</Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{parseFloat(booking.advanceAmount).toFixed(0)}</Typography>
-                                        <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{parseFloat(booking.remainingAmount).toFixed(0)}</Typography>
+                                        {(() => {
+                                            const discountAmt = (booking.items || []).reduce((s, i) => s + parseFloat(i.discount || 0), 0);
+                                            return (
+                                                <>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Rs.&nbsp;{parseFloat(booking.totalAmount).toFixed(0)}</Typography>
+                                                    {discountAmt > 0 && (
+                                                        <Typography variant="caption" color="error.main" sx={{ display: 'block', fontWeight: 600 }}>
+                                                            Disc: Rs.&nbsp;{discountAmt.toFixed(0)}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{parseFloat(booking.advanceAmount).toFixed(0)}</Typography>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{parseFloat(booking.remainingAmount).toFixed(0)}</Typography>
+                                                    {booking.billStatus && (
+                                                        <Chip 
+                                                            label={booking.billStatus} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                mt: 0.5, 
+                                                                height: 18, 
+                                                                fontSize: '0.62rem', 
+                                                                fontWeight: 700, 
+                                                                bgcolor: booking.billStatus === "Clear Bill" ? "#d1fae5" : "#fee2e2", 
+                                                                color: booking.billStatus === "Clear Bill" ? "#065f46" : "#991b1b" 
+                                                            }} 
+                                                        />
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </TableCell>
                                     {/* Actions */}
                                     <TableCell align="right">
@@ -3141,6 +3361,13 @@ ${allBookingsHtml}
                                             <Tooltip title="Edit Booking">
                                                 <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
                                             </Tooltip>
+                                            {parseFloat(booking.remainingAmount) > 0 && (
+                                                <Tooltip title="Pay / Clear Bill">
+                                                    <IconButton size="small" sx={{ color: '#10b981' }} onClick={() => handleOpenPayDialog(booking)}>
+                                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
                                             <Tooltip title="Print">
                                                 <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
                                             </Tooltip>

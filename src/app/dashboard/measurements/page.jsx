@@ -12,49 +12,42 @@ export const metadata = {
 
 async function getMeasurements() {
     try {
-        const measurements = await prisma.measurement.findMany({
-            include: {
-                customer: {
-                    select: { id: true, name: true, phone: true }
-                }
-            },
-            orderBy: { takenAt: "desc" },
-        });
-        return JSON.parse(JSON.stringify(measurements));
+        const [measurements, totalCount] = await Promise.all([
+            prisma.measurement.findMany({
+                include: {
+                    customer: {
+                        select: {
+                            id: true,
+                            name: true,
+                            phone: true,
+                            fatherName: true,
+                            measurementNo: true,
+                            code: true,
+                            address: true,
+                            balance: true,
+                            accountCategory: {
+                                select: { name: true }
+                            }
+                        }
+                    }
+                },
+                orderBy: { takenAt: "desc" },
+                take: 50,
+            }),
+            prisma.measurement.count()
+        ]);
+        return {
+            measurements: JSON.parse(JSON.stringify(measurements)),
+            totalCount
+        };
     } catch (error) {
         console.error("Database error fetching measurements:", error);
-        return [];
-    }
-}
-
-async function getCustomers() {
-    try {
-        const customers = await prisma.customer.findMany({
-            include: {
-                accountCategory: true
-            },
-            orderBy: { name: "asc" },
-        });
-
-        // Filter out employee categories (Cutter, Tailor)
-        return customers.filter(c => {
-            const catName = c.accountCategory?.name?.toLowerCase() || "";
-            return !catName.includes("cutter") && !catName.includes("tailor");
-        }).map(c => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone || "",
-            address: c.address || ""
-        }));
-    } catch (error) {
-        console.error("Database error fetching customers:", error);
-        return [];
+        return { measurements: [], totalCount: 0 };
     }
 }
 
 export default async function MeasurementPage() {
-    const measurements = await getMeasurements();
-    const customers = await getCustomers();
+    const { measurements, totalCount } = await getMeasurements();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -92,7 +85,7 @@ export default async function MeasurementPage() {
             </Box>
 
             <Box sx={{ px: 3 }}>
-                <MeasurementManagementClient initialMeasurements={measurements} customers={customers} />
+                <MeasurementManagementClient initialMeasurements={measurements} initialTotalCount={totalCount} />
             </Box>
         </Box>
     );

@@ -49,6 +49,20 @@ const ENTRY_TYPES = [
     { label: "Credit (Payable)", value: "CREDIT" },
 ];
 
+const getBriefDescription = (desc) => {
+    if (!desc) return "—";
+    const bookingMatch = desc.match(/Booking\s+#?([a-zA-Z0-9-]+)/i);
+    const bookingRef = bookingMatch ? ` #${bookingMatch[1]}` : "";
+    
+    if (desc.toLowerCase().includes("payment") || desc.toLowerCase().includes("pay")) {
+        return `Payment Received${bookingRef}`;
+    }
+    if (desc.toLowerCase().includes("booking") || desc.toLowerCase().includes("stitching")) {
+        return `Suit Purchase${bookingRef}`;
+    }
+    return desc;
+};
+
 export default function LedgerManagementClient({ 
     initialEntries, 
     initialCustomers, 
@@ -82,6 +96,60 @@ export default function LedgerManagementClient({
     const [successMessage, setSuccessMessage] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+    // View Modal State (For Bookings Details click)
+    const [viewOpen, setViewOpen] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+
+    // Payment Modal State (For pay action button)
+    const [payDialogOpen, setPayDialogOpen] = useState(false);
+    const [payBooking, setPayBooking] = useState(null);
+    const [payReceived, setPayReceived] = useState("");
+    const [paying, setPaying] = useState(false);
+
+    const handleOpenPayDialog = (booking) => {
+        setPayBooking(booking);
+        setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
+        setPayDialogOpen(true);
+    };
+
+    const handlePaySubmit = async (workflow) => {
+        if (!payBooking) return;
+        setPaying(true);
+        setError("");
+        try {
+            const amount = parseFloat(payReceived) || 0;
+            if (amount < 0) {
+                throw new Error("Payment amount cannot be negative");
+            }
+            if (workflow === "FULL_PAY" && amount < parseFloat(payBooking.remainingAmount)) {
+                throw new Error("Full pay requires paying the entire remaining amount");
+            }
+
+            const res = await fetch("/api/bookings/pay", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    bookingId: payBooking.id,
+                    paymentAmount: amount,
+                    workflow
+                })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to process payment");
+            }
+
+            setSuccessMessage("Payment processed successfully!");
+            setPayDialogOpen(false);
+            setRefetchTrigger(prev => prev + 1); // Refresh ledger
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setPaying(false);
+        }
+    };
 
     const [formData, setFormData] = useState({
         customerId: "",
@@ -444,7 +512,8 @@ export default function LedgerManagementClient({
                             <TableRow sx={{ bgcolor: "action.hover" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Ref #</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Account</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Date / Description</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Prev Balance</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Debit</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Credit</TableCell>
@@ -501,11 +570,32 @@ export default function LedgerManagementClient({
                                                     </TableCell>
                                                     <TableCell>
                                                         <Typography variant="body2">
-                                                            {new Date(entry.entryDate).toLocaleDateString()}
+                                                            {new Date(entry.entryDate).toLocaleDateString('en-GB')}
                                                         </Typography>
-                                                        {entry.description && (
-                                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                                {entry.description}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {entry.booking ? (
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                onClick={() => {
+                                                                    setSelectedBooking(entry.booking);
+                                                                    setViewOpen(true);
+                                                                }}
+                                                                sx={{ 
+                                                                    cursor: 'pointer', 
+                                                                    color: 'primary.main', 
+                                                                    fontWeight: 600,
+                                                                    textDecoration: 'underline',
+                                                                    '&:hover': {
+                                                                        color: 'primary.dark'
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {getBriefDescription(entry.description)}
+                                                            </Typography>
+                                                        ) : (
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                {entry.description || "—"}
                                                             </Typography>
                                                         )}
                                                     </TableCell>
@@ -541,7 +631,17 @@ export default function LedgerManagementClient({
                                                     </TableCell>
                                                     <TableCell align="right">
                                                         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-
+                                                            {entry.booking && parseFloat(entry.booking.remainingAmount) > 0 && (
+                                                                <Tooltip title="Pay / Clear Bill">
+                                                                    <IconButton 
+                                                                        size="small" 
+                                                                        sx={{ color: '#10b981' }} 
+                                                                        onClick={() => handleOpenPayDialog(entry.booking)}
+                                                                    >
+                                                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            )}
                                                             <Tooltip title="Delete Entry">
                                                                 <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
                                                                     <Trash2 size={17} />
@@ -787,6 +887,236 @@ export default function LedgerManagementClient({
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* ── Payment and View Booking Dialogs ── */}
+            {payBooking && (
+                <Dialog 
+                    open={payDialogOpen} 
+                    onClose={() => !paying && setPayDialogOpen(false)}
+                    maxWidth="xs"
+                    fullWidth
+                    PaperProps={{ sx: { borderRadius: 3 } }}
+                >
+                    <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
+                        Receive Bill Payment
+                    </DialogTitle>
+                    <DialogContent sx={{ pt: 2.5 }}>
+                        {error && (
+                            <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                                {error}
+                            </Alert>
+                        )}
+                        
+                        <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2, mb: 2.5 }}>
+                            <Grid container spacing={1.5}>
+                                <Grid size={{ xs: 6 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">BOOKING NO</Typography>
+                                    <Typography variant="body2" fontWeight={700}>#{payBooking.bookingNumber || payBooking.id}</Typography>
+                                </Grid>
+                                <Grid size={{ xs: 6 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">CUSTOMER</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{payBooking.customer?.name}</Typography>
+                                </Grid>
+                                
+                                <Grid size={{ xs: 4 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">TOTAL AMOUNT</Typography>
+                                    <Typography variant="body2" fontWeight={600}>Rs. {parseFloat(payBooking.totalAmount || 0).toLocaleString()}</Typography>
+                                </Grid>
+                                <Grid size={{ xs: 4 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">DISCOUNT</Typography>
+                                    <Typography variant="body2" fontWeight={600} color="error.main">
+                                        Rs. {(payBooking.items || []).reduce((s, i) => s + parseFloat(i.discount || 0), 0).toLocaleString()}
+                                    </Typography>
+                                </Grid>
+                                <Grid size={{ xs: 4 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">ADVANCE PAID</Typography>
+                                    <Typography variant="body2" fontWeight={600} color="success.main">Rs. {parseFloat(payBooking.advanceAmount || 0).toLocaleString()}</Typography>
+                                </Grid>
+                                
+                                <Grid size={{ xs: 12 }}>
+                                    <Divider sx={{ my: 0.5 }} />
+                                </Grid>
+                                
+                                <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">Current Balance Due:</Typography>
+                                    <Typography variant="subtitle1" fontWeight={800} color="#b91c1c">
+                                        Rs. {parseFloat(payBooking.remainingAmount || 0).toLocaleString()}
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        </Box>
+
+                        <TextField
+                            fullWidth
+                            label="Payment Amount Received"
+                            type="number"
+                            size="small"
+                            value={payReceived}
+                            onChange={(e) => setPayReceived(e.target.value)}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
+                            }}
+                            sx={{ mb: 1 }}
+                        />
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                            <Button 
+                                fullWidth 
+                                variant="contained" 
+                                color="success" 
+                                disabled={paying}
+                                onClick={() => handlePaySubmit("FULL_PAY")}
+                                sx={{ textTransform: 'none', borderRadius: 2 }}
+                            >
+                                Full Pay
+                            </Button>
+                            <Button 
+                                fullWidth 
+                                variant="outlined" 
+                                color="success" 
+                                disabled={paying}
+                                onClick={() => handlePaySubmit("LESS_PAY")}
+                                sx={{ textTransform: 'none', borderRadius: 2 }}
+                            >
+                                Less Pay & Clear
+                            </Button>
+                        </Box>
+                        <Button 
+                            fullWidth 
+                            variant="contained" 
+                            color="primary" 
+                            disabled={paying}
+                            onClick={() => handlePaySubmit("PARTIAL_PAY")}
+                            sx={{ textTransform: 'none', borderRadius: 2 }}
+                        >
+                            Partial Pay
+                        </Button>
+                        <Button 
+                            fullWidth 
+                            variant="text" 
+                            disabled={paying}
+                            onClick={() => setPayDialogOpen(false)}
+                            sx={{ textTransform: 'none', borderRadius: 2, color: 'text.secondary' }}
+                        >
+                            Cancel
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {selectedBooking && (
+                <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="md" fullWidth dir="rtl">
+                    <DialogTitle sx={{ bgcolor: '#8b5cf6', color: 'white', py: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h6" fontWeight="bold" className="font-urdu">بکنگ کی تفصیلات</Typography>
+                            <IconButton onClick={() => setViewOpen(false)} sx={{ color: 'white' }}>
+                                <X size={20} />
+                            </IconButton>
+                        </Box>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3 }}>
+                        <Box sx={{ mt: 2 }}>
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <Card variant="outlined" sx={{ p: 2 }}>
+                                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">گاہک کی معلومات</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>نام:</strong> {selectedBooking.customer?.name}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>فون:</strong> {selectedBooking.customer?.phone}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>پتہ:</strong> {selectedBooking.customer?.address}</Typography>
+                                        {selectedBooking.billingCustomer && selectedBooking.billingCustomer.id !== selectedBooking.customerId && (
+                                            <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed #e5e7eb' }}>
+                                                <Typography variant="caption" color="#8b5cf6" fontWeight={700}>Billing Account</Typography>
+                                                <Typography variant="body2"><strong>Name:</strong> {selectedBooking.billingCustomer.name}</Typography>
+                                                <Typography variant="body2"><strong>Phone:</strong> {selectedBooking.billingCustomer.phone}</Typography>
+                                            </Box>
+                                        )}
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <Card variant="outlined" sx={{ p: 2 }}>
+                                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} className="font-urdu">آرڈر کی معلومات</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            <strong>بکنگ نمبر:</strong> {selectedBooking.id}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>تاریخ بکنگ:</strong> {new Date(selectedBooking.bookingDate).toLocaleDateString('en-GB')}</Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}><strong>ڈیلیوری کی تاریخ:</strong> {selectedBooking.deliveryDate ? new Date(selectedBooking.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
+                                        <Typography variant="body2"><strong>ٹرائل کی تاریخ:</strong> {selectedBooking.trialDate ? new Date(selectedBooking.trialDate).toLocaleDateString('en-GB') : '-'}</Typography>
+                                    </Card>
+                                </Grid>
+                            </Grid>
+
+                            <Divider sx={{ my: 3 }}><Typography>Products / Items</Typography></Divider>
+                            <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: '#f9fafb' }}>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>Stitching Options</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {selectedBooking.items?.map((item, idx) => {
+                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" };
+                                            const sc = statusColors[item.itemStatus || "PENDING"] || "#6b7280";
+                                            const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                                            const isStitch = (item.selectedOptions || []).length > 0 || !item.productId;
+                                            const itemType = isStitch ? (isWskot ? "Waistcoat" : "Suit") : "";
+                                            return (
+                                                <TableRow key={idx}>
+                                                    <TableCell sx={{ fontWeight: 600, verticalAlign: 'top' }}>
+                                                        {itemType ? `${itemType} ` : ""}{item.product?.name || (isStitch ? "Custom Stitching" : "Product")}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {(item.selectedOptions || []).length > 0 ? (
+                                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                                {item.selectedOptions.map(so => (
+                                                                    <Chip key={so.id} size="small"
+                                                                        label={`${so.stitchingOption?.name} – Rs.${parseFloat(so.price).toLocaleString()}`}
+                                                                        sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontSize: '0.7rem', height: 20 }} />
+                                                                ))}
+                                                            </Box>
+                                                        ) : (
+                                                            <Typography variant="caption" color="text.disabled">No options</Typography>
+                                                        )}
+                                                        {item.itemNote && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                                                                Note: {item.itemNote}
+                                                            </Typography>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell align="right">Rs. {parseFloat(item.totalPrice).toFixed(0)}</TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 2 }}>
+                                <Box sx={{ width: 250 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="body2">Total Amount:</Typography>
+                                        <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(selectedBooking.totalAmount).toFixed(2)}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="body2">Advance:</Typography>
+                                        <Typography variant="body2" fontWeight="bold">Rs. {parseFloat(selectedBooking.advanceAmount).toFixed(2)}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
+                                        <Typography variant="body2">Remaining:</Typography>
+                                        <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(selectedBooking.remainingAmount).toFixed(2)}</Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button onClick={() => setViewOpen(false)} variant="outlined" sx={{ color: '#8b5cf6', borderColor: '#8b5cf6', textTransform: 'none' }}>Close</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
 
             {/* ── Success Snackbar ────────────────────────── */}
             <Snackbar

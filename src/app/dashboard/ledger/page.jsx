@@ -21,6 +21,26 @@ export default async function LedgerPage() {
         include: {
             customer: true,
             purchase: true,
+            booking: {
+                include: {
+                    customer: true,
+                    items: {
+                        include: {
+                            product: true,
+                            selectedOptions: {
+                                include: {
+                                    stitchingOption: true
+                                }
+                            }
+                        }
+                    },
+                    staff: {
+                        include: {
+                            customer: true
+                        }
+                    }
+                }
+            }
         },
         orderBy: [
             { entryDate: "asc" },
@@ -104,6 +124,18 @@ export default async function LedgerPage() {
         purchase: entry.purchase ? {
             ...entry.purchase,
             totalAmount: entry.purchase.totalAmount.toString()
+        } : null,
+        booking: entry.booking ? {
+            ...entry.booking,
+            totalAmount: entry.booking.totalAmount.toString(),
+            advanceAmount: entry.booking.advanceAmount.toString(),
+            remainingAmount: entry.booking.remainingAmount.toString(),
+            items: (entry.booking.items || []).map(i => ({
+                ...i,
+                unitPrice: i.unitPrice.toString(),
+                totalPrice: i.totalPrice.toString(),
+                discount: i.discount.toString()
+            }))
         } : null
     }));
 

@@ -6,7 +6,7 @@ import {
     Paper, Button, IconButton, Avatar, Box, Typography, TextField,
     Grid, CircularProgress, Alert, Snackbar, Tooltip, Tabs, Tab,
     Divider, Autocomplete, Stack, Dialog, DialogTitle, DialogContent,
-    DialogActions, MenuItem, InputAdornment, Chip,
+    DialogActions, MenuItem, InputAdornment, Chip, TablePagination, LinearProgress,
 } from "@mui/material";
 import {
     Edit, Trash2, Search, Plus, User, Calendar, Ruler, Printer,
@@ -86,24 +86,167 @@ function MeasureField({ field, formData, onChange }) {
     );
 }
 
-export default function MeasurementManagementClient({ initialMeasurements = [], customers = [] }) {
+export default function MeasurementManagementClient({ initialMeasurements = [], initialTotalCount = 0 }) {
     const [measurements, setMeasurements] = useState(initialMeasurements || []);
+    const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
+    const [listLoading, setListLoading] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [modalTab, setModalTab] = useState(0);
 
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [formData, setFormData] = useState(EMPTY_FORM);
 
+    // Dynamic Customer Selection State
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
+    const [customerOptions, setCustomerOptions] = useState([]);
+    const [loadingCustomers, setLoadingCustomers] = useState(false);
+
+    // Customer History State
+    const [customerHistory, setCustomerHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(0); // Reset page on search change
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // Debounce customer search input
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedCustomerSearch(customerSearch);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [customerSearch]);
+
+    // Fetch measurements with pagination & search
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            setListLoading(true);
+            try {
+                const queryParams = new URLSearchParams({
+                    page: (page + 1).toString(),
+                    limit: rowsPerPage.toString(),
+                    search: debouncedSearch,
+                });
+                const res = await fetch(`/api/measurements?${queryParams.toString()}`);
+                if (res.ok && active) {
+                    const data = await res.json();
+                    setMeasurements(data.measurements || []);
+                    setTotalCount(data.totalCount || 0);
+                }
+            } catch (err) {
+                console.error("Error fetching measurements:", err);
+            } finally {
+                if (active) setListLoading(false);
+            }
+        };
+
+        const isInitial = page === 0 && rowsPerPage === 50 && !debouncedSearch;
+        if (!isInitial || refreshTrigger > 0) {
+            load();
+        }
+
+        return () => {
+            active = false;
+        };
+    }, [page, rowsPerPage, debouncedSearch, refreshTrigger]);
+
+    // Fetch customers dynamically when debounced search query changes
+    useEffect(() => {
+        let active = true;
+        const fetchCustomers = async () => {
+            setLoadingCustomers(true);
+            try {
+                const queryParams = new URLSearchParams({
+                    page: "1",
+                    limit: "20",
+                    search: debouncedCustomerSearch,
+                });
+                const res = await fetch(`/api/customers?${queryParams.toString()}`);
+                if (res.ok && active) {
+                    const data = await res.json();
+                    setCustomerOptions(data.customers || []);
+                }
+            } catch (err) {
+                console.error("Error searching customers:", err);
+            } finally {
+                if (active) setLoadingCustomers(false);
+            }
+        };
+
+        fetchCustomers();
+
+        return () => {
+            active = false;
+        };
+    }, [debouncedCustomerSearch]);
+
+    // Fetch customer history
+    useEffect(() => {
+        if (!selectedCustomer) {
+            setCustomerHistory([]);
+            return;
+        }
+
+        let active = true;
+        const fetchHistory = async () => {
+            setLoadingHistory(true);
+            try {
+                const res = await fetch(`/api/measurements?customerId=${selectedCustomer.id}`);
+                if (res.ok && active) {
+                    const data = await res.json();
+                    const filteredData = Array.isArray(data)
+                        ? data.filter((item) => !editMode || item.id !== selectedId)
+                        : [];
+                    setCustomerHistory(filteredData);
+                }
+            } catch (err) {
+                console.error("Error fetching customer history:", err);
+            } finally {
+                if (active) setLoadingHistory(false);
+            }
+        };
+
+        fetchHistory();
+
+        return () => {
+            active = false;
+        };
+    }, [selectedCustomer, editMode, selectedId]);
+
+    const handlePageChange = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleRowsPerPageChange = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
     const handleOpen = (m = null) => {
         setModalTab(0);
+        setCustomerHistory([]);
         if (m) {
             setEditMode(true);
             setSelectedId(m.id);
+            setSelectedCustomer(m.customer);
             setFormData({
                 customerId: m.customerId || "",
                 unit: m.unit || "in",
@@ -132,6 +275,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         } else {
             setEditMode(false);
             setSelectedId(null);
+            setSelectedCustomer(null);
             setFormData(EMPTY_FORM);
         }
         setError("");
@@ -143,6 +287,35 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleCopyHistory = (historyItem) => {
+        setFormData({
+            customerId: historyItem.customerId || "",
+            unit: historyItem.unit || "in",
+            notes: historyItem.notes || "",
+            qameez_lambai: historyItem.qameez_lambai || "",
+            bazoo: historyItem.bazoo || "",
+            teera: historyItem.teera || "",
+            galaa: historyItem.galaa || "",
+            chaati: historyItem.chaati || "",
+            gheera: historyItem.gheera || "",
+            kaf: historyItem.kaf || "",
+            shalwar_lambai: historyItem.shalwar_lambai || "",
+            puhncha: historyItem.puhncha || "",
+            shalwar_gheera: historyItem.shalwar_gheera || "",
+            chaati_around: historyItem.chaati_around || "",
+            kamar_around: historyItem.kamar_around || "",
+            hip_around: historyItem.hip_around || "",
+            kandha: historyItem.kandha || "",
+            wskot_lambai: historyItem.wskot_lambai || "",
+            wskot_teera: historyItem.wskot_teera || "",
+            wskot_gala: historyItem.wskot_gala || "",
+            wskot_chaati: historyItem.wskot_chaati || "",
+            wskot_kamar: historyItem.wskot_kamar || "",
+            wskot_hip: historyItem.wskot_hip || "",
+        });
+        setSuccessMessage("Previous measurements loaded into the form!");
     };
 
     const handleSubmit = async () => {
@@ -163,10 +336,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 throw new Error(d.error || `Failed to ${editMode ? "update" : "create"} measurement`);
             }
 
-            const refreshRes = await fetch("/api/measurements");
-            const refreshed = await refreshRes.json();
-            if (Array.isArray(refreshed)) setMeasurements(refreshed);
-
+            setRefreshTrigger((prev) => prev + 1);
             setSuccessMessage(`Measurement ${editMode ? "updated" : "added"} successfully!`);
             setOpen(false);
         } catch (err) {
@@ -185,6 +355,8 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 throw new Error(d.error || "Failed to delete");
             }
             setMeasurements((prev) => prev.filter((m) => m.id !== id));
+            setTotalCount((prev) => Math.max(0, prev - 1));
+            setRefreshTrigger((prev) => prev + 1);
             setSuccessMessage("Deleted successfully!");
         } catch (err) {
             alert(err.message);
@@ -248,13 +420,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         printWindow.document.close();
     };
 
-    const filteredMeasurements = (measurements || []).filter((m) => {
-        if (!m) return false;
-        const q = (searchQuery || "").toLowerCase();
-        const name = (m.customer?.name || "").toLowerCase();
-        const phone = String(m.customer?.phone || "");
-        return name.includes(q) || phone.includes(searchQuery || "");
-    });
+    const filteredMeasurements = measurements || [];
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>
@@ -262,17 +428,17 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             {/* ── Action Bar ─────────────────────────────────── */}
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} sx={{ mb: 3 }}>
                 <TextField
-                    placeholder="Search by customer name or phone..."
+                    placeholder="Search by Name, Phone, M#, Code, Father's Name or Booking#..."
                     variant="outlined"
                     size="small"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
                         startAdornment: (
-                            <InputAdornment position="start"><Search size={18} /></InputAdornment>
+                            <InputAdornment position="start" sx={{ color: "text.secondary", mr: 1 }}><Search size={18} /></InputAdornment>
                         ),
                     }}
-                    sx={{ minWidth: 300, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    sx={{ minWidth: 400, bgcolor: "background.paper", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
                 <Button
                     variant="contained"
@@ -288,8 +454,13 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             <TableContainer
                 component={Paper}
                 elevation={0}
-                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden" }}
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden", position: "relative" }}
             >
+                {listLoading && (
+                    <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}>
+                        <LinearProgress sx={{ height: 3 }} />
+                    </Box>
+                )}
                 <Table>
                     <TableHead sx={{ bgcolor: "action.hover" }}>
                         <TableRow>
@@ -314,6 +485,11 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                 </Avatar>
                                                 <Box>
                                                     <Typography variant="subtitle2" fontWeight={600}>{m.customer?.name}</Typography>
+                                                    {m.customer?.fatherName && (
+                                                        <Typography variant="caption" color="text.secondary" display="block">
+                                                            S/O: {m.customer.fatherName}
+                                                        </Typography>
+                                                    )}
                                                     <Typography variant="caption" color="text.secondary" display="block">{m.customer?.phone}</Typography>
                                                 </Box>
                                             </Box>
@@ -378,6 +554,21 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 </Table>
             </TableContainer>
 
+            <TablePagination
+                component="div"
+                count={totalCount}
+                page={page}
+                onPageChange={handlePageChange}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleRowsPerPageChange}
+                rowsPerPageOptions={[25, 50, 100]}
+                sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                }}
+            />
+
             {/* ── Add / Edit Measurement Dialog ────────────────── */}
             <Dialog
                 open={open}
@@ -397,153 +588,266 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                         </Alert>
                     )}
 
-                    {/* Customer & Unit row */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Autocomplete
-                                fullWidth
-                                size="small"
-                                options={customers || []}
-                                getOptionLabel={(o) => o ? `${o.name || ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
-                                value={(customers || []).find((c) => c && c.id === formData.customerId) || null}
-                                onChange={(_, newValue) =>
-                                    setFormData((prev) => ({ ...prev, customerId: newValue ? newValue.id : "" }))
-                                }
-                                disabled={editMode}
-                                sx={{ minWidth: 300 }}
-                                ListboxProps={{ style: { minWidth: 300 } }}
-                                filterOptions={(options, { inputValue }) => {
-                                    const q = (inputValue || "").toLowerCase();
-                                    return (options || []).filter((o) =>
-                                        o && ((o.name || "").toLowerCase().includes(q) || String(o.phone || "").includes(q))
-                                    );
-                                }}
-                                renderOption={(props, option) => option ? (
-                                    <Box component="li" {...props} sx={{ borderBottom: "1px solid", borderColor: "divider", py: 1 }}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                            <Box sx={{ p: 0.75, bgcolor: "primary.light", borderRadius: 1.5, color: "primary.main" }}>
-                                                <User size={16} />
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
-                                                <Stack direction="row" spacing={1.5}>
-                                                    {option.phone && (
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                                                            <Phone size={11} color="#9ca3af" />
-                                                            <Typography variant="caption" color="text.secondary">{option.phone}</Typography>
-                                                        </Box>
-                                                    )}
-                                                    {option.address && (
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                                                            <MapPin size={11} color="#9ca3af" />
-                                                            <Typography variant="caption" color="text.secondary">{option.address}</Typography>
-                                                        </Box>
-                                                    )}
-                                                </Stack>
-                                            </Box>
+                    {/* Customer search selection row */}
+                    <Box sx={{ mb: 3 }}>
+                        <Autocomplete
+                            fullWidth
+                            size="small"
+                            options={customerOptions}
+                            getOptionLabel={(o) => o ? `${o.name || ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
+                            value={selectedCustomer}
+                            onChange={(_, newValue) => {
+                                setSelectedCustomer(newValue);
+                                setFormData((prev) => ({ ...prev, customerId: newValue ? newValue.id : "" }));
+                            }}
+                            onInputChange={(_, newInputValue) => {
+                                setCustomerSearch(newInputValue);
+                            }}
+                            disabled={editMode}
+                            loading={loadingCustomers}
+                            filterOptions={(x) => x}
+                            renderOption={(props, option) => option ? (
+                                <Box component="li" {...props} key={option.id} sx={{ borderBottom: "1px solid", borderColor: "divider", py: 1 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                        <Box sx={{ p: 0.75, bgcolor: "primary.light", borderRadius: 1.5, color: "primary.main" }}>
+                                            <User size={16} />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                            <Stack direction="row" spacing={1.5}>
+                                                {option.phone && (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                        <Phone size={11} color="#9ca3af" />
+                                                        <Typography variant="caption" color="text.secondary">{option.phone}</Typography>
+                                                    </Box>
+                                                )}
+                                                {option.address && (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                        <MapPin size={11} color="#9ca3af" />
+                                                        <Typography variant="caption" color="text.secondary">{option.address}</Typography>
+                                                    </Box>
+                                                )}
+                                            </Stack>
                                         </Box>
                                     </Box>
-                                ) : null}
-                                renderInput={(params) => (
-                                    <TextField {...params} label="Select Customer" variant="outlined" required placeholder="Search customer..." />
-                                )}
-                            />
-                        </Grid>
-
-                        {formData.customerId && (
-                            <Grid size={{ xs: 12, md: 3 }}>
-                                <TextField
-                                    fullWidth
-                                    select
-                                    size="small"
-                                    label="Unit"
-                                    name="unit"
-                                    value={formData.unit}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                    sx={{ minWidth: 150 }}
-                                >
-                                    <MenuItem value="in">Inches (in)</MenuItem>
-                                    <MenuItem value="cm">Centimeters (cm)</MenuItem>
-                                </TextField>
-                            </Grid>
-                        )}
-                    </Grid>
+                                </Box>
+                            ) : null}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Select Customer" 
+                                    variant="outlined" 
+                                    required 
+                                    placeholder="Search by Name, Phone, M# or Father's Name..." 
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {loadingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                    }}
+                                />
+                            )}
+                        />
+                    </Box>
 
                     {/* Prompt if no customer selected */}
-                    {!formData.customerId ? (
+                    {!selectedCustomer ? (
                         <Box sx={{ py: 8, textAlign: "center", bgcolor: "action.hover", borderRadius: 3, border: "2px dashed", borderColor: "divider" }}>
                             <User size={44} color="#d1d5db" />
                             <Typography color="text.secondary" variant="h6" sx={{ mt: 1 }}>Select a customer to continue</Typography>
-                            <Typography color="text.secondary" variant="body2">Measurement fields will appear once a customer is selected.</Typography>
+                            <Typography color="text.secondary" variant="body2">Measurement fields and history will appear once a customer is selected.</Typography>
                         </Box>
                     ) : (
-                        <>
-                            <Divider sx={{ my: 2 }} />
-
-                            {/* Tabs */}
-                            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-                                <Tabs value={modalTab} onChange={(_, v) => setModalTab(v)}>
-                                    <Tab icon={<Shirt size={17} />} iconPosition="start" label="شلوار قمیض" sx={{ fontWeight: 700 }} />
-                                    <Tab icon={<Square size={17} />} iconPosition="start" label="واسکٹ" sx={{ fontWeight: 700 }} />
-                                </Tabs>
-                            </Box>
-
-                            {/* ── Shalwar Qameez Tab ─────────────────── */}
-                            {modalTab === 0 && (
-                                <Box>
-                                    {/* Qameez section */}
-                                    <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
-                                        قمیض (Shirt)
-                                    </Typography>
-                                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                                        {SQ_QAMEEZ_FIELDS.map((f) => (
-                                            <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
-                                        ))}
-                                    </Grid>
-
-                                    {/* Shalwar section */}
-                                    <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
-                                        شلوار (Trouser)
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                        {SQ_SHALWAR_FIELDS.map((f) => (
-                                            <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
-                                        ))}
-                                    </Grid>
+                        <Grid container spacing={3}>
+                            {/* Left Side: Measurement Form */}
+                            <Grid size={{ xs: 12, md: 8 }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                    <Typography variant="h6" fontWeight={700}>Measurement Values</Typography>
+                                    <TextField
+                                        select
+                                        size="small"
+                                        label="Unit"
+                                        name="unit"
+                                        value={formData.unit}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                        sx={{ minWidth: 150 }}
+                                    >
+                                        <MenuItem value="in">Inches (in)</MenuItem>
+                                        <MenuItem value="cm">Centimeters (cm)</MenuItem>
+                                    </TextField>
                                 </Box>
-                            )}
 
-                            {/* ── Waistcoat Tab ──────────────────────── */}
-                            {modalTab === 1 && (
-                                <Box>
-                                    <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
-                                        واسکٹ (Waistcoat)
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                        {WAISTCOAT_FIELDS.map((f) => (
-                                            <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
-                                        ))}
-                                    </Grid>
+                                <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+                                    <Tabs value={modalTab} onChange={(_, v) => setModalTab(v)}>
+                                        <Tab icon={<Shirt size={17} />} iconPosition="start" label="شلوار قمیض" sx={{ fontWeight: 700 }} />
+                                        <Tab icon={<Square size={17} />} iconPosition="start" label="واسکٹ" sx={{ fontWeight: 700 }} />
+                                    </Tabs>
                                 </Box>
-                            )}
 
-                            {/* Notes */}
-                            <Box sx={{ mt: 3 }}>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="Additional Notes"
-                                    name="notes"
-                                    placeholder="Enter any additional instructions..."
-                                    multiline
-                                    rows={3}
-                                    value={formData.notes}
-                                    onChange={handleInputChange}
-                                    variant="outlined"
-                                />
-                            </Box>
-                        </>
+                                {/* Shalwar Qameez Tab */}
+                                {modalTab === 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
+                                            قمیض (Shirt)
+                                        </Typography>
+                                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                                            {SQ_QAMEEZ_FIELDS.map((f) => (
+                                                <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
+                                            ))}
+                                        </Grid>
+
+                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
+                                            شلوار (Trouser)
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {SQ_SHALWAR_FIELDS.map((f) => (
+                                                <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                {/* Waistcoat Tab */}
+                                {modalTab === 1 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
+                                            واسکٹ (Waistcoat)
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {WAISTCOAT_FIELDS.map((f) => (
+                                                <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                <Box sx={{ mt: 3 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Additional Notes"
+                                        name="notes"
+                                        placeholder="Enter any additional instructions..."
+                                        multiline
+                                        rows={2}
+                                        value={formData.notes}
+                                        onChange={handleInputChange}
+                                        variant="outlined"
+                                    />
+                                </Box>
+                            </Grid>
+
+                            {/* Right Side: Profile & History */}
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <Paper variant="outlined" sx={{ p: 2, bgcolor: "action.hover", borderRadius: 2, border: "1px solid", borderColor: "divider", height: "100%", display: "flex", flexDirection: "column" }}>
+                                    {/* Profile */}
+                                    <Typography variant="subtitle1" fontWeight={700} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <User size={18} />
+                                        Customer Profile
+                                    </Typography>
+                                    <Divider sx={{ my: 1 }} />
+                                    
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>NAME</Typography>
+                                            <Typography variant="body2" fontWeight={700}>{selectedCustomer.name}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>FATHER'S NAME</Typography>
+                                            <Typography variant="body2" fontWeight={600}>{selectedCustomer.fatherName || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>MEASUREMENT NO (M#)</Typography>
+                                            <Typography variant="body2" fontWeight={700} color="primary.main">{selectedCustomer.measurementNo || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>CODE</Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{selectedCustomer.code || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>PHONE</Typography>
+                                            <Typography variant="body2">{selectedCustomer.phone || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>CATEGORY</Typography>
+                                            <Chip label={selectedCustomer.accountCategory?.name || "N/A"} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>BALANCE</Typography>
+                                            <Typography variant="body2" fontWeight={700} color={parseFloat(selectedCustomer.balance) >= 0 ? "success.main" : "error.main"}>
+                                                Rs. {Math.abs(parseFloat(selectedCustomer.balance || 0)).toFixed(2)}
+                                                {parseFloat(selectedCustomer.balance || 0) > 0 ? " (Cr)" : parseFloat(selectedCustomer.balance || 0) < 0 ? " (Dr)" : ""}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", flexDirection: "column" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5 }}>ADDRESS</Typography>
+                                            <Typography variant="body2" color="text.primary" sx={{ bgcolor: "background.paper", p: 1, borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                                                {selectedCustomer.address || "—"}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+
+                                    {/* History */}
+                                    <Typography variant="subtitle1" fontWeight={700} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <Calendar size={18} />
+                                        Past Measurements
+                                    </Typography>
+                                    <Divider sx={{ my: 1 }} />
+
+                                    <Box sx={{ flexGrow: 1, overflowY: "auto", maxHeight: 300 }}>
+                                        {loadingHistory ? (
+                                            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                                                <CircularProgress size={24} />
+                                            </Box>
+                                        ) : customerHistory.length === 0 ? (
+                                            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+                                                No previous measurement records found.
+                                            </Typography>
+                                        ) : (
+                                            <Stack spacing={1.5} sx={{ py: 1 }}>
+                                                {customerHistory.map((item) => (
+                                                    <Paper key={item.id} variant="outlined" sx={{ p: 1.5, bgcolor: "background.paper", display: "flex", flexDirection: "column", gap: 1 }}>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                {new Date(item.takenAt).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="primary.main" fontWeight={600} sx={{ textTransform: "uppercase" }}>
+                                                                Unit: {item.unit}
+                                                            </Typography>
+                                                        </Box>
+                                                        
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3 }}>
+                                                            {[
+                                                                item.qameez_lambai && `Length: ${item.qameez_lambai}`,
+                                                                item.bazoo && `Bazoo: ${item.bazoo}`,
+                                                                item.teera && `Teera: ${item.teera}`,
+                                                                item.chaati && `Chest: ${item.chaati}`,
+                                                                item.wskot_lambai && `W-Length: ${item.wskot_lambai}`,
+                                                            ].filter(Boolean).join(", ")}
+                                                        </Typography>
+
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="secondary"
+                                                            startIcon={<Ruler size={13} />}
+                                                            onClick={() => handleCopyHistory(item)}
+                                                            sx={{ borderRadius: 1.5, textTransform: "none", fontSize: "0.75rem", py: 0.5, mt: 0.5 }}
+                                                        >
+                                                            Use These Values
+                                                        </Button>
+                                                    </Paper>
+                                                ))}
+                                            </Stack>
+                                        )}
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                        </Grid>
                     )}
                 </DialogContent>
 
