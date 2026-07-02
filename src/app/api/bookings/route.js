@@ -250,14 +250,23 @@ export async function POST(req) {
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth(); // 0-indexed
-            const startOfMonth = new Date(year, month, 1);
-            const startOfNextMonth = new Date(year, month + 1, 1);
-            const countThisMonth = await tx.booking.count({
-                where: { bookingDate: { gte: startOfMonth, lt: startOfNextMonth } }
-            });
             const mm = String(month + 1).padStart(2, "0");
-            const seq = String(countThisMonth + 1).padStart(4, "0");
-            const bookingNumber = `${year}${mm}-${seq}`;
+            const prefix = `${year}${mm}-`;
+
+            // Find the last booking number for this month by looking at bookingNumber prefix
+            const lastBooking = await tx.booking.findFirst({
+                where: { bookingNumber: { startsWith: prefix } },
+                orderBy: { bookingNumber: "desc" },
+                select: { bookingNumber: true }
+            });
+
+            let nextSeq = 1;
+            if (lastBooking) {
+                const lastSeq = parseInt(lastBooking.bookingNumber.split("-")[1], 10);
+                nextSeq = lastSeq + 1;
+            }
+            const seq = String(nextSeq).padStart(4, "0");
+            const bookingNumber = `${prefix}${seq}`;
 
             // 1. Create the booking
             const booking = await tx.booking.create({
