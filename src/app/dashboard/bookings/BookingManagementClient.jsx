@@ -2330,195 +2330,205 @@ ${allBookingsHtml}
                         </Box>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={2}>
-                                {/* Name Autocomplete */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
-                                    <Autocomplete
-                                        options={customerOptions}
-                                        getOptionLabel={(option) => option.name || ""}
-                                        value={selectedCust}
-                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
-                                        onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") setCustomerSearchInput(newInputValue);
-                                        }}
-                                        loading={searchingCustomers}
-                                        renderOption={(props, option) => {
-                                            const { key, ...rest } = props;
-                                            return (
-                                                <li key={key} {...rest}>
-                                                    <Box sx={{ py: 0.3 }}>
-                                                        <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
-                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                </li>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Name *"
-                                                size="small"
-                                                fullWidth
-                                                required
-                                                sx={FIELD_SX}
+                                {/* Customer Autocompletes in a single row */}
+                                <Grid size={{ xs: 12 }}>
+                                    <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', lg: 'row' }, width: '100%', alignItems: 'center' }}>
+                                        {/* Name Autocomplete */}
+                                        <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                            <Autocomplete
+                                                options={customerOptions}
+                                                getOptionLabel={(option) => option.name || ""}
+                                                filterOptions={(x) => x}
+                                                value={selectedCust}
+                                                onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                                onInputChange={(event, newInputValue, reason) => {
+                                                    if (reason === "input") setCustomerSearchInput(newInputValue);
+                                                }}
+                                                loading={searchingCustomers}
+                                                renderOption={(props, option) => {
+                                                    const { key, ...rest } = props;
+                                                    return (
+                                                        <li key={key} {...rest}>
+                                                            <Box sx={{ py: 0.3 }}>
+                                                                <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                    {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
+                                                                    {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                                    {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                                </Box>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Name *"
+                                                        size="small"
+                                                        fullWidth
+                                                        required
+                                                        sx={FIELD_SX}
+                                                    />
+                                                )}
                                             />
-                                        )}
-                                    />
-                                </Grid>
+                                        </Box>
 
-                                {/* Father Name Autocomplete */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
-                                    <Autocomplete
-                                        options={customerOptions}
-                                        getOptionLabel={(option) => option.fatherName || ""}
-                                        value={selectedCust}
-                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
-                                        onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") setCustomerSearchInput(newInputValue);
-                                        }}
-                                        loading={searchingCustomers}
-                                        renderOption={(props, option) => {
-                                            const { key, ...rest } = props;
-                                            return (
-                                                <li key={key} {...rest}>
-                                                    <Box sx={{ py: 0.3 }}>
-                                                        <Typography variant="body2" fontWeight={600}>{option.fatherName || "—"}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
-                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                </li>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Father Name"
-                                                size="small"
-                                                fullWidth
-                                                sx={FIELD_SX}
+                                        {/* Father Name Autocomplete */}
+                                        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                            <Autocomplete
+                                                options={customerOptions}
+                                                getOptionLabel={(option) => option.fatherName || ""}
+                                                filterOptions={(x) => x}
+                                                value={selectedCust}
+                                                onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                                onInputChange={(event, newInputValue, reason) => {
+                                                    if (reason === "input") setCustomerSearchInput(newInputValue);
+                                                }}
+                                                loading={searchingCustomers}
+                                                renderOption={(props, option) => {
+                                                    const { key, ...rest } = props;
+                                                    return (
+                                                        <li key={key} {...rest}>
+                                                            <Box sx={{ py: 0.3 }}>
+                                                                <Typography variant="body2" fontWeight={600}>{option.fatherName || "—"}</Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                    {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                                    {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                                    {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                                </Box>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Father Name"
+                                                        size="small"
+                                                        fullWidth
+                                                        sx={FIELD_SX}
+                                                    />
+                                                )}
                                             />
-                                        )}
-                                    />
-                                </Grid>
+                                        </Box>
 
-                                {/* Phone Number Autocomplete */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
-                                    <Autocomplete
-                                        options={customerOptions}
-                                        getOptionLabel={(option) => option.phone || ""}
-                                        value={selectedCust}
-                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
-                                        onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") setCustomerSearchInput(newInputValue);
-                                        }}
-                                        loading={searchingCustomers}
-                                        renderOption={(props, option) => {
-                                            const { key, ...rest } = props;
-                                            return (
-                                                <li key={key} {...rest}>
-                                                    <Box sx={{ py: 0.3 }}>
-                                                        <Typography variant="body2" fontWeight={600}>{option.phone || "—"}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
-                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
-                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                </li>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Phone Number"
-                                                size="small"
-                                                fullWidth
-                                                sx={FIELD_SX}
+                                        {/* Phone Number Autocomplete */}
+                                        <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                            <Autocomplete
+                                                options={customerOptions}
+                                                getOptionLabel={(option) => option.phone || ""}
+                                                filterOptions={(x) => x}
+                                                value={selectedCust}
+                                                onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                                onInputChange={(event, newInputValue, reason) => {
+                                                    if (reason === "input") setCustomerSearchInput(newInputValue);
+                                                }}
+                                                loading={searchingCustomers}
+                                                renderOption={(props, option) => {
+                                                    const { key, ...rest } = props;
+                                                    return (
+                                                        <li key={key} {...rest}>
+                                                            <Box sx={{ py: 0.3 }}>
+                                                                <Typography variant="body2" fontWeight={600}>{option.phone || "—"}</Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                    {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                                    {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
+                                                                    {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                                </Box>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Phone Number"
+                                                        size="small"
+                                                        fullWidth
+                                                        sx={FIELD_SX}
+                                                    />
+                                                )}
                                             />
-                                        )}
-                                    />
-                                </Grid>
+                                        </Box>
 
-                                {/* Address Autocomplete */}
-                                <Grid size={{ xs: 12, sm: 8 }}>
-                                    <Autocomplete
-                                        options={customerOptions}
-                                        getOptionLabel={(option) => option.address || ""}
-                                        value={selectedCust}
-                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
-                                        onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") setCustomerSearchInput(newInputValue);
-                                        }}
-                                        loading={searchingCustomers}
-                                        renderOption={(props, option) => {
-                                            const { key, ...rest } = props;
-                                            return (
-                                                <li key={key} {...rest}>
-                                                    <Box sx={{ py: 0.3 }}>
-                                                        <Typography variant="body2" fontWeight={600}>{option.address || "—"}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
-                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                </li>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Address"
-                                                size="small"
-                                                fullWidth
-                                                sx={FIELD_SX}
+                                        {/* Address Autocomplete */}
+                                        <Box sx={{ flex: 1.6, minWidth: 0, width: '100%' }}>
+                                            <Autocomplete
+                                                options={customerOptions}
+                                                getOptionLabel={(option) => option.address || ""}
+                                                filterOptions={(x) => x}
+                                                value={selectedCust}
+                                                onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                                onInputChange={(event, newInputValue, reason) => {
+                                                    if (reason === "input") setCustomerSearchInput(newInputValue);
+                                                }}
+                                                loading={searchingCustomers}
+                                                renderOption={(props, option) => {
+                                                    const { key, ...rest } = props;
+                                                    return (
+                                                        <li key={key} {...rest}>
+                                                            <Box sx={{ py: 0.3 }}>
+                                                                <Typography variant="body2" fontWeight={600}>{option.address || "—"}</Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                    {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                                    {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                                    {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                                </Box>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Address"
+                                                        size="small"
+                                                        fullWidth
+                                                        sx={FIELD_SX}
+                                                    />
+                                                )}
                                             />
-                                        )}
-                                    />
-                                </Grid>
+                                        </Box>
 
-                                {/* Measurement No Autocomplete */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
-                                    <Autocomplete
-                                        options={customerOptions}
-                                        getOptionLabel={(option) => option.measurementNo || ""}
-                                        value={selectedCust}
-                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
-                                        onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") setCustomerSearchInput(newInputValue);
-                                        }}
-                                        loading={searchingCustomers}
-                                        renderOption={(props, option) => {
-                                            const { key, ...rest } = props;
-                                            return (
-                                                <li key={key} {...rest}>
-                                                    <Box sx={{ py: 0.3 }}>
-                                                        <Typography variant="body2" fontWeight={700} color="primary.main">M# {option.measurementNo || "—"}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
-                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
-                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                </li>
-                                            );
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Measurement No"
-                                                size="small"
-                                                fullWidth
-                                                sx={FIELD_SX}
+                                        {/* Measurement No Autocomplete */}
+                                        <Box sx={{ flex: 0.8, minWidth: 0, width: '100%' }}>
+                                            <Autocomplete
+                                                options={customerOptions}
+                                                getOptionLabel={(option) => option.measurementNo || ""}
+                                                filterOptions={(x) => x}
+                                                value={selectedCust}
+                                                onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                                onInputChange={(event, newInputValue, reason) => {
+                                                    if (reason === "input") setCustomerSearchInput(newInputValue);
+                                                }}
+                                                loading={searchingCustomers}
+                                                renderOption={(props, option) => {
+                                                    const { key, ...rest } = props;
+                                                    return (
+                                                        <li key={key} {...rest}>
+                                                            <Box sx={{ py: 0.3 }}>
+                                                                <Typography variant="body2" fontWeight={700} color="primary.main">M# {option.measurementNo || "—"}</Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                                    {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                                    {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
+                                                                    {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                                </Box>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(params) => (
+                                                    <TextField
+                                                        {...params}
+                                                        label="Measurement No"
+                                                        size="small"
+                                                        fullWidth
+                                                        sx={FIELD_SX}
+                                                    />
+                                                )}
                                             />
-                                        )}
-                                    />
+                                        </Box>
+                                    </Box>
                                 </Grid>
                                 {/* Billing Account toggle */}
                                 <Grid size={{ xs: 12 }}>
