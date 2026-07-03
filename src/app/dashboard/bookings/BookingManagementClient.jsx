@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import {
     Table,
     TableBody,
@@ -885,6 +886,8 @@ function TailorTicket({ booking, measurements }) {
 }
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
     const stitchingOptions = initialStitchingOptions || [];
     
     // Helper to merge initial customers with any customer references inside the bookings list
@@ -2171,6 +2174,13 @@ ${allBookingsHtml}
     };
 
     const handleStatusUpdate = async (id, newStatus) => {
+        const booking = (bookings || []).find(b => b.id === id);
+        const currentStatus = booking?.status;
+        if ((currentStatus === "COMPLETED" || currentStatus === "RETURNED") && !isAdmin) {
+            alert("Only an admin can change the status of a completed or returned booking.");
+            return;
+        }
+
         if (newStatus === "RETURNED") {
             const confirmed = window.confirm("Are you sure you want to change the status to Returned?");
             if (!confirmed) return;
@@ -2183,7 +2193,8 @@ ${allBookingsHtml}
             });
 
             if (!response.ok) {
-                throw new Error("Failed to update status");
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to update status");
             }
 
             const refreshRes = await fetch("/api/bookings");

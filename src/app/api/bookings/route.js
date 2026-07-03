@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 // ── Account helpers ───────────────────────────────────────────────────────────
@@ -483,6 +485,8 @@ export async function POST(req) {
 // PUT - Update a booking
 export async function PUT(req) {
     try {
+        const session = await getServerSession(authOptions);
+        const isAdmin = session?.user?.role === "ADMIN";
         const body = await req.json();
         const {
             id,
@@ -539,6 +543,12 @@ export async function PUT(req) {
 
             if (!currentBooking) {
                 throw new Error("Booking not found");
+            }
+
+            if ((currentBooking.status === "COMPLETED" || currentBooking.status === "RETURNED") && status && status !== currentBooking.status) {
+                if (!isAdmin) {
+                    throw new Error("Only an admin can change the status of a completed or returned booking.");
+                }
             }
 
             const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentBooking.totalAmount);
