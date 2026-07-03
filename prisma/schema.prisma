@@ -119,6 +119,7 @@ model measurement {
   chaati         String?
   gheera         String?
   kaf            String?
+  gehra_gird     String?
   shalwar_lambai String?
   puhncha        String?
   shalwar_gheera String?
@@ -394,6 +395,7 @@ model booking_item {
   chaati         String?
   gheera         String?
   kaf            String?
+  gehra_gird     String?
   shalwar_lambai String?
   puhncha        String?
   shalwar_gheera String?

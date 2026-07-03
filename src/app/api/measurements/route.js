@@ -96,6 +96,7 @@ export async function POST(req) {
             chaati,
             gheera,
             kaf,
+            gehra_gird,
             shalwar_lambai,
             puhncha,
             shalwar_gheera,
@@ -131,6 +132,7 @@ export async function POST(req) {
                 chaati: chaati || null,
                 gheera: gheera || null,
                 kaf: kaf || null,
+                gehra_gird: gehra_gird || null,
                 shalwar_lambai: shalwar_lambai || null,
                 puhncha: puhncha || null,
                 shalwar_gheera: shalwar_gheera || null,
@@ -173,7 +175,7 @@ export async function PUT(req) {
         const updateData = {};
         const fields = [
             'unit', 'notes', 'qameez_lambai', 'bazoo', 'teera', 'galaa', 'chaati',
-            'gheera', 'kaf', 'shalwar_lambai', 'puhncha', 'shalwar_gheera',
+            'gheera', 'kaf', 'gehra_gird', 'shalwar_lambai', 'puhncha', 'shalwar_gheera',
             'chaati_around', 'kamar_around', 'hip_around', 'kandha',
             'wskot_lambai', 'wskot_teera', 'wskot_gala', 'wskot_chaati',
             'wskot_kamar', 'wskot_hip'

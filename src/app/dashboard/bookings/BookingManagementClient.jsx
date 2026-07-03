@@ -713,6 +713,7 @@ function TailorTicket({ booking, measurements }) {
             ['Chatti', src?.chaati],
             ['Kamar', src?.kamar_around],
             ['Ghera', src?.gheera],
+            ['Gehra Gird', src?.gehra_gird],
             ['Shalwar', src?.shalwar_lambai],
             ['Poncha', src?.puhncha],
             ['Kaf', src?.kaf],
@@ -771,22 +772,25 @@ function TailorTicket({ booking, measurements }) {
             </table>
 
             {/* Per-suit block — first stitching item only */}
-            {(booking.items || []).filter(item => !item.productId).slice(0, 1).map((item, idx) => {
-                const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                const hasItemMeasure = isWskot
-                    ? (item.wskot_lambai || item.wskot_teera || item.wskot_gala)
-                    : (item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati);
-                const src = hasItemMeasure ? item : measurements;
-                const measureRows = getMeasureRows(src, isWskot);
+            {(() => {
+                const stitchingItems = (booking.items || []).filter(item => !item.productId);
+                const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
+                return stitchingItems.slice(0, 1).map((item, idx) => {
+                    const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                    const hasItemMeasure = isWskot
+                        ? (item.wskot_lambai || item.wskot_teera || item.wskot_gala)
+                        : (item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati);
+                    const src = hasItemMeasure ? item : measurements;
+                    const measureRows = getMeasureRows(src, isWskot);
 
-                return (
-                    <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    return (
+                        <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
 
-                        {/* Suit header row */}
-                        <div style={{ backgroundColor: '#1a1a2e', color: '#fff', padding: '3px 8px', fontWeight: 700, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{isWskot ? 'Waistcoat' : 'Suit'} {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''}</span>
-                            <span>Qty: {item.quantity || 1}</span>
-                        </div>
+                            {/* Suit header row */}
+                            <div style={{ backgroundColor: '#1a1a2e', color: '#fff', padding: '3px 8px', fontWeight: 700, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{isWskot ? 'Waistcoat' : 'Suit'} {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''}</span>
+                                <span>Qty: {totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
+                            </div>
 
                         {/* 3-column body */}
                         <div style={{ display: 'flex', alignItems: 'stretch' }}>
@@ -872,7 +876,7 @@ function TailorTicket({ booking, measurements }) {
                         </div>
                     </div>
                 );
-            })}
+            })})()}
 
             {/* Booking-level note */}
             {booking.notes && (
@@ -1022,6 +1026,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [printDialogOpen, setPrintDialogOpen] = useState(false);
     const [customerMeasurements, setCustomerMeasurements] = useState(null);
     const [tempPrintBooking, setTempPrintBooking] = useState(null);
+    const selectedCust = (customerOptions || []).find(c => c.id === formData.customerId) || null;
 
     // Bulk select state
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -1156,7 +1161,7 @@ ${periodHtml}
     // Measurement field keys shared between cart items and measurement records
     const SUIT_MEASUREMENT_KEYS = [
         "qameez_lambai", "bazoo", "teera", "galaa", "chaati",
-        "gheera", "kaf", "kandha", "chaati_around", "kamar_around",
+        "gheera", "kaf", "gehra_gird", "kandha", "chaati_around", "kamar_around",
         "hip_around", "shalwar_lambai", "puhncha", "shalwar_gheera",
     ];
 
@@ -1217,7 +1222,9 @@ ${periodHtml}
                 return boxes;
             };
 
-            const itemsHtml = stitchingItems.map((item, idx) => {
+            const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
+
+            const itemsHtml = stitchingItems.slice(0, 1).map((item, idx) => {
                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
                 const hasItemMeasure = isWskot
                     ? (item.wskot_lambai || item.wskot_teera || item.wskot_gala)
@@ -1238,6 +1245,7 @@ ${periodHtml}
                     ['Chaati A', 'chaati_around'],
                     ['Ghera A', 'gheera'],
                     ['Galla', 'galaa'],
+                    ['Gehra Gird', 'gehra_gird'],
                     ['Shalwar Lambai', 'shalwar_lambai'],
                     ['Poncha', 'puhncha'],
                     ['Shalwar', 'shalwar_gheera'],
@@ -1257,6 +1265,7 @@ ${periodHtml}
                     `Chaati${src.chaati ? `: ${src.chaati}` : ''}`,
                     `Qamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
                     `Ghera${src.gheera ? `: ${src.gheera}` : ''}`,
+                    `Gehra Gird${src.gehra_gird ? `: ${src.gehra_gird}` : ''}`,
                     `Kaf${src.kaf ? `: ${src.kaf}` : ''}`,
                 ];
                 
@@ -1274,7 +1283,7 @@ ${periodHtml}
                 <div class="suit" style="margin-top:10px;">
                     <div class="suit-hdr">
                         <span>${isWskot ? 'Waistcoat' : 'Suit'} ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
-                        <span>Qty: ${item.quantity || 1}</span>
+                        <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
                     </div>
                     <div class="suit-body">
                         <div class="col-meas">
@@ -1509,7 +1518,7 @@ ${allBookingsHtml}
             cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
             pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
             qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
-            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+            gheera: "", kaf: "", gehra_gird: "", kandha: "", chaati_around: "", kamar_around: "",
             hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
             wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
             wskot_kamar: "", wskot_hip: "",
@@ -1533,6 +1542,18 @@ ${allBookingsHtml}
     const cutters = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "cutter");
 
     const handleCustomerChange = async (customerId) => {
+        if (!customerId) {
+            setFormData(prev => ({
+                ...prev,
+                customerId: "",
+                customerCode: "",
+                customerName: "",
+                customerAddress: "",
+                customerPhone: ""
+            }));
+            setCustomerMeasurements(null);
+            return;
+        }
         const customer = (customerOptions || []).find(c => c.id === parseInt(customerId));
         if (customer) {
             setFormData(prev => ({
@@ -1640,7 +1661,7 @@ ${allBookingsHtml}
                 cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
                 pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
                 qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
-                gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+                gheera: "", kaf: "", gehra_gird: "", kandha: "", chaati_around: "", kamar_around: "",
                 hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
                 wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
                 wskot_kamar: "", wskot_hip: "",
@@ -1882,6 +1903,7 @@ ${allBookingsHtml}
                         chaati: item.chaati,
                         gheera: item.gheera,
                         kaf: item.kaf,
+                        gehra_gird: item.gehra_gird,
                         kandha: item.kandha,
                         chaati_around: item.chaati_around,
                         kamar_around: item.kamar_around,
@@ -1979,6 +2001,7 @@ ${allBookingsHtml}
             chaati: item.chaati || "",
             gheera: item.gheera || "",
             kaf: item.kaf || "",
+            gehra_gird: item.gehra_gird || "",
             kandha: item.kandha || "",
             chaati_around: item.chaati_around || "",
             kamar_around: item.kamar_around || "",
@@ -2001,7 +2024,7 @@ ${allBookingsHtml}
             cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
             pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
             qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
-            gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+            gheera: "", kaf: "", gehra_gird: "", kandha: "", chaati_around: "", kamar_around: "",
             hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
             wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
             wskot_kamar: "", wskot_hip: "",
@@ -2058,7 +2081,7 @@ ${allBookingsHtml}
                 cuffType: "", pohnchaType: "", gheraType: "", galaType: "", galaSize: "",
                 pocketType: "", shalwarType: "", hasShalwarPocket: false, hasFrontPockets: false,
                 qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "",
-                gheera: "", kaf: "", kandha: "", chaati_around: "", kamar_around: "",
+                gheera: "", kaf: "", gehra_gird: "", kandha: "", chaati_around: "", kamar_around: "",
                 hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
                 wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
                 wskot_kamar: "", wskot_hip: "",
@@ -2307,27 +2330,15 @@ ${allBookingsHtml}
                         </Box>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={2}>
-                                {/* Customer autocomplete — full width */}
-                                <Grid size={{ xs: 12 }}>
+                                {/* Name Autocomplete */}
+                                <Grid size={{ xs: 12, sm: 4 }}>
                                     <Autocomplete
                                         options={customerOptions}
                                         getOptionLabel={(option) => option.name || ""}
-                                        filterOptions={(options, { inputValue }) => {
-                                            const q = (inputValue || "").toLowerCase().trim();
-                                            if (!q) return options;
-                                            return options.filter(c =>
-                                                (c.name || "").toLowerCase().includes(q) ||
-                                                (c.measurementNo || "").toLowerCase().includes(q) ||
-                                                (c.phone || "").toLowerCase().includes(q) ||
-                                                (c.address || "").toLowerCase().includes(q)
-                                            );
-                                        }}
-                                        value={(customerOptions || []).find(c => c.id === formData.customerId) || null}
+                                        value={selectedCust}
                                         onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                         onInputChange={(event, newInputValue, reason) => {
-                                            if (reason === "input") {
-                                                setCustomerSearchInput(newInputValue);
-                                            }
+                                            if (reason === "input") setCustomerSearchInput(newInputValue);
                                         }}
                                         loading={searchingCustomers}
                                         renderOption={(props, option) => {
@@ -2337,9 +2348,9 @@ ${allBookingsHtml}
                                                     <Box sx={{ py: 0.3 }}>
                                                         <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
                                                         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
                                                             {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
                                                             {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                            {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
                                                         </Box>
                                                     </Box>
                                                 </li>
@@ -2348,49 +2359,166 @@ ${allBookingsHtml}
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
-                                                label="Select Customer"
+                                                label="Name *"
                                                 size="small"
                                                 fullWidth
                                                 required
-                                                InputProps={{
-                                                    ...params.InputProps,
-                                                    startAdornment: (
-                                                        <><InputAdornment position="start"><User size={16} color="#9ca3af" /></InputAdornment>{params.InputProps.startAdornment}</>
-                                                    ),
-                                                    endAdornment: (
-                                                        <>
-                                                            {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
-                                                            {params.InputProps.endAdornment}
-                                                        </>
-                                                    )
-                                                }}
-                                                sx={{ minWidth: 300, ...FIELD_SX }}
+                                                sx={FIELD_SX}
                                             />
                                         )}
                                     />
                                 </Grid>
-                                {/* Name */}
+
+                                {/* Father Name Autocomplete */}
                                 <Grid size={{ xs: 12, sm: 4 }}>
-                                    <TextField fullWidth size="small" label="Name" value={formData.customerName}
-                                        disabled placeholder="Auto-filled" sx={DISABLED_SX} />
-                                </Grid>
-                                {/* Phone */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
-                                    <TextField fullWidth size="small" label="Phone Number" value={formData.customerPhone}
-                                        disabled placeholder="+92 300 1234567"
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <Typography sx={{ fontSize: '0.9rem', lineHeight: 1 }}>🇵🇰</Typography>
-                                                </InputAdornment>
-                                            ),
+                                    <Autocomplete
+                                        options={customerOptions}
+                                        getOptionLabel={(option) => option.fatherName || ""}
+                                        value={selectedCust}
+                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        onInputChange={(event, newInputValue, reason) => {
+                                            if (reason === "input") setCustomerSearchInput(newInputValue);
                                         }}
-                                        sx={DISABLED_SX} />
+                                        loading={searchingCustomers}
+                                        renderOption={(props, option) => {
+                                            const { key, ...rest } = props;
+                                            return (
+                                                <li key={key} {...rest}>
+                                                    <Box sx={{ py: 0.3 }}>
+                                                        <Typography variant="body2" fontWeight={600}>{option.fatherName || "—"}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </li>
+                                            );
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Father Name"
+                                                size="small"
+                                                fullWidth
+                                                sx={FIELD_SX}
+                                            />
+                                        )}
+                                    />
                                 </Grid>
-                                {/* Address */}
+
+                                {/* Phone Number Autocomplete */}
                                 <Grid size={{ xs: 12, sm: 4 }}>
-                                    <TextField fullWidth size="small" label="Address" value={formData.customerAddress}
-                                        disabled placeholder="Auto-filled" sx={DISABLED_SX} />
+                                    <Autocomplete
+                                        options={customerOptions}
+                                        getOptionLabel={(option) => option.phone || ""}
+                                        value={selectedCust}
+                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        onInputChange={(event, newInputValue, reason) => {
+                                            if (reason === "input") setCustomerSearchInput(newInputValue);
+                                        }}
+                                        loading={searchingCustomers}
+                                        renderOption={(props, option) => {
+                                            const { key, ...rest } = props;
+                                            return (
+                                                <li key={key} {...rest}>
+                                                    <Box sx={{ py: 0.3 }}>
+                                                        <Typography variant="body2" fontWeight={600}>{option.phone || "—"}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
+                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </li>
+                                            );
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Phone Number"
+                                                size="small"
+                                                fullWidth
+                                                sx={FIELD_SX}
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+
+                                {/* Address Autocomplete */}
+                                <Grid size={{ xs: 12, sm: 8 }}>
+                                    <Autocomplete
+                                        options={customerOptions}
+                                        getOptionLabel={(option) => option.address || ""}
+                                        value={selectedCust}
+                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        onInputChange={(event, newInputValue, reason) => {
+                                            if (reason === "input") setCustomerSearchInput(newInputValue);
+                                        }}
+                                        loading={searchingCustomers}
+                                        renderOption={(props, option) => {
+                                            const { key, ...rest } = props;
+                                            return (
+                                                <li key={key} {...rest}>
+                                                    <Box sx={{ py: 0.3 }}>
+                                                        <Typography variant="body2" fontWeight={600}>{option.address || "—"}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </li>
+                                            );
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Address"
+                                                size="small"
+                                                fullWidth
+                                                sx={FIELD_SX}
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+
+                                {/* Measurement No Autocomplete */}
+                                <Grid size={{ xs: 12, sm: 4 }}>
+                                    <Autocomplete
+                                        options={customerOptions}
+                                        getOptionLabel={(option) => option.measurementNo || ""}
+                                        value={selectedCust}
+                                        onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
+                                        onInputChange={(event, newInputValue, reason) => {
+                                            if (reason === "input") setCustomerSearchInput(newInputValue);
+                                        }}
+                                        loading={searchingCustomers}
+                                        renderOption={(props, option) => {
+                                            const { key, ...rest } = props;
+                                            return (
+                                                <li key={key} {...rest}>
+                                                    <Box sx={{ py: 0.3 }}>
+                                                        <Typography variant="body2" fontWeight={700} color="primary.main">M# {option.measurementNo || "—"}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.name && <Typography variant="caption" color="text.secondary">Name: {option.name}</Typography>}
+                                                            {option.fatherName && <Typography variant="caption" color="text.secondary">S/O: {option.fatherName}</Typography>}
+                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </li>
+                                            );
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Measurement No"
+                                                size="small"
+                                                fullWidth
+                                                sx={FIELD_SX}
+                                            />
+                                        )}
+                                    />
                                 </Grid>
                                 {/* Billing Account toggle */}
                                 <Grid size={{ xs: 12 }}>

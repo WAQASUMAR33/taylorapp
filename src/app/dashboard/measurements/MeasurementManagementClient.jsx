@@ -22,6 +22,7 @@ const SQ_QAMEEZ_FIELDS = [
     { name: "chaati", label: "چھاتی" },   // Chest
     { name: "gheera", label: "گھیرا" },   // Hem
     { name: "kaf", label: "کف" },   // Cuff
+    { name: "gehra_gird", label: "گہرا گرد" },   // Gehra Gird
     { name: "kandha", label: "کندھا" },   // Armhole
     { name: "chaati_around", label: "چھاتی گرد" },   // Chest Around
     { name: "kamar_around", label: "کمر گرد" },   // Waist Around
@@ -49,7 +50,7 @@ const EMPTY_FORM = {
     unit: "in",
     notes: "",
     qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "", gheera: "",
-    kaf: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "", chaati_around: "",
+    kaf: "", gehra_gird: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "", chaati_around: "",
     kamar_around: "", hip_around: "", kandha: "",
     wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
     wskot_kamar: "", wskot_hip: "",
@@ -274,6 +275,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 chaati: m.chaati || "",
                 gheera: m.gheera || "",
                 kaf: m.kaf || "",
+                gehra_gird: m.gehra_gird || "",
                 shalwar_lambai: m.shalwar_lambai || "",
                 puhncha: m.puhncha || "",
                 shalwar_gheera: m.shalwar_gheera || "",
@@ -317,6 +319,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             chaati: historyItem.chaati || "",
             gheera: historyItem.gheera || "",
             kaf: historyItem.kaf || "",
+            gehra_gird: historyItem.gehra_gird || "",
             shalwar_lambai: historyItem.shalwar_lambai || "",
             puhncha: historyItem.puhncha || "",
             shalwar_gheera: historyItem.shalwar_gheera || "",
@@ -418,7 +421,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             ${row("تیرہ", measurement.teera)}${row("گلا", measurement.galaa)}
             ${row("چھاتی", measurement.chaati)}${row("گھیرا", measurement.gheera)}
             ${row("کف", measurement.kaf)}${row("کندھا", measurement.kandha)}
-            ${row("چھاتی گرد", measurement.chaati_around)}${row("کمر گرد", measurement.kamar_around)}
+            ${row("گہرا گرد", measurement.gehra_gird)}${row("چھاتی گرد", measurement.chaati_around)}${row("کمر گرد", measurement.kamar_around)}
             ${row("ہپ گرد", measurement.hip_around)}${row("شلوار لمبائی", measurement.shalwar_lambai)}
             ${row("پہنچا", measurement.puhncha)}${row("شلوار گھیرا", measurement.shalwar_gheera)}
         </div></div>` : ""}
@@ -523,7 +526,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
 
                                         {/* SQ badge */}
                                         <TableCell>
-                                            {m.qameez_lambai
+                                            {(m.qameez_lambai || m.gehra_gird)
                                                 ? <Chip label="Recorded" size="small" color="success" variant="outlined" />
                                                 : <Typography variant="body2" color="text.secondary">—</Typography>}
                                         </TableCell>

@@ -142,6 +142,7 @@ export async function GET(req) {
             where.AND.push({
                 OR: [
                     { name: { contains: search } },
+                    { fatherName: { contains: search } },
                     { phone: { contains: search } },
                     { address: { contains: search } },
                     { measurementNo: { contains: search } }
