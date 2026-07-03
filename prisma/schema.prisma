@@ -1,3 +1,4 @@
+// Database Schema for TaylorApp - Force Redeploy
 generator client {
   provider = "prisma-client-js"
 }
