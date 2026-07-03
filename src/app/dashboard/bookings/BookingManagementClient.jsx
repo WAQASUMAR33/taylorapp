@@ -1531,6 +1531,21 @@ ${allBookingsHtml}
     const [productItems, setProductItems] = useState([]);
     const selectedCust = (customerOptions || []).find(c => c.id === formData.customerId) || null;
 
+    const filterCustomerOptions = (options, { inputValue }) => {
+        const q = (inputValue || "").toLowerCase().trim();
+        if (!q) return options;
+        return options.filter(c => {
+            if (!c) return false;
+            return (
+                (c.name || "").toLowerCase().includes(q) ||
+                (c.fatherName || "").toLowerCase().includes(q) ||
+                (c.phone || "").toLowerCase().includes(q) ||
+                (c.address || "").toLowerCase().includes(q) ||
+                (c.measurementNo || "").toLowerCase().includes(q)
+            );
+        });
+    };
+
     // Barcode scanner for product items
     const [scanCode, setScanCode] = useState("");
     const [scanStatus, setScanStatus] = useState(null);
@@ -2338,7 +2353,7 @@ ${allBookingsHtml}
                                             <Autocomplete
                                                 options={customerOptions}
                                                 getOptionLabel={(option) => option.name || ""}
-                                                filterOptions={(x) => x}
+                                                filterOptions={filterCustomerOptions}
                                                 value={selectedCust}
                                                 onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                                 onInputChange={(event, newInputValue, reason) => {
@@ -2378,7 +2393,7 @@ ${allBookingsHtml}
                                             <Autocomplete
                                                 options={customerOptions}
                                                 getOptionLabel={(option) => option.fatherName || ""}
-                                                filterOptions={(x) => x}
+                                                filterOptions={filterCustomerOptions}
                                                 value={selectedCust}
                                                 onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                                 onInputChange={(event, newInputValue, reason) => {
@@ -2417,7 +2432,7 @@ ${allBookingsHtml}
                                             <Autocomplete
                                                 options={customerOptions}
                                                 getOptionLabel={(option) => option.phone || ""}
-                                                filterOptions={(x) => x}
+                                                filterOptions={filterCustomerOptions}
                                                 value={selectedCust}
                                                 onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                                 onInputChange={(event, newInputValue, reason) => {
@@ -2456,7 +2471,7 @@ ${allBookingsHtml}
                                             <Autocomplete
                                                 options={customerOptions}
                                                 getOptionLabel={(option) => option.address || ""}
-                                                filterOptions={(x) => x}
+                                                filterOptions={filterCustomerOptions}
                                                 value={selectedCust}
                                                 onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                                 onInputChange={(event, newInputValue, reason) => {
@@ -2495,7 +2510,7 @@ ${allBookingsHtml}
                                             <Autocomplete
                                                 options={customerOptions}
                                                 getOptionLabel={(option) => option.measurementNo || ""}
-                                                filterOptions={(x) => x}
+                                                filterOptions={filterCustomerOptions}
                                                 value={selectedCust}
                                                 onChange={(event, newValue) => { handleCustomerChange(newValue ? newValue.id : ""); }}
                                                 onInputChange={(event, newInputValue, reason) => {
