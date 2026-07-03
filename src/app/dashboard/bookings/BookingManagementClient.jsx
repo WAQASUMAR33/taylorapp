@@ -1026,7 +1026,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [printDialogOpen, setPrintDialogOpen] = useState(false);
     const [customerMeasurements, setCustomerMeasurements] = useState(null);
     const [tempPrintBooking, setTempPrintBooking] = useState(null);
-    const selectedCust = (customerOptions || []).find(c => c.id === formData.customerId) || null;
 
     // Bulk select state
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -1530,6 +1529,7 @@ ${allBookingsHtml}
 
     // Product items added to the bill (non-stitching)
     const [productItems, setProductItems] = useState([]);
+    const selectedCust = (customerOptions || []).find(c => c.id === formData.customerId) || null;
 
     // Barcode scanner for product items
     const [scanCode, setScanCode] = useState("");
