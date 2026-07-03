@@ -1059,7 +1059,7 @@ export default function LedgerManagementClient({
                                     </TableHead>
                                     <TableBody>
                                         {selectedBooking.items?.map((item, idx) => {
-                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" };
+                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", COMPLETED: "#059669", RETURNED: "#ef4444", DELIVERED: "#059669", CANCELLED: "#ef4444" };
                                             const sc = statusColors[item.itemStatus || "PENDING"] || "#6b7280";
                                             const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
                                             const isStitch = (item.selectedOptions || []).length > 0 || !item.productId;

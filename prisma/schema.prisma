@@ -538,6 +538,8 @@ enum booking_status {
   READY
   DELIVERED
   CANCELLED
+  COMPLETED
+  RETURNED
 }
 
 enum materialmovement_type {

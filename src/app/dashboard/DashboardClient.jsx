@@ -37,12 +37,15 @@ import {
 /** Returns the right MUI Chip color for each booking status */
 function statusColor(status) {
     switch (status) {
+        case "COMPLETED":
         case "DELIVERED": return "success";
         case "READY": return "primary";
-        case "TRIAL": return "info";
-        case "STITCHING": return "secondary";
-        case "CUTTING": return "warning";
-        case "MEASUREMENT_TAKEN": return "default";
+        case "PENDING":
+        case "TRIAL":
+        case "STITCHING":
+        case "CUTTING":
+        case "MEASUREMENT_TAKEN": return "warning";
+        case "RETURNED":
         case "CANCELLED": return "error";
         default: return "default";
     }

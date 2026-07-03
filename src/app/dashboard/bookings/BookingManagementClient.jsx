@@ -57,13 +57,9 @@ import {
 
 const BOOKING_STATUSES = [
     { value: "PENDING", label: "Pending", color: "#f59e0b" },
-    { value: "MEASUREMENT_TAKEN", label: "Measurement Taken", color: "#3b82f6" },
-    { value: "CUTTING", label: "Cutting", color: "#8b5cf6" },
-    { value: "STITCHING", label: "Stitching", color: "#ec4899" },
-    { value: "TRIAL", label: "Trial", color: "#06b6d4" },
     { value: "READY", label: "Ready", color: "#10b981" },
-    { value: "DELIVERED", label: "Delivered", color: "#059669" },
-    { value: "CANCELLED", label: "Cancelled", color: "#ef4444" }
+    { value: "COMPLETED", label: "Completed", color: "#059669" },
+    { value: "RETURNED", label: "Returned", color: "#ef4444" }
 ];
 
 // ─── Shared print header ─────────────────────────────────────────────────────
@@ -95,7 +91,7 @@ function PrintHeader() {
 // ─── Booking List Print ───────────────────────────────────────────────────────
 function BookingListPrint({ bookings, dateFrom, dateTo }) {
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
-    const ITEM_STATUS_COLORS = { PENDING: '#f59e0b', READY: '#10b981', DELIVERED: '#059669', CANCELLED: '#ef4444' };
+    const ITEM_STATUS_COLORS = { PENDING: '#f59e0b', READY: '#10b981', COMPLETED: '#059669', RETURNED: '#ef4444', DELIVERED: '#059669', CANCELLED: '#ef4444' };
     const totalAmount = bookings.reduce((s, b) => s + parseFloat(b.totalAmount || 0), 0);
     const totalAdvance = bookings.reduce((s, b) => s + parseFloat(b.advanceAmount || 0), 0);
     const totalRemaining = bookings.reduce((s, b) => s + parseFloat(b.remainingAmount || 0), 0);
@@ -2175,6 +2171,10 @@ ${allBookingsHtml}
     };
 
     const handleStatusUpdate = async (id, newStatus) => {
+        if (newStatus === "RETURNED") {
+            const confirmed = window.confirm("Are you sure you want to change the status to Returned?");
+            if (!confirmed) return;
+        }
         try {
             const response = await fetch("/api/bookings", {
                 method: "PUT",
@@ -2687,8 +2687,13 @@ ${allBookingsHtml}
                                                             label="Suit Status"
                                                             value={item.itemStatus || "PENDING"}
                                                             onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                if (val === "RETURNED") {
+                                                                    const confirmed = window.confirm("Are you sure you want to change this suit status to Returned?");
+                                                                    if (!confirmed) return;
+                                                                }
                                                                 const ni = [...cartItems];
-                                                                ni[index].itemStatus = e.target.value;
+                                                                ni[index].itemStatus = val;
                                                                 setCartItems(ni);
                                                             }}
                                                             sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.8rem' } }}
@@ -2696,8 +2701,8 @@ ${allBookingsHtml}
                                                             {[
                                                                 { value: "PENDING", label: "Pending", color: "#f59e0b" },
                                                                 { value: "READY", label: "Ready", color: "#10b981" },
-                                                                { value: "DELIVERED", label: "Delivered", color: "#059669" },
-                                                                { value: "CANCELLED", label: "Cancelled", color: "#ef4444" },
+                                                                { value: "COMPLETED", label: "Completed", color: "#059669" },
+                                                                { value: "RETURNED", label: "Returned", color: "#ef4444" },
                                                             ].map(s => (
                                                                 <MenuItem key={s.value} value={s.value}>
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
@@ -3187,8 +3192,8 @@ ${allBookingsHtml}
                     <MenuItem value="">All</MenuItem>
                     <MenuItem value="PENDING">Pending</MenuItem>
                     <MenuItem value="READY">Ready</MenuItem>
-                    <MenuItem value="DELIVERED">Delivered</MenuItem>
-                    <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                    <MenuItem value="COMPLETED">Completed</MenuItem>
+                    <MenuItem value="RETURNED">Returned</MenuItem>
                 </TextField>
                 <TextField
                     label="Measurement No"
@@ -3725,7 +3730,7 @@ ${allBookingsHtml}
                                     </TableHead>
                                     <TableBody>
                                         {selectedBooking.items?.map((item, idx) => {
-                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444" };
+                                            const statusColors = { PENDING: "#f59e0b", READY: "#10b981", COMPLETED: "#059669", RETURNED: "#ef4444", DELIVERED: "#059669", CANCELLED: "#ef4444" };
                                             const sc = statusColors[item.itemStatus || "PENDING"] || "#6b7280";
                                             const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
                                             const isStitch = (item.selectedOptions || []).length > 0 || !item.productId;

@@ -25,6 +25,8 @@ const STATUS_COLOR = {
     STITCHING: { bg: "#fce7f3", color: "#9d174d", label: "Stitching" },
     TRIAL: { bg: "#d1fae5", color: "#065f46", label: "Trial" },
     READY: { bg: "#ccfbf1", color: "#0f766e", label: "Ready" },
+    COMPLETED: { bg: "#dcfce7", color: "#166534", label: "Completed" },
+    RETURNED: { bg: "#fee2e2", color: "#991b1b", label: "Returned" },
     DELIVERED: { bg: "#dcfce7", color: "#166534", label: "Delivered" },
     CANCELLED: { bg: "#fee2e2", color: "#991b1b", label: "Cancelled" },
 };
