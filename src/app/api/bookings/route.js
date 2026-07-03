@@ -82,6 +82,97 @@ async function reversePaymentFromAccounts(tx, { paymentMethod, bankId, advAmt, c
     }
 }
 
+// Reverse/restore all booking-related ledger entries when status becomes or exits RETURNED
+async function handleReturnedStatusTransition(tx, bookingId, currentBooking, newStatus) {
+    if (currentBooking.status !== "RETURNED" && newStatus === "RETURNED") {
+        const entries = await tx.ledgerentry.findMany({
+            where: { bookingId },
+            include: { customer: true }
+        });
+
+        const originalEntries = entries.filter(e => !e.description.startsWith("Reversal:") && !e.description.startsWith("Restore:"));
+
+        for (const entry of originalEntries) {
+            const amount = parseFloat(entry.amount);
+            const reverseType = entry.type === "DEBIT" ? "CREDIT" : "DEBIT";
+            const reverseDesc = `Reversal: ${entry.description}`;
+
+            await tx.ledgerentry.create({
+                data: {
+                    customerId: entry.customerId,
+                    type: reverseType,
+                    amount,
+                    description: reverseDesc,
+                    bookingId
+                }
+            });
+
+            const isDebit = reverseType === "DEBIT";
+            await tx.customer.update({
+                where: { id: entry.customerId },
+                data: {
+                    balance: { [isDebit ? "increment" : "decrement"]: amount }
+                }
+            });
+
+            if (entry.customer?.code && entry.customer.code.startsWith("BANK-")) {
+                const bankId = parseInt(entry.customer.code.split("-")[1]);
+                if (bankId) {
+                    await tx.bank.update({
+                        where: { id: bankId },
+                        data: {
+                            balance: { [isDebit ? "increment" : "decrement"]: amount }
+                        }
+                    });
+                }
+            }
+        }
+    } else if (currentBooking.status === "RETURNED" && newStatus !== "RETURNED") {
+        const entries = await tx.ledgerentry.findMany({
+            where: { bookingId },
+            include: { customer: true }
+        });
+
+        const reversalEntries = entries.filter(e => e.description.startsWith("Reversal:"));
+
+        for (const entry of reversalEntries) {
+            const amount = parseFloat(entry.amount);
+            const restoreType = entry.type === "DEBIT" ? "CREDIT" : "DEBIT";
+            const restoreDesc = `Restore: ${entry.description}`;
+
+            await tx.ledgerentry.create({
+                data: {
+                    customerId: entry.customerId,
+                    type: restoreType,
+                    amount,
+                    description: restoreDesc,
+                    bookingId
+                }
+            });
+
+            const isDebit = restoreType === "DEBIT";
+            await tx.customer.update({
+                where: { id: entry.customerId },
+                data: {
+                    balance: { [isDebit ? "increment" : "decrement"]: amount }
+                }
+            });
+
+            if (entry.customer?.code && entry.customer.code.startsWith("BANK-")) {
+                const bankId = parseInt(entry.customer.code.split("-")[1]);
+                if (bankId) {
+                    await tx.bank.update({
+                        where: { id: bankId },
+                        data: {
+                            balance: { [isDebit ? "increment" : "decrement"]: amount }
+                        }
+                    });
+                }
+            }
+        }
+    }
+}
+
 // GET - Fetch all bookings or a specific booking
 export async function GET(req) {
     try {
@@ -750,6 +841,10 @@ export async function PUT(req) {
                         });
                     }
                 }
+            }
+
+            if (status && status !== currentBooking.status) {
+                await handleReturnedStatusTransition(tx, currentBooking.id, currentBooking, status);
             }
 
             // 6. Perform the actual update
