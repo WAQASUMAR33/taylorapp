@@ -261,7 +261,7 @@ export async function GET(req) {
     } catch (error) {
         console.error("Failed to fetch bookings:", error);
         return NextResponse.json(
-            { error: "Failed to fetch bookings" },
+            { error: "Failed to fetch bookings: " + error.message, details: error.stack },
             { status: 500 }
         );
     }
