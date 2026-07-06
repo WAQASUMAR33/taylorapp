@@ -493,58 +493,31 @@ function MergedCustomerBill({ bookings }) {
             <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
-                        <tr>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', width: '45%', fontWeight: '600' }}>Bill Nos:</td>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold', wordBreak: 'break-all' }}>{billNumbers}</td>
-                        </tr>
-                        <tr>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Booking Date(s):</td>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{bookingDates}</td>
-                        </tr>
-                        <tr>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Delivery Date(s):</td>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{deliveryDates}</td>
-                        </tr>
-                        {trialDates && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Trial Date(s):</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{trialDates}</td>
-                            </tr>
-                        )}
-                        <tr style={{ borderTop: '1px dotted #ccc' }}>
-                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', fontWeight: '600' }}>Customer:</td>
-                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>
-                                {customer ? customer.name : 'Multiple Customers'}
-                            </td>
-                        </tr>
-                        {customer && customer.phone && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Phone:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{customer.phone}</td>
-                            </tr>
-                        )}
-                        <tr>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9.5px', fontWeight: '500' }}>{customer ? (customer.address || '—') : 'Multiple Addresses'}</td>
-                        </tr>
-                        {customer && customer.measurementNo && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Measurement No:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{customer.measurementNo}</td>
-                            </tr>
-                        )}
-                        {billingCust && billingCust.id !== customer?.id && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Billing Party:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>{billingCust.name}</td>
-                            </tr>
-                        )}
-                        {!billingCust && !allSameBillingCustomer && (
-                            <tr>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Billing Party:</td>
-                                <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right' }}>Multiple Parties</td>
-                            </tr>
-                        )}
+                        {sortedBookings.map((b, idx) => {
+                            const bc = b.customer || {};
+                            return (
+                                <tr key={b.id} style={{ borderBottom: idx < sortedBookings.length - 1 ? '1px dotted #ccc' : 'none' }}>
+                                    <td style={{ padding: '4px 0', verticalAlign: 'top' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '11px' }}>
+                                            <span>Bill No: #{b.bookingNumber || b.id}</span>
+                                            <span style={{ fontSize: '10px', fontWeight: 'normal', color: '#555' }}>
+                                                Bk Date: {fmt(b.bookingDate)} | Del: {fmt(b.deliveryDate)}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '11px', marginTop: '2px' }}>
+                                            <strong>Customer:</strong>{' '}
+                                            <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{bc.name || '—'}</span>
+                                            {bc.phone ? ` (${bc.phone})` : ''}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#333' }}>
+                                            <strong>Address:</strong>{' '}
+                                            <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{bc.address || '—'}</span>
+                                            {bc.measurementNo ? ` | M#: ${bc.measurementNo}` : ''}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
                 <div style={{ borderBottom: '1px dashed #000', margin: '6px 0' }} />
