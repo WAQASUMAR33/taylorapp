@@ -25,7 +25,8 @@ import {
     Grid,
     Snackbar,
     Alert,
-    TablePagination
+    TablePagination,
+    Autocomplete
 } from "@mui/material";
 import { Plus, Search, Eye, Trash2, RotateCcw, Printer } from "lucide-react";
 
@@ -604,18 +605,26 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                 {items.map((item, idx) => (
                                     <Box key={item.id} sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, width: '100%' }}>
                                         <Box sx={{ flex: 3, minWidth: '250px' }}>
-                                            <FormControl fullWidth size="small">
-                                                <InputLabel>Product</InputLabel>
-                                                <Select
-                                                    label="Product"
-                                                    value={item.productId}
-                                                    onChange={(e) => handleItemChange(item.id, "productId", e.target.value)}
-                                                >
-                                                    {products.map(p => (
-                                                        <MenuItem key={p.id} value={p.id}>{p.name} (SKU: {p.sku})</MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
+                                            <Autocomplete
+                                                size="small"
+                                                options={products}
+                                                getOptionLabel={(option) => `${option.name} (SKU: ${option.sku})`}
+                                                value={products.find(p => p.id === parseInt(item.productId)) || null}
+                                                onChange={(event, newValue) => {
+                                                    handleItemChange(item.id, "productId", newValue ? newValue.id : "");
+                                                }}
+                                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                                renderInput={(params) => (
+                                                    <TextField {...params} label="Product" required />
+                                                )}
+                                                slotProps={{
+                                                    paper: {
+                                                        sx: {
+                                                            maxHeight: 250
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </Box>
                                         
                                         <Box sx={{ flex: 1, minWidth: '80px' }}>
