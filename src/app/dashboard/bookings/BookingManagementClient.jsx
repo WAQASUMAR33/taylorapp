@@ -504,15 +504,17 @@ function MergedCustomerBill({ bookings }) {
                                                 Bk Date: {fmt(b.bookingDate)} | Del: {fmt(b.deliveryDate)}
                                             </span>
                                         </div>
-                                        <div style={{ fontSize: '11px', marginTop: '2px' }}>
-                                            <strong>Customer:</strong>{' '}
-                                            <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{bc.name || '—'}</span>
-                                            {bc.phone ? ` (${bc.phone})` : ''}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '2px' }}>
+                                            <strong>Customer:</strong>
+                                            <span style={{ fontWeight: 'bold', fontSize: '13px', textAlign: 'right' }}>
+                                                {bc.name || '—'} {bc.phone ? ` (${bc.phone})` : ''}
+                                            </span>
                                         </div>
-                                        <div style={{ fontSize: '11px', color: '#333' }}>
-                                            <strong>Address:</strong>{' '}
-                                            <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{bc.address || '—'}</span>
-                                            {bc.measurementNo ? ` | M#: ${bc.measurementNo}` : ''}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#333' }}>
+                                            <strong>Address:</strong>
+                                            <span style={{ fontWeight: 'bold', fontSize: '13px', textAlign: 'right' }}>
+                                                {bc.address || '—'} {bc.measurementNo ? ` | M#: ${bc.measurementNo}` : ''}
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>
