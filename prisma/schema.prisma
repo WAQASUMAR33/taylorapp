@@ -78,6 +78,7 @@ model customer {
   tailorBookings    booking[]        @relation("BookingTailor")
   cutterBookings    booking[]        @relation("BookingCutter")
   bookingStaff      booking_staff[]
+  saleReturns       sale_return[]
 
   @@index([accountCategoryId], map: "customer_accountCategoryId_fkey")
 }
@@ -92,6 +93,7 @@ model bank {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   payments      purchase_payment[]
+  saleReturns   sale_return[]
 }
 
 model employee {
@@ -169,6 +171,7 @@ model product {
   billItems     bill_item[]
   category      category?       @relation(fields: [categoryId], references: [id])
   purchaseItems purchase_item[]
+  saleReturnItems sale_return_item[]
 
   @@index([categoryId], map: "Product_categoryId_fkey")
 }
@@ -284,15 +287,18 @@ model ledgerentry {
   entryDate   DateTime         @default(now())
   purchaseId  Int?
   bookingId   Int?
+  saleReturnId Int?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   customer    customer         @relation(fields: [customerId], references: [id])
   purchase    purchase?        @relation(fields: [purchaseId], references: [id])
   booking     booking?         @relation(fields: [bookingId], references: [id])
+  saleReturn  sale_return?     @relation(fields: [saleReturnId], references: [id])
 
   @@index([customerId], map: "LedgerEntry_customerId_fkey")
   @@index([purchaseId], map: "ledgerentry_purchaseId_fkey")
   @@index([bookingId], map: "ledgerentry_bookingId_fkey")
+  @@index([saleReturnId], map: "ledgerentry_saleReturnId_fkey")
 }
 
 model stockmovement {
@@ -546,4 +552,40 @@ enum booking_status {
 enum materialmovement_type {
   IN
   OUT
+}
+
+model sale_return {
+  id            Int                @id @default(autoincrement())
+  returnNumber  String             @unique
+  customerId    Int
+  returnDate    DateTime           @default(now())
+  totalAmount   Decimal            @db.Decimal(10, 2)
+  paymentMode   String             @default("CASH") // "CASH", "BANK", "LEDGER"
+  bankId        Int?
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  customer      customer           @relation(fields: [customerId], references: [id])
+  bank          bank?              @relation(fields: [bankId], references: [id])
+  items         sale_return_item[]
+  ledgerEntries ledgerentry[]
+
+  @@index([customerId], map: "salereturn_customerId_fkey")
+  @@index([bankId], map: "salereturn_bankId_fkey")
+  @@map("salereturn")
+}
+
+model sale_return_item {
+  id           Int         @id @default(autoincrement())
+  saleReturnId Int
+  productId    Int
+  quantity     Decimal     @db.Decimal(10, 2)
+  unitPrice    Decimal     @db.Decimal(10, 2)
+  totalPrice   Decimal     @db.Decimal(10, 2)
+  product      product     @relation(fields: [productId], references: [id])
+  saleReturn   sale_return @relation(fields: [saleReturnId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "salereturn_item_productId_fkey")
+  @@index([saleReturnId], map: "salereturn_item_saleReturnId_fkey")
+  @@map("salereturnitem")
 }

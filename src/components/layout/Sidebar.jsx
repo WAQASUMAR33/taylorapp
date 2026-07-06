@@ -24,6 +24,7 @@ import {
     ClipboardList,
     TrendingDown,
     Receipt,
+    RotateCcw,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -47,6 +48,7 @@ const navItems = [
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
 
     { name: "Sale History", href: "/dashboard/sale-list", icon: ClipboardList, roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Sale Returns", href: "/dashboard/sale-returns", icon: RotateCcw, roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
     { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
     { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, roles: ["ADMIN", "MANAGER"] },
