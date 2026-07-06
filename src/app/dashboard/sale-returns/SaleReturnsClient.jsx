@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
     Table,
     TableBody,
@@ -51,6 +51,45 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [customerSearch, setCustomerSearch] = useState("");
     const [showCustomerGrid, setShowCustomerGrid] = useState(false);
+    const [customerResults, setCustomerResults] = useState([]);
+    const [searchingCustomer, setSearchingCustomer] = useState(false);
+    const searchTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleCustomerSearchChange = (query) => {
+        setCustomerSearch(query);
+        setShowCustomerGrid(true);
+        if (!query) {
+            setCustomerResults([]);
+            return;
+        }
+
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        searchTimeoutRef.current = setTimeout(async () => {
+            setSearchingCustomer(true);
+            try {
+                const res = await fetch(`/api/customers?search=${encodeURIComponent(query)}&limit=15`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setCustomerResults(data.customers || []);
+                }
+            } catch (error) {
+                console.error("Failed to search customers:", error);
+            } finally {
+                setSearchingCustomer(false);
+            }
+        }, 250);
+    };
 
     const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
     const [paymentMode, setPaymentMode] = useState("CASH");
@@ -64,17 +103,6 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     const triggerAlert = (message, severity = "success") => {
         setSnackbar({ open: true, message, severity });
     };
-
-    // Filter customers for search overlay
-    const filteredCustomers = useMemo(() => {
-        if (!customerSearch) return [];
-        const q = customerSearch.toLowerCase();
-        return customers.filter(c =>
-            c.name.toLowerCase().includes(q) ||
-            (c.phone && c.phone.includes(q)) ||
-            (c.measurementNo && c.measurementNo.includes(q))
-        );
-    }, [customers, customerSearch]);
 
     // Handle Item changes
     const handleItemChange = (id, field, value) => {
@@ -409,12 +437,53 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                         <Grid item xs={12} style={{ position: 'relative' }}>
                             <Typography variant="subtitle2" style={{ fontWeight: 700, marginBottom: '6px' }}>Select Customer</Typography>
                             {selectedCustomer ? (
-                                <Box sx={{ p: 1.5, border: '1px solid #ccc', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'grey.50' }}>
-                                    <Box>
-                                        <Typography variant="body1" fontWeight="bold">{selectedCustomer.name}</Typography>
-                                        {selectedCustomer.phone && <Typography variant="caption" color="textSecondary">{selectedCustomer.phone}</Typography>}
+                                <Box sx={{
+                                    p: 2,
+                                    border: '1px solid #e0e0e0',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    bgcolor: '#fafafa',
+                                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
+                                }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: '50%',
+                                            bgcolor: 'warning.light',
+                                            color: 'warning.main',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: '1.1rem'
+                                        }}>
+                                            {selectedCustomer.name.charAt(0).toUpperCase()}
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
+                                                {selectedCustomer.name}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 0.5 }}>
+                                                {selectedCustomer.phone && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        📞 {selectedCustomer.phone}
+                                                    </Typography>
+                                                )}
+                                                {selectedCustomer.address && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        📍 {selectedCustomer.address}
+                                                    </Typography>
+                                                )}
+                                                <Typography variant="caption" color="warning.main" fontWeight="bold">
+                                                    💳 Bal: Rs. {parseFloat(selectedCustomer.balance || 0).toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
                                     </Box>
-                                    <Button variant="outlined" color="error" size="small" onClick={() => { setSelectedCustomer(null); setCustomerSearch(""); }}>Change</Button>
+                                    <Button variant="outlined" color="error" size="small" sx={{ borderRadius: '8px' }} onClick={() => { setSelectedCustomer(null); setCustomerSearch(""); setCustomerResults([]); }}>Change</Button>
                                 </Box>
                             ) : (
                                 <>
@@ -423,33 +492,55 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                         size="small"
                                         placeholder="Type customer name, phone, measurement number..."
                                         value={customerSearch}
-                                        onChange={(e) => {
-                                            setCustomerSearch(e.target.value);
-                                            setShowCustomerGrid(true);
-                                        }}
+                                        onChange={(e) => handleCustomerSearchChange(e.target.value)}
                                         onFocus={() => setShowCustomerGrid(true)}
+                                        InputProps={{
+                                            startAdornment: <Search size={18} style={{ marginRight: 8, color: "#999" }} />
+                                        }}
                                     />
-                                    {showCustomerGrid && filteredCustomers.length > 0 && (
-                                        <Paper style={{ position: 'absolute', left: 24, right: 24, zIndex: 1000, maxHeight: '200px', overflowY: 'auto', border: '1px solid #ccc', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                            <Table size="small">
-                                                <TableBody>
-                                                    {filteredCustomers.map(c => (
-                                                        <TableRow 
-                                                            key={c.id} 
-                                                            hover 
-                                                            style={{ cursor: 'pointer' }}
-                                                            onClick={() => {
-                                                                setSelectedCustomer(c);
-                                                                setShowCustomerGrid(false);
-                                                            }}
-                                                        >
-                                                            <TableCell><strong>{c.name}</strong></TableCell>
-                                                            <TableCell>{c.phone || "—"}</TableCell>
-                                                            <TableCell>M# {c.measurementNo || "—"}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+                                    {showCustomerGrid && (customerSearch || searchingCustomer) && (
+                                        <Paper style={{
+                                            position: 'absolute',
+                                            left: 24,
+                                            right: 24,
+                                            zIndex: 1500,
+                                            maxHeight: '220px',
+                                            overflowY: 'auto',
+                                            border: '1px solid #e0e0e0',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 8px 16px rgba(0,0,0,0.08)',
+                                            backgroundColor: '#fff'
+                                        }}>
+                                            {searchingCustomer ? (
+                                                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
+                                                    Searching customers...
+                                                </Box>
+                                            ) : customerResults.length === 0 ? (
+                                                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
+                                                    No customers found.
+                                                </Box>
+                                            ) : (
+                                                <Table size="small">
+                                                    <TableBody>
+                                                        {customerResults.map(c => (
+                                                            <TableRow 
+                                                                key={c.id} 
+                                                                hover 
+                                                                style={{ cursor: 'pointer' }}
+                                                                onClick={() => {
+                                                                    setSelectedCustomer(c);
+                                                                    setShowCustomerGrid(false);
+                                                                }}
+                                                            >
+                                                                <TableCell sx={{ py: 1 }}><strong>{c.name}</strong></TableCell>
+                                                                <TableCell sx={{ py: 1 }}>{c.phone || "—"}</TableCell>
+                                                                <TableCell sx={{ py: 1 }}>M# {c.measurementNo || "—"}</TableCell>
+                                                                <TableCell sx={{ py: 1 }} align="right">Rs. {parseFloat(c.balance || 0).toLocaleString()}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            )}
                                         </Paper>
                                     )}
                                 </>
@@ -509,7 +600,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
 
                             {items.map((item, idx) => (
                                 <Grid container spacing={2} key={item.id} alignItems="center" sx={{ mb: 1.5 }}>
-                                    <Grid item xs={12} sm={4}>
+                                    <Grid item xs={12} sm={6}>
                                         <FormControl fullWidth size="small">
                                             <InputLabel>Product</InputLabel>
                                             <Select
@@ -523,7 +614,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} sm={2.5}>
+                                    <Grid item xs={12} sm={1.5}>
                                         <TextField
                                             fullWidth
                                             size="small"
@@ -533,7 +624,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                             onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={2.5}>
+                                    <Grid item xs={12} sm={2}>
                                         <TextField
                                             fullWidth
                                             size="small"
@@ -543,8 +634,8 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                             onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={2} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Typography variant="body2" style={{ fontWeight: 700 }}>
+                                    <Grid item xs={12} sm={2.5} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                                        <Typography variant="body2" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                             Rs. {item.totalPrice.toLocaleString()}
                                         </Typography>
                                         {items.length > 1 && (
@@ -568,11 +659,26 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                             />
                         </Grid>
 
-                        <Grid item xs={12} sm={4} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}>
-                            <Typography variant="caption" color="textSecondary">Refund Total</Typography>
-                            <Typography variant="h5" style={{ fontWeight: 900, color: '#dc2626' }}>
-                                Rs. {grandTotal.toLocaleString()}
-                            </Typography>
+                        <Grid item xs={12} sm={4}>
+                            <Box sx={{
+                                p: 1.5,
+                                borderRadius: '12px',
+                                bgcolor: '#fff5f5',
+                                border: '1px solid #fee2e2',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                minHeight: '65px'
+                            }}>
+                                <Typography variant="caption" fontWeight="bold" sx={{ color: 'error.main', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    Refund Total
+                                </Typography>
+                                <Typography variant="h5" fontWeight="bold" sx={{ color: 'error.main', mt: 0.5 }}>
+                                    Rs. {grandTotal.toLocaleString()}
+                                </Typography>
+                            </Box>
                         </Grid>
                     </Grid>
                 </DialogContent>
