@@ -300,11 +300,6 @@ function CustomerBill({ booking }) {
                                         <tr key={idx} style={{ borderBottom: '1px dotted #ddd' }}>
                                             <td style={{ padding: '6px 0', fontSize: '10px', verticalAlign: 'top', lineHeight: '1.3' }}>
                                                 {description}
-                                                {!isStitch && parseFloat(item.discount || 0) > 0 && (
-                                                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic' }}>
-                                                        Disc: Rs. {parseFloat(item.discount || 0).toLocaleString()}
-                                                    </div>
-                                                )}
                                                 {item.quantity > 1 && (
                                                     <div style={{ fontSize: '9px', color: '#666' }}>
                                                         {item.quantity} x Rs. {unitPr.toLocaleString()}
@@ -358,30 +353,50 @@ function CustomerBill({ booking }) {
             })()}
 
             {/* Totals Section */}
-            <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                        <tr style={{ borderTop: '1px dashed #000' }}>
-                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
-                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
-                                Rs. {parseFloat(booking.totalAmount || 0).toLocaleString()}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Paid:</td>
-                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
-                                Rs. {parseFloat(booking.advanceAmount || 0).toLocaleString()}
-                            </td>
-                        </tr>
-                        <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
-                            <td style={{ padding: '6px 0', fontSize: '11px' }}>Balance Due:</td>
-                            <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
-                                Rs. {parseFloat(booking.remainingAmount || 0).toLocaleString()}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            {(() => {
+                const totalDiscount = (booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0);
+                const netTotal = parseFloat(booking.totalAmount || 0);
+                const rawTotal = netTotal + totalDiscount;
+                
+                return (
+                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                <tr style={{ borderTop: '1px dashed #000' }}>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                        Rs. {rawTotal.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Discount Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold', color: '#dc2626' }}>
+                                        Rs. {totalDiscount.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr style={{ borderTop: '1px dotted #ccc' }}>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Net Total:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                        Rs. {netTotal.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
+                                        Rs. {parseFloat(booking.advanceAmount || 0).toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
+                                    <td style={{ padding: '6px 0', fontSize: '11px' }}>Remaining Balance:</td>
+                                    <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
+                                        Rs. {parseFloat(booking.remainingAmount || 0).toLocaleString()}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })()}
 
             {/* Booking Note */}
             {booking.notes && (
@@ -575,11 +590,6 @@ function MergedCustomerBill({ bookings }) {
                                             <div style={{ fontSize: '9px', color: '#7c3aed', fontWeight: 600 }}>
                                                 Bill: #{booking.bookingNumber || booking.id}
                                             </div>
-                                            {!isStitch && parseFloat(item.discount || 0) > 0 && (
-                                                <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic' }}>
-                                                    Disc: Rs. {parseFloat(item.discount || 0).toLocaleString()}
-                                                </div>
-                                            )}
                                             {item.quantity > 1 && (
                                                 <div style={{ fontSize: '9px', color: '#666' }}>
                                                     {item.quantity} x Rs. {unitPr.toLocaleString()}
@@ -637,30 +647,52 @@ function MergedCustomerBill({ bookings }) {
             })()}
 
             {/* Totals Section */}
-            <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                        <tr style={{ borderTop: '1px dashed #000' }}>
-                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
-                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
-                                Rs. {totalAmount.toLocaleString()}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Paid:</td>
-                            <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
-                                Rs. {advanceAmount.toLocaleString()}
-                            </td>
-                        </tr>
-                        <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
-                            <td style={{ padding: '6px 0', fontSize: '11px' }}>Balance Due:</td>
-                            <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
-                                Rs. {remainingAmount.toLocaleString()}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            {(() => {
+                const totalDiscount = sortedBookings.reduce((sum, b) => {
+                    return sum + (b.items || []).reduce((s, item) => s + parseFloat(item.discount || 0), 0);
+                }, 0);
+                const netTotal = totalAmount;
+                const rawTotal = netTotal + totalDiscount;
+                
+                return (
+                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                <tr style={{ borderTop: '1px dashed #000' }}>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Total Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                        Rs. {rawTotal.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Discount Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold', color: '#dc2626' }}>
+                                        Rs. {totalDiscount.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr style={{ borderTop: '1px dotted #ccc' }}>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Net Total:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                        Rs. {netTotal.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', fontWeight: '600' }}>Advance Amount:</td>
+                                    <td style={{ padding: '4px 0', fontSize: '10px', textAlign: 'right', color: '#059669', fontWeight: 'bold' }}>
+                                        Rs. {advanceAmount.toLocaleString()}
+                                    </td>
+                                </tr>
+                                <tr style={{ borderTop: '1px dashed #000', borderBottom: '1px solid #000', fontWeight: 'bold' }}>
+                                    <td style={{ padding: '6px 0', fontSize: '11px' }}>Remaining Balance:</td>
+                                    <td style={{ padding: '6px 0', fontSize: '11px', textAlign: 'right', color: '#dc2626' }}>
+                                        Rs. {remainingAmount.toLocaleString()}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })()}
 
             {/* Booking Notes */}
             {notesList.length > 0 && (
