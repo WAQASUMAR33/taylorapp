@@ -432,9 +432,10 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
             <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="md" fullWidth>
                 <DialogTitle style={{ fontWeight: 800 }}>Create New Product Sale Return</DialogTitle>
                 <DialogContent dividers>
-                    <Grid container spacing={3}>
-                        {/* Customer Row */}
-                        <Grid item xs={12} style={{ position: 'relative' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', pt: 1 }}>
+                        
+                        {/* Row 1: Customer Selection */}
+                        <Box sx={{ position: 'relative', width: '100%' }}>
                             <Typography variant="subtitle2" style={{ fontWeight: 700, marginBottom: '6px' }}>Select Customer</Typography>
                             {selectedCustomer ? (
                                 <Box sx={{
@@ -501,8 +502,8 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                     {showCustomerGrid && (customerSearch || searchingCustomer) && (
                                         <Paper style={{
                                             position: 'absolute',
-                                            left: 24,
-                                            right: 24,
+                                            left: 0,
+                                            right: 0,
                                             zIndex: 1500,
                                             maxHeight: '220px',
                                             overflowY: 'auto',
@@ -545,146 +546,159 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                     )}
                                 </>
                             )}
-                        </Grid>
+                        </Box>
 
-                        <Grid item xs={12} sm={4}>
-                            <TextField
-                                fullWidth
-                                type="date"
-                                size="small"
-                                label="Return Date"
-                                InputLabelProps={{ shrink: true }}
-                                value={returnDate}
-                                onChange={(e) => setReturnDate(e.target.value)}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} sm={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Payment Mode</InputLabel>
-                                <Select
-                                    label="Payment Mode"
-                                    value={paymentMode}
-                                    onChange={(e) => setPaymentMode(e.target.value)}
-                                >
-                                    <MenuItem value="CASH">Cash Refund</MenuItem>
-                                    <MenuItem value="BANK">Bank Transfer Refund</MenuItem>
-                                    <MenuItem value="LEDGER">Adjust Customer Balance</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        {paymentMode === "BANK" && (
-                            <Grid item xs={12} sm={4}>
+                        {/* Row 2: Date & Payment Options */}
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' }, width: '100%' }}>
+                            <Box sx={{ flex: 1, minWidth: '200px' }}>
+                                <TextField
+                                    fullWidth
+                                    type="date"
+                                    size="small"
+                                    label="Return Date"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={returnDate}
+                                    onChange={(e) => setReturnDate(e.target.value)}
+                                />
+                            </Box>
+                            
+                            <Box sx={{ flex: 1, minWidth: '200px' }}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Refund Bank</InputLabel>
+                                    <InputLabel>Payment Mode</InputLabel>
                                     <Select
-                                        label="Refund Bank"
-                                        value={selectedBankId}
-                                        onChange={(e) => setSelectedBankId(e.target.value)}
+                                        label="Payment Mode"
+                                        value={paymentMode}
+                                        onChange={(e) => setPaymentMode(e.target.value)}
                                     >
-                                        {banks.map(b => (
-                                            <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
-                                        ))}
+                                        <MenuItem value="CASH">Cash Refund</MenuItem>
+                                        <MenuItem value="BANK">Bank Transfer Refund</MenuItem>
+                                        <MenuItem value="LEDGER">Adjust Customer Balance</MenuItem>
                                     </Select>
                                 </FormControl>
-                            </Grid>
-                        )}
+                            </Box>
 
-                        {/* Items Section */}
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            {paymentMode === "BANK" && (
+                                <Box sx={{ flex: 1, minWidth: '200px' }}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Refund Bank</InputLabel>
+                                        <Select
+                                            label="Refund Bank"
+                                            value={selectedBankId}
+                                            onChange={(e) => setSelectedBankId(e.target.value)}
+                                        >
+                                            {banks.map(b => (
+                                                <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Box>
+                            )}
+                        </Box>
+
+                        {/* Row 3: Returned Products */}
+                        <Box sx={{ width: '100%' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, borderBottom: '1px solid #eee', pb: 1 }}>
                                 <Typography variant="subtitle2" style={{ fontWeight: 700 }}>Returned Products</Typography>
                                 <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={handleAddItemRow}>Add Product</Button>
                             </Box>
 
-                            {items.map((item, idx) => (
-                                <Grid container spacing={2} key={item.id} alignItems="center" sx={{ mb: 1.5 }}>
-                                    <Grid item xs={12} sm={6}>
-                                        <FormControl fullWidth size="small">
-                                            <InputLabel>Product</InputLabel>
-                                            <Select
-                                                label="Product"
-                                                value={item.productId}
-                                                onChange={(e) => handleItemChange(item.id, "productId", e.target.value)}
-                                            >
-                                                {products.map(p => (
-                                                    <MenuItem key={p.id} value={p.id}>{p.name} (SKU: {p.sku})</MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} sm={1.5}>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            label="Qty"
-                                            type="number"
-                                            value={item.quantity}
-                                            onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={2}>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            label="Unit Price"
-                                            type="number"
-                                            value={item.unitPrice}
-                                            onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={2.5} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                                        <Typography variant="body2" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                            Rs. {item.totalPrice.toLocaleString()}
-                                        </Typography>
-                                        {items.length > 1 && (
-                                            <IconButton color="error" size="small" onClick={() => handleRemoveItemRow(item.id)}>
-                                                <Trash2 size={16} />
-                                            </IconButton>
-                                        )}
-                                    </Grid>
-                                </Grid>
-                            ))}
-                        </Grid>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {items.map((item, idx) => (
+                                    <Box key={item.id} sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, width: '100%' }}>
+                                        <Box sx={{ flex: 3, minWidth: '250px' }}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Product</InputLabel>
+                                                <Select
+                                                    label="Product"
+                                                    value={item.productId}
+                                                    onChange={(e) => handleItemChange(item.id, "productId", e.target.value)}
+                                                >
+                                                    {products.map(p => (
+                                                        <MenuItem key={p.id} value={p.id}>{p.name} (SKU: {p.sku})</MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Box>
+                                        
+                                        <Box sx={{ flex: 1, minWidth: '80px' }}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Qty"
+                                                type="number"
+                                                value={item.quantity}
+                                                onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
+                                            />
+                                        </Box>
 
-                        <Grid item xs={12} sm={8}>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={2}
-                                label="Notes"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                            />
-                        </Grid>
+                                        <Box sx={{ flex: 1, minWidth: '100px' }}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Unit Price"
+                                                type="number"
+                                                value={item.unitPrice}
+                                                onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
+                                            />
+                                        </Box>
 
-                        <Grid item xs={12} sm={4}>
-                            <Box sx={{
-                                p: 1.5,
-                                borderRadius: '12px',
-                                bgcolor: '#fff5f5',
-                                border: '1px solid #fee2e2',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                height: '100%',
-                                minHeight: '65px'
-                            }}>
-                                <Typography variant="caption" fontWeight="bold" sx={{ color: 'error.main', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    Refund Total
-                                </Typography>
-                                <Typography variant="h5" fontWeight="bold" sx={{ color: 'error.main', mt: 0.5 }}>
-                                    Rs. {grandTotal.toLocaleString()}
-                                </Typography>
+                                        <Box sx={{ width: '120px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5, ml: 'auto' }}>
+                                            <Typography variant="body2" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                                Rs. {item.totalPrice.toLocaleString()}
+                                            </Typography>
+                                            {items.length > 1 && (
+                                                <IconButton color="error" size="small" onClick={() => handleRemoveItemRow(item.id)}>
+                                                    <Trash2 size={16} />
+                                                </IconButton>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                ))}
                             </Box>
-                        </Grid>
-                    </Grid>
+                        </Box>
+
+                        {/* Row 4: Notes & Refund Total */}
+                        <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' }, width: '100%', alignItems: 'stretch' }}>
+                            <Box sx={{ flex: 2, minWidth: '300px' }}>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    label="Notes"
+                                    placeholder="Add notes about this return..."
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
+                            </Box>
+
+                            <Box sx={{ flex: 1, minWidth: '200px' }}>
+                                <Box sx={{
+                                    p: 2,
+                                    borderRadius: '12px',
+                                    bgcolor: '#fff5f5',
+                                    border: '1px solid #fee2e2',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    minHeight: '90px'
+                                }}>
+                                    <Typography variant="caption" fontWeight="bold" sx={{ color: 'error.main', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        Refund Total
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ color: 'error.main', mt: 0.5 }}>
+                                        Rs. {grandTotal.toLocaleString()}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
+
+                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenAddDialog(false)} color="secondary">Cancel</Button>
-                    <Button onClick={handleSubmitReturn} color="primary" variant="contained">Submit Return</Button>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={() => setOpenAddDialog(false)} color="secondary" sx={{ fontWeight: 600 }}>Cancel</Button>
+                    <Button onClick={handleSubmitReturn} color="primary" variant="contained" sx={{ fontWeight: 600, px: 3 }}>Submit Return</Button>
                 </DialogActions>
             </Dialog>
 
