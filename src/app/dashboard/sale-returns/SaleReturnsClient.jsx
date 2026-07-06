@@ -434,123 +434,119 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                 <DialogContent dividers>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', pt: 1 }}>
                         
-                        {/* Row 1: Customer Selection */}
-                        <Box sx={{ position: 'relative', width: '100%' }}>
-                            <Typography variant="subtitle2" style={{ fontWeight: 700, marginBottom: '6px' }}>Select Customer</Typography>
-                            {selectedCustomer ? (
-                                <Box sx={{
-                                    p: 2,
-                                    border: '1px solid #e0e0e0',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    bgcolor: '#fafafa',
-                                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
-                                }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Box sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: '50%',
-                                            bgcolor: 'warning.light',
-                                            color: 'warning.main',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 'bold',
-                                            fontSize: '1.1rem'
-                                        }}>
-                                            {selectedCustomer.name.charAt(0).toUpperCase()}
-                                        </Box>
-                                        <Box>
-                                            <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
-                                                {selectedCustomer.name}
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 0.5 }}>
-                                                {selectedCustomer.phone && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        📞 {selectedCustomer.phone}
-                                                    </Typography>
-                                                )}
-                                                {selectedCustomer.address && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        📍 {selectedCustomer.address}
-                                                    </Typography>
-                                                )}
-                                                <Typography variant="caption" color="warning.main" fontWeight="bold">
-                                                    💳 Bal: Rs. {parseFloat(selectedCustomer.balance || 0).toLocaleString()}
-                                                </Typography>
+                        {/* Row 1: Customer Selection, Date & Payment Mode */}
+                        <Box sx={{ 
+                            display: 'flex', 
+                            gap: 2, 
+                            alignItems: 'flex-end', 
+                            width: '100%',
+                            flexWrap: { xs: 'wrap', md: 'nowrap' }
+                        }}>
+                            {/* Customer Select (Wide) */}
+                            <Box sx={{ flex: 2.5, minWidth: '280px', position: 'relative' }}>
+                                <Typography variant="subtitle2" style={{ fontWeight: 700, marginBottom: '6px' }}>Select Customer</Typography>
+                                {selectedCustomer ? (
+                                    <Box sx={{
+                                        p: 1,
+                                        px: 1.5,
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '8px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        bgcolor: '#fafafa',
+                                        height: '40px',
+                                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
+                                    }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box sx={{
+                                                width: 24,
+                                                height: 24,
+                                                borderRadius: '50%',
+                                                bgcolor: 'warning.light',
+                                                color: 'warning.main',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.8rem'
+                                            }}>
+                                                {selectedCustomer.name.charAt(0).toUpperCase()}
                                             </Box>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                                {selectedCustomer.name} {selectedCustomer.phone ? `(${selectedCustomer.phone})` : ''}
+                                            </Typography>
                                         </Box>
+                                        <Button variant="text" color="error" size="small" sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.75rem' }} onClick={() => { setSelectedCustomer(null); setCustomerSearch(""); setCustomerResults([]); }}>Change</Button>
                                     </Box>
-                                    <Button variant="outlined" color="error" size="small" sx={{ borderRadius: '8px' }} onClick={() => { setSelectedCustomer(null); setCustomerSearch(""); setCustomerResults([]); }}>Change</Button>
-                                </Box>
-                            ) : (
-                                <>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        placeholder="Type customer name, phone, measurement number..."
-                                        value={customerSearch}
-                                        onChange={(e) => handleCustomerSearchChange(e.target.value)}
-                                        onFocus={() => setShowCustomerGrid(true)}
-                                        InputProps={{
-                                            startAdornment: <Search size={18} style={{ marginRight: 8, color: "#999" }} />
-                                        }}
-                                    />
-                                    {showCustomerGrid && (customerSearch || searchingCustomer) && (
-                                        <Paper style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            right: 0,
-                                            zIndex: 1500,
-                                            maxHeight: '220px',
-                                            overflowY: 'auto',
-                                            border: '1px solid #e0e0e0',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 8px 16px rgba(0,0,0,0.08)',
-                                            backgroundColor: '#fff'
-                                        }}>
-                                            {searchingCustomer ? (
-                                                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
-                                                    Searching customers...
-                                                </Box>
-                                            ) : customerResults.length === 0 ? (
-                                                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
-                                                    No customers found.
-                                                </Box>
-                                            ) : (
-                                                <Table size="small">
-                                                    <TableBody>
-                                                        {customerResults.map(c => (
-                                                            <TableRow 
-                                                                key={c.id} 
-                                                                hover 
-                                                                style={{ cursor: 'pointer' }}
-                                                                onClick={() => {
-                                                                    setSelectedCustomer(c);
-                                                                    setShowCustomerGrid(false);
-                                                                }}
-                                                            >
-                                                                <TableCell sx={{ py: 1 }}><strong>{c.name}</strong></TableCell>
-                                                                <TableCell sx={{ py: 1 }}>{c.phone || "—"}</TableCell>
-                                                                <TableCell sx={{ py: 1 }}>M# {c.measurementNo || "—"}</TableCell>
-                                                                <TableCell sx={{ py: 1 }} align="right">Rs. {parseFloat(c.balance || 0).toLocaleString()}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            )}
-                                        </Paper>
-                                    )}
-                                </>
-                            )}
-                        </Box>
+                                ) : (
+                                    <>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            placeholder="Search name, phone, M#, father, address..."
+                                            value={customerSearch}
+                                            onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                                            onFocus={() => setShowCustomerGrid(true)}
+                                            InputProps={{
+                                                startAdornment: <Search size={18} style={{ marginRight: 8, color: "#999" }} />
+                                            }}
+                                        />
+                                        {showCustomerGrid && (customerSearch || searchingCustomer) && (
+                                            <Paper style={{
+                                                position: 'absolute',
+                                                left: 0,
+                                                zIndex: 1500,
+                                                maxHeight: '220px',
+                                                overflowY: 'auto',
+                                                border: '1px solid #e0e0e0',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 8px 16px rgba(0,0,0,0.08)',
+                                                backgroundColor: '#fff',
+                                                width: '650px' // Extra wide dropdown panel
+                                            }}>
+                                                {searchingCustomer ? (
+                                                    <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
+                                                        Searching customers...
+                                                    </Box>
+                                                ) : customerResults.length === 0 ? (
+                                                    <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '0.85rem' }}>
+                                                        No customers found.
+                                                    </Box>
+                                                ) : (
+                                                    <Table size="small">
+                                                        <TableBody>
+                                                            {customerResults.map(c => (
+                                                                <TableRow 
+                                                                    key={c.id} 
+                                                                    hover 
+                                                                    style={{ cursor: 'pointer' }}
+                                                                    onClick={() => {
+                                                                        setSelectedCustomer(c);
+                                                                        setShowCustomerGrid(false);
+                                                                    }}
+                                                                >
+                                                                    <TableCell sx={{ py: 1, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        <strong>{c.name}</strong>
+                                                                        {c.fatherName && <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '6px' }}>s/o {c.fatherName}</span>}
+                                                                    </TableCell>
+                                                                    <TableCell sx={{ py: 1 }}>{c.phone || "—"}</TableCell>
+                                                                    <TableCell sx={{ py: 1 }}>M# {c.measurementNo || "—"}</TableCell>
+                                                                    <TableCell sx={{ py: 1, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.address || "—"}</TableCell>
+                                                                    <TableCell sx={{ py: 1 }} align="right">Rs. {parseFloat(c.balance || 0).toLocaleString()}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                )}
+                                            </Paper>
+                                        )}
+                                    </>
+                                )}
+                            </Box>
 
-                        {/* Row 2: Date & Payment Options */}
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' }, width: '100%' }}>
-                            <Box sx={{ flex: 1, minWidth: '200px' }}>
+                            {/* Return Date */}
+                            <Box sx={{ flex: 1, minWidth: '150px' }}>
                                 <TextField
                                     fullWidth
                                     type="date"
@@ -561,8 +557,9 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                     onChange={(e) => setReturnDate(e.target.value)}
                                 />
                             </Box>
-                            
-                            <Box sx={{ flex: 1, minWidth: '200px' }}>
+
+                            {/* Payment Mode */}
+                            <Box sx={{ flex: 1, minWidth: '150px' }}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Payment Mode</InputLabel>
                                     <Select
@@ -577,8 +574,9 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                 </FormControl>
                             </Box>
 
+                            {/* Bank select (conditional) */}
                             {paymentMode === "BANK" && (
-                                <Box sx={{ flex: 1, minWidth: '200px' }}>
+                                <Box sx={{ flex: 1, minWidth: '150px' }}>
                                     <FormControl fullWidth size="small">
                                         <InputLabel>Refund Bank</InputLabel>
                                         <Select
