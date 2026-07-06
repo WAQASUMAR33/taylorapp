@@ -666,9 +666,9 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setLedgerDateFrom("");
         setLedgerDateTo("");
         try {
-            const res = await fetch(`/api/ledger?customerId=${customer.id}`);
+            const res = await fetch(`/api/ledger?customerId=${customer.id}&limit=1000`);
             const data = await res.json();
-            setLedgerEntries(Array.isArray(data) ? data : []);
+            setLedgerEntries(data && Array.isArray(data.entries) ? data.entries : []);
         } catch {
             setLedgerEntries([]);
         } finally {
