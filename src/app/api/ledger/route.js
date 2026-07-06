@@ -90,6 +90,16 @@ export async function GET(req) {
                                 }
                             }
                         }
+                    },
+                    saleReturn: {
+                        include: {
+                            customer: true,
+                            items: {
+                                include: {
+                                    product: true
+                                }
+                            }
+                        }
                     }
                 },
                 orderBy: [

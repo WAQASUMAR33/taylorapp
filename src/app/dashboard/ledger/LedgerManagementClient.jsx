@@ -53,12 +53,17 @@ const getBriefDescription = (desc) => {
     if (!desc) return "—";
     const bookingMatch = desc.match(/Booking\s+#?([a-zA-Z0-9-]+)/i);
     const bookingRef = bookingMatch ? ` #${bookingMatch[1]}` : "";
+    const returnMatch = desc.match(/Return\s+#?([a-zA-Z0-9-]+)/i);
+    const returnRef = returnMatch ? ` #${returnMatch[1]}` : "";
     
     if (desc.toLowerCase().includes("payment") || desc.toLowerCase().includes("pay")) {
         return `Payment Received${bookingRef}`;
     }
     if (desc.toLowerCase().includes("booking") || desc.toLowerCase().includes("stitching")) {
         return `Suit Purchase${bookingRef}`;
+    }
+    if (desc.toLowerCase().includes("return")) {
+        return `Product Return${returnRef}`;
     }
     return desc;
 };
@@ -100,6 +105,10 @@ export default function LedgerManagementClient({
     // View Modal State (For Bookings Details click)
     const [viewOpen, setViewOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
+
+    // View Modal State (For Sale Returns Details click)
+    const [returnViewOpen, setReturnViewOpen] = useState(false);
+    const [selectedSaleReturn, setSelectedSaleReturn] = useState(null);
 
     // Payment Modal State (For pay action button)
     const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -589,6 +598,25 @@ export default function LedgerManagementClient({
                                                                     textDecoration: 'underline',
                                                                     '&:hover': {
                                                                         color: 'primary.dark'
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {getBriefDescription(entry.description)}
+                                                            </Typography>
+                                                        ) : entry.saleReturn ? (
+                                                            <Typography 
+                                                                variant="body2" 
+                                                                onClick={() => {
+                                                                    setSelectedSaleReturn(entry.saleReturn);
+                                                                    setReturnViewOpen(true);
+                                                                }}
+                                                                sx={{ 
+                                                                    cursor: 'pointer', 
+                                                                    color: 'warning.main', 
+                                                                    fontWeight: 600,
+                                                                    textDecoration: 'underline',
+                                                                    '&:hover': {
+                                                                        color: 'warning.dark'
                                                                     }
                                                                 }}
                                                             >
@@ -1115,6 +1143,82 @@ export default function LedgerManagementClient({
                     </DialogContent>
                     <DialogActions sx={{ p: 2 }}>
                         <Button onClick={() => setViewOpen(false)} variant="outlined" sx={{ color: '#8b5cf6', borderColor: '#8b5cf6', textTransform: 'none' }}>Close</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {selectedSaleReturn && (
+                <Dialog open={returnViewOpen} onClose={() => setReturnViewOpen(false)} maxWidth="sm" fullWidth>
+                    <DialogTitle sx={{ bgcolor: 'warning.main', color: 'white', py: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h6" fontWeight="bold">Sale Return Details</Typography>
+                            <IconButton onClick={() => setReturnViewOpen(false)} sx={{ color: 'white' }}>
+                                <X size={20} />
+                            </IconButton>
+                        </Box>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3, pt: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" display="block">RETURN NUMBER</Typography>
+                                <Typography variant="body1" fontWeight="bold">#{selectedSaleReturn.returnNumber}</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" display="block">CUSTOMER</Typography>
+                                <Typography variant="body1" fontWeight="bold">{selectedSaleReturn.customer?.name}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">DATE</Typography>
+                                    <Typography variant="body2">{new Date(selectedSaleReturn.returnDate).toLocaleDateString('en-GB')}</Typography>
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">PAYMENT MODE</Typography>
+                                    <Typography variant="body2">{selectedSaleReturn.paymentMode}</Typography>
+                                </Box>
+                            </Box>
+
+                            <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>Returned Products</Typography>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: 'action.hover' }}>
+                                        <TableRow>
+                                            <TableCell>Product</TableCell>
+                                            <TableCell align="center">Qty</TableCell>
+                                            <TableCell align="right">Price</TableCell>
+                                            <TableCell align="right">Total</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {(selectedSaleReturn.items || []).map((item) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>{item.product?.name || "—"}</TableCell>
+                                                <TableCell align="center">{item.quantity}</TableCell>
+                                                <TableCell align="right">Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
+                                                <TableCell align="right" style={{ fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                <Box sx={{ textAlign: 'right' }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Refund Total</Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="error.main">Rs. {parseFloat(selectedSaleReturn.totalAmount).toLocaleString()}</Typography>
+                                </Box>
+                            </Box>
+
+                            {selectedSaleReturn.notes && (
+                                <Box sx={{ p: 1.5, border: '1px dotted #ccc', borderRadius: 2, bgcolor: 'action.hover' }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Notes</Typography>
+                                    <Typography variant="body2">{selectedSaleReturn.notes}</Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button onClick={() => setReturnViewOpen(false)} variant="outlined" color="warning" sx={{ textTransform: 'none' }}>Close</Button>
                     </DialogActions>
                 </Dialog>
             )}

@@ -40,6 +40,16 @@ export default async function LedgerPage() {
                         }
                     }
                 }
+            },
+            saleReturn: {
+                include: {
+                    customer: true,
+                    items: {
+                        include: {
+                            product: true
+                        }
+                    }
+                }
             }
         },
         orderBy: [
@@ -135,6 +145,16 @@ export default async function LedgerPage() {
                 unitPrice: i.unitPrice.toString(),
                 totalPrice: i.totalPrice.toString(),
                 discount: i.discount.toString()
+            }))
+        } : null,
+        saleReturn: entry.saleReturn ? {
+            ...entry.saleReturn,
+            totalAmount: entry.saleReturn.totalAmount.toString(),
+            items: (entry.saleReturn.items || []).map(i => ({
+                ...i,
+                quantity: parseFloat(i.quantity.toString()),
+                unitPrice: parseFloat(i.unitPrice.toString()),
+                totalPrice: parseFloat(i.totalPrice.toString())
             }))
         } : null
     }));
