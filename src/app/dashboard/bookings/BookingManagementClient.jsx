@@ -230,8 +230,8 @@ function CustomerBill({ booking }) {
                             </tr>
                         )}
                         <tr style={{ borderTop: '1px dotted #ccc' }}>
-                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', fontWeight: '600' }}>Customer:</td>
-                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold' }}>{booking.customer?.name}</td>
+                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', fontWeight: 'bold', fontSize: '12px' }}>Customer:</td>
+                            <td style={{ padding: '4px 0 2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>{booking.customer?.name}</td>
                         </tr>
                         {booking.customer?.phone && (
                             <tr>
@@ -240,8 +240,8 @@ function CustomerBill({ booking }) {
                             </tr>
                         )}
                         <tr>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600' }}>Address:</td>
-                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontSize: '9.5px', fontWeight: '500' }}>{booking.customer?.address || '—'}</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: 'bold', fontSize: '12px' }}>Address:</td>
+                            <td style={{ padding: '2px 0', verticalAlign: 'top', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>{booking.customer?.address || '—'}</td>
                         </tr>
                         {booking.customer?.measurementNo && (
                             <tr>
