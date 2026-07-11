@@ -383,16 +383,16 @@ export default function AnalyticsClient({ employees }) {
                                                 Rs. {fmt(s.totalStitchingCostCharged)}
                                             </Typography>
                                         </Box>
-                                        {/* Actual Stitching Cost */}
+                                        {/* Stitching Discount */}
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#dc2626" }} />
                                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                                    Actual Stitching Cost
+                                                    Stitching Discount
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" fontWeight={700} color="#dc2626">
-                                                - Rs. {fmt(s.totalActualStitchingCost)}
+                                                - Rs. {fmt(s.totalStitchingDiscountAmount)}
                                             </Typography>
                                         </Box>
                                         {/* Material Cost */}

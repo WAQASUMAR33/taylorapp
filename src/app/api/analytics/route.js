@@ -97,7 +97,8 @@ export async function GET(req) {
         let productRevenue = 0;     // total unitPrice for cloth items
 
         // Stitching profit breakdown
-        let totalStitchingCostCharged = 0;  // sum of stitchingCost from booking_items (revenue)
+        let totalStitchingAmount = 0;        // Gross stitching revenue before discount
+        let totalStitchingDiscountAmount = 0; // Total discount applied to stitching items
         let totalActualStitchingCost = 0;   // sum of stitching_cost from stitching_options
         let totalActualMaterialCost = 0;    // sum of material_cost from stitching_options
 
@@ -125,24 +126,24 @@ export async function GET(req) {
             for (const item of b.items) {
                 const itemTotal = parseFloat(item.totalPrice) || 0;
                 const qty = parseFloat(item.quantity) || 1;
+                const itemDiscount = parseFloat(item.discount) || 0;
 
                 if (!item.productId) {
                     // ── Stitching item ──
                     suitCount += qty;
                     stitchingRevenue += itemTotal;
 
-                    // Sum of stitching option prices charged to customer (revenue side)
-                    // and actual costs from linked options
+                    // Gross stitching amount is itemTotal + itemDiscount
+                    totalStitchingAmount += itemTotal + itemDiscount;
+                    totalStitchingDiscountAmount += itemDiscount;
+
                     if (item.selectedOptions && item.selectedOptions.length > 0) {
                         for (const opt of item.selectedOptions) {
-                            totalStitchingCostCharged += (parseFloat(opt.price) || 0) * qty;
                             if (opt.stitchingOption) {
                                 totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
                                 totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
                             }
                         }
-                    } else {
-                        totalStitchingCostCharged += itemTotal;
                     }
                 } else {
                     // ── Cloth / product item ──
@@ -171,8 +172,8 @@ export async function GET(req) {
             }
         }
 
-        // ── Stitching Profit = total stitching price (charged) - (actual stitching cost + actual material cost) ──
-        const stitchingProfit = totalStitchingCostCharged - (totalActualStitchingCost + totalActualMaterialCost);
+        // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost ──
+        const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost;
 
         // ── Cloth Profit = total unitPrice - (total costPrice + total expenses) ──
         const clothProfit = totalClothUnitPrice - (totalClothCostPrice + totalExpenses);
@@ -209,7 +210,8 @@ export async function GET(req) {
                 stitchingRevenue,
                 productRevenue,
                 // Stitching profit breakdown
-                totalStitchingCostCharged,
+                totalStitchingCostCharged: totalStitchingAmount,
+                totalStitchingDiscountAmount,
                 totalActualStitchingCost,
                 totalActualMaterialCost,
                 stitchingProfit,
