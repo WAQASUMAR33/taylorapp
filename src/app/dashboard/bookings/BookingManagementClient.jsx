@@ -1803,19 +1803,9 @@ ${allBookingsHtml}
     const productSubtotal = productItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
     const totalSubtotal = stitchingSubtotal + productSubtotal;
 
-    // Apply global discount based on rules:
-    // 1. stitching and products both -> apply discount on product only
-    // 2. stitching only -> apply discount on stitching only
-    // 3. products only -> apply discount on product only
+    // Apply global discount based on total subtotal
     const globalDiscountInput = parseFloat(formData.discount) || 0;
-    let appliedDiscount = 0;
-    if (stitchingSubtotal > 0 && productSubtotal > 0) {
-        appliedDiscount = Math.min(globalDiscountInput, productSubtotal);
-    } else if (stitchingSubtotal > 0) {
-        appliedDiscount = Math.min(globalDiscountInput, stitchingSubtotal);
-    } else if (productSubtotal > 0) {
-        appliedDiscount = Math.min(globalDiscountInput, productSubtotal);
-    }
+    const appliedDiscount = Math.min(globalDiscountInput, totalSubtotal);
 
     const totalAmount = Math.max(0, totalSubtotal - appliedDiscount);
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
@@ -1844,79 +1834,41 @@ ${allBookingsHtml}
         }
 
         try {
-            // Recalculate subtotal for discount target determination
             const subStitching = validItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const subProduct = validProductItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+            const subTotalAll = subStitching + subProduct;
 
             const discountInput = parseFloat(formData.discount) || 0;
-            let submitDiscount = 0;
-            let discountTarget = null; // 'PRODUCTS' or 'STITCHING'
+            const submitDiscount = Math.min(discountInput, subTotalAll);
 
-            if (subStitching > 0 && subProduct > 0) {
-                submitDiscount = Math.min(discountInput, subProduct);
-                discountTarget = 'PRODUCTS';
-            } else if (subStitching > 0) {
-                submitDiscount = Math.min(discountInput, subStitching);
-                discountTarget = 'STITCHING';
-            } else if (subProduct > 0) {
-                submitDiscount = Math.min(discountInput, subProduct);
-                discountTarget = 'PRODUCTS';
-            }
+            // Distribute discount proportionally across ALL valid items
+            let remainingDiscount = submitDiscount;
+            let remainingSubtotal = subTotalAll;
 
-            // Distribute discount proportionally
-            let finalStitchingItems = validItems.map(item => ({
-                ...item,
-                discount: 0,
-                totalPrice: parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)
-            }));
-
-            let finalProductItems = validProductItems.map(item => ({
-                ...item,
-                discount: 0,
-                totalPrice: parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)
-            }));
-
-            if (submitDiscount > 0) {
-                if (discountTarget === 'PRODUCTS') {
-                    let remainingDiscount = submitDiscount;
-                    let remainingSubtotal = subProduct;
-                    finalProductItems = finalProductItems.map((item, idx) => {
-                        const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
-                        let itemDisc = 0;
-                        if (idx === finalProductItems.length - 1) {
-                            itemDisc = remainingDiscount;
-                        } else {
-                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
-                            remainingDiscount -= itemDisc;
-                            remainingSubtotal -= itemSub;
-                        }
-                        return {
-                            ...item,
-                            discount: itemDisc,
-                            totalPrice: Math.max(0, itemSub - itemDisc)
-                        };
-                    });
-                } else if (discountTarget === 'STITCHING') {
-                    let remainingDiscount = submitDiscount;
-                    let remainingSubtotal = subStitching;
-                    finalStitchingItems = finalStitchingItems.map((item, idx) => {
-                        const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
-                        let itemDisc = 0;
-                        if (idx === finalStitchingItems.length - 1) {
-                            itemDisc = remainingDiscount;
-                        } else {
-                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
-                            remainingDiscount -= itemDisc;
-                            remainingSubtotal -= itemSub;
-                        }
-                        return {
-                            ...item,
-                            discount: itemDisc,
-                            totalPrice: Math.max(0, itemSub - itemDisc)
-                        };
-                    });
+            const allItemsProcessed = [...validItems, ...validProductItems].map((item, idx, arr) => {
+                const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                let itemDisc = 0;
+                
+                if (submitDiscount > 0 && remainingSubtotal > 0) {
+                    if (idx === arr.length - 1) {
+                        itemDisc = remainingDiscount;
+                    } else {
+                        itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
+                        remainingDiscount -= itemDisc;
+                        remainingSubtotal -= itemSub;
+                    }
                 }
-            }
+
+                return {
+                    ...item,
+                    discount: itemDisc,
+                    totalPrice: Math.max(0, itemSub - itemDisc)
+                };
+            });
+
+            // Split processed items back into finalStitchingItems and finalProductItems
+            const finalStitchingItems = allItemsProcessed.filter(item => !item.productId);
+            const finalProductItems = allItemsProcessed.filter(item => item.productId);
 
             const payload = {
                 customerId: formData.customerId,
