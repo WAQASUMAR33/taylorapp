@@ -41,7 +41,15 @@ export async function GET(req) {
             prisma.booking.findMany({
                 where: bookingWhere,
                 include: {
-                    items: true
+                    items: {
+                        include: {
+                            selectedOptions: {
+                                include: {
+                                    stitchingOption: true
+                                }
+                            }
+                        }
+                    }
                 }
             }),
             prisma.stitchingExpense.findMany({
@@ -49,26 +57,43 @@ export async function GET(req) {
             })
         ]);
 
-        // Calculate total stitching amount (excluding product/cloth sales)
+        // Calculate total stitching amount, actual stitching cost, and material cost
         let totalStitchingAmount = 0;
+        let totalActualStitchingCost = 0;
+        let totalActualMaterialCost = 0;
+
         for (const b of bookings) {
             for (const item of b.items) {
                 if (!item.productId) {
+                    const qty = parseFloat(item.quantity) || 1;
                     const itemTotal = parseFloat(item.totalPrice) || 0;
                     totalStitchingAmount += itemTotal;
+
+                    if (item.selectedOptions && item.selectedOptions.length > 0) {
+                        for (const opt of item.selectedOptions) {
+                            if (opt.stitchingOption) {
+                                totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
+                                totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // Calculate total stitching expenses
+        // Calculate total stitching profit (Gross Stitching Profit)
+        const totalStitchingProfit = totalStitchingAmount - (totalActualStitchingCost + totalActualMaterialCost);
+
+        // Calculate total stitching expenses (Overhead expenses)
         const totalStitchingExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-        // Profit
-        const profit = totalStitchingAmount - totalStitchingExpenses;
+        // Net Stitching Profit
+        const profit = totalStitchingProfit - totalStitchingExpenses;
 
         return NextResponse.json({
             totalStitchingAmount,
             totalStitchingExpenses,
+            totalStitchingProfit,
             profit
         });
     } catch (error) {

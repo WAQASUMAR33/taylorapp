@@ -404,7 +404,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                     >
                         <Box>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Stitching Profit
+                                Net Stitching Profit
                             </Typography>
                             {analyticsLoading ? (
                                 <Box sx={{ display: "flex", alignItems: "center", mt: 0.5, height: 32 }}>
@@ -421,7 +421,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                                 </Typography>
                             )}
                             <Typography variant="caption" color="text.secondary">
-                                Revenue - Expenses
+                                Stitching Profit - Stitching Expenses
                             </Typography>
                         </Box>
                         <Box
