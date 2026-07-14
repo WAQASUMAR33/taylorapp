@@ -743,7 +743,7 @@ function TailorTicket({ booking, measurements }) {
 
             {/* Title */}
             <div style={{ textAlign: 'center', margin: '6px 0', fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
-                Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی
+                Stitching Details &nbsp;|&nbsp; بکنگ پرچی
             </div>
 
             {/* Info bar */}
@@ -1400,7 +1400,7 @@ ${periodHtml}
                         <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
                     </div>
                 </div>
-                <div class="title">Tailor Order Ticket &nbsp;|&nbsp; بکنگ پرچی</div>
+                <div class="title">Stitching Details &nbsp;|&nbsp; بکنگ پرچی</div>
                 <table class="info-table">
                     <tbody>
                         <tr>
