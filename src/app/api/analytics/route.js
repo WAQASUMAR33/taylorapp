@@ -105,6 +105,7 @@ export async function GET(req) {
         // Cloth profit breakdown
         let totalClothUnitPrice = 0;        // sum of unitPrice * quantity for cloth items
         let totalClothCostPrice = 0;        // sum of costPrice * quantity for cloth items
+        let totalClothDiscountAmount = 0;   // sum of discount for cloth items
 
         // Tailor map: tailorId → { name, amount, count }
         const tailorMap = {};
@@ -150,6 +151,7 @@ export async function GET(req) {
                     productRevenue += itemTotal;
                     totalClothUnitPrice += (parseFloat(item.unitPrice) || 0) * qty;
                     totalClothCostPrice += (parseFloat(item.costPrice) || 0) * qty;
+                    totalClothDiscountAmount += itemDiscount;
                 }
             }
 
@@ -175,8 +177,8 @@ export async function GET(req) {
         // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost ──
         const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost;
 
-        // ── Cloth Profit = total unitPrice - (total costPrice + total expenses) ──
-        const clothProfit = totalClothUnitPrice - (totalClothCostPrice + totalExpenses);
+        // ── Cloth Profit = total unitPrice - total discount - (total costPrice + total expenses) ──
+        const clothProfit = totalClothUnitPrice - totalClothDiscountAmount - (totalClothCostPrice + totalExpenses);
 
         // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
         const overallShopProfit = stitchingProfit + clothProfit;
@@ -218,6 +220,7 @@ export async function GET(req) {
                 // Cloth profit breakdown
                 totalClothUnitPrice,
                 totalClothCostPrice,
+                totalClothDiscountAmount,
                 totalExpenses,
                 clothProfit,
                 // Overall shop profit

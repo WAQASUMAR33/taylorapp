@@ -296,7 +296,7 @@ export default function AnalyticsClient({ employees }) {
                                 sub={`${s.suitCount} suit pieces`} color="#0891b2" bgColor="#cffafe" />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <StatCard icon={Tag} label="Clothing Revenue" value={s.productRevenue}
+                            <StatCard icon={Tag} label="Product Sales" value={s.productRevenue}
                                 sub="Products / accessories" color="#b45309" bgColor="#fef3c7" />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -438,7 +438,7 @@ export default function AnalyticsClient({ employees }) {
                             </Card>
                         </Grid>
 
-                        {/* Cloth Profit Card */}
+                        {/* Product Profit Card */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card variant="outlined" sx={{
                                 borderRadius: 3, border: "1px solid #e5e7eb", height: "100%",
@@ -452,7 +452,7 @@ export default function AnalyticsClient({ employees }) {
                                         <ShoppingBag size={18} color="#b45309" />
                                     </Box>
                                     <Typography variant="subtitle1" fontWeight={800} color="#92400e">
-                                        Cloth Profit
+                                        Product Profit
                                     </Typography>
                                 </Box>
                                 <CardContent sx={{ p: 2.5 }}>
@@ -462,22 +462,34 @@ export default function AnalyticsClient({ employees }) {
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#b45309" }} />
                                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                                    Total Unit Price (Revenue)
+                                                    Total Product Sales
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" fontWeight={700} color="#b45309">
                                                 Rs. {fmt(s.totalClothUnitPrice)}
                                             </Typography>
                                         </Box>
-                                        {/* Cost Price */}
+                                        {/* Product Discount */}
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#dc2626" }} />
                                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                                    Total Cost Price
+                                                    Total Product Discount
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" fontWeight={700} color="#dc2626">
+                                                - Rs. {fmt(s.totalClothDiscountAmount)}
+                                            </Typography>
+                                        </Box>
+                                        {/* Cost Price */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#6b7280" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Cost Price
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#6b7280">
                                                 - Rs. {fmt(s.totalClothCostPrice)}
                                             </Typography>
                                         </Box>
@@ -486,7 +498,7 @@ export default function AnalyticsClient({ employees }) {
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#d97706" }} />
                                                 <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                                    Total Expenses
+                                                    Total Expenses (General Expenses)
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" fontWeight={700} color="#d97706">
@@ -497,20 +509,20 @@ export default function AnalyticsClient({ employees }) {
                                         {/* Net Profit */}
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                             <Typography variant="subtitle2" fontWeight={800} color="#1f2937">
-                                                Net Cloth Profit
+                                                Net Product Profit
                                             </Typography>
                                             <Typography variant="h6" fontWeight={800}
                                                 sx={{ color: (s.clothProfit || 0) >= 0 ? "#059669" : "#dc2626" }}>
                                                 Rs. {fmt(s.clothProfit)}
                                             </Typography>
                                         </Box>
-                                        {s.totalClothUnitPrice > 0 && (
+                                        {(s.totalClothUnitPrice - s.totalClothDiscountAmount) > 0 && (
                                             <Box sx={{ mt: 0.5 }}>
                                                 <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                                    Profit Margin: {((s.clothProfit / s.totalClothUnitPrice) * 100).toFixed(1)}%
+                                                    Profit Margin: {((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount)) * 100).toFixed(1)}%
                                                 </Typography>
                                                 <LinearProgress variant="determinate"
-                                                    value={Math.min(Math.abs((s.clothProfit / s.totalClothUnitPrice) * 100), 100)}
+                                                    value={Math.min(Math.abs((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount)) * 100), 100)}
                                                     sx={{
                                                         mt: 0.5, height: 6, borderRadius: 3, bgcolor: "#f3f4f6",
                                                         "& .MuiLinearProgress-bar": {
@@ -573,14 +585,14 @@ export default function AnalyticsClient({ employees }) {
                                     <Typography variant="h5" fontWeight={800} color="#9ca3af">+</Typography>
                                 </Grid>
 
-                                {/* Cloth Profit Summary */}
+                                {/* Product Profit Summary */}
                                 <Grid size={{ xs: 12, sm: 4 }}>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 0.5 }}>
                                             <ShoppingBag size={16} color="#b45309" />
                                             <Typography variant="caption" fontWeight={700} color="#92400e"
                                                 sx={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.7rem" }}>
-                                                Cloth Profit
+                                                Product Profit
                                             </Typography>
                                         </Box>
                                         <Typography variant="h5" fontWeight={800}
