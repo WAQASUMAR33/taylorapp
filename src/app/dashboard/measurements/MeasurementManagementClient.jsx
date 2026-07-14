@@ -14,25 +14,28 @@ import {
 } from "lucide-react";
 
 // ── Urdu labels for all measurement fields ──────────────────────────────────
-const SQ_QAMEEZ_FIELDS = [
-    { name: "qameez_lambai", label: "قمیض لمبائی" },   // Qameez Length
-    { name: "bazoo", label: "بازو" },   // Sleeve
-    { name: "teera", label: "تیرہ" },   // Shoulder
-    { name: "galaa", label: "گلا" },   // Neck
-    { name: "chaati", label: "چھاتی" },   // Chest
-    { name: "gheera", label: "گھیرا" },   // Hem
-    { name: "kaf", label: "کف" },   // Cuff
-    { name: "gehra_gird", label: "گہرا گرد" },   // Gehra Gird
-    { name: "kandha", label: "کندھا" },   // Armhole
-    { name: "chaati_around", label: "چھاتی گرد" },   // Chest Around
-    { name: "kamar_around", label: "کمر گرد" },   // Waist Around
-    { name: "hip_around", label: "ہپ گرد" },   // Hip Around
+const SQ_RIGHT_FIELDS = [
+    { name: "qameez_lambai", label: "قمیض" },
+    { name: "teera", label: "تیرہ" },
+    { name: "bazoo", label: "بازو" },
+    { name: "galaa", label: "گلا" },
+    { name: "chaati_around", label: "چھاتی گرد" },
+    { name: "gehra_gird", label: "گھیرا گرد" },
+    { name: "shalwar_lambai", label: "شلوار لمبائی" },
+    { name: "puhncha", label: "پہنچہ" },
 ];
 
-const SQ_SHALWAR_FIELDS = [
-    { name: "shalwar_lambai", label: "شلوار لمبائی" },   // Shalwar Length
-    { name: "puhncha", label: "پہنچا" },   // Ankle
-    { name: "shalwar_gheera", label: "شلوار گھیرا" },   // Shalwar Hem
+const SQ_LEFT_FIELDS = [
+    { name: "chaati", label: "چھاتی" },
+    { name: "kamar_around", label: "کمر" },
+    { name: "gheera", label: "گھیرا" },
+    { name: "kaf", label: "کف" },
+];
+
+const SQ_ADDITIONAL_FIELDS = [
+    { name: "kandha", label: "کندھا" },
+    { name: "hip_around", label: "ہپ گرد" },
+    { name: "shalwar_gheera", label: "شلوار گھیرا" },
 ];
 
 const WAISTCOAT_FIELDS = [
@@ -123,6 +126,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [formData, setFormData] = useState(EMPTY_FORM);
+    const [showAdditional, setShowAdditional] = useState(false);
 
     // Dynamic Customer Selection State
     const [customerSearch, setCustomerSearch] = useState("");
@@ -710,23 +714,118 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                 {/* Shalwar Qameez Tab */}
                                 {modalTab === 0 && (
                                     <Box>
-                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
-                                            قمیض (Shirt)
-                                        </Typography>
-                                        <Grid container spacing={2} sx={{ mb: 3 }}>
-                                            {SQ_QAMEEZ_FIELDS.map((f) => (
-                                                <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
-                                            ))}
+                                        <Grid container spacing={3}>
+                                            {/* Right Column */}
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 0.5 }}>
+                                                    قمیض (دائیں طرف)
+                                                </Typography>
+                                                <Grid container spacing={2}>
+                                                    {SQ_RIGHT_FIELDS.map((f) => (
+                                                        <Grid key={f.name} size={{ xs: 12 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label={
+                                                                    <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                        {f.label}
+                                                                    </span>
+                                                                }
+                                                                name={f.name}
+                                                                value={formData[f.name] || ""}
+                                                                onChange={handleInputChange}
+                                                                InputProps={{
+                                                                    endAdornment: (
+                                                                        <InputAdornment position="end">
+                                                                            <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                {formData.unit}
+                                                                            </Typography>
+                                                                        </InputAdornment>
+                                                                    ),
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                    ))}
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* Left Column */}
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 0.5 }}>
+                                                    چھاتی، کمر، گھیرا (بائیں طرف)
+                                                </Typography>
+                                                <Grid container spacing={2}>
+                                                    {SQ_LEFT_FIELDS.map((f) => (
+                                                        <Grid key={f.name} size={{ xs: 12 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label={
+                                                                    <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                        {f.label}
+                                                                    </span>
+                                                                }
+                                                                name={f.name}
+                                                                value={formData[f.name] || ""}
+                                                                onChange={handleInputChange}
+                                                                InputProps={{
+                                                                    endAdornment: (
+                                                                        <InputAdornment position="end">
+                                                                            <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                {formData.unit}
+                                                                            </Typography>
+                                                                        </InputAdornment>
+                                                                    ),
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                    ))}
+                                                </Grid>
+                                            </Grid>
                                         </Grid>
 
-                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
-                                            شلوار (Trouser)
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                            {SQ_SHALWAR_FIELDS.map((f) => (
-                                                <MeasureField key={f.name} field={f} formData={formData} onChange={handleInputChange} />
-                                            ))}
-                                        </Grid>
+                                        {/* Collapsible Section for the remaining 3 fields */}
+                                        <Box sx={{ mt: 2.5 }}>
+                                            <Button
+                                                size="small"
+                                                variant="text"
+                                                onClick={() => setShowAdditional(!showAdditional)}
+                                                sx={{ textTransform: "none", fontWeight: 600 }}
+                                            >
+                                                {showAdditional ? "Hide Additional Fields" : "Show Additional Fields (کندھا، ہپ گرد، شلوار گھیرا)"}
+                                            </Button>
+                                            {showAdditional && (
+                                                <Paper variant="outlined" sx={{ p: 2, mt: 1, bgcolor: "action.hover", borderRadius: 2 }}>
+                                                    <Grid container spacing={2}>
+                                                        {SQ_ADDITIONAL_FIELDS.map((f) => (
+                                                            <Grid key={f.name} size={{ xs: 12, sm: 4 }}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    label={
+                                                                        <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                            {f.label}
+                                                                        </span>
+                                                                    }
+                                                                    name={f.name}
+                                                                    value={formData[f.name] || ""}
+                                                                    onChange={handleInputChange}
+                                                                    InputProps={{
+                                                                        endAdornment: (
+                                                                            <InputAdornment position="end">
+                                                                                <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                    {formData.unit}
+                                                                                </Typography>
+                                                                            </InputAdornment>
+                                                                        ),
+                                                                    }}
+                                                                />
+                                                            </Grid>
+                                                        ))}
+                                                    </Grid>
+                                                </Paper>
+                                            )}
+                                        </Box>
                                     </Box>
                                 )}
 
