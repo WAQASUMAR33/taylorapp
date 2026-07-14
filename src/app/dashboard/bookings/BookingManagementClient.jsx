@@ -701,25 +701,25 @@ function TailorTicket({ booking, measurements }) {
     const getMeasureRows = (src, isWskot) => {
         if (isWskot) {
             return [
-                ['Lambai', src?.wskot_lambai],
-                ['Teera', src?.wskot_teera],
-                ['Galla', src?.wskot_gala],
-                ['Chatti', src?.wskot_chaati],
-                ['Kamar', src?.wskot_kamar],
-                ['Hip', src?.wskot_hip],
+                ['واسکٹ لمبائی', src?.wskot_lambai],
+                ['تیرہ', src?.wskot_teera],
+                ['گلا', src?.wskot_gala],
+                ['چھاتی', src?.wskot_chaati],
+                ['کمر', src?.wskot_kamar],
+                ['ہپ', src?.wskot_hip],
             ];
         }
         return [
-            ['Lambai', src?.qameez_lambai],
-            ['Teera', src?.teera],
-            ['Bazu', src?.bazoo],
-            ['Galla', src?.galaa],
-            ['Chaati A', src?.chaati_around],
-            ['Ghera A', src?.gehra_gird],
-            ['Shalwar Lambai', src?.shalwar_lambai],
-            ['Poncha', src?.puhncha],
-            ['Shalwar', src?.shalwar_gheera],
-            ['Ghera', src?.hip_around],
+            ['قمیض', src?.qameez_lambai],
+            ['تیرہ', src?.teera],
+            ['بازو', src?.bazoo],
+            ['گلا', src?.galaa],
+            ['چھاتی گرد', src?.chaati_around],
+            ['گھیرا گرد', src?.gehra_gird],
+            ['شلوار لمبائی', src?.shalwar_lambai],
+            ['پہنچہ', src?.puhncha],
+            ['شلوار گھیرا', src?.shalwar_gheera],
+            ['ہپ گرد', src?.hip_around],
         ];
     };
 
@@ -793,8 +793,8 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* ── Measurements column ── */}
                             <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
-                                    Measurements — پیمائش
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
+                                    قمیض (دائیں طرف)
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
@@ -818,10 +818,50 @@ function TailorTicket({ booking, measurements }) {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* ── Stitching options column ── */}
+                            <div style={{ flex: '0 0 30%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <div>
+                                    <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
+                                        کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
+                                    </div>
+                                    {(() => {
+                                        const stitchBoxes = isWskot ? [] : [
+                                            `کندھا${src?.kandha ? `: ${src.kandha}` : ''}`,
+                                            `چھاتی${src?.chaati ? `: ${src.chaati}` : ''}`,
+                                            `کمر${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                                            `گھیرا${src?.gheera ? `: ${src.gheera}` : ''}`,
+                                            `کف${src?.kaf ? `: ${src.kaf}` : ''}`,
+                                        ];
+                                        const options = getStitchingBoxes(item);
+                                        options.forEach(opt => {
+                                            stitchBoxes.push(opt);
+                                        });
+                                        return Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
+                                            const val = stitchBoxes[i] || '';
+                                            return (
+                                                <div key={i} style={{
+                                                    border: '1px solid #000',
+                                                    margin: '3px 5px',
+                                                    padding: '6px 8px',
+                                                    fontSize: 12,
+                                                    minHeight: 30,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    fontWeight: val ? 700 : 400,
+                                                    backgroundColor: val ? '#f9fafb' : 'transparent',
+                                                }}>
+                                                    {val}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
                                 {/* ── Pockets sub-section for Suit ── */}
                                 {!isWskot && (
                                     <div style={{ borderTop: '1px solid #000', padding: 6, backgroundColor: '#fcfcfc' }}>
-                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, marginBottom: 4, color: '#333' }}>Pockets</div>
+                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, marginBottom: 4, color: '#333' }}>جیب (POCKETS)</div>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 10, border: '1px solid #000' }}>
                                             <thead>
                                                 <tr style={{ backgroundColor: '#f0f0f0' }}>
@@ -840,44 +880,6 @@ function TailorTicket({ booking, measurements }) {
                                         </table>
                                     </div>
                                 )}
-                            </div>
-
-                            {/* ── Stitching options column ── */}
-                            <div style={{ flex: '0 0 30%', borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
-                                    Stitching Details
-                                </div>
-                                {(() => {
-                                    const stitchBoxes = isWskot ? [] : [
-                                        `Kandha${src?.kandha ? `: ${src.kandha}` : ''}`,
-                                        `Chaati${src?.chaati ? `: ${src.chaati}` : ''}`,
-                                        `Kamar${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
-                                        `Ghera${src?.gheera ? `: ${src.gheera}` : ''}`,
-                                        `Kaf${src?.kaf ? `: ${src.kaf}` : ''}`,
-                                    ];
-                                    const options = getStitchingBoxes(item);
-                                    options.forEach(opt => {
-                                        stitchBoxes.push(opt);
-                                    });
-                                    return Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
-                                        const val = stitchBoxes[i] || '';
-                                        return (
-                                            <div key={i} style={{
-                                                border: '1px solid #000',
-                                                margin: '3px 5px',
-                                                padding: '6px 8px',
-                                                fontSize: 12,
-                                                minHeight: 30,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                fontWeight: val ? 700 : 400,
-                                                backgroundColor: val ? '#f9fafb' : 'transparent',
-                                            }}>
-                                                {val}
-                                            </div>
-                                        );
-                                    });
-                                })()}
                             </div>
 
                             {/* ── Notes column ── */}
@@ -1291,23 +1293,23 @@ ${periodHtml}
                 const src = meas && Object.keys(meas).length > 0 ? meas : item;
 
                 const measureFields = isWskot ? [
-                    ['Lambai', 'wskot_lambai'],
-                    ['Teera', 'wskot_teera'],
-                    ['Gala', 'wskot_gala'],
-                    ['Chatti', 'wskot_chaati'],
-                    ['Kamar', 'wskot_kamar'],
-                    ['Hip', 'wskot_hip'],
+                    ['واسکٹ لمبائی', 'wskot_lambai'],
+                    ['تیرہ', 'wskot_teera'],
+                    ['گلا', 'wskot_gala'],
+                    ['چھاتی', 'wskot_chaati'],
+                    ['کمر', 'wskot_kamar'],
+                    ['ہپ', 'wskot_hip'],
                 ] : [
-                    ['Lambai', 'qameez_lambai'],
-                    ['Teera', 'teera'],
-                    ['Bazu', 'bazoo'],
-                    ['Galla', 'galaa'],
-                    ['Chaati A', 'chaati_around'],
-                    ['Ghera A', 'gehra_gird'],
-                    ['Shalwar Lambai', 'shalwar_lambai'],
-                    ['Poncha', 'puhncha'],
-                    ['Shalwar', 'shalwar_gheera'],
-                    ['Ghera', 'hip_around'],
+                    ['قمیض', 'qameez_lambai'],
+                    ['تیرہ', 'teera'],
+                    ['بازو', 'bazoo'],
+                    ['گلا', 'galaa'],
+                    ['چھاتی گرد', 'chaati_around'],
+                    ['گھیرا گرد', 'gehra_gird'],
+                    ['شلوار لمبائی', 'shalwar_lambai'],
+                    ['پہنچہ', 'puhncha'],
+                    ['شلوار گھیرا', 'shalwar_gheera'],
+                    ['ہپ گرد', 'hip_around'],
                 ];
 
                 const measureRowsHtml = measureFields.map(([label, key]) => {
@@ -1319,11 +1321,11 @@ ${periodHtml}
                 }).join('');
 
                 const stitchBoxes = isWskot ? [] : [
-                    `Kandha${src.kandha ? `: ${src.kandha}` : ''}`,
-                    `Chaati${src.chaati ? `: ${src.chaati}` : ''}`,
-                    `Kamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
-                    `Ghera${src.gheera ? `: ${src.gheera}` : ''}`,
-                    `Kaf${src.kaf ? `: ${src.kaf}` : ''}`,
+                    `کندھا${src.kandha ? `: ${src.kandha}` : ''}`,
+                    `چھاتی${src.chaati ? `: ${src.chaati}` : ''}`,
+                    `کمر${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                    `گھیرا${src.gheera ? `: ${src.gheera}` : ''}`,
+                    `کف${src.kaf ? `: ${src.kaf}` : ''}`,
                 ];
                 
                 const options = getStitchingBoxes(item);
@@ -1345,12 +1347,20 @@ ${periodHtml}
                     <div class="suit-body">
                         <div class="col-meas">
                             <div>
-                                <div class="col-hdr">Measurements — پیمائش</div>
+                                <div class="col-hdr">قمیض (دائیں طرف)</div>
                                 <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                            </div>
+                        </div>
+                        <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;">
+                            <div>
+                                <div class="col-hdr">کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)</div>
+                                <div style="display:flex;flex-direction:column;padding:4px;">
+                                    ${boxesHtml}
+                                </div>
                             </div>
                             ${!isWskot ? `
                             <div class="pockets-section" style="border-top:1px solid #000;padding:6px;background:#fcfcfc;">
-                                <div style="text-align:center;font-weight:700;font-size:11px;margin-bottom:4px;color:#333;">Pockets</div>
+                                <div style="text-align:center;font-weight:700;font-size:11px;margin-bottom:4px;color:#333;">جیب (POCKETS)</div>
                                 <table style="width:100%;border-collapse:collapse;text-align:center;font-size:10px;border:1px solid #000;">
                                     <thead>
                                         <tr style="background:#f0f0f0;">
@@ -1369,12 +1379,6 @@ ${periodHtml}
                                 </table>
                             </div>
                             ` : ''}
-                        </div>
-                        <div class="col-stitch">
-                            <div class="col-hdr">Stitching Details</div>
-                            <div style="display:flex;flex-direction:column;padding:4px;">
-                                ${boxesHtml}
-                            </div>
                         </div>
                         <div class="col-notes">
                             <div class="col-hdr">Notes</div>
@@ -1471,7 +1475,7 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .suit-hdr{background:#1a1a2e;color:#fff;padding:4px 8px;font-weight:700;font-size:12px;display:flex;justify-content:space-between}
 .suit-body{display:flex}
 .col-meas{flex:0 0 42%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
-.col-stitch{flex:0 0 30%;border-right:1px solid #000}
+.col-stitch{flex:0 0 30%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-notes{flex:1}
 .col-hdr{background:#f0f0f0;padding:5px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
 .mt{width:100%;border-collapse:collapse}
