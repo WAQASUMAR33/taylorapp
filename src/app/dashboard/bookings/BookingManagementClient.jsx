@@ -776,10 +776,7 @@ function TailorTicket({ booking, measurements }) {
                 const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
                 return stitchingItems.slice(0, 1).map((item, idx) => {
                     const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                    const hasItemMeasure = isWskot
-                        ? (item.wskot_lambai || item.wskot_teera || item.wskot_gala)
-                        : (item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati);
-                    const src = hasItemMeasure ? item : measurements;
+                    const src = measurements && Object.keys(measurements).length > 0 ? measurements : item;
                     const measureRows = getMeasureRows(src, isWskot);
 
                     return (
@@ -1291,10 +1288,7 @@ ${periodHtml}
 
             const itemsHtml = stitchingItems.slice(0, 1).map((item, idx) => {
                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                const hasItemMeasure = isWskot
-                    ? (item.wskot_lambai || item.wskot_teera || item.wskot_gala)
-                    : (item.qameez_lambai || item.bazoo || item.teera || item.galaa || item.chaati);
-                const src = hasItemMeasure ? item : (meas || {});
+                const src = meas && Object.keys(meas).length > 0 ? meas : item;
 
                 const measureFields = isWskot ? [
                     ['Lambai', 'wskot_lambai'],
