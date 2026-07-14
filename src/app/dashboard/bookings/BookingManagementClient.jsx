@@ -854,7 +854,7 @@ function TailorTicket({ booking, measurements }) {
                                     const stitchBoxes = isWskot ? [] : [
                                         `Kandha${src?.kandha ? `: ${src.kandha}` : ''}`,
                                         `Chaati${src?.chaati ? `: ${src.chaati}` : ''}`,
-                                        `Qamar${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                                        `Kamar${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
                                         `Ghera${src?.gheera ? `: ${src.gheera}` : ''}`,
                                         `Kaf${src?.kaf ? `: ${src.kaf}` : ''}`,
                                     ];
@@ -1327,7 +1327,7 @@ ${periodHtml}
                 const stitchBoxes = isWskot ? [] : [
                     `Kandha${src.kandha ? `: ${src.kandha}` : ''}`,
                     `Chaati${src.chaati ? `: ${src.chaati}` : ''}`,
-                    `Qamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                    `Kamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
                     `Ghera${src.gheera ? `: ${src.gheera}` : ''}`,
                     `Kaf${src.kaf ? `: ${src.kaf}` : ''}`,
                 ];
