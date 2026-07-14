@@ -435,6 +435,9 @@ export async function POST(req) {
                                 wskot_chaati: item.wskot_chaati || null,
                                 wskot_kamar: item.wskot_kamar || null,
                                 wskot_hip: item.wskot_hip || null,
+                                front_pocket: item.front_pocket || null,
+                                side_pocket: item.side_pocket || null,
+                                shalwar_pocket: item.shalwar_pocket || null,
                             };
                         })
                     }
@@ -811,6 +814,9 @@ export async function PUT(req) {
                             wskot_chaati: item.wskot_chaati || null,
                             wskot_kamar: item.wskot_kamar || null,
                             wskot_hip: item.wskot_hip || null,
+                            front_pocket: item.front_pocket || null,
+                            side_pocket: item.side_pocket || null,
+                            shalwar_pocket: item.shalwar_pocket || null,
                         }
                     });
 

@@ -419,6 +419,9 @@ model booking_item {
   wskot_chaati   String?
   wskot_kamar    String?
   wskot_hip      String?
+  front_pocket   String?
+  side_pocket    String?
+  shalwar_pocket String?
 
   booking          booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   product          product? @relation(fields: [productId], references: [id])

@@ -711,20 +711,15 @@ function TailorTicket({ booking, measurements }) {
         }
         return [
             ['Lambai', src?.qameez_lambai],
-            ['Bazoo', src?.bazoo],
             ['Teera', src?.teera],
+            ['Bazu', src?.bazoo],
             ['Galla', src?.galaa],
-            ['Chatti', src?.chaati],
-            ['Kamar', src?.kamar_around],
-            ['Ghera', src?.gheera],
-            ['Gehra Gird', src?.gehra_gird],
-            ['Shalwar', src?.shalwar_lambai],
-            ['Poncha', src?.puhncha],
-            ['Kaf', src?.kaf],
-            ['Kandha', src?.kandha],
-            ['Hip', src?.hip_around],
-            ['S. Ghera', src?.shalwar_gheera],
             ['Chaati A', src?.chaati_around],
+            ['Ghera A', src?.gehra_gird],
+            ['Shalwar Lambai', src?.shalwar_lambai],
+            ['Poncha', src?.puhncha],
+            ['Shalwar', src?.shalwar_gheera],
+            ['Ghera', src?.hip_around],
         ];
     };
 
@@ -826,6 +821,28 @@ function TailorTicket({ booking, measurements }) {
                                         ))}
                                     </tbody>
                                 </table>
+                                {/* ── Pockets sub-section for Suit ── */}
+                                {!isWskot && (
+                                    <div style={{ borderTop: '1px solid #000', padding: 6, backgroundColor: '#fcfcfc' }}>
+                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, marginBottom: 4, color: '#333' }}>Pockets</div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 10, border: '1px solid #000' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: '#f0f0f0' }}>
+                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>F</th>
+                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>Side</th>
+                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>Shalwar</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.front_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.side_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.shalwar_pocket || ''}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
 
                             {/* ── Stitching options column ── */}
@@ -833,15 +850,37 @@ function TailorTicket({ booking, measurements }) {
                                 <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
                                     Stitching Details
                                 </div>
-                                {Array.from({ length: 8 }, (_, i) => (
-                                    <div key={i} style={{
-                                        border: '1px solid #000',
-                                        margin: '4px 5px',
-                                        padding: '10px 9px',
-                                        fontSize: 15,
-                                        minHeight: 44,
-                                    }} />
-                                ))}
+                                {(() => {
+                                    const stitchBoxes = isWskot ? [] : [
+                                        `Kandha${src?.kandha ? `: ${src.kandha}` : ''}`,
+                                        `Chaati${src?.chaati ? `: ${src.chaati}` : ''}`,
+                                        `Qamar${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                                        `Ghera${src?.gheera ? `: ${src.gheera}` : ''}`,
+                                        `Kaf${src?.kaf ? `: ${src.kaf}` : ''}`,
+                                    ];
+                                    const options = getStitchingBoxes(item);
+                                    options.forEach(opt => {
+                                        stitchBoxes.push(opt);
+                                    });
+                                    return Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
+                                        const val = stitchBoxes[i] || '';
+                                        return (
+                                            <div key={i} style={{
+                                                border: '1px solid #000',
+                                                margin: '3px 5px',
+                                                padding: '6px 8px',
+                                                fontSize: 12,
+                                                minHeight: 30,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                fontWeight: val ? 700 : 400,
+                                                backgroundColor: val ? '#f9fafb' : 'transparent',
+                                            }}>
+                                                {val}
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
 
                             {/* ── Notes column ── */}
@@ -1188,6 +1227,7 @@ ${periodHtml}
         "qameez_lambai", "bazoo", "teera", "galaa", "chaati",
         "gheera", "kaf", "gehra_gird", "kandha", "chaati_around", "kamar_around",
         "hip_around", "shalwar_lambai", "puhncha", "shalwar_gheera",
+        "front_pocket", "side_pocket", "shalwar_pocket"
     ];
 
     const WAISTCOAT_MEASUREMENT_KEYS = [
@@ -1239,8 +1279,8 @@ ${periodHtml}
                 if (item.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
                 if (item.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
                 if (item.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
-                if (item.pocketType) boxes.push(item.pocketType === 'single' ? 'Pocket: Single' : 'Pocket: Double');
-                if (item.shalwarType) boxes.push(item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar');
+                if (item.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+                if (item.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
                 if (item.hasFrontPockets) boxes.push('Front Pockets');
                 if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
                 (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
@@ -1267,9 +1307,9 @@ ${periodHtml}
                     ['Lambai', 'qameez_lambai'],
                     ['Teera', 'teera'],
                     ['Bazu', 'bazoo'],
+                    ['Galla', 'galaa'],
                     ['Chaati A', 'chaati_around'],
                     ['Ghera A', 'gheera'],
-                    ['Galla', 'galaa'],
                     ['Gehra Gird', 'gehra_gird'],
                     ['Shalwar Lambai', 'shalwar_lambai'],
                     ['Poncha', 'puhncha'],
@@ -1290,7 +1330,6 @@ ${periodHtml}
                     `Chaati${src.chaati ? `: ${src.chaati}` : ''}`,
                     `Qamar${src.kamar_around ? `: ${src.kamar_around}` : ''}`,
                     `Ghera${src.gheera ? `: ${src.gheera}` : ''}`,
-                    `Gehra Gird${src.gehra_gird ? `: ${src.gehra_gird}` : ''}`,
                     `Kaf${src.kaf ? `: ${src.kaf}` : ''}`,
                 ];
                 
@@ -1329,9 +1368,9 @@ ${periodHtml}
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${item.pocketType === 'single' ? '1' : item.pocketType === 'double' ? '2' : (item.hasFrontPockets ? '1' : '')}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;"></td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${item.hasShalwarPocket ? '1' : ''}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.front_pocket || ''}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.side_pocket || ''}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.shalwar_pocket || ''}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1415,7 +1454,7 @@ ${periodHtml}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .hdr{border-bottom:3px solid #1a1a2e;padding-bottom:8px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
-.hdr img{width:64px;height:64px;object-fit:contain}
+.hdr img{width:64px;width:64px;object-fit:contain}
 .hdr-text{flex:1;text-align:center}
 .hdr-text h1{font-size:20px;font-weight:900;letter-spacing:1px;color:#1a1a2e;text-transform:uppercase}
 .hdr-text .tagline{font-size:11px;color:#555;font-style:italic;margin-top:2px}
@@ -1547,6 +1586,7 @@ ${allBookingsHtml}
             hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
             wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
             wskot_kamar: "", wskot_hip: "",
+            front_pocket: "", side_pocket: "", shalwar_pocket: "",
         }
     ]);
 
@@ -1720,6 +1760,7 @@ ${allBookingsHtml}
                 hip_around: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "",
                 wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
                 wskot_kamar: "", wskot_hip: "",
+                front_pocket: "", side_pocket: "", shalwar_pocket: "",
             }
         ]);
     };
@@ -1918,6 +1959,9 @@ ${allBookingsHtml}
                         shalwar_lambai: item.shalwar_lambai,
                         puhncha: item.puhncha,
                         shalwar_gheera: item.shalwar_gheera,
+                        front_pocket: item.front_pocket,
+                        side_pocket: item.side_pocket,
+                        shalwar_pocket: item.shalwar_pocket,
                     })),
                     ...finalProductItems.map(item => ({
                         productId: item.productId,
