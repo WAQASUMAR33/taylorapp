@@ -110,7 +110,11 @@ export async function POST(req) {
             wskot_gala,
             wskot_chaati,
             wskot_kamar,
-            wskot_hip
+            wskot_hip,
+            // Pockets
+            front_pocket,
+            side_pocket,
+            shalwar_pocket
         } = body;
 
         if (!customerId) {
@@ -146,6 +150,9 @@ export async function POST(req) {
                 wskot_chaati: wskot_chaati || null,
                 wskot_kamar: wskot_kamar || null,
                 wskot_hip: wskot_hip || null,
+                front_pocket: front_pocket || null,
+                side_pocket: side_pocket || null,
+                shalwar_pocket: shalwar_pocket || null,
             },
         });
 
@@ -178,7 +185,7 @@ export async function PUT(req) {
             'gheera', 'kaf', 'gehra_gird', 'shalwar_lambai', 'puhncha', 'shalwar_gheera',
             'chaati_around', 'kamar_around', 'hip_around', 'kandha',
             'wskot_lambai', 'wskot_teera', 'wskot_gala', 'wskot_chaati',
-            'wskot_kamar', 'wskot_hip'
+            'wskot_kamar', 'wskot_hip', 'front_pocket', 'side_pocket', 'shalwar_pocket'
         ];
 
         fields.forEach(field => {

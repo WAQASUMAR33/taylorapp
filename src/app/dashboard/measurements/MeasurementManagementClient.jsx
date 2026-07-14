@@ -26,6 +26,7 @@ const SQ_RIGHT_FIELDS = [
 ];
 
 const SQ_LEFT_FIELDS = [
+    { name: "kandha", label: "کندھا" },
     { name: "chaati", label: "چھاتی" },
     { name: "kamar_around", label: "کمر" },
     { name: "gheera", label: "گھیرا" },
@@ -33,7 +34,6 @@ const SQ_LEFT_FIELDS = [
 ];
 
 const SQ_ADDITIONAL_FIELDS = [
-    { name: "kandha", label: "کندھا" },
     { name: "hip_around", label: "ہپ گرد" },
     { name: "shalwar_gheera", label: "شلوار گھیرا" },
 ];
@@ -57,6 +57,7 @@ const EMPTY_FORM = {
     kamar_around: "", hip_around: "", kandha: "",
     wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
     wskot_kamar: "", wskot_hip: "",
+    front_pocket: "", side_pocket: "", shalwar_pocket: "",
 };
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -293,6 +294,9 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 wskot_chaati: m.wskot_chaati || "",
                 wskot_kamar: m.wskot_kamar || "",
                 wskot_hip: m.wskot_hip || "",
+                front_pocket: m.front_pocket || "",
+                side_pocket: m.side_pocket || "",
+                shalwar_pocket: m.shalwar_pocket || "",
             });
         } else {
             setEditMode(false);
@@ -337,6 +341,9 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             wskot_chaati: historyItem.wskot_chaati || "",
             wskot_kamar: historyItem.wskot_kamar || "",
             wskot_hip: historyItem.wskot_hip || "",
+            front_pocket: historyItem.front_pocket || "",
+            side_pocket: historyItem.side_pocket || "",
+            shalwar_pocket: historyItem.shalwar_pocket || "",
         });
         setSuccessMessage("Previous measurements loaded into the form!");
     };
@@ -421,13 +428,16 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
             <div class="info-row"><strong>Unit:</strong><span>${unit === "in" ? "Inches" : "Centimeters"}</span></div>
         </div>
         ${measurement.qameez_lambai || measurement.bazoo ? `<div class="section"><h3>Shalwar Qameez</h3><div class="measurements-grid">
-            ${row("قمیض لمبائی", measurement.qameez_lambai)}${row("بازو", measurement.bazoo)}
-            ${row("تیرہ", measurement.teera)}${row("گلا", measurement.galaa)}
-            ${row("چھاتی", measurement.chaati)}${row("گھیرا", measurement.gheera)}
-            ${row("کف", measurement.kaf)}${row("کندھا", measurement.kandha)}
-            ${row("گہرا گرد", measurement.gehra_gird)}${row("چھاتی گرد", measurement.chaati_around)}${row("کمر گرد", measurement.kamar_around)}
-            ${row("ہپ گرد", measurement.hip_around)}${row("شلوار لمبائی", measurement.shalwar_lambai)}
-            ${row("پہنچا", measurement.puhncha)}${row("شلوار گھیرا", measurement.shalwar_gheera)}
+            ${row("قمیض", measurement.qameez_lambai)}${row("تیرہ", measurement.teera)}
+            ${row("بازو", measurement.bazoo)}${row("گلا", measurement.galaa)}
+            ${row("کندھا", measurement.kandha)}${row("چھاتی", measurement.chaati)}
+            ${row("کمر", measurement.kamar_around)}${row("گھیرا", measurement.gheera)}
+            ${row("کف", measurement.kaf)}${row("چھاتی گرد", measurement.chaati_around)}
+            ${row("گھیرا گرد", measurement.gehra_gird)}${row("ہپ گرد", measurement.hip_around)}
+            ${row("شلوار لمبائی", measurement.shalwar_lambai)}${row("پہنچہ", measurement.puhncha)}
+            ${row("شلوار گھیرا", measurement.shalwar_gheera)}
+            ${row("جیب F", measurement.front_pocket)}${row("جیب Side", measurement.side_pocket)}
+            ${row("جیب Shalwar", measurement.shalwar_pocket)}
         </div></div>` : ""}
         ${measurement.wskot_lambai ? `<div class="section"><h3>Waistcoat</h3><div class="measurements-grid">
             ${row("واسکٹ لمبائی", measurement.wskot_lambai)}${row("تیرہ", measurement.wskot_teera)}
@@ -752,7 +762,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                             {/* Left Column */}
                                             <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 0.5 }}>
-                                                    چھاتی، کمر، گھیرا (بائیں طرف)
+                                                    کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
                                                 </Typography>
                                                 <Grid container spacing={2}>
                                                     {SQ_LEFT_FIELDS.map((f) => (
@@ -781,10 +791,49 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                         </Grid>
                                                     ))}
                                                 </Grid>
+
+                                                {/* جیب (Pockets) */}
+                                                <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "rgba(139, 92, 246, 0.01)" }}>
+                                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: "block", mb: 1.5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                                        جیب (Pockets)
+                                                    </Typography>
+                                                    <Grid container spacing={1.5}>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="F"
+                                                                name="front_pocket"
+                                                                value={formData.front_pocket || ""}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </Grid>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Side"
+                                                                name="side_pocket"
+                                                                value={formData.side_pocket || ""}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </Grid>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Shalwar"
+                                                                name="shalwar_pocket"
+                                                                value={formData.shalwar_pocket || ""}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Box>
                                             </Grid>
                                         </Grid>
 
-                                        {/* Collapsible Section for the remaining 3 fields */}
+                                        {/* Collapsible Section for the remaining 2 fields */}
                                         <Box sx={{ mt: 2.5 }}>
                                             <Button
                                                 size="small"
@@ -792,7 +841,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                 onClick={() => setShowAdditional(!showAdditional)}
                                                 sx={{ textTransform: "none", fontWeight: 600 }}
                                             >
-                                                {showAdditional ? "Hide Additional Fields" : "Show Additional Fields (کندھا، ہپ گرد، شلوار گھیرا)"}
+                                                {showAdditional ? "Hide Additional Fields" : "Show Additional Fields (ہپ گرد، شلوار گھیرا)"}
                                             </Button>
                                             {showAdditional && (
                                                 <Paper variant="outlined" sx={{ p: 2, mt: 1, bgcolor: "action.hover", borderRadius: 2 }}>
