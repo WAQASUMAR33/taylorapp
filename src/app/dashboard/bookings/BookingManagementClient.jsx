@@ -832,7 +832,7 @@ function TailorTicket({ booking, measurements }) {
                                         کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
                                     </div>
                                     {!isWskot && (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000' }}>
                                             <tbody>
                                                 {[
                                                     ['کندھا', src?.kandha],
@@ -846,7 +846,7 @@ function TailorTicket({ booking, measurements }) {
                                                             {val || ''}
                                                         </td>
                                                         <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
-                                                            {label}:
+                                                            {label}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -906,7 +906,7 @@ function TailorTicket({ booking, measurements }) {
                                 <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                     قمیض (دائیں طرف)
                                 </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000' }}>
                                     <tbody>
                                         {measureRows.map(([label, val], i) => (
                                             <tr key={i}>
@@ -914,7 +914,7 @@ function TailorTicket({ booking, measurements }) {
                                                     {val || ''}
                                                 </td>
                                                 <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
-                                                    {label}:
+                                                    {label}
                                                 </td>
                                             </tr>
                                         ))}
@@ -1322,7 +1322,7 @@ ${periodHtml}
                     const val = src[key];
                     return `<tr>
                         <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
-                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}:</td>
+                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
                     </tr>`;
                 }).join('');
 
@@ -1338,7 +1338,7 @@ ${periodHtml}
                     const val = src[key];
                     return `<tr>
                         <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
-                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}:</td>
+                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
                     </tr>`;
                 }).join('');
 
@@ -1489,7 +1489,7 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .col-stitch{flex:0 0 30%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-notes{flex:1}
 .col-hdr{background:#f0f0f0;padding:5px 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
-.mt{width:100%;border-collapse:collapse}
+.mt{width:100%;border-collapse:collapse;border-top:1px solid #000}
 .ml{padding:16px 8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
 .mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
