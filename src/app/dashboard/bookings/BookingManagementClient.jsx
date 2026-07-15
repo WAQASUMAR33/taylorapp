@@ -1396,11 +1396,6 @@ ${periodHtml}
                                 <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
                             </div>
                         </div>
-                        <div class="col-notes">
-                            <div class="col-hdr">Notes</div>
-                            <div class="nbox">${item.itemNote || ''}</div>
-                            ${meas?.notes ? `<div class="meas-note"><span class="meas-note-label">Meas. Notes: </span>${meas.notes}</div>` : ''}
-                        </div>
                     </div>
                 </div>`;
             }).join('');
