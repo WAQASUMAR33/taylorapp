@@ -791,34 +791,6 @@ function TailorTicket({ booking, measurements }) {
                         {/* 3-column body */}
                         <div style={{ display: 'flex', alignItems: 'stretch' }}>
 
-                            {/* ── Measurements column ── */}
-                            <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
-                                    قمیض (دائیں طرف)
-                                </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <tbody>
-                                        {measureRows.map(([label, val], i) => (
-                                            <tr key={i}>
-                                                <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
-                                                    {label}:
-                                                </td>
-                                                <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        minWidth: 60,
-                                                        fontWeight: 700,
-                                                        textDecoration: 'none',
-                                                    }}>
-                                                        {val || ''}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
                             {/* ── Stitching options column ── */}
                             <div style={{ flex: '0 0 30%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                 <div>
@@ -836,18 +808,11 @@ function TailorTicket({ booking, measurements }) {
                                                     ['کف', src?.kaf],
                                                 ].map(([label, val], i) => (
                                                     <tr key={i}>
-                                                        <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', width: '45%', whiteSpace: 'nowrap' }}>
-                                                            {label}:
+                                                        <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                                                            {val || ''}
                                                         </td>
-                                                        <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000' }}>
-                                                            <span style={{
-                                                                display: 'inline-block',
-                                                                minWidth: 60,
-                                                                fontWeight: 700,
-                                                                textDecoration: 'none',
-                                                            }}>
-                                                                {val || ''}
-                                                            </span>
+                                                        <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                            {label}:
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -900,6 +865,27 @@ function TailorTicket({ booking, measurements }) {
                                         </table>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* ── Measurements column ── */}
+                            <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
+                                    قمیض (دائیں طرف)
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <tbody>
+                                        {measureRows.map(([label, val], i) => (
+                                            <tr key={i}>
+                                                <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                                                    {val || ''}
+                                                </td>
+                                                <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                    {label}:
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* ── Notes column ── */}
@@ -1335,8 +1321,8 @@ ${periodHtml}
                 const measureRowsHtml = measureFields.map(([label, key]) => {
                     const val = src[key];
                     return `<tr>
-                        <td class="ml">${label}:</td>
-                        <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}:</td>
                     </tr>`;
                 }).join('');
 
@@ -1351,8 +1337,8 @@ ${periodHtml}
                 const stitchRowsHtml = stitchFields.map(([label, key]) => {
                     const val = src[key];
                     return `<tr>
-                        <td class="ml">${label}:</td>
-                        <td class="mv">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}:</td>
                     </tr>`;
                 }).join('');
 
@@ -1369,12 +1355,6 @@ ${periodHtml}
                         <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
                     </div>
                     <div class="suit-body">
-                        <div class="col-meas">
-                            <div>
-                                <div class="col-hdr">قمیض (دائیں طرف)</div>
-                                <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
-                            </div>
-                        </div>
                         <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;">
                             <div>
                                 <div class="col-hdr">کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)</div>
@@ -1404,6 +1384,12 @@ ${periodHtml}
                                 </table>
                             </div>
                             ` : ''}
+                        </div>
+                        <div class="col-meas">
+                            <div>
+                                <div class="col-hdr">قمیض (دائیں طرف)</div>
+                                <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
+                            </div>
                         </div>
                         <div class="col-notes">
                             <div class="col-hdr">Notes</div>
