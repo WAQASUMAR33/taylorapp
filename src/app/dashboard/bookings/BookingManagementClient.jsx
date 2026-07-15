@@ -828,7 +828,7 @@ function TailorTicket({ booking, measurements }) {
                             {/* ── Stitching options column ── */}
                             <div style={{ flex: '0 0 30%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                 <div>
-                                    <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
+                                    <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                         کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
                                     </div>
                                     {!isWskot && (
@@ -842,10 +842,10 @@ function TailorTicket({ booking, measurements }) {
                                                     ['کف', src?.kaf],
                                                 ].map(([label, val], i) => (
                                                     <tr key={i}>
-                                                        <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                                                        <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle' }}>
                                                             {val || ''}
                                                         </td>
-                                                        <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                        <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                                             {label}:
                                                         </td>
                                                     </tr>
@@ -903,17 +903,17 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* ── Measurements column ── */}
                             <div style={{ flex: '0 0 42%', borderRight: 'none' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                     قمیض (دائیں طرف)
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {measureRows.map(([label, val], i) => (
                                             <tr key={i}>
-                                                <td style={{ padding: '11px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left' }}>
+                                                <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle' }}>
                                                     {val || ''}
                                                 </td>
-                                                <td style={{ padding: '11px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                                <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                                     {label}:
                                                 </td>
                                             </tr>
@@ -1488,10 +1488,10 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .col-meas{flex:0 0 42%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-stitch{flex:0 0 30%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-notes{flex:1}
-.col-hdr{background:#f0f0f0;padding:5px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000}
+.col-hdr{background:#f0f0f0;padding:5px 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
 .mt{width:100%;border-collapse:collapse}
-.ml{padding:6px 8px;font-size:13px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap}
-.mv{padding:6px 6px;font-size:13px;border-bottom:1px solid #ddd;border-left:1px solid #000}
+.ml{padding:16px 8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
+.mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
 .sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
 .nbox{border:1px solid #000;margin:5px;padding:8px;min-height:140px;font-size:13px;white-space:pre-wrap}
