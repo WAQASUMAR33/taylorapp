@@ -826,37 +826,40 @@ function TailorTicket({ booking, measurements }) {
                                     <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
                                         کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
                                     </div>
-                                    {(() => {
-                                        const stitchBoxes = isWskot ? [] : [
-                                            `کندھا${src?.kandha ? `: ${src.kandha}` : ''}`,
-                                            `چھاتی${src?.chaati ? `: ${src.chaati}` : ''}`,
-                                            `کمر${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
-                                            `گھیرا${src?.gheera ? `: ${src.gheera}` : ''}`,
-                                            `کف${src?.kaf ? `: ${src.kaf}` : ''}`,
-                                        ];
-                                        const options = getStitchingBoxes(item);
-                                        options.forEach(opt => {
-                                            stitchBoxes.push(opt);
-                                        });
-                                        return Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
-                                            const val = stitchBoxes[i] || '';
-                                            return (
-                                                <div key={i} style={{
-                                                    border: '1px solid #000',
-                                                    margin: '3px 5px',
-                                                    padding: '6px 8px',
-                                                    fontSize: 12,
-                                                    minHeight: 30,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    fontWeight: val ? 700 : 400,
-                                                    backgroundColor: val ? '#f9fafb' : 'transparent',
-                                                }}>
-                                                    {val}
-                                                </div>
-                                            );
-                                        });
-                                    })()}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', padding: '4px' }}>
+                                        {(() => {
+                                            const stitchBoxes = isWskot ? [] : [
+                                                `کندھا${src?.kandha ? `: ${src.kandha}` : ''}`,
+                                                `چھاتی${src?.chaati ? `: ${src.chaati}` : ''}`,
+                                                `کمر${src?.kamar_around ? `: ${src.kamar_around}` : ''}`,
+                                                `گھیرا${src?.gheera ? `: ${src.gheera}` : ''}`,
+                                                `کف${src?.kaf ? `: ${src.kaf}` : ''}`,
+                                            ];
+                                            const options = getStitchingBoxes(item);
+                                            options.forEach(opt => {
+                                                stitchBoxes.push(opt);
+                                            });
+                                            return Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
+                                                const val = stitchBoxes[i] || '';
+                                                return (
+                                                    <div key={i} style={{
+                                                        border: '1px solid #000',
+                                                        padding: '6px 8px',
+                                                        fontSize: 12,
+                                                        minHeight: 30,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        fontWeight: val ? 700 : 400,
+                                                        backgroundColor: val ? '#f9fafb' : 'transparent',
+                                                        direction: 'ltr',
+                                                        textAlign: 'left',
+                                                    }}>
+                                                        {val}
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
                                 </div>
                                 {/* ── Pockets sub-section for Suit ── */}
                                 {!isWskot && (
@@ -1335,7 +1338,7 @@ ${periodHtml}
 
                 const boxesHtml = Array.from({ length: Math.max(10, stitchBoxes.length) }, (_, i) => {
                     const val = stitchBoxes[i] || '';
-                    return `<div class="sbox" style="border:1px solid #000;margin:3px;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val}</div>`;
+                    return `<div class="sbox" style="border:1px solid #000;margin:0;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};direction:ltr;text-align:left;">${val}</div>`;
                 }).join('');
 
                 return `
@@ -1354,7 +1357,7 @@ ${periodHtml}
                         <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;">
                             <div>
                                 <div class="col-hdr">کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)</div>
-                                <div style="display:flex;flex-direction:column;padding:4px;">
+                                <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:4px;padding:4px;">
                                     ${boxesHtml}
                                 </div>
                             </div>
