@@ -791,6 +791,40 @@ function TailorTicket({ booking, measurements }) {
                         {/* 3-column body */}
                         <div style={{ display: 'flex', alignItems: 'stretch' }}>
 
+                            {/* ── Notes column ── */}
+                            <div style={{ flex: 1, borderRight: '1px solid #000' }}>
+                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
+                                    Notes
+                                </div>
+                                <div style={{
+                                    border: '1px solid #000',
+                                    margin: '5px',
+                                    padding: '8px 10px',
+                                    fontSize: 15,
+                                    minHeight: 150,
+                                    fontWeight: 600,
+                                    lineHeight: 1.6,
+                                    whiteSpace: 'pre-wrap',
+                                }}>
+                                    {item.itemNote || ''}
+                                </div>
+                                {measurements?.notes && (
+                                    <div style={{
+                                        borderTop: '1px dashed #999',
+                                        margin: '0 5px 5px 5px',
+                                        padding: '6px 10px',
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
+                                        color: '#333',
+                                    }}>
+                                        <span style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Meas. Notes: </span>
+                                        {measurements.notes}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* ── Stitching options column ── */}
                             <div style={{ flex: '0 0 30%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                 <div>
@@ -868,7 +902,7 @@ function TailorTicket({ booking, measurements }) {
                             </div>
 
                             {/* ── Measurements column ── */}
-                            <div style={{ flex: '0 0 42%', borderRight: '1px solid #000' }}>
+                            <div style={{ flex: '0 0 42%', borderRight: 'none' }}>
                                 <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000' }}>
                                     قمیض (دائیں طرف)
                                 </div>
@@ -886,40 +920,6 @@ function TailorTicket({ booking, measurements }) {
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
-
-                            {/* ── Notes column ── */}
-                            <div style={{ flex: 1 }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
-                                    Notes
-                                </div>
-                                <div style={{
-                                    border: '1px solid #000',
-                                    margin: '5px',
-                                    padding: '8px 10px',
-                                    fontSize: 15,
-                                    minHeight: 150,
-                                    fontWeight: 600,
-                                    lineHeight: 1.6,
-                                    whiteSpace: 'pre-wrap',
-                                }}>
-                                    {item.itemNote || ''}
-                                </div>
-                                {measurements?.notes && (
-                                    <div style={{
-                                        borderTop: '1px dashed #999',
-                                        margin: '0 5px 5px 5px',
-                                        padding: '6px 10px',
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        lineHeight: 1.5,
-                                        whiteSpace: 'pre-wrap',
-                                        color: '#333',
-                                    }}>
-                                        <span style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Meas. Notes: </span>
-                                        {measurements.notes}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -1355,7 +1355,12 @@ ${periodHtml}
                         <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
                     </div>
                     <div class="suit-body">
-                        <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;">
+                        <div class="col-notes" style="border-right:1px solid #000;">
+                            <div class="col-hdr">Notes</div>
+                            <div class="nbox">${item.itemNote || ''}</div>
+                            ${meas?.notes ? `<div class="meas-note"><span class="meas-note-label">Meas. Notes: </span>${meas.notes}</div>` : ''}
+                        </div>
+                        <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid #000;">
                             <div>
                                 <div class="col-hdr">کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)</div>
                                 <table class="mt"><tbody>${stitchRowsHtml}</tbody></table>
@@ -1385,7 +1390,7 @@ ${periodHtml}
                             </div>
                             ` : ''}
                         </div>
-                        <div class="col-meas">
+                        <div class="col-meas" style="border-right:none;">
                             <div>
                                 <div class="col-hdr">قمیض (دائیں طرف)</div>
                                 <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
