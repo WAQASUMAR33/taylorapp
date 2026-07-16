@@ -765,9 +765,6 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
       <div class="shop-name">Grace Tailors</div>
       <div class="shop-tagline">Premium Stitching &amp; Tailoring Services</div>
     </div>
-    <div class="doc-title">
-      <div class="doc-title-text">Active Balances Report</div>
-    </div>
     <div class="shop-contact">
       Print Date: ${printDate}
     </div>
