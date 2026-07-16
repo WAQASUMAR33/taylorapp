@@ -444,7 +444,7 @@ export default function LedgerManagementClient({
                         <Autocomplete
                             size="small"
                             options={customerOptions}
-                            getOptionLabel={(o) => o.name || ""}
+                            getOptionLabel={(o) => o ? `${o.name || ""}${o.fatherName ? ` s/o ${o.fatherName}` : ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
                             value={filterCustomer}
                             onChange={(_, v) => setFilterCustomer(v)}
                             onInputChange={(event, newInputValue, reason) => {
@@ -454,8 +454,37 @@ export default function LedgerManagementClient({
                             }}
                             loading={searchingCustomers}
                             filterOptions={(options) => options}
-                            componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                            componentsProps={{ paper: { sx: { minWidth: 320 } } }}
                             sx={{ minWidth: 240 }}
+                            renderOption={(props, option) => {
+                                const { key, ...optionProps } = props;
+                                return (
+                                    <li key={key} {...optionProps}>
+                                        <Box sx={{ py: 0.5, width: '100%' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                {option.name} {option.fatherName ? `s/o ${option.fatherName}` : ""}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', gap: 1.5, mt: 0.25, flexWrap: 'wrap' }}>
+                                                {option.phone && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        📞 {option.phone}
+                                                    </Typography>
+                                                )}
+                                                {option.measurementNo && (
+                                                    <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        🗺️ Map: {option.measurementNo}
+                                                    </Typography>
+                                                )}
+                                                {option.address && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        📍 {option.address}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    </li>
+                                );
+                            }}
                             renderInput={(params) => (
                                 <TextField 
                                     {...params} 
@@ -775,7 +804,7 @@ export default function LedgerManagementClient({
                             <Autocomplete
                                 size="small"
                                 options={customerOptions}
-                                getOptionLabel={(o) => `${o.name || ""}${o.code ? ` (${o.code})` : ""}`}
+                                getOptionLabel={(o) => o ? `${o.name || ""}${o.fatherName ? ` s/o ${o.fatherName}` : ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
                                 value={selectedFormCustomer}
                                 onChange={(_, v) => setFormData(p => ({ ...p, customerId: v?.id || "" }))}
                                 onInputChange={(event, newInputValue, reason) => {
@@ -785,8 +814,37 @@ export default function LedgerManagementClient({
                                 }}
                                 loading={searchingCustomers}
                                 filterOptions={(options) => options}
-                                componentsProps={{ paper: { sx: { minWidth: 300 } } }}
+                                componentsProps={{ paper: { sx: { minWidth: 320 } } }}
                                 sx={{ minWidth: 300 }}
+                                renderOption={(props, option) => {
+                                    const { key, ...optionProps } = props;
+                                    return (
+                                        <li key={key} {...optionProps}>
+                                            <Box sx={{ py: 0.5, width: '100%' }}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                    {option.name} {option.fatherName ? `s/o ${option.fatherName}` : ""}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', gap: 1.5, mt: 0.25, flexWrap: 'wrap' }}>
+                                                    {option.phone && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            📞 {option.phone}
+                                                        </Typography>
+                                                    )}
+                                                    {option.measurementNo && (
+                                                        <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            🗺️ Map: {option.measurementNo}
+                                                        </Typography>
+                                                    )}
+                                                    {option.address && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            📍 {option.address}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </Box>
+                                        </li>
+                                    );
+                                }}
                                 renderInput={(params) => (
                                     <TextField 
                                         {...params} 
