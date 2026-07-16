@@ -64,6 +64,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [rowsPerPage, setRowsPerPage] = useState(50);
     const [listLoading, setListLoading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [printingBalances, setPrintingBalances] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -658,6 +659,172 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setTimeout(() => { win.print(); }, 400);
     };
 
+    const handlePrintActiveBalances = async () => {
+        setPrintingBalances(true);
+        try {
+            const queryParams = new URLSearchParams({
+                page: "1",
+                limit: "5000",
+                search: debouncedSearch,
+                categoryId: filterCategory ? filterCategory.id.toString() : "",
+                measurementNo: debouncedMeasurementNo,
+                sortBy,
+                sortOrder,
+            });
+            const res = await fetch(`/api/customers?${queryParams.toString()}`);
+            if (!res.ok) throw new Error("Failed to fetch customer list");
+            
+            const data = await res.json();
+            const customersToPrint = data.customers || [];
+            const activeCustomers = customersToPrint.filter(c => parseFloat(c.balance || 0) !== 0);
+            
+            const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
+            const totalBalance = activeCustomers.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
+            
+            const fmt = (n) => "Rs. " + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (n > 0 ? " Cr" : n < 0 ? " Dr" : "");
+            
+            let rowsHtml = activeCustomers.map((c, idx) => {
+                const bal = parseFloat(c.balance || 0);
+                return `
+                    <tr>
+                        <td style="text-align: center;">${idx + 1}</td>
+                        <td><strong>${c.name}</strong>${c.fatherName ? ` <span style="color:#555;font-size:10px;">s/o ${c.fatherName}</span>` : ""}</td>
+                        <td>${c.address || "—"}</td>
+                        <td>${c.phone || "—"}</td>
+                        <td class="amount ${bal > 0 ? 'cr' : 'dr'}">${fmt(bal)}</td>
+                    </tr>`;
+            }).join("");
+
+            if (activeCustomers.length === 0) {
+                rowsHtml = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">No customers with active balances found.</td></tr>`;
+            }
+
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Customer Balances Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; padding: 30px 36px; }
+
+  /* ── HEADER ── */
+  .page-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 3px solid #1e293b; margin-bottom: 20px; }
+  .brand { display: flex; flex-direction: column; }
+  .shop-name { font-size: 28px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #1e293b; line-height: 1; }
+  .shop-tagline { font-size: 11px; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
+  .shop-contact { text-align: right; font-size: 11px; color: #475569; line-height: 1.8; }
+  .doc-title { text-align: center; flex: 1; }
+  .doc-title-text { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #1e293b; border: 2px solid #1e293b; display: inline-block; padding: 4px 18px; border-radius: 3px; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
+  thead tr { background: #1e293b; }
+  thead th { color: #fff; font-weight: 700; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #1e293b; }
+  thead th.amount { text-align: right; }
+  tbody td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; color: #374151; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  td.amount { text-align: right; white-space: nowrap; font-weight: bold; }
+  .cr { color: #15803d; }
+  .dr { color: #b91c1c; }
+
+  /* ── TOTALS ROW ── */
+  .totals-row td { background: #f1f5f9 !important; font-weight: 700; border-top: 2px solid #1e293b; font-size: 12px; padding: 10px 12px; }
+
+  /* ── FOOTER ── */
+  .page-footer { margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sig-block { text-align: center; }
+  .sig-line { width: 160px; border-top: 1.5px solid #475569; margin: 0 auto 4px; }
+  .sig-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .print-note { font-size: 9.5px; color: #94a3b8; text-align: right; }
+
+  @media print {
+    body { padding: 18px 24px; }
+    @page { size: A4; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="brand">
+      <div class="shop-name">Grace Tailors</div>
+      <div class="shop-tagline">Premium Stitching &amp; Tailoring Services</div>
+    </div>
+    <div class="doc-title">
+      <div class="doc-title-text">Active Balances Report</div>
+    </div>
+    <div class="shop-contact">
+      Print Date: ${printDate}
+    </div>
+  </div>
+
+  <!-- SUMMARY BOX -->
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div>
+        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Customers:</span>
+        <span style="font-size: 14px; font-weight: 800; color: #1e293b; margin-left: 5px;">${activeCustomers.length}</span>
+    </div>
+    <div>
+        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Net Balance:</span>
+        <span style="font-size: 16px; font-weight: 900; margin-left: 5px; color: ${totalBalance >= 0 ? '#15803d' : '#b91c1c'}">${fmt(totalBalance)}</span>
+    </div>
+  </div>
+
+  <!-- BALANCES TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px; text-align: center;">Sr #</th>
+        <th>Customer Name</th>
+        <th>Address</th>
+        <th>Phone No</th>
+        <th class="amount" style="width: 150px;">Current Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+      ${activeCustomers.length > 0 ? `
+      <tr class="totals-row">
+        <td colspan="4" style="text-align: right; text-transform: uppercase; letter-spacing: 0.5px;">Net Total Balance</td>
+        <td class="amount ${totalBalance >= 0 ? 'cr' : 'dr'}">${fmt(totalBalance)}</td>
+      </tr>
+      ` : ''}
+    </tbody>
+  </table>
+
+  <!-- PAGE FOOTER -->
+  <div class="page-footer">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared By</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Authorized By</div>
+    </div>
+    <div class="print-note">
+      Printed on ${printDate} &nbsp;|&nbsp; Grace Tailors
+    </div>
+  </div>
+
+</body>
+</html>`;
+
+            const win = window.open("", "_blank", "width=950,height=700");
+            win.document.write(html);
+            win.document.close();
+            win.focus();
+            setTimeout(() => { win.print(); }, 400);
+        } catch (err) {
+            console.error("Print active balances error:", err);
+            alert("Failed to load customer list for printing.");
+        } finally {
+            setPrintingBalances(false);
+        }
+    };
+
     const handleOpenLedger = async (customer) => {
         setLedgerCustomer(customer);
         setLedgerEntries([]);
@@ -902,14 +1069,26 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         </Button>
                     )}
                 </Stack>
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={handleOpen}
-                    sx={{ borderRadius: 2, textTransform: "none", px: 3, py: 1, whiteSpace: "nowrap" }}
-                >
-                    Add New Customer
-                </Button>
+                <Stack direction="row" spacing={1.5} sx={{ flexShrink: 0 }}>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        disabled={printingBalances}
+                        startIcon={printingBalances ? <CircularProgress size={16} /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>}
+                        onClick={handlePrintActiveBalances}
+                        sx={{ borderRadius: 2, textTransform: "none", px: 2.5, py: 1, whiteSpace: "nowrap" }}
+                    >
+                        Print List
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        onClick={handleOpen}
+                        sx={{ borderRadius: 2, textTransform: "none", px: 3, py: 1, whiteSpace: "nowrap" }}
+                    >
+                        Add New Customer
+                    </Button>
+                </Stack>
             </Stack>
 
             {/* ── Customers Table ───────────────────────────── */}
