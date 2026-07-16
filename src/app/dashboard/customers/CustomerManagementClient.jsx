@@ -681,6 +681,19 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
             const totalBalance = activeCustomers.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
             
+            // Build applied filters string
+            const appliedFilters = [];
+            if (debouncedSearch) {
+                appliedFilters.push(`<strong>Search:</strong> "${debouncedSearch}"`);
+            }
+            if (filterCategory) {
+                appliedFilters.push(`<strong>Category:</strong> ${filterCategory.name}`);
+            }
+            if (debouncedMeasurementNo) {
+                appliedFilters.push(`<strong>Map No:</strong> "${debouncedMeasurementNo}"`);
+            }
+            const filtersStr = appliedFilters.length > 0 ? appliedFilters.join(" &nbsp;|&nbsp; ") : "All Customers";
+            
             const fmt = (n) => "Rs. " + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (n > 0 ? " Cr" : n < 0 ? " Dr" : "");
             
             let rowsHtml = activeCustomers.map((c, idx) => {
@@ -761,14 +774,20 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
   </div>
 
   <!-- SUMMARY BOX -->
-  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
     <div>
-        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Customers:</span>
-        <span style="font-size: 14px; font-weight: 800; color: #1e293b; margin-left: 5px;">${activeCustomers.length}</span>
+        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Filters Applied:</span>
+        <span style="font-size: 12px; font-weight: 600; color: #1e293b; margin-left: 5px;">${filtersStr}</span>
     </div>
-    <div>
-        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Net Balance:</span>
-        <span style="font-size: 16px; font-weight: 900; margin-left: 5px; color: ${totalBalance >= 0 ? '#15803d' : '#b91c1c'}">${fmt(totalBalance)}</span>
+    <div style="display: flex; gap: 20px;">
+        <div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Customers:</span>
+            <span style="font-size: 14px; font-weight: 800; color: #1e293b; margin-left: 5px;">${activeCustomers.length}</span>
+        </div>
+        <div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Net Balance:</span>
+            <span style="font-size: 16px; font-weight: 900; margin-left: 5px; color: ${totalBalance >= 0 ? '#15803d' : '#b91c1c'}">${fmt(totalBalance)}</span>
+        </div>
     </div>
   </div>
 
