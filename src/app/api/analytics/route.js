@@ -72,6 +72,16 @@ export async function GET(req) {
         const expenses = await prisma.expense.findMany({ where: expenseWhere });
         const totalExpenses = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
+        // --- Sale Returns between dates ---
+        const returnWhere = {};
+        if (fromDate || toDate) {
+            returnWhere.returnDate = {};
+            if (fromDate) returnWhere.returnDate.gte = fromDate;
+            if (toDate) returnWhere.returnDate.lte = toDate;
+        }
+        const saleReturns = await prisma.sale_return.findMany({ where: returnWhere });
+        const totalSaleReturns = saleReturns.reduce((s, r) => s + (parseFloat(r.totalAmount) || 0), 0);
+
         // --- Purchases (for payables) ---
         const purchases = await prisma.purchase.findMany({
             include: {
@@ -177,8 +187,8 @@ export async function GET(req) {
         // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost ──
         const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost;
 
-        // ── Cloth Profit = total unitPrice - total discount - (total costPrice + total expenses) ──
-        const clothProfit = totalClothUnitPrice - totalClothDiscountAmount - (totalClothCostPrice + totalExpenses);
+        // ── Cloth Profit = total unitPrice - total discount - (total costPrice + total expenses + total sale returns) ──
+        const clothProfit = totalClothUnitPrice - totalClothDiscountAmount - (totalClothCostPrice + totalExpenses + totalSaleReturns);
 
         // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
         const overallShopProfit = stitchingProfit + clothProfit;
@@ -222,6 +232,7 @@ export async function GET(req) {
                 totalClothCostPrice,
                 totalClothDiscountAmount,
                 totalExpenses,
+                totalSaleReturns,
                 clothProfit,
                 // Overall shop profit
                 overallShopProfit,

@@ -645,6 +645,14 @@ export async function PUT(req) {
                 }
             }
 
+            if (advanceAmount !== undefined) {
+                const parsedAdvance = parseFloat(advanceAmount);
+                const currentAdvance = parseFloat(currentBooking.advanceAmount);
+                if (parsedAdvance !== currentAdvance && !isAdmin) {
+                    throw new Error("Only an admin can edit the advance amount.");
+                }
+            }
+
             const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentBooking.totalAmount);
             const newAdvance = advanceAmount !== undefined ? parseFloat(advanceAmount) : parseFloat(currentBooking.advanceAmount);
 

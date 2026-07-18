@@ -505,6 +505,18 @@ export default function AnalyticsClient({ employees }) {
                                                 - Rs. {fmt(s.totalExpenses)}
                                             </Typography>
                                         </Box>
+                                        {/* Sale Returns */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#ea580c" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Total Sale Returns
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#ea580c">
+                                                - Rs. {fmt(s.totalSaleReturns)}
+                                            </Typography>
+                                        </Box>
                                         <Divider sx={{ my: 0.5 }} />
                                         {/* Net Profit */}
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -516,13 +528,13 @@ export default function AnalyticsClient({ employees }) {
                                                 Rs. {fmt(s.clothProfit)}
                                             </Typography>
                                         </Box>
-                                        {(s.totalClothUnitPrice - s.totalClothDiscountAmount) > 0 && (
+                                        {(s.totalClothUnitPrice - s.totalClothDiscountAmount - (s.totalSaleReturns || 0)) > 0 && (
                                             <Box sx={{ mt: 0.5 }}>
                                                 <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                                    Profit Margin: {((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount)) * 100).toFixed(1)}%
+                                                    Profit Margin: {((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount - (s.totalSaleReturns || 0))) * 100).toFixed(1)}%
                                                 </Typography>
                                                 <LinearProgress variant="determinate"
-                                                    value={Math.min(Math.abs((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount)) * 100), 100)}
+                                                    value={Math.min(Math.abs((s.clothProfit / (s.totalClothUnitPrice - s.totalClothDiscountAmount - (s.totalSaleReturns || 0))) * 100), 100)}
                                                     sx={{
                                                         mt: 0.5, height: 6, borderRadius: 3, bgcolor: "#f3f4f6",
                                                         "& .MuiLinearProgress-bar": {

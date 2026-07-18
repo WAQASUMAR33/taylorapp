@@ -1852,9 +1852,11 @@ ${allBookingsHtml}
     const productSubtotal = productItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
     const totalSubtotal = stitchingSubtotal + productSubtotal;
 
-    // Apply global discount based on total subtotal
+    // Apply global discount: if products are involved, cap discount at productSubtotal, otherwise cap at stitchingSubtotal
+    const hasProductsInUI = productItems.some(p => p.productId);
+    const targetSubtotal = hasProductsInUI ? productSubtotal : stitchingSubtotal;
     const globalDiscountInput = parseFloat(formData.discount) || 0;
-    const appliedDiscount = Math.min(globalDiscountInput, totalSubtotal);
+    const appliedDiscount = Math.min(globalDiscountInput, targetSubtotal);
 
     const totalAmount = Math.max(0, totalSubtotal - appliedDiscount);
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
@@ -1885,16 +1887,19 @@ ${allBookingsHtml}
         try {
             const subStitching = validItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const subProduct = validProductItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
-            const subTotalAll = subStitching + subProduct;
 
+            const hasProducts = validProductItems.length > 0;
+            const discountTargets = hasProducts ? [...validProductItems] : [...validItems];
+            const nonDiscountTargets = hasProducts ? [...validItems] : [];
+
+            const targetSubtotal = discountTargets.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const discountInput = parseFloat(formData.discount) || 0;
-            const submitDiscount = Math.min(discountInput, subTotalAll);
+            const submitDiscount = Math.min(discountInput, targetSubtotal);
 
-            // Distribute discount proportionally across ALL valid items
             let remainingDiscount = submitDiscount;
-            let remainingSubtotal = subTotalAll;
+            let remainingSubtotal = targetSubtotal;
 
-            const allItemsProcessed = [...validItems, ...validProductItems].map((item, idx, arr) => {
+            const processedDiscountTargets = discountTargets.map((item, idx, arr) => {
                 const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
                 let itemDisc = 0;
                 
@@ -1915,9 +1920,17 @@ ${allBookingsHtml}
                 };
             });
 
-            // Split processed items back into finalStitchingItems and finalProductItems
-            const finalStitchingItems = allItemsProcessed.filter(item => !item.productId);
-            const finalProductItems = allItemsProcessed.filter(item => item.productId);
+            const processedNonDiscountTargets = nonDiscountTargets.map(item => {
+                const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                return {
+                    ...item,
+                    discount: 0,
+                    totalPrice: itemSub
+                };
+            });
+
+            const finalStitchingItems = hasProducts ? processedNonDiscountTargets : processedDiscountTargets;
+            const finalProductItems = hasProducts ? processedDiscountTargets : [];
 
             const payload = {
                 customerId: formData.customerId,
@@ -2989,6 +3002,7 @@ ${allBookingsHtml}
                                         <TextField fullWidth size="small" label="Advance Amount" required
                                             value={formData.advanceAmount}
                                             onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
+                                            disabled={!!editingBookingId && !isAdmin}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={FIELD_SX} />
                                     </Grid>
