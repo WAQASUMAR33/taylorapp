@@ -79,8 +79,27 @@ export async function GET(req) {
             if (fromDate) returnWhere.returnDate.gte = fromDate;
             if (toDate) returnWhere.returnDate.lte = toDate;
         }
-        const saleReturns = await prisma.sale_return.findMany({ where: returnWhere });
+        const saleReturns = await prisma.sale_return.findMany({
+            where: returnWhere,
+            include: {
+                items: {
+                    include: {
+                        product: { select: { id: true, costPrice: true } }
+                    }
+                }
+            }
+        });
         const totalSaleReturns = saleReturns.reduce((s, r) => s + (parseFloat(r.totalAmount) || 0), 0);
+
+        // Calculate the cost price of returned items
+        let totalReturnedCostPrice = 0;
+        for (const r of saleReturns) {
+            for (const item of r.items) {
+                const qty = parseFloat(item.quantity) || 0;
+                const cost = parseFloat(item.product?.costPrice) || 0;
+                totalReturnedCostPrice += qty * cost;
+            }
+        }
 
         // --- Purchases (for payables) ---
         const purchases = await prisma.purchase.findMany({
@@ -187,13 +206,16 @@ export async function GET(req) {
         // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost ──
         const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost;
 
-        // ── Cloth Profit = total unitPrice - total discount - (total costPrice + total expenses + total sale returns) ──
-        const clothProfit = totalClothUnitPrice - totalClothDiscountAmount - (totalClothCostPrice + totalExpenses + totalSaleReturns);
+        // Deduct cost price of returned items from total cost price of products
+        const totalClothCostPriceNet = Math.max(0, totalClothCostPrice - totalReturnedCostPrice);
+
+        // ── Cloth Profit = total unitPrice - total discount - (total costPrice (net) + total expenses + total sale returns) ──
+        const clothProfit = totalClothUnitPrice - totalClothDiscountAmount - (totalClothCostPriceNet + totalExpenses + totalSaleReturns);
 
         // ── Overall Shop Profit = Stitching Profit + Cloth Profit ──
         const overallShopProfit = stitchingProfit + clothProfit;
 
-        totalCost = totalClothCostPrice + totalActualStitchingCost + totalActualMaterialCost;
+        totalCost = totalClothCostPriceNet + totalActualStitchingCost + totalActualMaterialCost;
         const totalProfit = overallShopProfit;
 
         // --- Payables from purchases ---
@@ -229,7 +251,7 @@ export async function GET(req) {
                 stitchingProfit,
                 // Cloth profit breakdown
                 totalClothUnitPrice,
-                totalClothCostPrice,
+                totalClothCostPrice: totalClothCostPriceNet,
                 totalClothDiscountAmount,
                 totalExpenses,
                 totalSaleReturns,
