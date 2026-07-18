@@ -29,6 +29,9 @@ const STATUS_COLOR = {
     RETURNED: { bg: "#fee2e2", color: "#991b1b", label: "Returned" },
     DELIVERED: { bg: "#dcfce7", color: "#166534", label: "Delivered" },
     CANCELLED: { bg: "#fee2e2", color: "#991b1b", label: "Cancelled" },
+    PARTIALLY_DELIVERED: { bg: "#f3e8ff", color: "#6b21a8", label: "Partially Delivered" },
+    PAID: { bg: "#dcfce7", color: "#166534", label: "Paid" },
+    TRANSFERRED_TO_LEDGER: { bg: "#e0f2fe", color: "#075985", label: "Transferred To Ledger" },
 };
 
 // ─── Stat card ───────────────────────────────────────────────────────────────

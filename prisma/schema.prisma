@@ -553,6 +553,9 @@ enum booking_status {
   CANCELLED
   COMPLETED
   RETURNED
+  PARTIALLY_DELIVERED
+  PAID
+  TRANSFERRED_TO_LEDGER
 }
 
 enum materialmovement_type {
