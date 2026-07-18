@@ -49,6 +49,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
     const [analytics, setAnalytics] = useState({
         totalStitchingAmount: 0,
         totalStitchingExpenses: 0,
+        totalStitchingProfit: 0,
         profit: 0,
     });
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -308,7 +309,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                     >
                         <Box>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Total Stitching Amount
+                                Stitching Profit
                             </Typography>
                             {analyticsLoading ? (
                                 <Box sx={{ display: "flex", alignItems: "center", mt: 0.5, height: 32 }}>
@@ -316,11 +317,11 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                                 </Box>
                             ) : (
                                 <Typography variant="h5" fontWeight={800} color="success.main" sx={{ mt: 0.5 }}>
-                                    PKR {analytics.totalStitchingAmount.toLocaleString("en-PK", { minimumFractionDigits: 2 })}
+                                    PKR {(analytics.totalStitchingProfit || 0).toLocaleString("en-PK", { minimumFractionDigits: 2 })}
                                 </Typography>
                             )}
                             <Typography variant="caption" color="text.secondary">
-                                Excludes product sales
+                                Excludes stitching expenses
                             </Typography>
                         </Box>
                         <Box
