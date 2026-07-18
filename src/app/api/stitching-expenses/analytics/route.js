@@ -57,9 +57,9 @@ export async function GET(req) {
             })
         ]);
 
-        // Calculate total stitching amount, actual stitching cost, and material cost
-        let totalStitchingAmount = 0;
-        let totalActualStitchingCost = 0;
+        // Calculate total stitching amount (Gross & Net) and material cost
+        let totalStitchingAmountGross = 0;
+        let totalStitchingDiscount = 0;
         let totalActualMaterialCost = 0;
 
         for (const b of bookings) {
@@ -67,12 +67,14 @@ export async function GET(req) {
                 if (!item.productId) {
                     const qty = parseFloat(item.quantity) || 1;
                     const itemTotal = parseFloat(item.totalPrice) || 0;
-                    totalStitchingAmount += itemTotal;
+                    const itemDiscount = parseFloat(item.discount) || 0;
+                    
+                    totalStitchingAmountGross += itemTotal + itemDiscount;
+                    totalStitchingDiscount += itemDiscount;
 
                     if (item.selectedOptions && item.selectedOptions.length > 0) {
                         for (const opt of item.selectedOptions) {
                             if (opt.stitchingOption) {
-                                totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
                                 totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
                             }
                         }
@@ -81,19 +83,19 @@ export async function GET(req) {
             }
         }
 
-        // Calculate total stitching profit (Gross Stitching Profit)
-        const totalStitchingProfit = totalStitchingAmount - (totalActualStitchingCost + totalActualMaterialCost);
+        // Calculate primary profit (Gross Stitching Profit as in the main analytics page)
+        const primaryProfit = totalStitchingAmountGross - totalStitchingDiscount - totalActualMaterialCost;
 
         // Calculate total stitching expenses (Overhead expenses)
         const totalStitchingExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-        // Net Stitching Profit
-        const profit = totalStitchingProfit - totalStitchingExpenses;
+        // Original Profit (Net Stitching Profit = primary profit - total stitching expenses)
+        const profit = primaryProfit - totalStitchingExpenses;
 
         return NextResponse.json({
-            totalStitchingAmount,
+            totalStitchingAmount: totalStitchingAmountGross - totalStitchingDiscount, // Net stitching charged
             totalStitchingExpenses,
-            totalStitchingProfit,
+            totalStitchingProfit: primaryProfit,
             profit
         });
     } catch (error) {
