@@ -86,7 +86,15 @@ export default function LedgerManagementClient({
     const [limit, setLimit] = useState(50);
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [searchName, setSearchName] = useState("");
+    const [searchFatherName, setSearchFatherName] = useState("");
+    const [searchPhone, setSearchPhone] = useState("");
+
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [debouncedName, setDebouncedName] = useState("");
+    const [debouncedFatherName, setDebouncedFatherName] = useState("");
+    const [debouncedPhone, setDebouncedPhone] = useState("");
+
     const [filterCustomer, setFilterCustomer] = useState(null);
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
@@ -170,14 +178,17 @@ export default function LedgerManagementClient({
     // Derived: selected customer object for the form
     const selectedFormCustomer = customerOptions.find(c => c.id === formData.customerId) || null;
 
-    // Handle debouncing for ledger search query
+    // Handle debouncing for search inputs
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchQuery);
+            setDebouncedName(searchName);
+            setDebouncedFatherName(searchFatherName);
+            setDebouncedPhone(searchPhone);
             setPage(1);
         }, 400);
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+    }, [searchQuery, searchName, searchFatherName, searchPhone]);
 
     // Handle debouncing for customer search input
     useEffect(() => {
@@ -258,6 +269,9 @@ export default function LedgerManagementClient({
                 params.append("page", page.toString());
                 params.append("limit", limit.toString());
                 if (debouncedSearch) params.append("search", debouncedSearch);
+                if (debouncedName) params.append("searchName", debouncedName);
+                if (debouncedFatherName) params.append("searchFatherName", debouncedFatherName);
+                if (debouncedPhone) params.append("searchPhone", debouncedPhone);
                 if (filterCustomer) params.append("customerId", filterCustomer.id.toString());
                 if (dateFrom) params.append("dateFrom", dateFrom);
                 if (dateTo) params.append("dateTo", dateTo);
@@ -279,7 +293,7 @@ export default function LedgerManagementClient({
         };
 
         fetchEntries();
-    }, [page, limit, debouncedSearch, filterCustomer?.id, dateFrom, dateTo, refetchTrigger]);
+    }, [page, limit, debouncedSearch, debouncedName, debouncedFatherName, debouncedPhone, filterCustomer?.id, dateFrom, dateTo, refetchTrigger]);
 
     // Reset page to 1 on filter changes
     useEffect(() => {
@@ -333,11 +347,17 @@ export default function LedgerManagementClient({
         }
     };
 
-    const hasActiveFilters = searchQuery || filterCustomer || dateFrom || dateTo;
+    const hasActiveFilters = searchQuery || searchName || searchFatherName || searchPhone || filterCustomer || dateFrom || dateTo;
 
     const clearFilters = () => {
         setSearchQuery("");
+        setSearchName("");
+        setSearchFatherName("");
+        setSearchPhone("");
         setDebouncedSearch("");
+        setDebouncedName("");
+        setDebouncedFatherName("");
+        setDebouncedPhone("");
         setFilterCustomer(null);
         setDateFrom("");
         setDateTo("");
@@ -427,17 +447,60 @@ export default function LedgerManagementClient({
                             sx={{ minWidth: 175 }}
                             inputProps={{ min: dateFrom || undefined }}
                         />
-                        {/* ── Then search + account ── */}
+                        {/* ── Separate Search Fields ── */}
                         <TextField
-                            placeholder="Search entries…"
+                            label="Customer Name"
+                            placeholder="Search Name…"
+                            variant="outlined"
+                            size="small"
+                            value={searchName}
+                            onChange={(e) => setSearchName(e.target.value)}
+                            sx={{ minWidth: 165 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start"><User size={16} /></InputAdornment>
+                                ),
+                            }}
+                        />
+                        <TextField
+                            label="Father Name"
+                            placeholder="Search Father Name…"
+                            variant="outlined"
+                            size="small"
+                            value={searchFatherName}
+                            onChange={(e) => setSearchFatherName(e.target.value)}
+                            sx={{ minWidth: 165 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start"><User size={16} /></InputAdornment>
+                                ),
+                            }}
+                        />
+                        <TextField
+                            label="Phone Number"
+                            placeholder="Search Phone…"
+                            variant="outlined"
+                            size="small"
+                            value={searchPhone}
+                            onChange={(e) => setSearchPhone(e.target.value)}
+                            sx={{ minWidth: 165 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start"><span style={{ fontSize: 13 }}>📞</span></InputAdornment>
+                                ),
+                            }}
+                        />
+                        <TextField
+                            label="Ref # / Desc"
+                            placeholder="Ref # or desc…"
                             variant="outlined"
                             size="small"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            sx={{ minWidth: 220 }}
+                            sx={{ minWidth: 150 }}
                             InputProps={{
                                 startAdornment: (
-                                    <InputAdornment position="start"><Search size={18} /></InputAdornment>
+                                    <InputAdornment position="start"><Search size={16} /></InputAdornment>
                                 ),
                             }}
                         />
@@ -534,7 +597,7 @@ export default function LedgerManagementClient({
                         New Entry
                     </Button>
                 </Box>
-                {(dateFrom || dateTo || searchQuery || filterCustomer) && (
+                {(dateFrom || dateTo || searchQuery || searchName || searchFatherName || searchPhone || filterCustomer) && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
                         Found {totalCount} matching ledger entr{totalCount === 1 ? "y" : "ies"}
                         {dateFrom && ` from ${new Date(dateFrom).toLocaleDateString()}`}
@@ -598,12 +661,24 @@ export default function LedgerManagementClient({
                                                             <Box>
                                                                 <Typography variant="subtitle2" fontWeight={600}>
                                                                     {entry.customer?.name}
+                                                                    {entry.customer?.fatherName && (
+                                                                        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 400 }}>
+                                                                            s/o {entry.customer.fatherName}
+                                                                        </Typography>
+                                                                    )}
                                                                 </Typography>
-                                                                {entry.customer?.code && (
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {entry.customer.code}
-                                                                    </Typography>
-                                                                )}
+                                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                                                    {entry.customer?.phone && (
+                                                                        <Typography variant="caption" color="text.secondary">
+                                                                            📞 {entry.customer.phone}
+                                                                        </Typography>
+                                                                    )}
+                                                                    {entry.customer?.code && (
+                                                                        <Typography variant="caption" color="text.secondary">
+                                                                            {entry.customer?.phone ? '• ' : ''}{entry.customer.code}
+                                                                        </Typography>
+                                                                    )}
+                                                                </Box>
                                                             </Box>
                                                         </Box>
                                                     </TableCell>

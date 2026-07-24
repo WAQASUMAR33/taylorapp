@@ -8,6 +8,9 @@ export async function GET(req) {
         const page = searchParams.get("page") || "1";
         const limit = searchParams.get("limit") || "50";
         const search = searchParams.get("search") || "";
+        const searchName = searchParams.get("searchName") || "";
+        const searchFatherName = searchParams.get("searchFatherName") || "";
+        const searchPhone = searchParams.get("searchPhone") || "";
         const customerId = searchParams.get("customerId") || "";
         const dateFrom = searchParams.get("dateFrom") || "";
         const dateTo = searchParams.get("dateTo") || "";
@@ -46,6 +49,7 @@ export async function GET(req) {
                     customer: {
                         OR: [
                             { name: { contains: search } },
+                            { fatherName: { contains: search } },
                             { phone: { contains: search } },
                             { address: { contains: search } },
                             { measurementNo: { contains: search } }
@@ -59,9 +63,23 @@ export async function GET(req) {
                 searchOr.push({ id: searchId });
             }
 
-            where.AND = [
-                { OR: searchOr }
-            ];
+            where.AND = where.AND || [];
+            where.AND.push({ OR: searchOr });
+        }
+
+        if (searchName) {
+            where.AND = where.AND || [];
+            where.AND.push({ customer: { name: { contains: searchName } } });
+        }
+
+        if (searchFatherName) {
+            where.AND = where.AND || [];
+            where.AND.push({ customer: { fatherName: { contains: searchFatherName } } });
+        }
+
+        if (searchPhone) {
+            where.AND = where.AND || [];
+            where.AND.push({ customer: { phone: { contains: searchPhone } } });
         }
 
         // Fetch paginated entries and total count
@@ -150,6 +168,7 @@ export async function GET(req) {
                         customer: {
                             OR: [
                                 { name: { contains: search } },
+                                { fatherName: { contains: search } },
                                 { phone: { contains: search } },
                                 { address: { contains: search } },
                                 { measurementNo: { contains: search } }
@@ -163,9 +182,23 @@ export async function GET(req) {
                     searchOr.push({ id: searchId });
                 }
 
-                priorWhere.AND = [
-                    { OR: searchOr }
-                ];
+                priorWhere.AND = priorWhere.AND || [];
+                priorWhere.AND.push({ OR: searchOr });
+            }
+
+            if (searchName) {
+                priorWhere.AND = priorWhere.AND || [];
+                priorWhere.AND.push({ customer: { name: { contains: searchName } } });
+            }
+
+            if (searchFatherName) {
+                priorWhere.AND = priorWhere.AND || [];
+                priorWhere.AND.push({ customer: { fatherName: { contains: searchFatherName } } });
+            }
+
+            if (searchPhone) {
+                priorWhere.AND = priorWhere.AND || [];
+                priorWhere.AND.push({ customer: { phone: { contains: searchPhone } } });
             }
 
             priorWhere.AND = priorWhere.AND || [];
