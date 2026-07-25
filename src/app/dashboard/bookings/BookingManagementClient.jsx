@@ -3204,268 +3204,602 @@ ${allBookingsHtml}
         </Dialog>
     );
 
-    const checkoutDialog = checkoutBooking && (
-        <Dialog 
-            open={checkoutOpen} 
-            onClose={() => !paying && setCheckoutOpen(false)}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3 } }}
-        >
-            <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
-                Order Check Out Wizard — Step {checkoutStep} of 3
-            </DialogTitle>
-            <DialogContent sx={{ pt: 2.5 }}>
-                {error && (
-                    <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
-                        {error}
-                    </Alert>
-                )}
+    const checkoutDialog = checkoutBooking && (() => {
+        const allItems = checkoutBooking.items || [];
+        const totalSuitsInBooking = allItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
+        const alreadyDeliveredBeforeThis = allItems
+            .filter(item => item.itemStatus === "DELIVERED")
+            .reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
 
-                {/* Step 1: Quantities to Deliver */}
-                {checkoutStep === 1 && (
-                    <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: 'text.secondary' }}>
-                            Select the quantity of each item to deliver:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {(checkoutBooking.items || [])
-                                .filter(item => item.itemStatus !== "DELIVERED")
-                                .map(item => {
-                                    const maxQty = parseFloat(item.quantity) || 1;
-                                    const currentVal = checkoutQuantities[item.id] !== undefined ? checkoutQuantities[item.id] : maxQty;
-                                    
-                                    // Generate item title: if item.productId is set, it's a product, else it's stitching
-                                    const itemTitle = item.productId 
-                                        ? `Product: ${item.productName || item.product?.name || "Cloth/Product"}`
-                                        : `Stitching: ${item.stitchingType} (${(item.selectedOptions || []).map(o => o.stitchingOption?.name).join(', ') || 'No options'})`;
+        const undeliveredItems = allItems.filter(item => item.itemStatus !== "DELIVERED");
 
-                                    return (
-                                        <Card key={item.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Box sx={{ flex: 1, pr: 2 }}>
-                                                    <Typography variant="body2" fontWeight={700}>
-                                                        {itemTitle}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Total in Booking: {maxQty} | Price: Rs. {parseFloat(item.totalPrice).toFixed(0)}
-                                                    </Typography>
+        let deliveredNow = 0;
+        undeliveredItems.forEach(item => {
+            const maxQty = parseFloat(item.quantity) || 1;
+            const q = checkoutQuantities[item.id] !== undefined ? checkoutQuantities[item.id] : maxQty;
+            deliveredNow += parseFloat(q) || 0;
+        });
+
+        const totalDeliveredAfterThis = alreadyDeliveredBeforeThis + deliveredNow;
+        const allDelivered = totalDeliveredAfterThis === totalSuitsInBooking;
+
+        const totalAmount = parseFloat(checkoutBooking.totalAmount || 0);
+        const alreadyPaid = parseFloat(checkoutBooking.advanceAmount || 0);
+        const currentRemaining = parseFloat(checkoutBooking.remainingAmount || 0);
+
+        const cashReceived = parseFloat(checkoutCashReceived) || 0;
+        const discount = parseFloat(checkoutDiscount) || 0;
+        const paymentPlusDiscount = cashReceived + discount;
+
+        const remainingBalanceAfterPayment = Math.max(0, currentRemaining - paymentPlusDiscount);
+        const totalPaidBeforeAndThis = alreadyPaid + cashReceived + discount;
+
+        const isExceeding = paymentPlusDiscount > currentRemaining;
+
+        const isAllSelected = undeliveredItems.length > 0 && undeliveredItems.every(item => {
+            const maxQty = parseFloat(item.quantity) || 1;
+            const q = checkoutQuantities[item.id] !== undefined ? checkoutQuantities[item.id] : maxQty;
+            return q === maxQty && q > 0;
+        });
+
+        const handleToggleSelectAll = (checked) => {
+            const newQuants = {};
+            undeliveredItems.forEach(item => {
+                const maxQty = parseFloat(item.quantity) || 1;
+                newQuants[item.id] = checked ? maxQty : 0;
+            });
+            setCheckoutQuantities(newQuants);
+        };
+
+        return (
+            <Dialog 
+                open={checkoutOpen} 
+                onClose={() => !paying && setCheckoutOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
+                    {/* Header Wizard Steps Nav */}
+                    <Grid container spacing={1.5} sx={{ alignItems: 'center' }}>
+                        {[
+                            { step: 1, title: "1. SELECT SUITS TO DELIVER", subtitle: "Step 1 of 3" },
+                            { step: 2, title: "2. PAYMENT & DISCOUNT", subtitle: "Step 2 of 3" },
+                            { step: 3, title: "3. REVIEW & FINALIZE", subtitle: "Step 3 of 3" },
+                        ].map((s) => {
+                            const isActive = checkoutStep === s.step;
+                            const isCompleted = checkoutStep > s.step;
+                            return (
+                                <Grid key={s.step} size={{ xs: 4 }}>
+                                    <Box
+                                        onClick={() => {
+                                            if (isCompleted) setCheckoutStep(s.step);
+                                        }}
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 2,
+                                            bgcolor: isActive ? '#3b82f6' : isCompleted ? '#dbeafe' : '#f8fafc',
+                                            color: isActive ? '#ffffff' : isCompleted ? '#1e40af' : '#64748b',
+                                            cursor: isCompleted ? 'pointer' : 'default',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 0.3,
+                                            border: isActive ? '2px solid #2563eb' : '1px solid #cbd5e1'
+                                        }}
+                                    >
+                                        <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, opacity: isActive ? 0.9 : 0.8 }}>
+                                            {s.subtitle}
+                                        </Typography>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                                            {s.title}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            );
+                        })}
+                    </Grid>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                    {error && (
+                        <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* STEP 1: SELECT SUITS TO DELIVER */}
+                    {checkoutStep === 1 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                            <Box>
+                                <Typography variant="h6" fontWeight={800} color="text.primary">
+                                    Order Check Out Wizard — Step 1 of 3
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    All pending suits are selected by default. You can change quantities if needed.
+                                </Typography>
+                            </Box>
+
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                                        <TableRow>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={isAllSelected}
+                                                    onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Suit (Item)</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: 700 }}>Total Qty</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: 700 }}>Already Delivered</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: 700, width: 140 }}>Deliver Now (Qty)</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: 700 }}>Pending After</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {allItems.map((item, idx) => {
+                                            const totalQty = parseFloat(item.quantity) || 1;
+                                            const isDelivered = item.itemStatus === "DELIVERED";
+                                            const alreadyDeliv = isDelivered ? totalQty : 0;
+                                            const maxDeliverNow = totalQty - alreadyDeliv;
+                                            const currentDeliverVal = isDelivered 
+                                                ? 0 
+                                                : (checkoutQuantities[item.id] !== undefined ? checkoutQuantities[item.id] : maxDeliverNow);
+                                            const pendingAfter = Math.max(0, totalQty - alreadyDeliv - currentDeliverVal);
+
+                                            const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                                            const itemType = item.productId ? "Product" : (isWskot ? "Waistcoat" : "SUIT");
+                                            const optionsStr = (item.selectedOptions || []).map(o => o.stitchingOption?.name).filter(Boolean).join(', ');
+                                            
+                                            const itemTitle = item.productId 
+                                                ? `${item.productName || item.product?.name || "Cloth/Product"}`
+                                                : `Stitching: ${itemType} ${optionsStr ? `(${optionsStr})` : ''}`;
+
+                                            return (
+                                                <TableRow key={item.id} sx={{ bgcolor: currentDeliverVal > 0 ? '#f5f3ff' : 'inherit' }}>
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox
+                                                            size="small"
+                                                            disabled={isDelivered}
+                                                            checked={currentDeliverVal > 0}
+                                                            onChange={(e) => {
+                                                                setCheckoutQuantities({
+                                                                    ...checkoutQuantities,
+                                                                    [item.id]: e.target.checked ? maxDeliverNow : 0
+                                                                });
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontWeight: 600 }}>{idx + 1}</TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" fontWeight={700}>{itemTitle}</Typography>
+                                                        {item.itemNote && (
+                                                            <Typography variant="caption" color="text.secondary">Note: {item.itemNote}</Typography>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ fontWeight: 600 }}>{totalQty}</TableCell>
+                                                    <TableCell align="center" sx={{ color: 'text.secondary' }}>{alreadyDeliv}</TableCell>
+                                                    <TableCell align="center">
+                                                        {isDelivered ? (
+                                                            <Chip label="Delivered" size="small" color="success" variant="outlined" />
+                                                        ) : (
+                                                            <TextField
+                                                                type="number"
+                                                                size="small"
+                                                                inputProps={{ min: 0, max: maxDeliverNow, step: "any", style: { textAlign: 'center' } }}
+                                                                value={currentDeliverVal}
+                                                                onChange={(e) => {
+                                                                    const val = Math.max(0, Math.min(maxDeliverNow, parseFloat(e.target.value) || 0));
+                                                                    setCheckoutQuantities({
+                                                                        ...checkoutQuantities,
+                                                                        [item.id]: val
+                                                                    });
+                                                                }}
+                                                                sx={{ width: 90, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                                                            />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell align="center">
+                                                        <Chip
+                                                            label={pendingAfter}
+                                                            size="small"
+                                                            sx={{
+                                                                fontWeight: 800,
+                                                                bgcolor: pendingAfter === 0 ? '#dcfce7' : '#fee2e2',
+                                                                color: pendingAfter === 0 ? '#166534' : '#991b1b'
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                                <Box sx={{ p: 1.5, bg: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0' }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={isAllSelected}
+                                                onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                                            />
+                                        }
+                                        label={<Typography variant="body2" fontWeight={700}>Select All</Typography>}
+                                    />
+                                    <Box sx={{ display: 'flex', gap: 3 }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Total Suits in Booking: <strong>{totalSuitsInBooking}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" color="primary.main" fontWeight={700}>
+                                            Total Deliver Now: <strong>{deliveredNow}</strong>
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </TableContainer>
+
+                            {/* Validation Check Step 1 */}
+                            <Card variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#fafafa' }}>
+                                <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    Validation Check — Is Quantity Selected &gt; 0?
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{
+                                            p: 2, borderRadius: 2, border: '2px solid',
+                                            borderColor: deliveredNow === 0 ? '#f87171' : '#e2e8f0',
+                                            bgcolor: deliveredNow === 0 ? '#fef2f2' : '#ffffff',
+                                            textAlign: 'center'
+                                        }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color={deliveredNow === 0 ? '#dc2626' : 'text.secondary'}>
+                                                No (0 Selected)
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                                Exit Wizard / Return to Booking Dashboard<br />(No state change)
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{
+                                            p: 2, borderRadius: 2, border: '2px solid',
+                                            borderColor: deliveredNow > 0 ? '#22c55e' : '#e2e8f0',
+                                            bgcolor: deliveredNow > 0 ? '#f0fdf4' : '#ffffff',
+                                            textAlign: 'center'
+                                        }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color={deliveredNow > 0 ? '#16a34a' : 'text.secondary'}>
+                                                Yes (1 or more selected)
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                                Proceed to Step 2
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
+                            </Card>
+                        </Box>
+                    )}
+
+                    {/* STEP 2: PAYMENT & DISCOUNT */}
+                    {checkoutStep === 2 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                            <Box>
+                                <Typography variant="h6" fontWeight={800} color="text.primary">
+                                    Order Check Out Wizard — Step 2 of 3
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Enter payment details for this delivery.
+                                </Typography>
+                            </Box>
+
+                            <Grid container spacing={2.5}>
+                                {/* Booking Summary Card */}
+                                <Grid size={{ xs: 6 }}>
+                                    <Card variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: '100%' }}>
+                                        <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                            Booking Summary
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">Booking No.</Typography>
+                                                <Typography variant="body2" fontWeight={800} color="#6d28d9">#{checkoutBooking.bookingNumber || checkoutBooking.id}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">Customer</Typography>
+                                                <Box sx={{ textAlign: 'right' }}>
+                                                    <Typography variant="body2" fontWeight={700}>{checkoutBooking.customer?.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">{checkoutBooking.customer?.phone}</Typography>
                                                 </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <TextField
-                                                        type="number"
-                                                        label="Qty to Deliver"
-                                                        size="small"
-                                                        inputProps={{ min: 0, max: maxQty, step: "any" }}
-                                                        value={currentVal}
-                                                        onChange={(e) => {
-                                                            const val = Math.max(0, Math.min(maxQty, parseFloat(e.target.value) || 0));
-                                                            setCheckoutQuantities({
-                                                                ...checkoutQuantities,
-                                                                [item.id]: val
-                                                            });
-                                                        }}
-                                                        sx={{ width: 130 }}
-                                                    />
+                                            </Box>
+                                            <Divider />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">Total Amount</Typography>
+                                                <Typography variant="body2" fontWeight={700}>Rs. {totalAmount.toLocaleString()}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">Already Paid</Typography>
+                                                <Typography variant="body2" fontWeight={700} color="success.main">Rs. {alreadyPaid.toLocaleString()}</Typography>
+                                            </Box>
+                                            <Divider />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="body2" fontWeight={700}>Remaining Balance</Typography>
+                                                <Typography variant="subtitle1" fontWeight={800} color="success.main">
+                                                    Rs. {currentRemaining.toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Card>
+                                </Grid>
+
+                                {/* Payment Details Card */}
+                                <Grid size={{ xs: 6 }}>
+                                    <Card variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: '100%' }}>
+                                        <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                            Payment Details
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            <TextField
+                                                fullWidth
+                                                label="Cash Received"
+                                                type="number"
+                                                size="small"
+                                                value={checkoutCashReceived}
+                                                onChange={(e) => setCheckoutCashReceived(e.target.value)}
+                                                InputProps={{
+                                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
+                                                }}
+                                            />
+                                            <TextField
+                                                fullWidth
+                                                label="Discount"
+                                                type="number"
+                                                size="small"
+                                                value={checkoutDiscount}
+                                                onChange={(e) => setCheckoutDiscount(e.target.value)}
+                                                InputProps={{
+                                                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
+                                                }}
+                                            />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 0.5 }}>
+                                                <Typography variant="body2" color="text.secondary">Payment + Discount</Typography>
+                                                <Typography variant="body2" fontWeight={700}>Rs. {paymentPlusDiscount.toLocaleString()}</Typography>
+                                            </Box>
+                                            <Divider />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="body2" fontWeight={700}>Remaining Balance After Payment</Typography>
+                                                <Typography variant="subtitle1" fontWeight={800} color={remainingBalanceAfterPayment > 0 ? "error.main" : "success.main"}>
+                                                    Rs. {remainingBalanceAfterPayment.toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Card>
+                                </Grid>
+                            </Grid>
+
+                            {/* Validation Check Step 2 */}
+                            <Card variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#fafafa' }}>
+                                <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    Validation Check — Is Cash Received + Discount &gt; Remaining Balance?
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{
+                                            p: 2, borderRadius: 2, border: '2px solid',
+                                            borderColor: isExceeding ? '#f87171' : '#e2e8f0',
+                                            bgcolor: isExceeding ? '#fef2f2' : '#ffffff',
+                                            textAlign: 'center'
+                                        }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color={isExceeding ? '#dc2626' : 'text.secondary'}>
+                                                Yes (Exceeds)
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                                Checkout not allowed.<br />Amount cannot exceed remaining balance.
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{
+                                            p: 2, borderRadius: 2, border: '2px solid',
+                                            borderColor: !isExceeding ? '#22c55e' : '#e2e8f0',
+                                            bgcolor: !isExceeding ? '#f0fdf4' : '#ffffff',
+                                            textAlign: 'center'
+                                        }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color={!isExceeding ? '#16a34a' : 'text.secondary'}>
+                                                No (Valid)
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                                Proceed to Step 3
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
+                            </Card>
+                        </Box>
+                    )}
+
+                    {/* STEP 3: REVIEW & FINALIZE */}
+                    {checkoutStep === 3 && (() => {
+                        let finalStatusTitle = "";
+                        let finalStatusColor = "";
+                        let finalStatusBg = "";
+                        let finalStatusDesc = "";
+                        let ledgerActionDesc = "";
+
+                        if (allDelivered) {
+                            if (remainingBalanceAfterPayment === 0) {
+                                finalStatusTitle = "Completed — Fully Paid (Booking Closed)";
+                                finalStatusColor = "#15803d";
+                                finalStatusBg = "#dcfce7";
+                                finalStatusDesc = "All suits delivered and remaining balance is Rs. 0. Order is complete.";
+                                ledgerActionDesc = "No ledger entry created.";
+                            } else {
+                                finalStatusTitle = "Closed — Pending Ledger Settlement (Transferred To Ledger)";
+                                finalStatusColor = "#b91c1c";
+                                finalStatusBg = "#fef2f2";
+                                finalStatusDesc = "All suits delivered, but an outstanding balance remains. Order will be closed.";
+                                ledgerActionDesc = `Debit Customer Ledger Account with exact remaining balance: Rs. ${remainingBalanceAfterPayment.toLocaleString()}`;
+                            }
+                        } else {
+                            if (remainingBalanceAfterPayment === 0) {
+                                finalStatusTitle = "Partially Delivered — Fully Paid (Booking Open)";
+                                finalStatusColor = "#0369a1";
+                                finalStatusBg = "#e0f2fe";
+                                finalStatusDesc = "Some suits delivered & balance cleared. Booking remains open for pending items.";
+                                ledgerActionDesc = "No ledger entry created (Booking remains open).";
+                            } else {
+                                finalStatusTitle = "Partially Delivered — Partial Payment (Booking Open)";
+                                finalStatusColor = "#c2410c";
+                                finalStatusBg = "#fff7ed";
+                                finalStatusDesc = "Some suits delivered & partial payment received. Booking remains open.";
+                                ledgerActionDesc = "No ledger entry created (Booking remains open).";
+                            }
+                        }
+
+                        return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                                <Box>
+                                    <Typography variant="h6" fontWeight={800} color="text.primary">
+                                        Order Check Out Wizard — Step 3 of 3
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Review and confirm. System will decide the final status automatically.
+                                    </Typography>
+                                </Box>
+
+                                <Grid container spacing={2.5}>
+                                    {/* Delivery Summary */}
+                                    <Grid size={{ xs: 6 }}>
+                                        <Card variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: '100%' }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                Delivery Summary
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Total Suits in Booking</Typography>
+                                                    <Typography variant="body2" fontWeight={700}>{totalSuitsInBooking}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Already Delivered (Before This)</Typography>
+                                                    <Typography variant="body2" fontWeight={700}>{alreadyDeliveredBeforeThis}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Delivered Now</Typography>
+                                                    <Typography variant="body2" fontWeight={700} color="primary.main">{deliveredNow}</Typography>
+                                                </Box>
+                                                <Divider />
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant="body2" fontWeight={700}>Total Delivered (After This)</Typography>
+                                                    <Typography variant="subtitle1" fontWeight={800} color="primary.dark">{totalDeliveredAfterThis}</Typography>
                                                 </Box>
                                             </Box>
                                         </Card>
-                                    );
-                                })}
-                            {(checkoutBooking.items || []).filter(item => item.itemStatus !== "DELIVERED").length === 0 && (
-                                <Typography variant="body2" sx={{ fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-                                    No undelivered items remaining.
-                                </Typography>
-                            )}
-                        </Box>
-                    </Box>
-                )}
+                                    </Grid>
 
-                {/* Step 2: Payment & Discount */}
-                {checkoutStep === 2 && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Box sx={{ bgcolor: 'action.hover', p: 2.5, borderRadius: 2 }}>
-                            <Grid container spacing={2}>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">BOOKING NUMBER</Typography>
-                                    <Typography variant="body2" fontWeight={700}>#{checkoutBooking.bookingNumber || checkoutBooking.id}</Typography>
+                                    {/* Payment Summary */}
+                                    <Grid size={{ xs: 6 }}>
+                                        <Card variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: '100%' }}>
+                                            <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                Payment Summary
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Total Amount</Typography>
+                                                    <Typography variant="body2" fontWeight={700}>Rs. {totalAmount.toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Already Paid</Typography>
+                                                    <Typography variant="body2" fontWeight={700}>Rs. {alreadyPaid.toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Cash Received</Typography>
+                                                    <Typography variant="body2" fontWeight={700} color="success.main">Rs. {cashReceived.toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Discount</Typography>
+                                                    <Typography variant="body2" fontWeight={700} color="warning.dark">Rs. {discount.toLocaleString()}</Typography>
+                                                </Box>
+                                                <Divider />
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" fontWeight={700}>Total Paid (Before + This)</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color="success.main">Rs. {totalPaidBeforeAndThis.toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant="body2" fontWeight={700}>Remaining Balance</Typography>
+                                                    <Typography variant="subtitle1" fontWeight={800} color={remainingBalanceAfterPayment > 0 ? "error.main" : "success.main"}>
+                                                        Rs. {remainingBalanceAfterPayment.toLocaleString()}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Card>
+                                    </Grid>
                                 </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">CUSTOMER</Typography>
-                                    <Typography variant="body2" fontWeight={700}>{checkoutBooking.customer?.name}</Typography>
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">TOTAL BOOKING AMT</Typography>
-                                    <Typography variant="body2" fontWeight={600}>Rs. {parseFloat(checkoutBooking.totalAmount || 0).toLocaleString()}</Typography>
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">CURRENT BALANCE DUE</Typography>
-                                    <Typography variant="body2" fontWeight={700} color="#b91c1c">Rs. {parseFloat(checkoutBooking.remainingAmount || 0).toLocaleString()}</Typography>
-                                </Grid>
-                            </Grid>
-                        </Box>
 
-                        <TextField
-                            fullWidth
-                            label="Additional Checkout Discount"
-                            type="number"
-                            size="small"
-                            value={checkoutDiscount}
-                            onChange={(e) => setCheckoutDiscount(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
-                            }}
-                        />
-
-                        <TextField
-                            fullWidth
-                            label="Cash Received"
-                            type="number"
-                            size="small"
-                            value={checkoutCashReceived}
-                            onChange={(e) => setCheckoutCashReceived(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
-                            }}
-                        />
-
-                        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="subtitle2" fontWeight={700}>New Remaining Balance:</Typography>
-                            <Typography variant="subtitle1" fontWeight={800} color="#b91c1c">
-                                Rs. {Math.max(0, 
-                                    parseFloat(checkoutBooking.remainingAmount || 0) 
-                                    - (parseFloat(checkoutCashReceived) || 0) 
-                                    - (parseFloat(checkoutDiscount) || 0)
-                                ).toLocaleString()}
-                            </Typography>
-                        </Box>
-                    </Box>
-                )}
-
-                {/* Step 3: Suit Quantity Check & Confirmation */}
-                {checkoutStep === 3 && (() => {
-                    // Check if any items are left behind
-                    let leftBehind = false;
-                    const itemsToDeliverList = [];
-                    const itemsLeftBehindList = [];
-
-                    (checkoutBooking.items || []).forEach(item => {
-                        if (item.itemStatus === "DELIVERED") return;
-                        
-                        const deliverQty = checkoutQuantities[item.id] !== undefined ? checkoutQuantities[item.id] : item.quantity;
-                        const remainingQty = item.quantity;
-
-                        const itemTitle = item.productId 
-                            ? `Product: ${item.productName || item.product?.name || "Cloth/Product"}`
-                            : `Stitching: ${item.stitchingType}`;
-
-                        if (deliverQty > 0) {
-                            itemsToDeliverList.push({ title: itemTitle, qty: deliverQty });
-                        }
-                        
-                        if (deliverQty < remainingQty) {
-                            leftBehind = true;
-                            itemsLeftBehindList.push({ title: itemTitle, qty: remainingQty - deliverQty });
-                        }
-                    });
-
-                    const currentRemaining = parseFloat(checkoutBooking.remainingAmount || 0);
-                    const discAmt = parseFloat(checkoutDiscount) || 0;
-                    const cashAmt = parseFloat(checkoutCashReceived) || 0;
-                    const remainingAfter = Math.max(0, currentRemaining - cashAmt - discAmt);
-
-                    return (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                            <Box sx={{ p: 2, bgcolor: leftBehind ? '#fef3c7' : '#dcfce7', color: leftBehind ? '#92400e' : '#15803d', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <Typography variant="subtitle2" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    {leftBehind ? "⚠️ Suit Quantity Check: Items Left Behind" : "✅ Suit Quantity Check: All Items Delivered"}
-                                </Typography>
-                                <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                                    {leftBehind 
-                                        ? "Since some suits or products are being left behind, the booking status will be updated to Partially Delivered and kept open."
-                                        : remainingAfter === 0 
-                                            ? "All items are delivered and balance is fully cleared. Booking status will be set to Paid and fully closed."
-                                            : "All items are delivered, but an outstanding balance remains. An Automatic Close is triggered, and status will be updated to Transferred To Ledger."
-                                    }
-                                </Typography>
+                                {/* Automatic Status Decision Card */}
+                                <Card variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: finalStatusBg, borderColor: finalStatusColor + '80' }}>
+                                    <Typography variant="caption" fontWeight={800} sx={{ color: finalStatusColor, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 0.5 }}>
+                                        AUTOMATIC FINAL STATUS DECISION
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight={800} sx={{ color: finalStatusColor, mb: 1 }}>
+                                        {finalStatusTitle}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: finalStatusColor, opacity: 0.9 }}>
+                                        {finalStatusDesc}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: finalStatusColor, fontWeight: 700, display: 'block', mt: 1 }}>
+                                        💡 Ledger Action: {ledgerActionDesc}
+                                    </Typography>
+                                </Card>
                             </Box>
+                        );
+                    })()}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3, pt: 1, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        disabled={paying}
+                        onClick={() => {
+                            if (checkoutStep === 1) {
+                                setCheckoutOpen(false);
+                            } else {
+                                setCheckoutStep(checkoutStep - 1);
+                            }
+                        }}
+                        sx={{ textTransform: 'none', borderRadius: 2, px: 3, fontWeight: 700 }}
+                    >
+                        {checkoutStep === 1 ? "Cancel" : "Back"}
+                    </Button>
 
-                            <Grid container spacing={2}>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">ITEMS BEING DELIVERED</Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
-                                        {itemsToDeliverList.map((it, idx) => (
-                                            <Typography key={idx} variant="body2" fontWeight={700}>• {it.title} (Qty: {it.qty})</Typography>
-                                        ))}
-                                        {itemsToDeliverList.length === 0 && <Typography variant="body2" sx={{ fontStyle: 'italic' }}>None</Typography>}
-                                    </Box>
-                                </Grid>
-                                <Grid size={{ xs: 6 }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">ITEMS LEFT BEHIND</Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
-                                        {itemsLeftBehindList.map((it, idx) => (
-                                            <Typography key={idx} variant="body2" fontWeight={700} color="warning.dark">• {it.title} (Qty: {it.qty})</Typography>
-                                        ))}
-                                        {itemsLeftBehindList.length === 0 && <Typography key={idx} variant="body2" sx={{ fontStyle: 'italic', color: 'success.main' }}>None (Full Delivery)</Typography>}
-                                    </Box>
-                                </Grid>
-                            </Grid>
-
-                            <Divider />
-
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">CASH RECEIVED</Typography>
-                                    <Typography variant="body1" fontWeight={700}>Rs. {cashAmt.toLocaleString()}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">DISCOUNT</Typography>
-                                    <Typography variant="body1" fontWeight={700} color="error.main">Rs. {discAmt.toLocaleString()}</Typography>
-                                </Box>
-                                <Box sx={{ textAlign: 'right' }}>
-                                    <Typography variant="caption" color="text.secondary">NEW BALANCE</Typography>
-                                    <Typography variant="body1" fontWeight={800} color="#b91c1c">Rs. {remainingAfter.toLocaleString()}</Typography>
-                                </Box>
-                            </Box>
-                        </Box>
-                    );
-                })()}
-
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 3, display: 'flex', gap: 1.5 }}>
-                <Button 
-                    variant="outlined" 
-                    color="inherit" 
-                    disabled={paying}
-                    onClick={() => {
-                        if (checkoutStep === 1) {
-                            setCheckoutOpen(false);
-                        } else {
-                            setCheckoutStep(checkoutStep - 1);
-                        }
-                    }}
-                    sx={{ textTransform: 'none', borderRadius: 2 }}
-                >
-                    {checkoutStep === 1 ? "Cancel" : "Back"}
-                </Button>
-                <Button 
-                    variant="contained" 
-                    color={checkoutStep === 3 ? "success" : "primary"}
-                    disabled={paying || (checkoutStep === 1 && Object.values(checkoutQuantities).reduce((s, q) => s + q, 0) === 0)}
-                    onClick={() => {
-                        if (checkoutStep < 3) {
-                            setCheckoutStep(checkoutStep + 1);
-                        } else {
-                            handleCheckoutSubmit();
-                        }
-                    }}
-                    sx={{ textTransform: 'none', borderRadius: 2, flexGrow: 1 }}
-                >
-                    {paying ? <CircularProgress size={20} color="inherit" /> : checkoutStep === 3 ? "Process Checkout" : "Next"}
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
+                    <Button
+                        variant="contained"
+                        color={checkoutStep === 3 ? "success" : "primary"}
+                        disabled={paying || (checkoutStep === 1 && deliveredNow === 0) || (checkoutStep === 2 && isExceeding)}
+                        onClick={() => {
+                            if (checkoutStep < 3) {
+                                setCheckoutStep(checkoutStep + 1);
+                            } else {
+                                handleCheckoutSubmit();
+                            }
+                        }}
+                        startIcon={checkoutStep === 3 ? <ScanLine size={18} /> : null}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 2,
+                            px: 4,
+                            py: 1.2,
+                            fontWeight: 800,
+                            bgcolor: checkoutStep === 3 ? "#16a34a" : "#3b82f6",
+                            '&:hover': {
+                                bgcolor: checkoutStep === 3 ? "#15803d" : "#2563eb",
+                            }
+                        }}
+                    >
+                        {paying ? <CircularProgress size={22} color="inherit" /> : checkoutStep === 3 ? "Confirm & Complete Checkout" : "Next"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
+    })();
 
     return (
         <Box sx={{ width: '100%', p: 3 }}>
