@@ -255,6 +255,26 @@ export async function POST(req) {
                 }
             }
 
+            // C. Debit Customer Ledger Account when Transferred to Ledger (All suits delivered & balance > 0)
+            if (newStatus === "TRANSFERRED_TO_LEDGER" && newRemainingAmount > 0) {
+                await tx.ledgerentry.create({
+                    data: {
+                        customerId: effectiveBillingId,
+                        type: 'DEBIT',
+                        amount: newRemainingAmount,
+                        description: `Transferred to Ledger - Remaining Balance for Booking #${booking.bookingNumber || booking.id}`,
+                        bookingId: bId
+                    }
+                });
+
+                await tx.customer.update({
+                    where: { id: effectiveBillingId },
+                    data: {
+                        balance: { increment: newRemainingAmount }
+                    }
+                });
+            }
+
             return updatedBooking;
         }, {
             maxWait: 5000,
