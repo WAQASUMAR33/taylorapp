@@ -912,6 +912,14 @@ export async function PUT(req) {
 // DELETE - Delete a booking
 export async function DELETE(req) {
     try {
+        const session = await getServerSession(authOptions);
+        if (session?.user?.role !== "ADMIN") {
+            return NextResponse.json(
+                { error: "Unauthorized. Only administrators can delete bookings." },
+                { status: 403 }
+            );
+        }
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
 

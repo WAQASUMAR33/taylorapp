@@ -2246,6 +2246,10 @@ ${allBookingsHtml}
     };
 
     const handleDelete = async (id) => {
+        if (!isAdmin) {
+            alert("Only administrators can delete bookings.");
+            return;
+        }
         if (!confirm("Are you sure you want to delete this booking?")) return;
 
         try {
@@ -2254,13 +2258,14 @@ ${allBookingsHtml}
             });
 
             if (!response.ok) {
-                throw new Error("Failed to delete");
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to delete");
             }
 
             setBookings(prev => prev.filter(b => b.id !== id));
             setSuccessMessage("Booking deleted successfully!");
         } catch (err) {
-            alert(err.message);
+            alert(err.message || "Failed to delete booking");
         }
     };
 
@@ -4242,9 +4247,11 @@ ${allBookingsHtml}
                                             <Tooltip title="Print">
                                                 <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Delete Booking">
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(booking.id)}><Trash2 size={17} /></IconButton>
-                                            </Tooltip>
+                                            {isAdmin && (
+                                                <Tooltip title="Delete Booking">
+                                                    <IconButton size="small" color="error" onClick={() => handleDelete(booking.id)}><Trash2 size={17} /></IconButton>
+                                                </Tooltip>
+                                            )}
                                         </Box>
                                     </TableCell>
                                 </TableRow>
