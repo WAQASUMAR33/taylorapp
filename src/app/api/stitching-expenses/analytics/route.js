@@ -61,6 +61,7 @@ export async function GET(req) {
         let totalStitchingAmountGross = 0;
         let totalStitchingDiscount = 0;
         let totalActualMaterialCost = 0;
+        let totalActualStitchingCost = 0;
 
         for (const b of bookings) {
             for (const item of b.items) {
@@ -76,6 +77,7 @@ export async function GET(req) {
                         for (const opt of item.selectedOptions) {
                             if (opt.stitchingOption) {
                                 totalActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
+                                totalActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
                             }
                         }
                     }
@@ -84,7 +86,7 @@ export async function GET(req) {
         }
 
         // Calculate primary profit (Gross Stitching Profit as in the main analytics page)
-        const primaryProfit = totalStitchingAmountGross - totalStitchingDiscount - totalActualMaterialCost;
+        const primaryProfit = totalStitchingAmountGross - totalStitchingDiscount - totalActualMaterialCost - totalActualStitchingCost;
 
         // Calculate total stitching expenses (Overhead expenses)
         const totalStitchingExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);

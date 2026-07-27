@@ -203,8 +203,8 @@ export async function GET(req) {
             }
         }
 
-        // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost ──
-        const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost;
+        // ── Stitching Profit = total stitching amount - total stitching discount amount - total material cost - total stitching cost ──
+        const stitchingProfit = totalStitchingAmount - totalStitchingDiscountAmount - totalActualMaterialCost - totalActualStitchingCost;
 
         // Deduct cost price of returned items from total cost price of products
         const totalClothCostPriceNet = Math.max(0, totalClothCostPrice - totalReturnedCostPrice);

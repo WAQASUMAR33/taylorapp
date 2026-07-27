@@ -410,6 +410,18 @@ export default function AnalyticsClient({ employees }) {
                                                 - Rs. {fmt(s.totalActualMaterialCost)}
                                             </Typography>
                                         </Box>
+                                        {/* Stitching Cost */}
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#e11d48" }} />
+                                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                                    Stitching Cost
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" fontWeight={700} color="#e11d48">
+                                                - Rs. {fmt(s.totalActualStitchingCost)}
+                                            </Typography>
+                                        </Box>
                                         <Divider sx={{ my: 0.5 }} />
                                         {/* Net Profit */}
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

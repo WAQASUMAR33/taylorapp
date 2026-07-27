@@ -303,29 +303,29 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
     return (
         <Box sx={{ width: "100%", p: 3 }}>
 
-            <Grid container spacing={2.5} sx={{ mb: 3 }}>
-                <Grid size={{ xs: 12, md: isAdmin ? 4 : 6 }}>
-                    <Card sx={{
-                        p: 3,
-                        background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
-                        color: "white",
-                        borderRadius: 3,
-                        boxShadow: "0 10px 40px rgba(59, 130, 246, 0.15)",
-                    }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Box>
-                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
-                                    Total Stock Quantity
-                                </Typography>
-                                <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
-                                    {totalStockQty.toLocaleString()}
-                                </Typography>
+            {isAdmin && (
+                <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Card sx={{
+                            p: 3,
+                            background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
+                            color: "white",
+                            borderRadius: 3,
+                            boxShadow: "0 10px 40px rgba(59, 130, 246, 0.15)",
+                        }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Box>
+                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        Total Stock Quantity
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
+                                        {totalStockQty.toLocaleString()}
+                                    </Typography>
+                                </Box>
+                                <Package size={36} style={{ opacity: 0.8 }} />
                             </Box>
-                            <Package size={36} style={{ opacity: 0.8 }} />
-                        </Box>
-                    </Card>
-                </Grid>
-                {isAdmin && (
+                        </Card>
+                    </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{
                             p: 3,
@@ -347,29 +347,29 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                             </Box>
                         </Card>
                     </Grid>
-                )}
-                <Grid size={{ xs: 12, md: isAdmin ? 4 : 6 }}>
-                    <Card sx={{
-                        p: 3,
-                        background: "linear-gradient(135deg, #34d399 0%, #059669 100%)",
-                        color: "white",
-                        borderRadius: 3,
-                        boxShadow: "0 10px 40px rgba(5, 150, 105, 0.15)",
-                    }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Box>
-                                <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
-                                    Total Stock Sale Price (Retail Value)
-                                </Typography>
-                                <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
-                                    Rs. {totalStockSale.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Typography>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Card sx={{
+                            p: 3,
+                            background: "linear-gradient(135deg, #34d399 0%, #059669 100%)",
+                            color: "white",
+                            borderRadius: 3,
+                            boxShadow: "0 10px 40px rgba(5, 150, 105, 0.15)",
+                        }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Box>
+                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        Total Stock Sale Price (Retail Value)
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
+                                        Rs. {totalStockSale.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Box>
+                                <Tag size={36} style={{ opacity: 0.8 }} />
                             </Box>
-                            <Tag size={36} style={{ opacity: 0.8 }} />
-                        </Box>
-                    </Card>
+                        </Card>
+                    </Grid>
                 </Grid>
-            </Grid>
+            )}
 
             {/* ── Action bar ─────────────────────────────────── */}
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
