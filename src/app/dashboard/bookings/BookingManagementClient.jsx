@@ -3111,39 +3111,36 @@ ${allBookingsHtml}
                     </Alert>
                 )}
                 
-                <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2, mb: 2.5 }}>
+                <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2.5, mb: 2.5 }}>
                     <Grid container spacing={1.5}>
                         <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">BOOKING NO</Typography>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">BOOKING NO</Typography>
                             <Typography variant="body2" fontWeight={700}>#{payBooking.bookingNumber || payBooking.id}</Typography>
                         </Grid>
                         <Grid size={{ xs: 6 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">CUSTOMER</Typography>
-                            <Typography variant="body2" fontWeight={700}>{payBooking.customer?.name}</Typography>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">CUSTOMER</Typography>
+                            <Typography variant="body2" fontWeight={700}>{payBooking.customer?.name || "Customer"}</Typography>
                         </Grid>
-                        
-                        <Grid size={{ xs: 4 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">TOTAL AMOUNT</Typography>
-                            <Typography variant="body2" fontWeight={600}>Rs. {parseFloat(payBooking.totalAmount || 0).toLocaleString()}</Typography>
-                        </Grid>
-                        <Grid size={{ xs: 4 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">DISCOUNT</Typography>
-                            <Typography variant="body2" fontWeight={600} color="error.main">
-                                Rs. {(payBooking.items || []).reduce((s, i) => s + parseFloat(i.discount || 0), 0).toLocaleString()}
-                            </Typography>
-                        </Grid>
-                        <Grid size={{ xs: 4 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">ADVANCE PAID</Typography>
-                            <Typography variant="body2" fontWeight={600} color="success.main">Rs. {parseFloat(payBooking.advanceAmount || 0).toLocaleString()}</Typography>
-                        </Grid>
-                        
+
                         <Grid size={{ xs: 12 }}>
                             <Divider sx={{ my: 0.5 }} />
                         </Grid>
                         
-                        <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="subtitle2" fontWeight={700} color="text.primary">Current Balance Due:</Typography>
-                            <Typography variant="subtitle1" fontWeight={800} color="#b91c1c">
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">ADVANCE AMOUNT</Typography>
+                            <Typography variant="body2" fontWeight={700} color="success.main">
+                                Rs. {parseFloat(payBooking.advanceAmount || 0).toLocaleString()}
+                            </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">PAID AMOUNT</Typography>
+                            <Typography variant="body2" fontWeight={700} color="primary.main">
+                                Rs. {Math.max(0, parseFloat(payBooking.totalAmount || 0) - parseFloat(payBooking.remainingAmount || 0)).toLocaleString()}
+                            </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 4 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">REMAINING AMOUNT</Typography>
+                            <Typography variant="body2" fontWeight={800} color="error.main">
                                 Rs. {parseFloat(payBooking.remainingAmount || 0).toLocaleString()}
                             </Typography>
                         </Grid>
@@ -4230,13 +4227,6 @@ ${allBookingsHtml}
                                             <Tooltip title="Edit Booking">
                                                 <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
                                             </Tooltip>
-                                            {booking.status !== "PAID" && booking.status !== "TRANSFERRED_TO_LEDGER" && booking.status !== "CANCELLED" && (
-                                                <Tooltip title="CHECK OUT">
-                                                    <IconButton size="small" sx={{ color: '#6366f1' }} onClick={() => handleOpenCheckout(booking)}>
-                                                        <ShoppingCart size={17} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
                                             {parseFloat(booking.remainingAmount) > 0 && (
                                                 <Tooltip title="Pay / Clear Bill">
                                                     <IconButton size="small" sx={{ color: '#10b981' }} onClick={() => handleOpenPayDialog(booking)}>
