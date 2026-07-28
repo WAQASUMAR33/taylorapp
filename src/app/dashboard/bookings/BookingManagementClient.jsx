@@ -1046,12 +1046,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [payBooking, setPayBooking] = useState(null);
     const [payReceived, setPayReceived] = useState("");
     const [payDiscount, setPayDiscount] = useState("0");
+    const [payDeliverQuantities, setPayDeliverQuantities] = useState({});
     const [paying, setPaying] = useState(false);
 
     const handleOpenPayDialog = (booking) => {
         setPayBooking(booking);
         setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
         setPayDiscount("0");
+
+        // Initialize delivery quantities for undelivered items
+        const initialDel = {};
+        (booking.items || []).forEach(item => {
+            if (item.itemStatus !== "DELIVERED") {
+                initialDel[item.id] = parseFloat(item.quantity) || 1;
+            }
+        });
+        setPayDeliverQuantities(initialDel);
         setPayDialogOpen(true);
     };
 
@@ -1129,9 +1139,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             if (amount < 0 || discount < 0) {
                 throw new Error("Payment and discount amounts cannot be negative");
             }
-            if (amount === 0 && discount === 0) {
-                throw new Error("Please enter a payment amount or discount");
-            }
+
+            const itemsDelivery = Object.entries(payDeliverQuantities).map(([itemId, qty]) => ({
+                itemId: parseInt(itemId),
+                deliverNowQty: parseFloat(qty) || 0
+            }));
 
             const res = await fetch("/api/bookings/pay", {
                 method: "POST",
@@ -1139,13 +1151,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 body: JSON.stringify({
                     bookingId: payBooking.id,
                     paymentAmount: amount,
-                    discountAmount: discount
+                    discountAmount: discount,
+                    itemsDelivery
                 })
             });
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.error || "Failed to process payment");
+                throw new Error(data.error || "Failed to process update");
             }
 
             // Refresh bookings
@@ -1153,7 +1166,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             const refreshed = await refreshRes.json();
             setBookings(Array.isArray(refreshed) ? refreshed : []);
 
-            setSuccessMessage("Payment processed successfully!");
+            setSuccessMessage("Updated successfully!");
             setPayDialogOpen(false);
         } catch (err) {
             setError(err.message);
@@ -3208,18 +3221,77 @@ ${allBookingsHtml}
                         </Grid>
                     </Box>
 
+                    {/* Suit Quantity Tracking & Delivery Section */}
+                    {(() => {
+                        const stitchingItems = (payBooking.items || []).filter(i => !i.productId);
+                        if (stitchingItems.length === 0) return null;
+
+                        const totalSuitQty = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+                        const alreadyDeliveredQty = stitchingItems
+                            .filter(i => i.itemStatus === "DELIVERED")
+                            .reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+
+                        const deliverNowTotal = stitchingItems.reduce((sum, i) => {
+                            if (i.itemStatus === "DELIVERED") return sum;
+                            const inputVal = payDeliverQuantities[i.id];
+                            const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : (parseFloat(i.quantity) || 1);
+                            return sum + Math.min(val, parseFloat(i.quantity) || 1);
+                        }, 0);
+
+                        const totalDeliveredLive = alreadyDeliveredQty + deliverNowTotal;
+                        const remainingSuitQty = Math.max(0, totalSuitQty - totalDeliveredLive);
+                        const isBookingClosed = totalSuitQty > 0 && remainingSuitQty === 0;
+
+                        return (
+                            <Box sx={{ bgcolor: isBookingClosed ? '#f0fdf4' : '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid', borderColor: isBookingClosed ? '#bbf7d0' : '#e2e8f0', mb: 2.5 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        SUIT QUANTITY TRACKING
+                                    </Typography>
+                                    {isBookingClosed ? (
+                                        <Chip label="BOOKING CLOSED" size="small" sx={{ fontWeight: 800, bgcolor: '#16a34a', color: 'white', fontSize: '0.72rem' }} />
+                                    ) : (
+                                        <Chip label={`${remainingSuitQty} Suit${remainingSuitQty !== 1 ? 's' : ''} Pending`} size="small" sx={{ fontWeight: 700, bgcolor: '#fef3c7', color: '#92400e', fontSize: '0.72rem' }} />
+                                    )}
+                                </Box>
+                                <Grid container spacing={1.5}>
+                                    <Grid size={{ xs: 4 }}>
+                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2 }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL SUITS</Typography>
+                                            <Typography variant="body2" fontWeight={800} color="#1e293b">{totalSuitQty}</Typography>
+                                        </Card>
+                                    </Grid>
+                                    <Grid size={{ xs: 4 }}>
+                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                            <Typography variant="caption" color="success.main" fontWeight={600} display="block" fontSize="0.65rem">DELIVERED QTY</Typography>
+                                            <Typography variant="body2" fontWeight={800} color="#15803d">{totalDeliveredLive}</Typography>
+                                        </Card>
+                                    </Grid>
+                                    <Grid size={{ xs: 4 }}>
+                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: remainingSuitQty > 0 ? '#fde68a' : '#bbf7d0' }}>
+                                            <Typography variant="caption" color={remainingSuitQty > 0 ? "warning.dark" : "success.main"} fontWeight={600} display="block" fontSize="0.65rem">REMAINING QTY</Typography>
+                                            <Typography variant="body2" fontWeight={800} color={remainingSuitQty > 0 ? "#b45309" : "#15803d"}>{remainingSuitQty}</Typography>
+                                        </Card>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        );
+                    })()}
+
                     {/* Items Summary Table */}
                     {(payBooking.items || []).length > 0 && (
                         <Box sx={{ mb: 2.5 }}>
                             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Booking Items ({payBooking.items.length})
+                                Booking Items ({payBooking.items.length}) — <span style={{ color: '#3b82f6', textTransform: 'none' }}>Set Delivered Qty below</span>
                             </Typography>
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 140 }}>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 180 }}>
                                 <Table size="small" stickyHeader>
                                     <TableHead>
                                         <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
                                             <TableCell>Item Description</TableCell>
-                                            <TableCell align="center">Qty</TableCell>
+                                            <TableCell align="center">Total Qty</TableCell>
+                                            <TableCell align="center" sx={{ color: '#059669' }}>Deliver Now</TableCell>
+                                            <TableCell align="center" sx={{ color: '#b45309' }}>Rem. Qty</TableCell>
                                             <TableCell align="right">Unit Price</TableCell>
                                             <TableCell align="right">Total</TableCell>
                                         </TableRow>
@@ -3229,10 +3301,38 @@ ${allBookingsHtml}
                                             const itemName = item.productId 
                                                 ? (item.product?.name || "Product Item")
                                                 : `${item.stitchingType || "Suit"} Stitching`;
+                                            const itemQty = parseFloat(item.quantity) || 1;
+                                            const isDelivered = item.itemStatus === "DELIVERED";
+                                            const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
+                                            const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
+
                                             return (
                                                 <TableRow key={item.id || idx}>
-                                                    <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>{itemName}</TableCell>
-                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 600 }}>{item.quantity || 1}</TableCell>
+                                                    <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
+                                                        {itemName}
+                                                        {isDelivered && <Chip label="DELIVERED" size="small" sx={{ ml: 1, height: 16, fontSize: '0.6rem', bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700 }} />}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
+                                                    <TableCell align="center" sx={{ py: 0.5 }}>
+                                                        {isDelivered || item.productId ? (
+                                                            <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
+                                                        ) : (
+                                                            <TextField
+                                                                type="number"
+                                                                size="small"
+                                                                value={deliverNowVal}
+                                                                onChange={(e) => {
+                                                                    const v = Math.min(itemQty, Math.max(0, parseFloat(e.target.value) || 0));
+                                                                    setPayDeliverQuantities(prev => ({ ...prev, [item.id]: v }));
+                                                                }}
+                                                                inputProps={{ min: 0, max: itemQty, style: { textAlign: 'center', padding: '2px 4px', fontSize: '0.8rem', fontWeight: 700 } }}
+                                                                sx={{ width: 65 }}
+                                                            />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700, color: remainingVal > 0 ? '#b45309' : '#15803d' }}>
+                                                        {remainingVal}
+                                                    </TableCell>
                                                     <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
                                                     <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
                                                 </TableRow>
@@ -4298,11 +4398,6 @@ ${allBookingsHtml}
                                                     <Typography variant="caption" color="text.disabled">—</Typography>
                                                 )}
                                             </Box>
-                                            <Tooltip title="Edit Staff">
-                                                <IconButton size="small" sx={{ color: '#9ca3af', p: 0.25 }} onClick={() => handleOpenStaffEdit(booking)}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                                </IconButton>
-                                            </Tooltip>
                                         </Box>
                                     </TableCell>
                                     {/* Cutter */}
@@ -4320,27 +4415,42 @@ ${allBookingsHtml}
                                         {(() => {
                                             const stitchItems = (booking.items || []).filter(i => !i.productId);
                                             const prodItems = (booking.items || []).filter(i => !!i.productId);
-                                            const suitsQty = stitchItems.filter(i => i.stitchingType !== "WAISTCOAT").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
-                                            const wskotsQty = stitchItems.filter(i => i.stitchingType === "WAISTCOAT").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                            const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                            const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                            const remainingQty = Math.max(0, totalSuitQty - deliveredQty);
+                                            const isClosed = totalSuitQty > 0 && remainingQty === 0;
+
                                             const prodQty = prodItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+
                                             return (
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                                                    {suitsQty > 0 && (
-                                                        <Chip size="small"
-                                                            label={`${suitsQty} Suit${suitsQty > 1 ? 's' : ''}`}
-                                                            sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ede9fe', color: '#6d28d9', borderRadius: 1 }} />
-                                                    )}
-                                                    {wskotsQty > 0 && (
-                                                        <Chip size="small"
-                                                            label={`${wskotsQty} W.Coat${wskotsQty > 1 ? 's' : ''}`}
-                                                            sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#fbcfe8', color: '#be185d', borderRadius: 1 }} />
+                                                    {totalSuitQty > 0 && (
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                                                                <Chip size="small"
+                                                                    label={`Total: ${totalSuitQty}`}
+                                                                    sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ede9fe', color: '#6d28d9', borderRadius: 1 }} />
+                                                                {isClosed ? (
+                                                                    <Chip size="small"
+                                                                        label="CLOSED"
+                                                                        sx={{ height: 20, fontSize: '0.68rem', fontWeight: 800, bgcolor: '#16a34a', color: 'white', borderRadius: 1 }} />
+                                                                ) : (
+                                                                    <Chip size="small"
+                                                                        label={`Rem: ${remainingQty}`}
+                                                                        sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#fef3c7', color: '#92400e', borderRadius: 1 }} />
+                                                                )}
+                                                            </Box>
+                                                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', display: 'block' }}>
+                                                                Delivered: <strong style={{ color: '#15803d' }}>{deliveredQty}</strong> | Rem: <strong style={{ color: remainingQty > 0 ? '#b45309' : '#15803d' }}>{remainingQty}</strong>
+                                                            </Typography>
+                                                        </Box>
                                                     )}
                                                     {prodQty > 0 && (
                                                         <Chip size="small"
                                                             label={`${prodQty} Product${prodQty > 1 ? 's' : ''}`}
                                                             sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#dbeafe', color: '#1d4ed8', borderRadius: 1 }} />
                                                     )}
-                                                    {suitsQty === 0 && wskotsQty === 0 && prodQty === 0 && (
+                                                    {totalSuitQty === 0 && prodQty === 0 && (
                                                         <Typography variant="caption" color="text.disabled">—</Typography>
                                                     )}
                                                 </Box>
@@ -4355,23 +4465,48 @@ ${allBookingsHtml}
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
-                                        <TextField
-                                            select size="small" value={booking.status}
-                                            onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
-                                            sx={{
-                                                minWidth: 155,
-                                                '& .MuiOutlinedInput-root': {
-                                                    bgcolor: getStatusColor(booking.status) + '18',
-                                                    borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
-                                                    color: getStatusColor(booking.status),
-                                                    '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <TextField
+                                                select size="small" value={booking.status}
+                                                onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
+                                                sx={{
+                                                    minWidth: 155,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        bgcolor: getStatusColor(booking.status) + '18',
+                                                        borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
+                                                        color: getStatusColor(booking.status),
+                                                        '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                                    }
+                                                }}
+                                            >
+                                                {BOOKING_STATUSES.map((s) => (
+                                                    <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
+                                                ))}
+                                            </TextField>
+                                            {(() => {
+                                                const stitchItems = (booking.items || []).filter(i => !i.productId);
+                                                const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const remainingQty = Math.max(0, totalSuitQty - deliveredQty);
+                                                if (totalSuitQty > 0 && remainingQty === 0) {
+                                                    return (
+                                                        <Chip
+                                                            label="BOOKING CLOSED"
+                                                            size="small"
+                                                            sx={{
+                                                                height: 18,
+                                                                fontSize: '0.62rem',
+                                                                fontWeight: 800,
+                                                                bgcolor: '#16a34a',
+                                                                color: 'white',
+                                                                alignSelf: 'flex-start'
+                                                            }}
+                                                        />
+                                                    );
                                                 }
-                                            }}
-                                        >
-                                            {BOOKING_STATUSES.map((s) => (
-                                                <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
-                                            ))}
-                                        </TextField>
+                                                return null;
+                                            })()}
+                                        </Box>
                                     </TableCell>
                                     {/* Amount */}
                                     <TableCell align="right">
