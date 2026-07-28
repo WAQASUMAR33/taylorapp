@@ -1117,12 +1117,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPaying(true);
         setError("");
         try {
-            const amount = parseFloat(payReceived) || 0;
-            if (amount < 0) {
-                throw new Error("Payment amount cannot be negative");
+            let amount = parseFloat(payReceived) || 0;
+            if (workflow === "FULL_PAY") {
+                amount = parseFloat(payBooking.remainingAmount || 0);
             }
-            if (workflow === "FULL_PAY" && amount < parseFloat(payBooking.remainingAmount)) {
-                throw new Error("Full pay requires paying the entire remaining amount");
+            if (amount <= 0 && workflow !== "LESS_PAY") {
+                throw new Error("Please enter a valid payment amount greater than zero");
             }
 
             const res = await fetch("/api/bookings/pay", {
@@ -3231,6 +3231,30 @@ ${allBookingsHtml}
                         </Box>
                     )}
 
+                    {/* Amount Entry Input */}
+                    <Box sx={{ mb: 2.5 }}>
+                        <TextField
+                            fullWidth
+                            label="Payment Amount Received (Now Paying)"
+                            type="number"
+                            size="small"
+                            value={payReceived}
+                            onChange={(e) => setPayReceived(e.target.value)}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 2.5,
+                                    fontWeight: 800,
+                                    fontSize: '1.15rem',
+                                    bgcolor: 'white',
+                                    '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
+                                }
+                            }}
+                        />
+                    </Box>
+
                     {/* Booking Financial Breakdown Cards */}
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Booking Financial Breakdown
@@ -3274,7 +3298,7 @@ ${allBookingsHtml}
                     </Grid>
 
                     {/* Customer Account Balance Box */}
-                    <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd', mb: 2.5 }}>
+                    <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd' }}>
                         <Grid container spacing={2} alignItems="center">
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
@@ -3294,28 +3318,6 @@ ${allBookingsHtml}
                             </Grid>
                         </Grid>
                     </Box>
-
-                    {/* Amount Entry Input */}
-                    <TextField
-                        fullWidth
-                        label="Payment Amount Received"
-                        type="number"
-                        size="small"
-                        value={payReceived}
-                        onChange={(e) => setPayReceived(e.target.value)}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
-                        }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 2.5,
-                                fontWeight: 800,
-                                fontSize: '1.15rem',
-                                bgcolor: 'white',
-                                '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
-                            }
-                        }}
-                    />
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, pb: 3, pt: 1, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
