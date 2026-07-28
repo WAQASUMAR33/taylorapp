@@ -1,12 +1,3 @@
-/**
- * Helper function to check if the current logged-in user has permission
- * for a specific module and action (view, create, edit, delete).
- *
- * @param {Object} session - NextAuth session object
- * @param {string} moduleKey - e.g. "bookings", "customers", "products", "purchases", "users", etc.
- * @param {string} action - "view" | "create" | "edit" | "delete"
- * @returns {boolean}
- */
 export function checkPermission(session, moduleKey, action = "view") {
     if (!session?.user) return false;
     const role = session.user.role;
@@ -14,10 +5,18 @@ export function checkPermission(session, moduleKey, action = "view") {
     // ADMIN always has full permissions across all modules
     if (role === "ADMIN") return true;
 
-    const permissions = session.user.permissions;
-    if (permissions && typeof permissions === "object" && permissions[moduleKey]) {
+    let permissions = session.user.permissions;
+    if (typeof permissions === "string") {
+        try {
+            permissions = JSON.parse(permissions);
+        } catch {
+            permissions = null;
+        }
+    }
+
+    if (permissions && typeof permissions === "object" && permissions !== null && permissions[moduleKey]) {
         const mod = permissions[moduleKey];
-        if (mod[action] !== undefined) {
+        if (mod && mod[action] !== undefined) {
             return Boolean(mod[action]);
         }
     }

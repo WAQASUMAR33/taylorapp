@@ -333,15 +333,22 @@ export default function UserManagementClient({ initialUsers }) {
     });
 
     const roleCounts = ROLES.reduce((acc, r) => {
-        acc[r] = users.filter(u => u.role === r).length;
+        acc[r] = (users || []).filter(u => u.role === r).length;
         return acc;
     }, {});
 
     // Count granted permissions for a user
     const countPermissions = (perms) => {
         if (!perms) return 0;
-        return Object.values(perms).reduce((sum, actions) =>
-            sum + Object.values(actions).filter(Boolean).length, 0);
+        let parsed = perms;
+        if (typeof perms === "string") {
+            try { parsed = JSON.parse(perms); } catch { return 0; }
+        }
+        if (!parsed || typeof parsed !== "object") return 0;
+        return Object.values(parsed).reduce((sum, actions) => {
+            if (!actions || typeof actions !== "object") return sum;
+            return sum + Object.values(actions).filter(Boolean).length;
+        }, 0);
     };
 
     /* ── render ──────────────────────────────────────── */
