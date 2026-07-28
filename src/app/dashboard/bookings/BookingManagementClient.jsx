@@ -3093,232 +3093,274 @@ ${allBookingsHtml}
     );
     // --- end formDialog ---
 
-    const paymentDialog = payBooking && (
-        <Dialog 
-            open={payDialogOpen} 
-            onClose={() => !paying && setPayDialogOpen(false)}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
-        >
-            <DialogTitle sx={{
-                fontWeight: 700,
-                pt: 2.5,
-                pb: 2,
-                px: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                color: 'white'
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, display: 'flex' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
-                    </Box>
-                    <Box>
-                        <Typography variant="h6" fontWeight={800} sx={{ color: 'white', lineHeight: 1.2 }}>
-                            Receive Bill Payment
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                            Booking #{payBooking.bookingNumber || payBooking.id}
-                        </Typography>
-                    </Box>
-                </Box>
-                <Chip 
-                    label={payBooking.status || "PENDING"} 
-                    size="small" 
-                    sx={{ 
-                        fontWeight: 700, 
-                        bgcolor: 'rgba(255,255,255,0.15)', 
-                        color: 'white',
-                        fontSize: '0.72rem' 
-                    }} 
-                />
-            </DialogTitle>
+    const paymentDialog = payBooking && (() => {
+        const payAmount = parseFloat(payReceived) || 0;
+        const totalBill = parseFloat(payBooking.totalAmount || 0);
+        const advanceAmt = parseFloat(payBooking.advanceAmount || 0);
+        const currentRemaining = parseFloat(payBooking.remainingAmount || 0);
+        const alreadyPaid = Math.max(0, totalBill - currentRemaining);
+        const newBookingRemaining = Math.max(0, currentRemaining - payAmount);
 
-            <DialogContent sx={{ p: 3, pt: '20px !important' }}>
-                {error && (
-                    <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
-                        {error}
-                    </Alert>
-                )}
+        // Customer Balance (from billing customer or main customer)
+        const custObj = payBooking.billingCustomer || payBooking.customer || {};
+        const custCurrentBalance = parseFloat(custObj.balance || 0);
+        const custRemainingBalance = custCurrentBalance - payAmount;
 
-                {/* Customer & Booking Dates Section */}
-                <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid #e2e8f0', mb: 2.5 }}>
-                    <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                                CUSTOMER DETAILS
+        return (
+            <Dialog 
+                open={payDialogOpen} 
+                onClose={() => !paying && setPayDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
+            >
+                <DialogTitle sx={{
+                    fontWeight: 700,
+                    pt: 2.5,
+                    pb: 2,
+                    px: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    color: 'white'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, display: 'flex' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight={800} sx={{ color: 'white', lineHeight: 1.2 }}>
+                                Receive Bill Payment
                             </Typography>
-                            <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
-                                {payBooking.customer?.name || "N/A"}
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                Booking #{payBooking.bookingNumber || payBooking.id}
                             </Typography>
-                            {payBooking.customer?.phone && (
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Phone: {payBooking.customer.phone}
+                        </Box>
+                    </Box>
+                    <Chip 
+                        label={payBooking.status || "PENDING"} 
+                        size="small" 
+                        sx={{ 
+                            fontWeight: 700, 
+                            bgcolor: 'rgba(255,255,255,0.15)', 
+                            color: 'white',
+                            fontSize: '0.72rem' 
+                        }} 
+                    />
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3, pt: '20px !important' }}>
+                    {error && (
+                        <Alert severity="error" onClose={() => setError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* Customer & Booking Dates Section */}
+                    <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid #e2e8f0', mb: 2.5 }}>
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                                    CUSTOMER DETAILS
                                 </Typography>
-                            )}
-                            {payBooking.customer?.address && (
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Addr: {payBooking.customer.address}
+                                <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
+                                    {custObj.name || "N/A"}
                                 </Typography>
-                            )}
+                                {custObj.phone && (
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                        Phone: {custObj.phone}
+                                    </Typography>
+                                )}
+                                {custObj.address && (
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                        Addr: {custObj.address}
+                                    </Typography>
+                                )}
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                                    ORDER DATES & TYPE
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700} color="#334155">
+                                    Type: {payBooking.bookingType || "STITCHING"}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                    Booking Date: {payBooking.bookingDate ? new Date(payBooking.bookingDate).toLocaleDateString('en-GB') : "N/A"}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                    Delivery Date: {payBooking.deliveryDate ? new Date(payBooking.deliveryDate).toLocaleDateString('en-GB') : "N/A"}
+                                </Typography>
+                            </Grid>
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                                ORDER DATES & TYPE
-                            </Typography>
-                            <Typography variant="body2" fontWeight={700} color="#334155">
-                                Type: {payBooking.bookingType || "STITCHING"}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block">
-                                Booking Date: {payBooking.bookingDate ? new Date(payBooking.bookingDate).toLocaleDateString('en-GB') : "N/A"}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block">
-                                Delivery Date: {payBooking.deliveryDate ? new Date(payBooking.deliveryDate).toLocaleDateString('en-GB') : "N/A"}
-                            </Typography>
-                        </Grid>
-                    </Grid>
-                </Box>
-
-                {/* Items Summary Table */}
-                {(payBooking.items || []).length > 0 && (
-                    <Box sx={{ mb: 2.5 }}>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Booking Items ({payBooking.items.length})
-                        </Typography>
-                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 160 }}>
-                            <Table size="small" stickyHeader>
-                                <TableHead>
-                                    <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
-                                        <TableCell>Item Description</TableCell>
-                                        <TableCell align="center">Qty</TableCell>
-                                        <TableCell align="right">Unit Price</TableCell>
-                                        <TableCell align="right">Total</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {payBooking.items.map((item, idx) => {
-                                        const itemName = item.productId 
-                                            ? (item.product?.name || "Product Item")
-                                            : `${item.stitchingType || "Suit"} Stitching`;
-                                        return (
-                                            <TableRow key={item.id || idx}>
-                                                <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>{itemName}</TableCell>
-                                                <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 600 }}>{item.quantity || 1}</TableCell>
-                                                <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
-                                                <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
                     </Box>
-                )}
 
-                {/* Payment Financial Cards */}
-                <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                        <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">TOTAL BILL</Typography>
-                            <Typography variant="body2" fontWeight={800} color="#0f172a">
-                                Rs. {parseFloat(payBooking.totalAmount || 0).toLocaleString()}
+                    {/* Items Summary Table */}
+                    {(payBooking.items || []).length > 0 && (
+                        <Box sx={{ mb: 2.5 }}>
+                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Booking Items ({payBooking.items.length})
                             </Typography>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                        <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">ADVANCE</Typography>
-                            <Typography variant="body2" fontWeight={800} color="#15803d">
-                                Rs. {parseFloat(payBooking.advanceAmount || 0).toLocaleString()}
-                            </Typography>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                        <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">TOTAL PAID</Typography>
-                            <Typography variant="body2" fontWeight={800} color="#1d4ed8">
-                                Rs. {Math.max(0, parseFloat(payBooking.totalAmount || 0) - parseFloat(payBooking.remainingAmount || 0)).toLocaleString()}
-                            </Typography>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 3 }}>
-                        <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#fef2f2', borderRadius: 2, borderColor: '#fecaca' }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">REMAINING</Typography>
-                            <Typography variant="body2" fontWeight={800} color="#b91c1c">
-                                Rs. {parseFloat(payBooking.remainingAmount || 0).toLocaleString()}
-                            </Typography>
-                        </Card>
-                    </Grid>
-                </Grid>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 140 }}>
+                                <Table size="small" stickyHeader>
+                                    <TableHead>
+                                        <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
+                                            <TableCell>Item Description</TableCell>
+                                            <TableCell align="center">Qty</TableCell>
+                                            <TableCell align="right">Unit Price</TableCell>
+                                            <TableCell align="right">Total</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {payBooking.items.map((item, idx) => {
+                                            const itemName = item.productId 
+                                                ? (item.product?.name || "Product Item")
+                                                : `${item.stitchingType || "Suit"} Stitching`;
+                                            return (
+                                                <TableRow key={item.id || idx}>
+                                                    <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>{itemName}</TableCell>
+                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 600 }}>{item.quantity || 1}</TableCell>
+                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
+                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </Box>
+                    )}
 
-                {/* Amount Entry Input */}
-                <TextField
-                    fullWidth
-                    label="Payment Amount Received"
-                    type="number"
-                    size="small"
-                    value={payReceived}
-                    onChange={(e) => setPayReceived(e.target.value)}
-                    InputProps={{
-                        startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
-                    }}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: 2.5,
-                            fontWeight: 800,
-                            fontSize: '1.15rem',
-                            bgcolor: 'white',
-                            '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
-                        }
-                    }}
-                />
-            </DialogContent>
+                    {/* Booking Financial Breakdown Cards */}
+                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Booking Financial Breakdown
+                    </Typography>
+                    <Grid container spacing={1.5} sx={{ mb: 2 }}>
+                        <Grid size={{ xs: 6, sm: 3 }}>
+                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">TOTAL BILL</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#0f172a">
+                                    Rs. {totalBill.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 3 }}>
+                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">ALREADY PAID</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#15803d">
+                                    Rs. {alreadyPaid.toLocaleString()}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" fontSize="0.65rem">
+                                    Adv: Rs. {advanceAmt.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 3 }}>
+                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">NOW PAYING</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#1d4ed8">
+                                    Rs. {payAmount.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 3 }}>
+                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: newBookingRemaining > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: newBookingRemaining > 0 ? '#fecaca' : '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">BOOKING REMAINING</Typography>
+                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'}>
+                                    Rs. {newBookingRemaining.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                    </Grid>
 
-            <DialogActions sx={{ px: 3, pb: 3, pt: 1, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
-                <Button 
-                    variant="outlined" 
-                    color="inherit" 
-                    disabled={paying}
-                    onClick={() => setPayDialogOpen(false)}
-                    sx={{ borderRadius: 2, textTransform: 'none', px: 2.5 }}
-                >
-                    Cancel
-                </Button>
-                <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                    {/* Customer Account Balance Box */}
+                    <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd', mb: 2.5 }}>
+                        <Grid container spacing={2} alignItems="center">
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
+                                    CUSTOMER TOTAL BALANCE (BEFORE)
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight={800} color="#0c4a6e">
+                                    Rs. {custCurrentBalance.toLocaleString()}
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
+                                    CUSTOMER REMAINING BALANCE (AFTER)
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalance > 0 ? '#b91c1c' : '#047857'}>
+                                    Rs. {custRemainingBalance.toLocaleString()}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Box>
+
+                    {/* Amount Entry Input */}
+                    <TextField
+                        fullWidth
+                        label="Payment Amount Received"
+                        type="number"
+                        size="small"
+                        value={payReceived}
+                        onChange={(e) => setPayReceived(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
+                        }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2.5,
+                                fontWeight: 800,
+                                fontSize: '1.15rem',
+                                bgcolor: 'white',
+                                '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
+                            }
+                        }}
+                    />
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, pb: 3, pt: 1, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
                     <Button 
                         variant="outlined" 
-                        color="success" 
+                        color="inherit" 
                         disabled={paying}
-                        onClick={() => handlePaySubmit("LESS_PAY")}
-                        sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                        onClick={() => setPayDialogOpen(false)}
+                        sx={{ borderRadius: 2, textTransform: 'none', px: 2.5 }}
                     >
-                        Less Pay & Clear
+                        Cancel
                     </Button>
-                    <Button 
-                        variant="contained" 
-                        color="primary" 
-                        disabled={paying}
-                        onClick={() => handlePaySubmit("PARTIAL_PAY")}
-                        sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
-                    >
-                        Partial Pay
-                    </Button>
-                    <Button 
-                        variant="contained" 
-                        color="success" 
-                        disabled={paying}
-                        onClick={() => handlePaySubmit("FULL_PAY")}
-                        sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700, px: 3 }}
-                    >
-                        Full Pay
-                    </Button>
-                </Box>
-            </DialogActions>
-        </Dialog>
-    );
+                    <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                        <Button 
+                            variant="outlined" 
+                            color="success" 
+                            disabled={paying}
+                            onClick={() => handlePaySubmit("LESS_PAY")}
+                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                        >
+                            Less Pay & Clear
+                        </Button>
+                        <Button 
+                            variant="contained" 
+                            color="primary" 
+                            disabled={paying}
+                            onClick={() => handlePaySubmit("PARTIAL_PAY")}
+                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
+                        >
+                            Partial Pay
+                        </Button>
+                        <Button 
+                            variant="contained" 
+                            color="success" 
+                            disabled={paying}
+                            onClick={() => handlePaySubmit("FULL_PAY")}
+                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700, px: 3 }}
+                        >
+                            Full Pay
+                        </Button>
+                    </Box>
+                </DialogActions>
+            </Dialog>
+        );
+    })();
 
     const checkoutDialog = checkoutBooking && (() => {
         const allItems = checkoutBooking.items || [];
