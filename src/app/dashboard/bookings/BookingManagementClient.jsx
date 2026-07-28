@@ -4473,15 +4473,48 @@ ${allBookingsHtml}
                                     </TableCell>
                                     {/* Status */}
                                     <TableCell>
-                                                    color: getStatusColor(booking.status),
-                                                    '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <TextField
+                                                select size="small" value={booking.status}
+                                                onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
+                                                sx={{
+                                                    minWidth: 155,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        bgcolor: getStatusColor(booking.status) + '18',
+                                                        borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
+                                                        color: getStatusColor(booking.status),
+                                                        '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                                    }
+                                                }}
+                                            >
+                                                {BOOKING_STATUSES.map((s) => (
+                                                    <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
+                                                ))}
+                                            </TextField>
+                                            {(() => {
+                                                const stitchItems = (booking.items || []).filter(i => !i.productId);
+                                                const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const remainingQty = Math.max(0, totalSuitQty - deliveredQty);
+                                                if (totalSuitQty > 0 && remainingQty === 0) {
+                                                    return (
+                                                        <Chip
+                                                            label="BOOKING CLOSED"
+                                                            size="small"
+                                                            sx={{
+                                                                height: 18,
+                                                                fontSize: '0.62rem',
+                                                                fontWeight: 800,
+                                                                bgcolor: '#16a34a',
+                                                                color: 'white',
+                                                                alignSelf: 'flex-start'
+                                                            }}
+                                                        />
+                                                    );
                                                 }
-                                            }}
-                                        >
-                                            {BOOKING_STATUSES.map((s) => (
-                                                <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
-                                            ))}
-                                        </TextField>
+                                                return null;
+                                            })()}
+                                        </Box>
                                     </TableCell>
                                     {/* Amount */}
                                     <TableCell align="right">
