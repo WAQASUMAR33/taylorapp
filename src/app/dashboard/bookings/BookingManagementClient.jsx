@@ -938,6 +938,7 @@ function TailorTicket({ booking, measurements }) {
             )}
         </div>
     );
+}
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
     const { data: session } = useSession();
