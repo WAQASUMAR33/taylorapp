@@ -4,17 +4,19 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { bookingId, paymentAmount, workflow } = body;
+        const { bookingId, paymentAmount, discountAmount } = body;
 
-        if (!bookingId || paymentAmount === undefined || !workflow) {
+        if (!bookingId || paymentAmount === undefined) {
             return NextResponse.json(
-                { error: "bookingId, paymentAmount, and workflow are required" },
+                { error: "bookingId and paymentAmount are required" },
                 { status: 400 }
             );
         }
 
         const bId = parseInt(bookingId);
         const payAmt = parseFloat(paymentAmount) || 0;
+        const discountAmt = parseFloat(discountAmount) || 0;
+        const totalDeduction = payAmt + discountAmt;
 
         const result = await prisma.$transaction(async (tx) => {
             const booking = await tx.booking.findUnique({
@@ -28,45 +30,13 @@ export async function POST(req) {
 
             const currentRemaining = parseFloat(booking.remainingAmount || 0);
             const currentAdvance = parseFloat(booking.advanceAmount || 0);
-            const totalAmount = parseFloat(booking.totalAmount || 0);
 
             const effectiveBillingId = booking.billingCustomerId || booking.customerId;
             const billingName = booking.billingCustomer?.name || booking.customer.name;
 
-            let updatedRemaining = currentRemaining;
-            let updatedAdvance = currentAdvance;
-            let updatedBillStatus = booking.billStatus || "Partial Pending";
-
-            let customerCreditAmt = 0;
-            let cashDebitAmt = 0;
-
-            if (workflow === "FULL_PAY") {
-                // Marks bill immediately as "Clear Bill"
-                customerCreditAmt = currentRemaining;
-                cashDebitAmt = currentRemaining;
-                
-                updatedRemaining = 0;
-                updatedAdvance = totalAmount;
-                updatedBillStatus = "Clear Bill";
-            } else if (workflow === "LESS_PAY") {
-                // Allows manual clearance despite lower payment
-                customerCreditAmt = currentRemaining; // Clear full remaining debt from customer balance
-                cashDebitAmt = payAmt; // But record actual cash received
-                
-                updatedRemaining = 0;
-                updatedAdvance = totalAmount;
-                updatedBillStatus = "Clear Bill";
-            } else if (workflow === "PARTIAL_PAY") {
-                // Automatically flags status as "Partial Pending"
-                customerCreditAmt = payAmt;
-                cashDebitAmt = payAmt;
-
-                updatedRemaining = Math.max(0, currentRemaining - payAmt);
-                updatedAdvance = currentAdvance + payAmt;
-                updatedBillStatus = "Partial Pending";
-            } else {
-                throw new Error("Invalid payment workflow");
-            }
+            const updatedRemaining = Math.max(0, currentRemaining - totalDeduction);
+            const updatedAdvance = currentAdvance + payAmt;
+            const updatedBillStatus = updatedRemaining === 0 ? "Clear Bill" : "Partial Pending";
 
             // Update booking remaining amount, advance amount, and status
             const updatedBooking = await tx.booking.update({
@@ -79,13 +49,17 @@ export async function POST(req) {
             });
 
             // Create ledger entry for customer credit (reducing what they owe)
-            if (customerCreditAmt > 0) {
+            if (payAmt > 0) {
+                const descNotes = discountAmt > 0 
+                    ? `Payment received: Rs. ${payAmt.toLocaleString()} (Discount: Rs. ${discountAmt.toLocaleString()}) for Booking #${booking.bookingNumber || booking.id}`
+                    : `Payment received for Booking #${booking.bookingNumber || booking.id}`;
+
                 await tx.ledgerentry.create({
                     data: {
                         customerId: effectiveBillingId,
                         type: 'CREDIT',
-                        amount: customerCreditAmt,
-                        description: `${workflow} - Payment received for Booking #${booking.bookingNumber || booking.id}`,
+                        amount: payAmt,
+                        description: descNotes,
                         bookingId: bId
                     }
                 });
@@ -94,21 +68,21 @@ export async function POST(req) {
                 await tx.customer.update({
                     where: { id: effectiveBillingId },
                     data: {
-                        balance: { decrement: customerCreditAmt }
+                        balance: { decrement: payAmt }
                     }
                 });
             }
 
             // Create ledger entry for cash account debit (cash in)
-            if (cashDebitAmt > 0) {
+            if (payAmt > 0) {
                 const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
                 if (cashAccount) {
                     await tx.ledgerentry.create({
                         data: {
                             customerId: cashAccount.id,
                             type: 'DEBIT',
-                            amount: cashDebitAmt,
-                            description: `Cash received from ${billingName} for Booking #${booking.bookingNumber || booking.id} (${workflow})`,
+                            amount: payAmt,
+                            description: `Cash received from ${billingName} for Booking #${booking.bookingNumber || booking.id}`,
                             bookingId: bId
                         }
                     });
@@ -117,7 +91,7 @@ export async function POST(req) {
                     await tx.customer.update({
                         where: { id: cashAccount.id },
                         data: {
-                            balance: { increment: cashDebitAmt }
+                            balance: { increment: payAmt }
                         }
                     });
                 }
@@ -127,10 +101,10 @@ export async function POST(req) {
         });
 
         return NextResponse.json(result);
-    } catch (err) {
-        console.error("Failed to process payment:", err);
+    } catch (error) {
+        console.error("Error processing booking payment:", error);
         return NextResponse.json(
-            { error: err.message || "Failed to process payment" },
+            { error: error.message || "Failed to process payment" },
             { status: 500 }
         );
     }

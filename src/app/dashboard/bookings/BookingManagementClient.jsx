@@ -1045,11 +1045,13 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [payDialogOpen, setPayDialogOpen] = useState(false);
     const [payBooking, setPayBooking] = useState(null);
     const [payReceived, setPayReceived] = useState("");
+    const [payDiscount, setPayDiscount] = useState("0");
     const [paying, setPaying] = useState(false);
 
     const handleOpenPayDialog = (booking) => {
         setPayBooking(booking);
         setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
+        setPayDiscount("0");
         setPayDialogOpen(true);
     };
 
@@ -1117,17 +1119,18 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }
     };
 
-    const handlePaySubmit = async (workflow) => {
+    const handlePaySubmit = async () => {
         if (!payBooking) return;
         setPaying(true);
         setError("");
         try {
-            let amount = parseFloat(payReceived) || 0;
-            if (workflow === "FULL_PAY") {
-                amount = parseFloat(payBooking.remainingAmount || 0);
+            const amount = parseFloat(payReceived) || 0;
+            const discount = parseFloat(payDiscount) || 0;
+            if (amount < 0 || discount < 0) {
+                throw new Error("Payment and discount amounts cannot be negative");
             }
-            if (amount <= 0 && workflow !== "LESS_PAY") {
-                throw new Error("Please enter a valid payment amount greater than zero");
+            if (amount === 0 && discount === 0) {
+                throw new Error("Please enter a payment amount or discount");
             }
 
             const res = await fetch("/api/bookings/pay", {
@@ -1136,7 +1139,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 body: JSON.stringify({
                     bookingId: payBooking.id,
                     paymentAmount: amount,
-                    workflow
+                    discountAmount: discount
                 })
             });
 
@@ -3100,16 +3103,21 @@ ${allBookingsHtml}
 
     const paymentDialog = payBooking && (() => {
         const payAmount = parseFloat(payReceived) || 0;
+        const discountAmount = parseFloat(payDiscount) || 0;
         const totalBill = parseFloat(payBooking.totalAmount || 0);
         const advanceAmt = parseFloat(payBooking.advanceAmount || 0);
         const currentRemaining = parseFloat(payBooking.remainingAmount || 0);
         const alreadyPaid = Math.max(0, totalBill - currentRemaining);
-        const newBookingRemaining = Math.max(0, currentRemaining - payAmount);
+        
+        const totalDeduction = payAmount + discountAmount;
+        const newBookingRemaining = Math.max(0, currentRemaining - totalDeduction);
 
         // Customer Balance (from billing customer or main customer)
         const custObj = payBooking.billingCustomer || payBooking.customer || {};
-        const custCurrentBalance = parseFloat(custObj.balance || 0);
-        const custRemainingBalance = custCurrentBalance - payAmount;
+        const custCurrentLedgerBal = parseFloat(custObj.balance || 0);
+        // Customer Total Due Before = ledger balance + current booking remaining
+        const custTotalDueBefore = custCurrentLedgerBal + currentRemaining;
+        const custRemainingBalanceAfter = Math.max(0, custTotalDueBefore - totalDeduction);
 
         return (
             <Dialog 
@@ -3236,66 +3244,95 @@ ${allBookingsHtml}
                         </Box>
                     )}
 
-                    {/* Amount Entry Input */}
-                    <Box sx={{ mb: 2.5 }}>
-                        <TextField
-                            fullWidth
-                            label="Payment Amount Received (Now Paying)"
-                            type="number"
-                            size="small"
-                            value={payReceived}
-                            onChange={(e) => setPayReceived(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
-                            }}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2.5,
-                                    fontWeight: 800,
-                                    fontSize: '1.15rem',
-                                    bgcolor: 'white',
-                                    '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
-                                }
-                            }}
-                        />
-                    </Box>
+                    {/* Amount Entry & Additional Discount Inputs */}
+                    <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Payment Amount Received (Now Paying)"
+                                type="number"
+                                size="small"
+                                value={payReceived}
+                                onChange={(e) => setPayReceived(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2.5,
+                                        fontWeight: 800,
+                                        fontSize: '1.05rem',
+                                        bgcolor: 'white',
+                                        '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
+                                    }
+                                }}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                fullWidth
+                                label="Additional Discount"
+                                type="number"
+                                size="small"
+                                value={payDiscount}
+                                onChange={(e) => setPayDiscount(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="secondary">Rs.</Typography></InputAdornment>
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2.5,
+                                        fontWeight: 800,
+                                        fontSize: '1.05rem',
+                                        bgcolor: 'white',
+                                        '& fieldset': { borderColor: '#ec4899', borderWidth: 2 }
+                                    }
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
 
                     {/* Booking Financial Breakdown Cards */}
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Booking Financial Breakdown
                     </Typography>
-                    <Grid container spacing={1.5} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 6, sm: 3 }}>
-                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">TOTAL BILL</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#0f172a">
+                    <Grid container spacing={1} sx={{ mb: 2 }}>
+                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">TOTAL BILL</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.85rem">
                                     Rs. {totalBill.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 3 }}>
-                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">ALREADY PAID</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#15803d">
+                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">ALREADY PAID</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.85rem">
                                     Rs. {alreadyPaid.toLocaleString()}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" fontSize="0.65rem">
-                                    Adv: Rs. {advanceAmt.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 3 }}>
-                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">NOW PAYING</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#1d4ed8">
+                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#fdf2f8', borderRadius: 2, borderColor: '#fbcfe8' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">ADD. DISCOUNT</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#be185d" fontSize="0.85rem">
+                                    Rs. {discountAmount.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">NOW PAYING</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#1d4ed8" fontSize="0.85rem">
                                     Rs. {payAmount.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 3 }}>
-                            <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center', bgcolor: newBookingRemaining > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: newBookingRemaining > 0 ? '#fecaca' : '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">BOOKING REMAINING</Typography>
-                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'}>
+                        <Grid size={{ xs: 12, sm: 2.4 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: newBookingRemaining > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: newBookingRemaining > 0 ? '#fecaca' : '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">BOOKING REMAINING</Typography>
+                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'} fontSize="0.85rem">
                                     Rs. {newBookingRemaining.toLocaleString()}
                                 </Typography>
                             </Card>
@@ -3310,60 +3347,47 @@ ${allBookingsHtml}
                                     CUSTOMER TOTAL BALANCE (BEFORE)
                                 </Typography>
                                 <Typography variant="subtitle1" fontWeight={800} color="#0c4a6e">
-                                    Rs. {custCurrentBalance.toLocaleString()}
+                                    Rs. {custTotalDueBefore.toLocaleString()}
                                 </Typography>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
                                     CUSTOMER REMAINING BALANCE (AFTER)
                                 </Typography>
-                                <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalance > 0 ? '#b91c1c' : '#047857'}>
-                                    Rs. {custRemainingBalance.toLocaleString()}
+                                <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#b91c1c' : '#047857'}>
+                                    Rs. {custRemainingBalanceAfter.toLocaleString()}
                                 </Typography>
                             </Grid>
                         </Grid>
                     </Box>
                 </DialogContent>
 
-                <DialogActions sx={{ px: 3, pb: 3, pt: 1, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
+                <DialogActions sx={{ px: 3, pb: 3, pt: 1.5, borderTop: '1px solid', borderColor: 'divider', justifyContent: 'space-between' }}>
                     <Button 
                         variant="outlined" 
                         color="inherit" 
                         disabled={paying}
                         onClick={() => setPayDialogOpen(false)}
-                        sx={{ borderRadius: 2, textTransform: 'none', px: 2.5 }}
+                        sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600 }}
                     >
                         Cancel
                     </Button>
-                    <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-                        <Button 
-                            variant="outlined" 
-                            color="success" 
-                            disabled={paying}
-                            onClick={() => handlePaySubmit("LESS_PAY")}
-                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
-                        >
-                            Less Pay & Clear
-                        </Button>
-                        <Button 
-                            variant="contained" 
-                            color="primary" 
-                            disabled={paying}
-                            onClick={() => handlePaySubmit("PARTIAL_PAY")}
-                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
-                        >
-                            Partial Pay
-                        </Button>
-                        <Button 
-                            variant="contained" 
-                            color="success" 
-                            disabled={paying}
-                            onClick={() => handlePaySubmit("FULL_PAY")}
-                            sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700, px: 3 }}
-                        >
-                            Full Pay
-                        </Button>
-                    </Box>
+                    <Button 
+                        variant="contained" 
+                        disabled={paying}
+                        onClick={handlePaySubmit}
+                        sx={{ 
+                            textTransform: 'none', 
+                            borderRadius: 2, 
+                            fontWeight: 700, 
+                            px: 4, 
+                            py: 1,
+                            bgcolor: '#10b981', 
+                            '&:hover': { bgcolor: '#059669' } 
+                        }}
+                    >
+                        {paying ? <CircularProgress size={22} color="inherit" /> : "Pay Now"}
+                    </Button>
                 </DialogActions>
             </Dialog>
         );
