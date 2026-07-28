@@ -937,11 +937,15 @@ function TailorTicket({ booking, measurements }) {
             )}
         </div>
     );
-}
+import { checkPermission } from "@/lib/permissions";
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "bookings", "view");
+    const canCreate = checkPermission(session, "bookings", "create");
+    const canEdit = checkPermission(session, "bookings", "edit");
+    const canDelete = checkPermission(session, "bookings", "delete");
     const stitchingOptions = initialStitchingOptions || [];
     
     // Helper to merge initial customers with any customer references inside the bookings list
@@ -2246,8 +2250,8 @@ ${allBookingsHtml}
     };
 
     const handleDelete = async (id) => {
-        if (!isAdmin) {
-            alert("Only administrators can delete bookings.");
+        if (!canDelete && !isAdmin) {
+            alert("You do not have permission to delete bookings.");
             return;
         }
         if (!confirm("Are you sure you want to delete this booking?")) return;

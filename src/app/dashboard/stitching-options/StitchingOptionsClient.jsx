@@ -18,7 +18,16 @@ const FIELD_SX = {
     }
 };
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function StitchingOptionsClient({ initialOptions }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "stitching", "view");
+    const canCreate = checkPermission(session, "stitching", "create");
+    const canEdit = checkPermission(session, "stitching", "edit");
+    const canDelete = checkPermission(session, "stitching", "delete");
     const [options, setOptions] = useState(initialOptions || []);
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");

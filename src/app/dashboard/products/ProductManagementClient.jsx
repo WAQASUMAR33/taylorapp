@@ -62,9 +62,15 @@ function makeBarcodesvg(value) {
     }
 }
 
+import { checkPermission } from "@/lib/permissions";
+
 export default function ProductManagementClient({ initialProducts }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "products", "view");
+    const canCreate = checkPermission(session, "products", "create");
+    const canEdit = checkPermission(session, "products", "edit");
+    const canDelete = checkPermission(session, "products", "delete");
 
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState("");

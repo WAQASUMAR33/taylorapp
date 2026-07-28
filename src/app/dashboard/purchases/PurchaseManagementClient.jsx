@@ -47,7 +47,16 @@ const PAYMENT_METHODS = [
     { value: "ONLINE", label: "Online" },
 ];
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function PurchaseManagementClient({ initialPurchases, suppliers, products, banks }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "purchases", "view");
+    const canCreate = checkPermission(session, "purchases", "create");
+    const canEdit = checkPermission(session, "purchases", "edit");
+    const canDelete = checkPermission(session, "purchases", "delete");
     const [purchases, setPurchases] = useState(initialPurchases);
     const [searchQuery, setSearchQuery] = useState("");
 

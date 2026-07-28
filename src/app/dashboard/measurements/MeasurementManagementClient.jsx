@@ -107,7 +107,16 @@ function MeasureField({ field, formData, onChange }) {
     );
 }
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function MeasurementManagementClient({ initialMeasurements = [], initialTotalCount = 0 }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "measurements", "view");
+    const canCreate = checkPermission(session, "measurements", "create");
+    const canEdit = checkPermission(session, "measurements", "edit");
+    const canDelete = checkPermission(session, "measurements", "delete");
     const [measurements, setMeasurements] = useState(initialMeasurements || []);
     const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
     const [page, setPage] = useState(0);

@@ -56,7 +56,17 @@ import {
     X,
 } from "lucide-react";
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function CustomerManagementClient({ initialCustomers, initialTotalCount, accountCategories }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "customers", "view");
+    const canCreate = checkPermission(session, "customers", "create");
+    const canEdit = checkPermission(session, "customers", "edit");
+    const canDelete = checkPermission(session, "customers", "delete");
+
     const [customers, setCustomers] = useState(initialCustomers);
     const [categories, setCategories] = useState(accountCategories);
     const [totalCount, setTotalCount] = useState(initialTotalCount || 0);

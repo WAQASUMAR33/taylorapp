@@ -127,8 +127,14 @@ function StaffRow({ item, max, color }) {
     );
 }
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function AnalyticsClient({ employees }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "analytics", "view");
     const tailors = employees.filter(e => e.role === "TAILOR" || e.role === "Tailor");
     const cutters = employees.filter(e => e.role === "CUTTER" || e.role === "Cutter");
     // If roles don't match strictly, fall back to all employees in dropdowns

@@ -30,7 +30,16 @@ import {
 } from "@mui/material";
 import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Users } from "lucide-react";
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function AccountCategoryClient({ initialCategories }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "categories", "view");
+    const canCreate = checkPermission(session, "categories", "create");
+    const canEdit = checkPermission(session, "categories", "edit");
+    const canDelete = checkPermission(session, "categories", "delete");
     const [categories, setCategories] = useState(initialCategories);
     const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);

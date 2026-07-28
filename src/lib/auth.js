@@ -41,6 +41,7 @@ export const authOptions = {
                         name: user.fullName,
                         email: user.email,
                         role: user.role,
+                        permissions: user.permissions,
                     };
                 } catch (error) {
                     console.error("Authorization error:", error);
@@ -55,7 +56,8 @@ export const authOptions = {
                 token.role = user.role;
                 token.id = user.id;
                 token.name = user.name;
-            } else if (!token.role && token.sub) {
+                token.permissions = user.permissions;
+            } else if (token.sub) {
                 try {
                     const dbUser = await prisma.user.findUnique({
                         where: { id: parseInt(token.sub) },
@@ -64,6 +66,7 @@ export const authOptions = {
                         token.role = dbUser.role;
                         token.id = dbUser.id.toString();
                         token.name = dbUser.fullName;
+                        token.permissions = dbUser.permissions;
                     }
                 } catch (error) {
                     console.error("Error fetching user in jwt callback", error);
@@ -75,6 +78,7 @@ export const authOptions = {
             if (session.user) {
                 session.user.role = token.role || "STAFF"; // Fallback to avoid empty sidebar
                 session.user.id = token.id;
+                session.user.permissions = token.permissions || null;
                 if (token.name) {
                     session.user.name = token.name;
                 }

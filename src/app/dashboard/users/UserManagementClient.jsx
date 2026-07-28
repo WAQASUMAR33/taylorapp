@@ -194,8 +194,17 @@ const FIELD_SX = {
     }
 };
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function UserManagementClient({ initialUsers }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "users", "view");
+    const canCreate = checkPermission(session, "users", "create");
+    const canEdit = checkPermission(session, "users", "edit");
+    const canDelete = checkPermission(session, "users", "delete");
     const [users, setUsers] = useState(initialUsers);
     const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);

@@ -68,12 +68,21 @@ const getBriefDescription = (desc) => {
     return desc;
 };
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function LedgerManagementClient({ 
     initialEntries, 
     initialCustomers, 
     initialTotalCount, 
     initialTotals 
 }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "ledger", "view");
+    const canCreate = checkPermission(session, "ledger", "create");
+    const canEdit = checkPermission(session, "ledger", "edit");
+    const canDelete = checkPermission(session, "ledger", "delete");
     const searchParams = useSearchParams();
     const customerIdParam = searchParams.get("customerId");
 

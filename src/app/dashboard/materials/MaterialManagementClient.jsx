@@ -43,7 +43,16 @@ import {
     TrendingDown,
 } from "lucide-react";
 
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
+
 export default function MaterialManagementClient({ initialMaterials }) {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const canView = checkPermission(session, "materials", "view");
+    const canCreate = checkPermission(session, "materials", "create");
+    const canEdit = checkPermission(session, "materials", "edit");
+    const canDelete = checkPermission(session, "materials", "delete");
     const [materials, setMaterials] = useState(initialMaterials);
     const [searchQuery, setSearchQuery] = useState("");
 

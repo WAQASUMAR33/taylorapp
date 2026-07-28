@@ -41,26 +41,26 @@ import {
 } from "@mui/material";
 
 const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Account Management", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Measurements", href: "/dashboard/measurements", icon: Ruler, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, moduleKey: "dashboard", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Account Management", href: "/dashboard/customers", icon: Users, moduleKey: "customers", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Measurements", href: "/dashboard/measurements", icon: Ruler, moduleKey: "measurements", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon, moduleKey: "bookings", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, moduleKey: "analytics", roles: ["ADMIN", "MANAGER"] },
 
-    { name: "Sale History", href: "/dashboard/sale-list", icon: ClipboardList, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Sale Returns", href: "/dashboard/sale-returns", icon: RotateCcw, roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { name: "Products", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
-    { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, roles: ["ADMIN", "MANAGER"] },
-    { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, roles: ["ADMIN", "MANAGER"] },
-    { name: "Expenses", href: "/dashboard/expenses", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stitching Expenses", href: "/dashboard/stitching-expenses", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stitching Expense Titles", href: "/dashboard/stitching-expense-titles", icon: Tags, roles: ["ADMIN", "MANAGER"] },
-    { name: "Ledger", href: "/dashboard/ledger", icon: BookText, roles: ["ADMIN", "MANAGER"] },
-    { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, roles: ["ADMIN", "MANAGER"] },
-    { name: "Stitching Option Pricing", href: "/dashboard/stitching-options", icon: SlidersHorizontal, roles: ["ADMIN", "MANAGER"] },
-    { name: "User Management", href: "/dashboard/users", icon: Settings, roles: ["ADMIN"] },
-    { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal, roles: ["ADMIN"] },
+    { name: "Sale History", href: "/dashboard/sale-list", icon: ClipboardList, moduleKey: "bookings", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Sale Returns", href: "/dashboard/sale-returns", icon: RotateCcw, moduleKey: "bookings", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { name: "Products", href: "/dashboard/products", icon: Package, moduleKey: "products", roles: ["ADMIN", "MANAGER"] },
+    { name: "Material Stock", href: "/dashboard/materials", icon: Boxes, moduleKey: "materials", roles: ["ADMIN", "MANAGER"] },
+    { name: "Stock Out Records", href: "/dashboard/material-out-records", icon: TrendingDown, moduleKey: "materials", roles: ["ADMIN", "MANAGER"] },
+    { name: "Purchases", href: "/dashboard/purchases", icon: ShoppingCart, moduleKey: "purchases", roles: ["ADMIN", "MANAGER"] },
+    { name: "Expenses", href: "/dashboard/expenses", icon: Receipt, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
+    { name: "Stitching Expenses", href: "/dashboard/stitching-expenses", icon: Receipt, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
+    { name: "Stitching Expense Titles", href: "/dashboard/stitching-expense-titles", icon: Tags, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
+    { name: "Ledger", href: "/dashboard/ledger", icon: BookText, moduleKey: "ledger", roles: ["ADMIN", "MANAGER"] },
+    { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, moduleKey: "categories", roles: ["ADMIN", "MANAGER"] },
+    { name: "Stitching Option Pricing", href: "/dashboard/stitching-options", icon: SlidersHorizontal, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
+    { name: "User Management", href: "/dashboard/users", icon: Settings, moduleKey: "users", roles: ["ADMIN"] },
+    { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal, moduleKey: "users", roles: ["ADMIN"] },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapsedDrawerWidth }) {
@@ -70,9 +70,20 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
 
     const sidebarWidth = collapsed ? collapsedDrawerWidth : drawerWidth;
 
-    const filteredNavItems = navItems.filter((item) =>
-        item.roles.includes(session?.user?.role)
-    );
+    const filteredNavItems = navItems.filter((item) => {
+        if (!session?.user) return false;
+        const role = session.user.role;
+        if (role === "ADMIN") return true;
+
+        const perms = session.user.permissions;
+        if (item.moduleKey && perms && typeof perms === "object") {
+            const modPerm = perms[item.moduleKey];
+            if (modPerm !== undefined) {
+                return Boolean(modPerm.view || modPerm.create || modPerm.edit || modPerm.delete);
+            }
+        }
+        return item.roles.includes(role);
+    });
 
     return (
         <Box
