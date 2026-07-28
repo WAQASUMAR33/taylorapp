@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { bookingId, paymentAmount, discountAmount, itemQuantities } = body;
+        const { bookingId, paymentAmount, discountAmount } = body;
 
         if (!bookingId || paymentAmount === undefined) {
             return NextResponse.json(
@@ -21,53 +21,27 @@ export async function POST(req) {
         const result = await prisma.$transaction(async (tx) => {
             const booking = await tx.booking.findUnique({
                 where: { id: bId },
-                include: { items: true, customer: true, billingCustomer: true }
+                include: { customer: true, billingCustomer: true }
             });
 
             if (!booking) {
                 throw new Error("Booking not found");
             }
 
-            // 1. Update item quantities and prices if itemQuantities provided
-            if (Array.isArray(itemQuantities) && itemQuantities.length > 0) {
-                for (const qItem of itemQuantities) {
-                    const item = booking.items.find(i => i.id === parseInt(qItem.itemId));
-                    if (!item) continue;
-                    const newQty = parseFloat(qItem.quantity) || 0;
-                    if (newQty < 0) continue;
-                    const unitPrice = parseFloat(item.unitPrice || 0);
-                    const itemDiscount = parseFloat(item.discount || 0);
-                    const newTotalPrice = Math.max(0, (newQty * unitPrice) - itemDiscount);
-
-                    await tx.booking_item.update({
-                        where: { id: item.id },
-                        data: {
-                            quantity: newQty,
-                            totalPrice: newTotalPrice
-                        }
-                    });
-                }
-            }
-
-            // 2. Fetch updated items to calculate new total amount
-            const updatedItems = await tx.booking_item.findMany({
-                where: { bookingId: bId }
-            });
-            const newTotalAmount = updatedItems.reduce((sum, i) => sum + parseFloat(i.totalPrice || 0), 0);
-
+            const currentRemaining = parseFloat(booking.remainingAmount || 0);
             const currentAdvance = parseFloat(booking.advanceAmount || 0);
-            const effectiveBillingId = booking.billingCustomerId || booking.customerId;
-            const billingName = booking.billingCustomer?.name || booking.customer?.name || "Customer";
 
+            const effectiveBillingId = booking.billingCustomerId || booking.customerId;
+            const billingName = booking.billingCustomer?.name || booking.customer.name;
+
+            const updatedRemaining = Math.max(0, currentRemaining - totalDeduction);
             const updatedAdvance = currentAdvance + payAmt;
-            const updatedRemaining = Math.max(0, newTotalAmount - (updatedAdvance + discountAmt));
             const updatedBillStatus = updatedRemaining === 0 ? "Clear Bill" : "Partial Pending";
 
-            // Update booking total amount, remaining amount, advance amount, and bill status
+            // Update booking remaining amount, advance amount, and status
             const updatedBooking = await tx.booking.update({
                 where: { id: bId },
                 data: {
-                    totalAmount: newTotalAmount,
                     remainingAmount: updatedRemaining,
                     advanceAmount: updatedAdvance,
                     billStatus: updatedBillStatus
@@ -135,4 +109,3 @@ export async function POST(req) {
         );
     }
 }
-
