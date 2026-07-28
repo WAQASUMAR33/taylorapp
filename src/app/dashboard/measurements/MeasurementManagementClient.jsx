@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, IconButton, Avatar, Box, Typography, TextField,
@@ -106,9 +108,6 @@ function MeasureField({ field, formData, onChange }) {
         </Grid>
     );
 }
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function MeasurementManagementClient({ initialMeasurements = [], initialTotalCount = 0 }) {
     const { data: session } = useSession();

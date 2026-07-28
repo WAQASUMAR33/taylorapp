@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, Chip, IconButton, Avatar, Box, Typography, TextField,
@@ -193,9 +195,6 @@ const FIELD_SX = {
         "&.Mui-focused fieldset": { borderColor: "#8b5cf6", borderWidth: 2 },
     }
 };
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function UserManagementClient({ initialUsers }) {

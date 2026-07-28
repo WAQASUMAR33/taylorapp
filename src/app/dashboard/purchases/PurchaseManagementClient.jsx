@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Button,
@@ -46,9 +48,6 @@ const PAYMENT_METHODS = [
     { value: "CHEQUE", label: "Cheque" },
     { value: "ONLINE", label: "Online" },
 ];
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function PurchaseManagementClient({ initialPurchases, suppliers, products, banks }) {
     const { data: session } = useSession();

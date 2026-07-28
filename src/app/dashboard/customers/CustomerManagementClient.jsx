@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import Link from "next/link";
 import {
     Table,
@@ -55,9 +57,6 @@ import {
     Camera,
     X,
 } from "lucide-react";
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function CustomerManagementClient({ initialCustomers, initialTotalCount, accountCategories }) {
     const { data: session } = useSession();

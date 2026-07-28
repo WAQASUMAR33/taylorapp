@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table,
     TableBody,
@@ -29,9 +31,6 @@ import {
     Divider,
 } from "@mui/material";
 import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Users } from "lucide-react";
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function AccountCategoryClient({ initialCategories }) {
     const { data: session } = useSession();

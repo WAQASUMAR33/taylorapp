@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Button,
@@ -61,8 +62,6 @@ function makeBarcodesvg(value) {
         return "";
     }
 }
-
-import { checkPermission } from "@/lib/permissions";
 
 export default function ProductManagementClient({ initialProducts }) {
     const { data: session } = useSession();

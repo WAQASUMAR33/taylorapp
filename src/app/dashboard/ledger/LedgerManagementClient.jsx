@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Button,
@@ -67,9 +69,6 @@ const getBriefDescription = (desc) => {
     }
     return desc;
 };
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function LedgerManagementClient({ 
     initialEntries, 

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box, Button, Card, Typography, TextField, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Paper, IconButton,
@@ -17,9 +19,6 @@ const FIELD_SX = {
         "&.Mui-focused fieldset": { borderColor: "#8b5cf6", borderWidth: 2 },
     }
 };
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function StitchingOptionsClient({ initialOptions }) {
     const { data: session } = useSession();

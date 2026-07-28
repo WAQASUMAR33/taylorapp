@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Button,
@@ -42,9 +44,6 @@ import {
     Eye,
     TrendingDown,
 } from "lucide-react";
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 export default function MaterialManagementClient({ initialMaterials }) {
     const { data: session } = useSession();

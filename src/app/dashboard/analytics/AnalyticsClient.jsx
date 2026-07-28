@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box, Grid, Card, CardContent, Typography, TextField, Button,
     Autocomplete, Table, TableBody, TableCell, TableContainer,
@@ -126,9 +128,6 @@ function StaffRow({ item, max, color }) {
         </Box>
     );
 }
-
-import { useSession } from "next-auth/react";
-import { checkPermission } from "@/lib/permissions";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function AnalyticsClient({ employees }) {

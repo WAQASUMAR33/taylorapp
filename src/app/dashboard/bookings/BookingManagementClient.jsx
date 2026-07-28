@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table,
     TableBody,
@@ -937,7 +938,6 @@ function TailorTicket({ booking, measurements }) {
             )}
         </div>
     );
-import { checkPermission } from "@/lib/permissions";
 
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
     const { data: session } = useSession();
