@@ -55,11 +55,20 @@ export async function POST(req) {
                     } else {
                         // Split item: remaining portion (PENDING) and delivered portion (DELIVERED)
                         const remainingQty = totalQty - delNow;
+                        const unitP = parseFloat(item.unitPrice) || 0;
+                        const originalTotalPrice = parseFloat(item.totalPrice) || (totalQty * unitP);
+                        const pricePerUnit = totalQty > 0 ? (originalTotalPrice / totalQty) : unitP;
+
+                        const remTotalPrice = Math.round((remainingQty * pricePerUnit) * 100) / 100;
+                        const delTotalPrice = Math.round((delNow * pricePerUnit) * 100) / 100;
 
                         // Keep original item for remaining undelivered portion in stitching
                         await tx.booking_item.update({
                             where: { id: item.id },
-                            data: { quantity: remainingQty }
+                            data: {
+                                quantity: remainingQty,
+                                totalPrice: remTotalPrice
+                            }
                         });
 
                         // Create a new booking_item for the delivered portion
@@ -69,7 +78,7 @@ export async function POST(req) {
                                 productId: item.productId,
                                 quantity: delNow,
                                 unitPrice: item.unitPrice,
-                                totalPrice: item.totalPrice,
+                                totalPrice: delTotalPrice,
                                 costPrice: item.costPrice,
                                 cuttingCost: item.cuttingCost,
                                 discount: item.discount,
@@ -140,7 +149,8 @@ export async function POST(req) {
 
             // Check if all suits in the booking are delivered
             const allBookingItems = await tx.booking_item.findMany({
-                where: { bookingId: bId }
+                where: { bookingId: bId },
+                select: { id: true, itemStatus: true }
             });
             const hasUndelivered = allBookingItems.some(i => i.itemStatus !== "DELIVERED");
 
@@ -210,6 +220,9 @@ export async function POST(req) {
             }
 
             return updatedBooking;
+        }, {
+            maxWait: 10000,
+            timeout: 30000
         });
 
         return NextResponse.json(result);
