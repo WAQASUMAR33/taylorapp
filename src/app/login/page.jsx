@@ -12,9 +12,6 @@ import {
     IconButton,
     Alert,
     CircularProgress,
-    Checkbox,
-    FormControlLabel,
-    Link as MuiLink
 } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
@@ -25,7 +22,6 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
-    const [rememberMe, setRememberMe] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -189,43 +185,6 @@ export default function LoginPage() {
                                 }}
                             />
 
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", my: 0.5 }}>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={rememberMe}
-                                            onChange={(e) => setRememberMe(e.target.checked)}
-                                            size="small"
-                                            sx={{
-                                                color: "#9ca3af",
-                                                "&.Mui-checked": {
-                                                    color: "#604235",
-                                                },
-                                            }}
-                                        />
-                                    }
-                                    label={
-                                        <Typography variant="body2" sx={{ color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}>
-                                            Remember me
-                                        </Typography>
-                                    }
-                                />
-
-                                <MuiLink
-                                    href="#"
-                                    underline="none"
-                                    sx={{
-                                        color: "#604235",
-                                        fontSize: "0.875rem",
-                                        fontWeight: 600,
-                                        "&:hover": { textDecoration: "underline" },
-                                    }}
-                                    onClick={(e) => e.preventDefault()}
-                                >
-                                    Forgot password?
-                                </MuiLink>
-                            </Box>
-
                             <Button
                                 type="submit"
                                 variant="contained"
@@ -252,29 +211,6 @@ export default function LoginPage() {
                             >
                                 {loading ? <CircularProgress size={22} color="inherit" /> : "Sign in"}
                             </Button>
-
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    textAlign: "center",
-                                    mt: 1.5,
-                                    fontSize: "0.875rem",
-                                    color: "#6b7280",
-                                }}
-                            >
-                                Don't have an account yet?{" "}
-                                <MuiLink
-                                    href="/register"
-                                    underline="none"
-                                    sx={{
-                                        color: "#604235",
-                                        fontWeight: 600,
-                                        "&:hover": { textDecoration: "underline" },
-                                    }}
-                                >
-                                    Sign up
-                                </MuiLink>
-                            </Typography>
                         </Box>
                     </form>
                 </Box>

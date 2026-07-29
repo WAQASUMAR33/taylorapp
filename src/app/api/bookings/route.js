@@ -632,11 +632,23 @@ export async function PUT(req) {
         const booking = await prisma.$transaction(async (tx) => {
             const currentBooking = await tx.booking.findUnique({
                 where: { id: parseInt(id) },
-                include: { customer: true, billingCustomer: true }
+                include: { customer: true, billingCustomer: true, items: true }
             });
 
             if (!currentBooking) {
                 throw new Error("Booking not found");
+            }
+
+            const currentStitchItems = (currentBooking.items || []).filter(i => !i.productId);
+            const totalSuitQty = currentStitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+            const deliveredQty = currentStitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+            const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
+
+            const areAllItemsDelivered = currentStitchItems.length === 0 || remainingSuitQty === 0;
+            const isPaymentCleared = parseFloat(currentBooking.remainingAmount || 0) <= 0;
+
+            if (areAllItemsDelivered && isPaymentCleared) {
+                throw new Error("This booking is closed and fully paid. It cannot be edited.");
             }
 
             if ((currentBooking.status === "COMPLETED" || currentBooking.status === "RETURNED") && status && status !== currentBooking.status) {

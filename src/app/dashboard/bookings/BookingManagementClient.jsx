@@ -55,6 +55,7 @@ import {
     Ruler,
     MessageCircle,
     ScanLine,
+    Lock,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -948,6 +949,20 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const canEdit = checkPermission(session, "bookings", "edit");
     const canDelete = checkPermission(session, "bookings", "delete");
     const stitchingOptions = initialStitchingOptions || [];
+
+    const isBookingClosedAndPaid = (booking) => {
+        if (!booking) return false;
+        const items = booking.items || [];
+        const stitchItems = items.filter(i => !i.productId);
+        const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+        const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+        const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
+
+        const areAllItemsDelivered = stitchItems.length === 0 || remainingSuitQty === 0;
+        const isPaymentCleared = parseFloat(booking.remainingAmount || 0) <= 0;
+
+        return areAllItemsDelivered && isPaymentCleared;
+    };
     
     // Helper to merge initial customers with any customer references inside the bookings list
     const getInitialCustomerOptions = () => {
@@ -2110,6 +2125,10 @@ ${allBookingsHtml}
     };
 
     const handleEdit = (booking) => {
+        if (isBookingClosedAndPaid(booking)) {
+            alert("This booking is closed and fully paid. It cannot be edited.");
+            return;
+        }
         setEditingBookingId(booking.id);
         setFormData({
             customerId: booking.customerId || "",
@@ -2292,6 +2311,10 @@ ${allBookingsHtml}
 
     const handleStatusUpdate = async (id, newStatus) => {
         const booking = (bookings || []).find(b => b.id === id);
+        if (isBookingClosedAndPaid(booking)) {
+            alert("This booking is closed and fully paid. Status cannot be changed.");
+            return;
+        }
         const currentStatus = booking?.status;
         if ((currentStatus === "COMPLETED" || currentStatus === "RETURNED") && !isAdmin) {
             alert("Only an admin can change the status of a completed or returned booking.");
@@ -4466,23 +4489,29 @@ ${allBookingsHtml}
                                     {/* Status */}
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            <TextField
-                                                select size="small" value={booking.status}
-                                                onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
-                                                sx={{
-                                                    minWidth: 155,
-                                                    '& .MuiOutlinedInput-root': {
-                                                        bgcolor: getStatusColor(booking.status) + '18',
-                                                        borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
-                                                        color: getStatusColor(booking.status),
-                                                        '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
-                                                    }
-                                                }}
-                                            >
-                                                {BOOKING_STATUSES.map((s) => (
-                                                    <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
-                                                ))}
-                                            </TextField>
+                                            {(() => {
+                                                const isLocked = isBookingClosedAndPaid(booking);
+                                                return (
+                                                    <TextField
+                                                        select size="small" value={booking.status}
+                                                        disabled={isLocked}
+                                                        onChange={(e) => handleStatusUpdate(booking.id, e.target.value)}
+                                                        sx={{
+                                                            minWidth: 155,
+                                                            '& .MuiOutlinedInput-root': {
+                                                                bgcolor: getStatusColor(booking.status) + '18',
+                                                                borderRadius: 2, fontWeight: 600, fontSize: '0.78rem',
+                                                                color: getStatusColor(booking.status),
+                                                                '& fieldset': { borderColor: getStatusColor(booking.status) + '60' },
+                                                            }
+                                                        }}
+                                                    >
+                                                        {BOOKING_STATUSES.map((s) => (
+                                                            <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
+                                                        ))}
+                                                    </TextField>
+                                                );
+                                            })()}
                                             {(() => {
                                                 const stitchItems = (booking.items || []).filter(i => !i.productId);
                                                 const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
