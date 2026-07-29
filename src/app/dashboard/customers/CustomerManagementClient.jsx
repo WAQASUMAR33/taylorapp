@@ -171,6 +171,80 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [ledgerDateFrom, setLedgerDateFrom] = useState("");
     const [ledgerDateTo, setLedgerDateTo] = useState("");
 
+    // New Ledger Entry Modal State
+    const [addLedgerOpen, setAddLedgerOpen] = useState(false);
+    const [addLedgerCustomer, setAddLedgerCustomer] = useState(null);
+    const [addLedgerType, setAddLedgerType] = useState("DEBIT");
+    const [addLedgerAmount, setAddLedgerAmount] = useState("");
+    const [addLedgerDescription, setAddLedgerDescription] = useState("");
+    const [addLedgerLoading, setAddLedgerLoading] = useState(false);
+    const [addLedgerError, setAddLedgerError] = useState("");
+
+    const handleOpenAddLedger = (customer) => {
+        const targetCustomer = customer?.id
+            ? (customers.find((c) => String(c.id) === String(customer.id)) || customer)
+            : ((customers && customers.length > 0) ? customers[0] : null);
+        setAddLedgerCustomer(targetCustomer);
+        setAddLedgerType("DEBIT");
+        setAddLedgerAmount("");
+        setAddLedgerDescription("");
+        setAddLedgerError("");
+        setAddLedgerOpen(true);
+    };
+
+    const handleCloseAddLedger = () => {
+        setAddLedgerOpen(false);
+        setAddLedgerCustomer(null);
+        setAddLedgerAmount("");
+        setAddLedgerDescription("");
+        setAddLedgerError("");
+    };
+
+    const handleSaveLedgerEntry = async (e) => {
+        e.preventDefault();
+        if (!addLedgerCustomer?.id) {
+            setAddLedgerError("Please select a customer.");
+            return;
+        }
+        if (!addLedgerAmount || parseFloat(addLedgerAmount) <= 0) {
+            setAddLedgerError("Please enter a valid amount.");
+            return;
+        }
+        if (!addLedgerDescription.trim()) {
+            setAddLedgerError("Please enter a description.");
+            return;
+        }
+
+        setAddLedgerLoading(true);
+        setAddLedgerError("");
+
+        try {
+            const res = await fetch("/api/ledger", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customerId: addLedgerCustomer.id,
+                    type: addLedgerType,
+                    amount: parseFloat(addLedgerAmount),
+                    description: addLedgerDescription.trim(),
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to create ledger entry.");
+            }
+
+            setSuccessMessage("Ledger entry created successfully!");
+            handleCloseAddLedger();
+            setRefreshTrigger((prev) => prev + 1);
+        } catch (err) {
+            setAddLedgerError(err.message || "Failed to save ledger entry.");
+        } finally {
+            setAddLedgerLoading(false);
+        }
+    };
+
     // Quick Add Category State
     const [quickAddCatOpen, setQuickAddCatOpen] = useState(false);
     const [newCatName, setNewCatName] = useState("");
@@ -1304,6 +1378,15 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     {/* Actions */}
                                     <TableCell align="center">
                                         <Stack direction="row" spacing={0.5} justifyContent="center">
+                                            <Tooltip title="New Ledger Entry">
+                                                <IconButton
+                                                    size="small"
+                                                    sx={{ color: "#059669", "&:hover": { bgcolor: "#ecfdf5" } }}
+                                                    onClick={() => handleOpenAddLedger(customer)}
+                                                >
+                                                    <BookText size={17} />
+                                                </IconButton>
+                                            </Tooltip>
                                             <Tooltip title="Measurements">
                                                 <IconButton
                                                     size="small"
@@ -1862,6 +1945,153 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         Print Ledger
                     </Button>
                 </DialogActions>
+            </Dialog>
+
+            {/* ── New Ledger Entry Dialog ──────────────────────── */}
+            <Dialog
+                open={addLedgerOpen}
+                onClose={handleCloseAddLedger}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        p: 0.5,
+                        bgcolor: "#ffffff",
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem", color: "#111827", pt: 2.5, pb: 2, px: 3, borderBottom: "1px solid", borderColor: "divider" }}>
+                    New Ledger Entry
+                </DialogTitle>
+
+                <form onSubmit={handleSaveLedgerEntry}>
+                    <DialogContent sx={{ p: 3, pt: 3 }}>
+                        {addLedgerError && (
+                            <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }}>
+                                {addLedgerError}
+                            </Alert>
+                        )}
+
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                            {/* Row 1: Account, Entry Type, Amount */}
+                            <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", md: "row" }, alignItems: "center" }}>
+                                {/* Account (Customer Select) */}
+                                <Box sx={{ flex: 2, width: "100%" }}>
+                                    <Autocomplete
+                                        disabled
+                                        options={customers || []}
+                                        getOptionLabel={(opt) => {
+                                            if (!opt) return "";
+                                            if (typeof opt === "string") return opt;
+                                            const nameStr = (opt.name || "").trim() || "Unnamed Customer";
+                                            const phoneStr = opt.phone ? ` (${opt.phone})` : "";
+                                            return `${nameStr}${phoneStr}`;
+                                        }}
+                                        value={addLedgerCustomer}
+                                        onChange={(e, newVal) => setAddLedgerCustomer(newVal)}
+                                        isOptionEqualToValue={(opt, val) => Number(opt?.id) === Number(val?.id)}
+                                        renderOption={(props, option) => (
+                                            <Box component="li" {...props} key={option.id} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", py: 1 }}>
+                                                <Typography variant="body2" fontWeight={600}>{option.name || "Unnamed Customer"}</Typography>
+                                                {option.phone && (
+                                                    <Typography variant="caption" color="text.secondary">Phone: {option.phone}</Typography>
+                                                )}
+                                            </Box>
+                                        )}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Account"
+                                                required
+                                                fullWidth
+                                            />
+                                        )}
+                                    />
+                                </Box>
+
+                                {/* Entry Type */}
+                                <Box sx={{ flex: 1.2, width: "100%" }}>
+                                    <FormControl fullWidth required>
+                                        <InputLabel id="entry-type-select-label">Entry Type</InputLabel>
+                                        <Select
+                                            labelId="entry-type-select-label"
+                                            label="Entry Type"
+                                            value={addLedgerType}
+                                            onChange={(e) => setAddLedgerType(e.target.value)}
+                                        >
+                                            <MenuItem value="DEBIT">Debit (Receivable)</MenuItem>
+                                            <MenuItem value="CREDIT">Credit (Payable)</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Box>
+
+                                {/* Amount (Rs.) */}
+                                <Box sx={{ flex: 1.2, width: "100%" }}>
+                                    <TextField
+                                        label="Amount (Rs.)"
+                                        type="number"
+                                        required
+                                        fullWidth
+                                        value={addLedgerAmount}
+                                        onChange={(e) => setAddLedgerAmount(e.target.value)}
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
+
+                            {/* Row 2: Description */}
+                            <Box sx={{ width: "100%" }}>
+                                <TextField
+                                    label="Description"
+                                    required
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    value={addLedgerDescription}
+                                    onChange={(e) => setAddLedgerDescription(e.target.value)}
+                                />
+                            </Box>
+                        </Box>
+                    </DialogContent>
+
+                    <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: "1px solid", borderColor: "divider", gap: 1.5 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleCloseAddLedger}
+                            startIcon={<X size={16} />}
+                            disabled={addLedgerLoading}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: "none",
+                                px: 2.5,
+                                py: 0.8,
+                                color: "#4b5563",
+                                borderColor: "#d1d5db",
+                                "&:hover": { borderColor: "#9ca3af", bgcolor: "#f9fafb" }
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={addLedgerLoading || !addLedgerAmount || !addLedgerDescription}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: "none",
+                                px: 3.5,
+                                py: 0.8,
+                                fontWeight: 600,
+                                boxShadow: "none"
+                            }}
+                        >
+                            {addLedgerLoading ? <CircularProgress size={20} color="inherit" /> : "Save Entry"}
+                        </Button>
+                    </DialogActions>
+                </form>
             </Dialog>
 
             {/* ── Success Snackbar ──────────────────────────── */}

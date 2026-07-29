@@ -145,7 +145,7 @@ export async function POST(req) {
 
             const updatedRemaining = Math.max(0, currentRemaining - totalDeduction);
             const updatedAdvance = currentAdvance + payAmt;
-            const updatedBillStatus = updatedRemaining === 0 ? "Clear Bill" : "Partial Pending";
+            const updatedBillStatus = updatedRemaining <= 0 ? "Clear" : (updatedAdvance <= 0 ? "Pending" : "Partially Pending");
 
             // Check if all suits in the booking are delivered
             const allBookingItems = await tx.booking_item.findMany({

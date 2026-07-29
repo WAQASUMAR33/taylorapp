@@ -5,7 +5,6 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
     Box,
-    Paper,
     Typography,
     TextField,
     Button,
@@ -17,11 +16,8 @@ import {
     FormControlLabel,
     Link as MuiLink
 } from "@mui/material";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
-import CheckBoxOutlinedIcon from "@mui/icons-material/CheckBoxOutlined";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -45,7 +41,7 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Invalid username or password. Please try again.");
+                setError("Invalid email or password. Please try again.");
             } else {
                 router.push("/dashboard");
             }
@@ -64,83 +60,65 @@ export default function LoginPage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#e8f5e9",
-                backgroundImage: `
-                    radial-gradient(circle at 10% 10%, #a7f3d0 0%, transparent 40%),
-                    radial-gradient(circle at 90% 90%, #6ee7b7 0%, transparent 40%)
-                `,
-                position: "relative",
-                overflow: "hidden",
-                p: { xs: 2, sm: 3 },
-                "&::before": {
-                    content: '""',
-                    position: "absolute",
-                    top: -60,
-                    right: -60,
-                    width: 260,
-                    height: 260,
-                    borderRadius: "40% 60% 70% 30% / 40% 50% 60% 50%",
-                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                    opacity: 0.85,
-                    pointerEvents: "none",
-                },
-                "&::after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: -80,
-                    left: -80,
-                    width: 320,
-                    height: 320,
-                    borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%",
-                    background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                    opacity: 0.8,
-                    pointerEvents: "none",
-                }
+                backgroundColor: "#e0f2fe",
+                backgroundImage: "linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%)",
+                p: { xs: 2, sm: 3, md: 4 },
             }}
         >
-            <Paper
-                elevation={10}
+            {/* Main Container Card */}
+            <Box
                 sx={{
                     width: "100%",
-                    maxWidth: 880,
-                    minHeight: 480,
-                    borderRadius: 5,
+                    maxWidth: 1040,
+                    bgcolor: "#ffffff",
+                    borderRadius: "28px",
+                    boxShadow: "0 20px 45px -10px rgba(0, 0, 0, 0.07), 0 10px 20px -5px rgba(0, 0, 0, 0.04)",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: { xs: "column", md: "row" },
-                    boxShadow: "0 20px 40px rgba(5, 150, 105, 0.15)",
-                    position: "relative",
-                    zIndex: 1,
+                    p: { xs: 2.5, sm: 3 },
+                    gap: { xs: 2, md: 3 },
                 }}
             >
                 {/* Left Panel: Form */}
                 <Box
                     sx={{
-                        flex: 1.1,
-                        bgcolor: "#ffffff",
-                        p: { xs: 4, sm: 6 },
+                        flex: 1,
+                        p: { xs: 2, sm: 4, md: 5 },
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "center",
                     }}
                 >
                     <Typography
-                        variant="h4"
-                        fontWeight={800}
+                        variant="h3"
                         sx={{
-                            color: "#059669",
-                            mb: 4,
-                            letterSpacing: "-0.5px"
+                            fontWeight: 700,
+                            color: "#111827",
+                            mb: 1,
+                            fontSize: { xs: "1.875rem", sm: "2.25rem" },
+                            letterSpacing: "-0.5px",
                         }}
                     >
-                        Log in
+                        Grace Tailors
+                    </Typography>
+
+                    <Typography
+                        variant="body1"
+                        sx={{
+                            color: "#8c857b",
+                            mb: 4,
+                            fontSize: "0.95rem",
+                        }}
+                    >
+                        Enter your details below to continue
                     </Typography>
 
                     {error && (
                         <Alert
                             severity="error"
                             variant="outlined"
-                            sx={{ mb: 3, borderRadius: 2 }}
+                            sx={{ mb: 3, borderRadius: 2.5 }}
                             onClose={() => setError("")}
                         >
                             {error}
@@ -148,36 +126,32 @@ export default function LoginPage() {
                     )}
 
                     <form onSubmit={handleSubmit}>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
                             <TextField
-                                id="username"
-                                label="Username"
-                                variant="standard"
+                                id="email"
+                                label="Email"
+                                variant="outlined"
                                 fullWidth
                                 required
-                                autoComplete="username"
+                                autoComplete="email"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <AccountCircleOutlinedIcon sx={{ color: "#a1a1aa" }} />
-                                        </InputAdornment>
-                                    ),
-                                }}
                                 sx={{
-                                    "& .MuiInput-underline:before": { borderBottomColor: "#e4e4e7" },
-                                    "& .MuiInput-underline:hover:before": { borderBottomColor: "#059669" },
-                                    "& .MuiInput-underline:after": { borderBottomColor: "#059669" },
-                                    "& .MuiInputLabel-root": { color: "#a1a1aa" },
-                                    "& .MuiInputLabel-root.Mui-focused": { color: "#059669" },
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: "10px",
+                                        "& fieldset": { borderColor: "#d1d5db" },
+                                        "&:hover fieldset": { borderColor: "#9ca3af" },
+                                        "&.Mui-focused fieldset": { borderColor: "#604235" },
+                                    },
+                                    "& .MuiInputLabel-root": { color: "#6b7280" },
+                                    "& .MuiInputLabel-root.Mui-focused": { color: "#604235" },
                                 }}
                             />
 
                             <TextField
                                 id="password"
                                 label="Password"
-                                variant="standard"
+                                variant="outlined"
                                 type={showPassword ? "text" : "password"}
                                 fullWidth
                                 required
@@ -185,11 +159,6 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <LockOutlinedIcon sx={{ color: "#a1a1aa" }} />
-                                        </InputAdornment>
-                                    ),
                                     endAdornment: (
                                         <InputAdornment position="end">
                                             <IconButton
@@ -197,7 +166,7 @@ export default function LoginPage() {
                                                 onClick={() => setShowPassword((prev) => !prev)}
                                                 edge="end"
                                                 size="small"
-                                                sx={{ color: "#a1a1aa" }}
+                                                sx={{ color: "#6b7280" }}
                                             >
                                                 {showPassword ? (
                                                     <VisibilityOffOutlinedIcon fontSize="small" />
@@ -209,127 +178,132 @@ export default function LoginPage() {
                                     ),
                                 }}
                                 sx={{
-                                    "& .MuiInput-underline:before": { borderBottomColor: "#e4e4e7" },
-                                    "& .MuiInput-underline:hover:before": { borderBottomColor: "#059669" },
-                                    "& .MuiInput-underline:after": { borderBottomColor: "#059669" },
-                                    "& .MuiInputLabel-root": { color: "#a1a1aa" },
-                                    "& .MuiInputLabel-root.Mui-focused": { color: "#059669" },
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: "10px",
+                                        "& fieldset": { borderColor: "#d1d5db" },
+                                        "&:hover fieldset": { borderColor: "#9ca3af" },
+                                        "&.Mui-focused fieldset": { borderColor: "#604235" },
+                                    },
+                                    "& .MuiInputLabel-root": { color: "#6b7280" },
+                                    "& .MuiInputLabel-root.Mui-focused": { color: "#604235" },
                                 }}
                             />
 
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    disabled={loading || !username.trim() || !password.trim()}
-                                    sx={{
-                                        px: 4,
-                                        py: 1.2,
-                                        borderRadius: 8,
-                                        bgcolor: "#059669",
-                                        color: "#ffffff",
-                                        textTransform: "none",
-                                        fontWeight: 700,
-                                        fontSize: "0.95rem",
-                                        boxShadow: "0 4px 14px rgba(5, 150, 105, 0.35)",
-                                        "&:hover": {
-                                            bgcolor: "#047857",
-                                            boxShadow: "0 6px 20px rgba(5, 150, 105, 0.45)",
-                                        },
-                                        "&.Mui-disabled": {
-                                            bgcolor: "#a7f3d0",
-                                            color: "#ffffff",
-                                        }
-                                    }}
-                                >
-                                    {loading ? <CircularProgress size={22} color="inherit" /> : "Log in"}
-                                </Button>
-
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", my: 0.5 }}>
                                 <FormControlLabel
                                     control={
                                         <Checkbox
                                             checked={rememberMe}
                                             onChange={(e) => setRememberMe(e.target.checked)}
-                                            checkedIcon={<CheckBoxOutlinedIcon sx={{ color: "#059669" }} />}
                                             size="small"
+                                            sx={{
+                                                color: "#9ca3af",
+                                                "&.Mui-checked": {
+                                                    color: "#604235",
+                                                },
+                                            }}
                                         />
                                     }
                                     label={
-                                        <Typography variant="body2" sx={{ color: "#52525b", fontWeight: 600, fontSize: "0.85rem" }}>
+                                        <Typography variant="body2" sx={{ color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}>
                                             Remember me
                                         </Typography>
                                     }
                                 />
-                            </Box>
 
-                            <Box sx={{ textAlign: "center", mt: 1 }}>
                                 <MuiLink
                                     href="#"
-                                    underline="hover"
+                                    underline="none"
                                     sx={{
-                                        color: "#6ee7b7",
-                                        fontSize: "0.8rem",
-                                        fontWeight: 500,
+                                        color: "#604235",
+                                        fontSize: "0.875rem",
+                                        fontWeight: 600,
+                                        "&:hover": { textDecoration: "underline" },
                                     }}
                                     onClick={(e) => e.preventDefault()}
                                 >
-                                    forgot password?
+                                    Forgot password?
                                 </MuiLink>
                             </Box>
+
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                fullWidth
+                                disabled={loading}
+                                sx={{
+                                    py: 1.5,
+                                    borderRadius: "10px",
+                                    bgcolor: "#604235",
+                                    color: "#ffffff",
+                                    textTransform: "none",
+                                    fontWeight: 600,
+                                    fontSize: "1rem",
+                                    boxShadow: "none",
+                                    "&:hover": {
+                                        bgcolor: "#4d3429",
+                                        boxShadow: "0 4px 12px rgba(96, 66, 53, 0.25)",
+                                    },
+                                    "&.Mui-disabled": {
+                                        bgcolor: "#a8978e",
+                                        color: "#ffffff",
+                                    },
+                                }}
+                            >
+                                {loading ? <CircularProgress size={22} color="inherit" /> : "Sign in"}
+                            </Button>
+
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    textAlign: "center",
+                                    mt: 1.5,
+                                    fontSize: "0.875rem",
+                                    color: "#6b7280",
+                                }}
+                            >
+                                Don't have an account yet?{" "}
+                                <MuiLink
+                                    href="/register"
+                                    underline="none"
+                                    sx={{
+                                        color: "#604235",
+                                        fontWeight: 600,
+                                        "&:hover": { textDecoration: "underline" },
+                                    }}
+                                >
+                                    Sign up
+                                </MuiLink>
+                            </Typography>
                         </Box>
                     </form>
                 </Box>
 
-                {/* Right Panel: Welcome Back Banner */}
+                {/* Right Panel: Tailor Banner Image */}
                 <Box
                     sx={{
-                        flex: 1,
-                        background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                        p: { xs: 4, sm: 6 },
-                        color: "#ffffff",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        textAlign: "center",
+                        flex: 1.05,
+                        display: { xs: "none", md: "block" },
                         position: "relative",
+                        minHeight: 520,
+                        borderRadius: "20px",
+                        overflow: "hidden",
                     }}
                 >
-                    <Typography variant="h3" fontWeight={800} sx={{ mb: 1.5, letterSpacing: "-0.5px" }}>
-                        Welcome Back!
-                    </Typography>
-                    <Typography variant="body1" sx={{ opacity: 0.9, fontWeight: 400, mb: 4 }}>
-                        Please enter your details
-                    </Typography>
-
-                    <Typography variant="body2" sx={{ opacity: 0.85, mb: 2, fontSize: "0.9rem" }}>
-                        Don't have an account?
-                    </Typography>
-
-                    <Button
-                        variant="outlined"
-                        onClick={() => router.push("/register")}
+                    <Box
+                        component="img"
+                        src="/tailor_login_banner.png"
+                        alt="Tailor craftsmanship"
                         sx={{
-                            px: 4,
-                            py: 1,
-                            borderRadius: 8,
-                            borderColor: "#ffffff",
-                            color: "#ffffff",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            borderWidth: "1.5px",
-                            "&:hover": {
-                                borderColor: "#ffffff",
-                                bgcolor: "rgba(255, 255, 255, 0.15)",
-                                borderWidth: "1.5px",
-                            }
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                            borderRadius: "20px",
                         }}
-                    >
-                        Sign Up
-                    </Button>
+                    />
                 </Box>
-            </Paper>
+            </Box>
         </Box>
     );
 }

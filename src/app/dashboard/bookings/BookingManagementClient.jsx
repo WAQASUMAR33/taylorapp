@@ -4512,30 +4512,46 @@ ${allBookingsHtml}
                                     <TableCell align="right">
                                         {(() => {
                                             const discountAmt = (booking.items || []).reduce((s, i) => s + parseFloat(i.discount || 0), 0);
+                                            const adv = parseFloat(booking.advanceAmount || 0);
+                                            const rem = parseFloat(booking.remainingAmount || 0);
+                                            const total = parseFloat(booking.totalAmount || 0);
+
+                                            let label = "Pending";
+                                            let bg = "#fef3c7";
+                                            let color = "#92400e";
+
+                                            if (rem <= 0 || (adv >= total && total > 0) || booking.billStatus === "Clear" || booking.billStatus === "Clear Bill") {
+                                                label = "Clear";
+                                                bg = "#d1fae5";
+                                                color = "#065f46";
+                                            } else if (adv > 0) {
+                                                label = "Partially Pending";
+                                                bg = "#fee2e2";
+                                                color = "#991b1b";
+                                            }
+
                                             return (
                                                 <>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Rs.&nbsp;{parseFloat(booking.totalAmount).toFixed(0)}</Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Rs.&nbsp;{total.toFixed(0)}</Typography>
                                                     {discountAmt > 0 && (
                                                         <Typography variant="caption" color="error.main" sx={{ display: 'block', fontWeight: 600 }}>
                                                             Disc: Rs.&nbsp;{discountAmt.toFixed(0)}
                                                         </Typography>
                                                     )}
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{parseFloat(booking.advanceAmount).toFixed(0)}</Typography>
-                                                    <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{parseFloat(booking.remainingAmount).toFixed(0)}</Typography>
-                                                    {booking.billStatus && (
-                                                        <Chip 
-                                                            label={booking.billStatus} 
-                                                            size="small" 
-                                                            sx={{ 
-                                                                mt: 0.5, 
-                                                                height: 18, 
-                                                                fontSize: '0.62rem', 
-                                                                fontWeight: 700, 
-                                                                bgcolor: booking.billStatus === "Clear Bill" ? "#d1fae5" : "#fee2e2", 
-                                                                color: booking.billStatus === "Clear Bill" ? "#065f46" : "#991b1b" 
-                                                            }} 
-                                                        />
-                                                    )}
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{adv.toFixed(0)}</Typography>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{rem.toFixed(0)}</Typography>
+                                                    <Chip 
+                                                        label={label} 
+                                                        size="small" 
+                                                        sx={{ 
+                                                            mt: 0.5, 
+                                                            height: 18, 
+                                                            fontSize: '0.62rem', 
+                                                            fontWeight: 700, 
+                                                            bgcolor: bg, 
+                                                            color: color 
+                                                        }} 
+                                                    />
                                                 </>
                                             );
                                         })()}

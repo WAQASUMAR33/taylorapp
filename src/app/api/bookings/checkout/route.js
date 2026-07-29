@@ -185,12 +185,12 @@ export async function POST(req) {
 
             if (itemsLeftBehind) {
                 newStatus = "PARTIALLY_DELIVERED";
-                newBillStatus = newRemainingAmount <= 0 ? "Clear Bill" : "Partial Pending";
+                newBillStatus = newRemainingAmount <= 0 ? "Clear" : (newAdvance <= 0 ? "Pending" : "Partially Pending");
             } else {
                 // All items delivered
                 if (newRemainingAmount === 0) {
                     newStatus = "PAID";
-                    newBillStatus = "Clear Bill";
+                    newBillStatus = "Clear";
                 } else {
                     newStatus = "TRANSFERRED_TO_LEDGER";
                     newBillStatus = "Transferred To Ledger";
