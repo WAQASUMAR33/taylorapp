@@ -37,7 +37,9 @@ export default function NextAppDirEmotionCacheProvider(props) {
     }
     let styles = '';
     for (const name of names) {
-      styles += cache.inserted[name];
+      if (typeof cache.inserted[name] === 'string') {
+        styles += cache.inserted[name];
+      }
     }
     return (
       <style

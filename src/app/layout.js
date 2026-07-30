@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono, Noto_Nastaliq_Urdu } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
+import Providers from '@/components/Providers';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${notoNastaliqUrdu.variable} antialiased font-sans`}>
-        <ThemeRegistry>{children}</ThemeRegistry>
+        <Providers>
+          <ThemeRegistry>{children}</ThemeRegistry>
+        </Providers>
       </body>
     </html>
   );
