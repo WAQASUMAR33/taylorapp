@@ -3518,7 +3518,7 @@ ${allBookingsHtml}
                             '&:hover': { bgcolor: '#059669' } 
                         }}
                     >
-                        {paying ? <CircularProgress size={22} color="inherit" /> : "Pay Now"}
+                        {paying ? <CircularProgress size={22} color="inherit" /> : (parseFloat(payBooking.remainingAmount || 0) <= 0 ? "Deliver Suits" : "Pay & Deliver")}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -4615,13 +4615,24 @@ ${allBookingsHtml}
                                             <Tooltip title="Edit Booking">
                                                 <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
                                             </Tooltip>
-                                            {parseFloat(booking.remainingAmount) > 0 && (
-                                                <Tooltip title="Pay / Clear Bill">
-                                                    <IconButton size="small" sx={{ color: '#10b981' }} onClick={() => handleOpenPayDialog(booking)}>
-                                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
+                                            {(() => {
+                                                const stitchItems = (booking.items || []).filter(i => !i.productId);
+                                                const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
+                                                const hasPendingSuits = stitchItems.length > 0 && remainingSuitQty > 0;
+                                                const hasRemAmt = parseFloat(booking.remainingAmount || 0) > 0;
+
+                                                if (!hasRemAmt && !hasPendingSuits) return null;
+
+                                                return (
+                                                    <Tooltip title={hasRemAmt ? "Pay / Clear Bill / Deliver Suits" : "Deliver Remaining Suits"}>
+                                                        <IconButton size="small" sx={{ color: hasRemAmt ? '#10b981' : '#8b5cf6' }} onClick={() => handleOpenPayDialog(booking)}>
+                                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                );
+                                            })()}
                                             <Tooltip title="Print">
                                                 <IconButton size="small" color="primary" onClick={() => handlePrintClick(booking)}><Printer size={17} /></IconButton>
                                             </Tooltip>
