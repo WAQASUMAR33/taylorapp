@@ -91,6 +91,10 @@ export async function GET(req) {
         const page = searchParams.get("page") || "1";
         const limit = searchParams.get("limit") || "50";
         const search = searchParams.get("search") || "";
+        const nameFilter = searchParams.get("name") || "";
+        const fatherNameFilter = searchParams.get("fatherName") || "";
+        const phoneFilter = searchParams.get("phone") || "";
+        const addressFilter = searchParams.get("address") || "";
         const categoryId = searchParams.get("categoryId") || "";
         const measurementNo = searchParams.get("measurementNo") || "";
         const sortBy = searchParams.get("sortBy") || "createdAt";
@@ -148,6 +152,22 @@ export async function GET(req) {
                     { measurementNo: { contains: search } }
                 ]
             });
+        }
+
+        if (nameFilter) {
+            where.AND.push({ name: { contains: nameFilter } });
+        }
+
+        if (fatherNameFilter) {
+            where.AND.push({ fatherName: { contains: fatherNameFilter } });
+        }
+
+        if (phoneFilter) {
+            where.AND.push({ phone: { contains: phoneFilter } });
+        }
+
+        if (addressFilter) {
+            where.AND.push({ address: { contains: addressFilter } });
         }
 
         if (categoryId) {

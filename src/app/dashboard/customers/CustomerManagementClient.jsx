@@ -81,6 +81,38 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [filterMeasurementNo, setFilterMeasurementNo] = useState("");
     const [debouncedMeasurementNo, setDebouncedMeasurementNo] = useState("");
 
+    // Customer Information Search Panel State
+    const [customerSearchFilters, setCustomerSearchFilters] = useState({
+        name: "",
+        fatherName: "",
+        phone: "",
+        address: "",
+        measurementNo: "",
+    });
+    const [debouncedFilters, setDebouncedFilters] = useState({
+        name: "",
+        fatherName: "",
+        phone: "",
+        address: "",
+        measurementNo: "",
+    });
+    const [showCustomerGrid, setShowCustomerGrid] = useState(false);
+
+    const FIELD_SX = {
+        '& .MuiOutlinedInput-root': {
+            bgcolor: 'white',
+            borderRadius: 2,
+            '& fieldset': { borderColor: '#e5e7eb' },
+            '&:hover fieldset': { borderColor: '#7c3aed' },
+            '&.Mui-focused fieldset': { borderColor: '#7c3aed', borderWidth: 2 },
+        }
+    };
+
+    const handleFilterChange = (field, value) => {
+        setCustomerSearchFilters(prev => ({ ...prev, [field]: value }));
+        setShowCustomerGrid(true);
+    };
+
     // Sorting State
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
@@ -91,6 +123,15 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setSortBy(property);
         setPage(0); // Reset page to first page when sort changes
     };
+
+    // Debounce multi-field search filters
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedFilters(customerSearchFilters);
+            setPage(0);
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [customerSearchFilters]);
 
     // Debounce search query
     useEffect(() => {
@@ -125,8 +166,12 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     page: (page + 1).toString(),
                     limit: rowsPerPage.toString(),
                     search: debouncedSearch,
+                    name: debouncedFilters.name,
+                    fatherName: debouncedFilters.fatherName,
+                    phone: debouncedFilters.phone,
+                    address: debouncedFilters.address,
                     categoryId: filterCategory ? filterCategory.id.toString() : "",
-                    measurementNo: debouncedMeasurementNo,
+                    measurementNo: debouncedFilters.measurementNo || debouncedMeasurementNo,
                     sortBy,
                     sortOrder,
                 });
@@ -144,7 +189,9 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         };
 
         // Skip fetch on initial mount if page=0 and no filters, as initialCustomers is already populated.
-        const isInitial = page === 0 && rowsPerPage === 50 && !debouncedSearch && !filterCategory && !debouncedMeasurementNo && sortBy === "createdAt" && sortOrder === "desc";
+        const hasFilters = debouncedSearch || filterCategory || debouncedMeasurementNo ||
+            debouncedFilters.name || debouncedFilters.fatherName || debouncedFilters.phone || debouncedFilters.address || debouncedFilters.measurementNo;
+        const isInitial = page === 0 && rowsPerPage === 50 && !hasFilters && sortBy === "createdAt" && sortOrder === "desc";
         if (!isInitial || refreshTrigger > 0) {
             load();
         }
@@ -152,7 +199,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         return () => {
             active = false;
         };
-    }, [page, rowsPerPage, debouncedSearch, filterCategory, debouncedMeasurementNo, sortBy, sortOrder, refreshTrigger]);
+    }, [page, rowsPerPage, debouncedSearch, filterCategory, debouncedMeasurementNo, debouncedFilters, sortBy, sortOrder, refreshTrigger]);
 
     const handlePageChange = (event, newPage) => {
         setPage(newPage);
@@ -942,7 +989,15 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         }
     };
 
-    const hasActiveFilters = searchQuery || filterCategory || filterMeasurementNo;
+    const hasActiveSearch = Boolean(
+        customerSearchFilters.name ||
+        customerSearchFilters.fatherName ||
+        customerSearchFilters.phone ||
+        customerSearchFilters.address ||
+        customerSearchFilters.measurementNo
+    );
+
+    const hasActiveFilters = searchQuery || filterCategory || filterMeasurementNo || hasActiveSearch;
 
     const clearFilters = () => {
         setSearchQuery("");
@@ -950,6 +1005,14 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setFilterMeasurementNo("");
         setDebouncedMeasurementNo("");
         setFilterCategory(null);
+        setCustomerSearchFilters({
+            name: "",
+            fatherName: "",
+            phone: "",
+            address: "",
+            measurementNo: "",
+        });
+        setShowCustomerGrid(false);
         setPage(0);
     };
 
@@ -1062,6 +1125,152 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     );
                 })}
             </Box>
+
+            {/* ── Customer Information Search Panel ── */}
+            <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '1px solid #e5e7eb', overflow: 'visible', bgcolor: 'background.paper', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+                <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #7c3aed' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <User size={18} color="#7c3aed" />
+                        <Typography variant="subtitle1" fontWeight={700} color="#1f2937">Customer Information Search</Typography>
+                    </Box>
+                    {hasActiveSearch && (
+                        <Button
+                            size="small"
+                            variant="text"
+                            color="secondary"
+                            startIcon={<X size={14} />}
+                            onClick={() => {
+                                setCustomerSearchFilters({ name: "", fatherName: "", phone: "", address: "", measurementNo: "" });
+                                setShowCustomerGrid(false);
+                            }}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Clear Search
+                        </Button>
+                    )}
+                </Box>
+                <Box sx={{ p: 2.5, pt: 1.5 }}>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12 }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', lg: 'row' }, width: '100%', alignItems: 'center' }}>
+                                {/* Name input */}
+                                <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Name"
+                                        placeholder="Search name…"
+                                        value={customerSearchFilters.name}
+                                        onChange={(e) => handleFilterChange("name", e.target.value)}
+                                        sx={FIELD_SX}
+                                    />
+                                </Box>
+
+                                {/* Father Name input */}
+                                <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Father Name"
+                                        placeholder="Father name…"
+                                        value={customerSearchFilters.fatherName}
+                                        onChange={(e) => handleFilterChange("fatherName", e.target.value)}
+                                        sx={FIELD_SX}
+                                    />
+                                </Box>
+
+                                {/* Phone Number input */}
+                                <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Phone Number"
+                                        placeholder="Phone number…"
+                                        value={customerSearchFilters.phone}
+                                        onChange={(e) => handleFilterChange("phone", e.target.value)}
+                                        sx={FIELD_SX}
+                                    />
+                                </Box>
+
+                                {/* Address input */}
+                                <Box sx={{ flex: 1.6, minWidth: 0, width: '100%' }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Address"
+                                        placeholder="Address…"
+                                        value={customerSearchFilters.address}
+                                        onChange={(e) => handleFilterChange("address", e.target.value)}
+                                        sx={FIELD_SX}
+                                    />
+                                </Box>
+
+                                {/* Measurement No input */}
+                                <Box sx={{ flex: 0.8, minWidth: 0, width: '100%' }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Measurement No"
+                                        placeholder="M#…"
+                                        value={customerSearchFilters.measurementNo}
+                                        onChange={(e) => handleFilterChange("measurementNo", e.target.value)}
+                                        sx={FIELD_SX}
+                                    />
+                                </Box>
+                            </Box>
+
+                            {/* Clickable Customer Search Results Grid */}
+                            {showCustomerGrid && hasActiveSearch && customers.length > 0 && (
+                                <Card variant="outlined" sx={{ mt: 2, border: '1px solid #d1d5db', borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                                    <TableContainer sx={{ maxHeight: 250 }}>
+                                        <Table size="small" stickyHeader>
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Father Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Phone Number</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Address</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Measurement No</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {customers.map((cust) => (
+                                                    <TableRow
+                                                        key={cust.id}
+                                                        hover
+                                                        onClick={() => {
+                                                            setCustomerSearchFilters({
+                                                                name: cust.name || "",
+                                                                fatherName: cust.fatherName || "",
+                                                                phone: cust.phone || "",
+                                                                address: cust.address || "",
+                                                                measurementNo: cust.measurementNo || ""
+                                                            });
+                                                            setShowCustomerGrid(false);
+                                                        }}
+                                                        sx={{
+                                                            cursor: 'pointer',
+                                                            '&:hover': {
+                                                                backgroundColor: '#f3e8ff !important'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <TableCell sx={{ fontWeight: 600, color: '#1f2937' }}>{cust.name}</TableCell>
+                                                        <TableCell color="text.secondary">{cust.fatherName || "—"}</TableCell>
+                                                        <TableCell color="text.secondary">{cust.phone || "—"}</TableCell>
+                                                        <TableCell color="text.secondary">{cust.address || "—"}</TableCell>
+                                                        <TableCell sx={{ color: '#7c3aed', fontWeight: 700 }}>M# {cust.measurementNo || "—"}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Card>
+                            )}
+                        </Grid>
+                    </Grid>
+                </Box>
+            </Card>
 
             {/* ── Action Bar ────────────────────────────────── */}
             <Stack
