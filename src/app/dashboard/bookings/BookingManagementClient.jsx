@@ -2315,6 +2315,15 @@ ${allBookingsHtml}
             alert("This booking is closed and fully paid. Status cannot be changed.");
             return;
         }
+        const stitchItems = (booking?.items || []).filter(i => !i.productId);
+        const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+        const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+        const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
+        const isClosingStatus = newStatus === "COMPLETED" || newStatus === "PAID" || newStatus === "TRANSFERRED_TO_LEDGER";
+        if (isClosingStatus && stitchItems.length > 0 && remainingSuitQty > 0) {
+            alert("Booking cannot be closed or set to Completed / Paid / Transferred To Ledger while suits are still pending delivery.");
+            return;
+        }
         const currentStatus = booking?.status;
         if ((currentStatus === "COMPLETED" || currentStatus === "RETURNED") && !isAdmin) {
             alert("Only an admin can change the status of a completed or returned booking.");
@@ -4491,6 +4500,12 @@ ${allBookingsHtml}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                             {(() => {
                                                 const isLocked = isBookingClosedAndPaid(booking);
+                                                const stitchItems = (booking.items || []).filter(i => !i.productId);
+                                                const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+                                                const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
+                                                const hasPendingSuits = stitchItems.length > 0 && remainingSuitQty > 0;
+
                                                 return (
                                                     <TextField
                                                         select size="small" value={booking.status}
@@ -4506,9 +4521,15 @@ ${allBookingsHtml}
                                                             }
                                                         }}
                                                     >
-                                                        {BOOKING_STATUSES.map((s) => (
-                                                            <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.82rem' }}>{s.label}</MenuItem>
-                                                        ))}
+                                                        {BOOKING_STATUSES.map((s) => {
+                                                            const isClosing = s.value === "COMPLETED" || s.value === "PAID" || s.value === "TRANSFERRED_TO_LEDGER";
+                                                            const isDisabled = isClosing && hasPendingSuits;
+                                                            return (
+                                                                <MenuItem key={s.value} value={s.value} disabled={isDisabled} sx={{ fontSize: '0.82rem' }}>
+                                                                    {s.label}{isDisabled ? " (Suits Pending)" : ""}
+                                                                </MenuItem>
+                                                            );
+                                                        })}
                                                     </TextField>
                                                 );
                                             })()}

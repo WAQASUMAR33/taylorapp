@@ -651,6 +651,11 @@ export async function PUT(req) {
                 throw new Error("This booking is closed and fully paid. It cannot be edited.");
             }
 
+            const isClosingStatus = status === "COMPLETED" || status === "PAID" || status === "TRANSFERRED_TO_LEDGER";
+            if (isClosingStatus && !areAllItemsDelivered) {
+                throw new Error("Booking cannot be closed or completed while suits/items are still pending delivery.");
+            }
+
             if ((currentBooking.status === "COMPLETED" || currentBooking.status === "RETURNED") && status && status !== currentBooking.status) {
                 if (!isAdmin) {
                     throw new Error("Only an admin can change the status of a completed or returned booking.");
