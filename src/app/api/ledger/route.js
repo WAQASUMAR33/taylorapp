@@ -130,8 +130,12 @@ export async function GET(req) {
             prisma.ledgerentry.count({ where })
         ]);
 
-        // Calculate total debit and credit matching current filter (across all pages)
-        const [debitSum, creditSum] = await Promise.all([
+        // Calculate total debit and credit matching current filter, plus today's received and payments
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        const [debitSum, creditSum, todayReceivedSum, todayPaymentsSum] = await Promise.all([
             prisma.ledgerentry.aggregate({
                 where: { ...where, type: "DEBIT" },
                 _sum: { amount: true }
@@ -139,12 +143,48 @@ export async function GET(req) {
             prisma.ledgerentry.aggregate({
                 where: { ...where, type: "CREDIT" },
                 _sum: { amount: true }
+            }),
+            prisma.ledgerentry.aggregate({
+                where: {
+                    customer: { name: { not: "Cash Account" } },
+                    type: "CREDIT",
+                    entryDate: { gte: todayStart, lte: todayEnd }
+                },
+                _sum: { amount: true }
+            }),
+            prisma.ledgerentry.aggregate({
+                where: {
+                    OR: [
+                        {
+                            customer: { name: "Cash Account" },
+                            type: "CREDIT",
+                            entryDate: { gte: todayStart, lte: todayEnd }
+                        },
+                        {
+                            customer: {
+                                OR: [
+                                    { accountCategory: { name: { contains: "supplier" } } },
+                                    { accountCategory: { name: { contains: "vendor" } } },
+                                    { accountCategory: { name: { contains: "expense" } } },
+                                    { accountCategory: { name: { contains: "employee" } } },
+                                    { accountCategory: { name: { contains: "tailor" } } },
+                                    { accountCategory: { name: { contains: "cutter" } } }
+                                ]
+                            },
+                            type: "DEBIT",
+                            entryDate: { gte: todayStart, lte: todayEnd }
+                        }
+                    ]
+                },
+                _sum: { amount: true }
             })
         ]);
 
         const totals = {
             debit: parseFloat(debitSum._sum.amount || 0),
-            credit: parseFloat(creditSum._sum.amount || 0)
+            credit: parseFloat(creditSum._sum.amount || 0),
+            todayReceived: parseFloat(todayReceivedSum._sum.amount || 0),
+            todayPayments: parseFloat(todayPaymentsSum._sum.amount || 0)
         };
 
         // Calculate initial balance (running balance of all matching entries before current page)

@@ -44,6 +44,8 @@ import {
     BookText,
     User,
     Wallet,
+    ArrowDownLeft,
+    ArrowUpRight,
 } from "lucide-react";
 
 const ENTRY_TYPES = [
@@ -382,45 +384,59 @@ export default function LedgerManagementClient({
         <Box sx={{ width: "100%", p: 3 }}>
 
             {/* ── Summary Cards ──────────────────────────── */}
-            <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
                 {[
                     {
                         label: "Total Debit",
                         value: totals.debit,
                         gradient: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
                         shadow: "rgba(59,130,246,0.3)",
-                        icon: <TrendingUp size={36} style={{ opacity: 0.8 }} />,
+                        icon: <TrendingUp size={32} style={{ opacity: 0.8 }} />,
                     },
                     {
                         label: "Total Credit",
                         value: totals.credit,
                         gradient: "linear-gradient(135deg, #f87171 0%, #ef4444 100%)",
                         shadow: "rgba(239,68,68,0.3)",
-                        icon: <TrendingDown size={36} style={{ opacity: 0.8 }} />,
+                        icon: <TrendingDown size={32} style={{ opacity: 0.8 }} />,
+                    },
+                    {
+                        label: "Today Received",
+                        value: totals.todayReceived || 0,
+                        gradient: "linear-gradient(135deg, #34d399 0%, #059669 100%)",
+                        shadow: "rgba(16,185,129,0.3)",
+                        icon: <ArrowDownLeft size={32} style={{ opacity: 0.8 }} />,
+                    },
+                    {
+                        label: "Today Payments",
+                        value: totals.todayPayments || 0,
+                        gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 100%)",
+                        shadow: "rgba(234,88,12,0.3)",
+                        icon: <ArrowUpRight size={32} style={{ opacity: 0.8 }} />,
                     },
                     {
                         label: filterCustomer ? `${filterCustomer.name} — Balance` : "Current Balance",
                         value: balance,
-                        gradient: "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
-                        shadow: "rgba(16,185,129,0.3)",
-                        icon: <BookText size={36} style={{ opacity: 0.8 }} />,
+                        gradient: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)",
+                        shadow: "rgba(124,58,237,0.3)",
+                        icon: <BookText size={32} style={{ opacity: 0.8 }} />,
                     },
                 ].map(({ label, value, gradient, shadow, icon }) => (
-                    <Grid key={label} size={{ xs: 12, md: 4 }}>
+                    <Grid key={label} size={{ xs: 12, sm: 6, md: 2.4 }}>
                         <Card sx={{
-                            p: 3,
+                            p: 2.5,
                             background: gradient,
                             color: "white",
                             borderRadius: 3,
-                            boxShadow: `0 10px 40px ${shadow}`,
+                            boxShadow: `0 8px 30px ${shadow}`,
                         }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Box>
-                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600, fontSize: "0.82rem" }}>
                                         {label}
                                     </Typography>
-                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
-                                        Rs. {value.toLocaleString()}
+                                    <Typography variant="h5" fontWeight="bold" sx={{ mt: 0.5 }}>
+                                        Rs. {(value || 0).toLocaleString()}
                                     </Typography>
                                 </Box>
                                 {icon}

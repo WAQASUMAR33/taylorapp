@@ -74,8 +74,12 @@ export default async function LedgerPage() {
             }
         });
 
-        // 3. Calculate initial totals (debit & credit)
-        const [debitSum, creditSum] = await Promise.all([
+        // 3. Calculate initial totals (debit, credit, today received & today payments)
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        const [debitSum, creditSum, todayReceivedSum, todayPaymentsSum] = await Promise.all([
             prisma.ledgerentry.aggregate({
                 where: { customer: { name: { not: "Cash Account" } }, type: "DEBIT" },
                 _sum: { amount: true }
@@ -83,12 +87,48 @@ export default async function LedgerPage() {
             prisma.ledgerentry.aggregate({
                 where: { customer: { name: { not: "Cash Account" } }, type: "CREDIT" },
                 _sum: { amount: true }
+            }),
+            prisma.ledgerentry.aggregate({
+                where: {
+                    customer: { name: { not: "Cash Account" } },
+                    type: "CREDIT",
+                    entryDate: { gte: todayStart, lte: todayEnd }
+                },
+                _sum: { amount: true }
+            }),
+            prisma.ledgerentry.aggregate({
+                where: {
+                    OR: [
+                        {
+                            customer: { name: "Cash Account" },
+                            type: "CREDIT",
+                            entryDate: { gte: todayStart, lte: todayEnd }
+                        },
+                        {
+                            customer: {
+                                OR: [
+                                    { accountCategory: { name: { contains: "supplier" } } },
+                                    { accountCategory: { name: { contains: "vendor" } } },
+                                    { accountCategory: { name: { contains: "expense" } } },
+                                    { accountCategory: { name: { contains: "employee" } } },
+                                    { accountCategory: { name: { contains: "tailor" } } },
+                                    { accountCategory: { name: { contains: "cutter" } } }
+                                ]
+                            },
+                            type: "DEBIT",
+                            entryDate: { gte: todayStart, lte: todayEnd }
+                        }
+                    ]
+                },
+                _sum: { amount: true }
             })
         ]);
 
         initialTotals = {
             debit: parseFloat(debitSum._sum.amount || 0),
-            credit: parseFloat(creditSum._sum.amount || 0)
+            credit: parseFloat(creditSum._sum.amount || 0),
+            todayReceived: parseFloat(todayReceivedSum._sum.amount || 0),
+            todayPayments: parseFloat(todayPaymentsSum._sum.amount || 0)
         };
 
         // 4. Fetch initial 50 customers to populate dropdowns initially (excluding cutter & tailor)
