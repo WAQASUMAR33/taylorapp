@@ -361,6 +361,12 @@ export async function POST(req) {
             const seq = String(nextSeq).padStart(4, "0");
             const bookingNumber = `${prefix}${seq}`;
 
+            const parsedTotal = parseFloat(totalAmount || 0);
+            const parsedAdvance = parseFloat(advanceAmount || 0);
+            const calcRemaining = (remainingAmount !== undefined && remainingAmount !== null && remainingAmount !== "")
+                ? parseFloat(remainingAmount)
+                : Math.max(0, parsedTotal - parsedAdvance);
+
             // 1. Create the booking
             const booking = await tx.booking.create({
                 data: {
@@ -374,10 +380,10 @@ export async function POST(req) {
                     trialDate: trialDate ? new Date(trialDate) : null,
                     tailorId: resolvedTailorIds[0] || null,
                     cutterId: resolvedCutterIds[0] || null,
-                    totalAmount: parseFloat(totalAmount),
-                    advanceAmount: parseFloat(advanceAmount || 0),
-                    remainingAmount: parseFloat(remainingAmount || totalAmount),
-                    billStatus: (parseFloat(remainingAmount || totalAmount) <= 0) ? "Clear" : (parseFloat(advanceAmount || 0) <= 0 ? "Pending" : "Partially Pending"),
+                    totalAmount: parsedTotal,
+                    advanceAmount: parsedAdvance,
+                    remainingAmount: calcRemaining,
+                    billStatus: calcRemaining <= 0 ? "Clear" : (parsedAdvance <= 0 ? "Pending" : "Partially Pending"),
                     notes,
                     status: "PENDING",
                     staff: {
@@ -879,10 +885,11 @@ export async function PUT(req) {
             }
 
             // 6. Perform the actual update
+            const calcPutRemaining = Math.max(0, newTotal - newAdvance);
             updateData.totalAmount = newTotal;
             updateData.advanceAmount = newAdvance;
-            updateData.remainingAmount = newTotal - newAdvance;
-            updateData.billStatus = (newTotal - newAdvance) <= 0 ? "Clear" : (newAdvance <= 0 ? "Pending" : "Partially Pending");
+            updateData.remainingAmount = calcPutRemaining;
+            updateData.billStatus = calcPutRemaining <= 0 ? "Clear" : (newAdvance <= 0 ? "Pending" : "Partially Pending");
 
             return await tx.booking.update({
                 where: { id: parseInt(id) },

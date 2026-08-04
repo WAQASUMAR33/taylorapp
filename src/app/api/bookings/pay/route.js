@@ -137,12 +137,14 @@ export async function POST(req) {
             }
 
             // 2. Financial Update (Payment & Discount - Independent of suit quantity)
+            const currentTotal = parseFloat(booking.totalAmount || 0);
             const currentRemaining = parseFloat(booking.remainingAmount || 0);
             const currentAdvance = parseFloat(booking.advanceAmount || 0);
 
             const effectiveBillingId = booking.billingCustomerId || booking.customerId;
             const billingName = booking.billingCustomer?.name || booking.customer?.name || "Customer";
 
+            const updatedTotal = Math.max(0, currentTotal - discountAmt);
             const updatedRemaining = Math.max(0, currentRemaining - totalDeduction);
             const updatedAdvance = currentAdvance + payAmt;
             const updatedBillStatus = updatedRemaining <= 0 ? "Clear" : (updatedAdvance <= 0 ? "Pending" : "Partially Pending");
@@ -166,6 +168,7 @@ export async function POST(req) {
             const updatedBooking = await tx.booking.update({
                 where: { id: bId },
                 data: {
+                    totalAmount: updatedTotal,
                     remainingAmount: updatedRemaining,
                     advanceAmount: updatedAdvance,
                     billStatus: updatedBillStatus,

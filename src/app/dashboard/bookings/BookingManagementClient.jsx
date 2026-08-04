@@ -1955,15 +1955,13 @@ ${allBookingsHtml}
     const productSubtotal = productItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
     const totalSubtotal = stitchingSubtotal + productSubtotal;
 
-    // Apply global discount: if products are involved, cap discount at productSubtotal, otherwise cap at stitchingSubtotal
-    const hasProductsInUI = productItems.some(p => p.productId);
-    const targetSubtotal = hasProductsInUI ? productSubtotal : stitchingSubtotal;
+    // Apply global discount on totalSubtotal
     const globalDiscountInput = parseFloat(formData.discount) || 0;
-    const appliedDiscount = Math.min(globalDiscountInput, targetSubtotal);
+    const appliedDiscount = Math.min(globalDiscountInput, totalSubtotal);
 
     const totalAmount = Math.max(0, totalSubtotal - appliedDiscount);
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
-    const balanceAmount = totalAmount - advanceAmount;
+    const balanceAmount = Math.max(0, totalAmount - advanceAmount);
 
     const handleSubmit = async () => {
         setLoading(true);
@@ -1990,19 +1988,20 @@ ${allBookingsHtml}
         try {
             const subStitching = validItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const subProduct = validProductItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
+            const totalSub = subStitching + subProduct;
 
-            const hasProducts = validProductItems.length > 0;
-            const discountTargets = hasProducts ? [...validProductItems] : [...validItems];
-            const nonDiscountTargets = hasProducts ? [...validItems] : [];
-
-            const targetSubtotal = discountTargets.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const discountInput = parseFloat(formData.discount) || 0;
-            const submitDiscount = Math.min(discountInput, targetSubtotal);
+            const submitDiscount = Math.min(discountInput, totalSub);
 
             let remainingDiscount = submitDiscount;
-            let remainingSubtotal = targetSubtotal;
+            let remainingSubtotal = totalSub;
 
-            const processedDiscountTargets = discountTargets.map((item, idx, arr) => {
+            const allTargets = [
+                ...validItems.map(item => ({ ...item, _isStitch: true })),
+                ...validProductItems.map(item => ({ ...item, _isStitch: false }))
+            ];
+
+            const processedTargets = allTargets.map((item, idx, arr) => {
                 const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
                 let itemDisc = 0;
                 
@@ -2023,17 +2022,8 @@ ${allBookingsHtml}
                 };
             });
 
-            const processedNonDiscountTargets = nonDiscountTargets.map(item => {
-                const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
-                return {
-                    ...item,
-                    discount: 0,
-                    totalPrice: itemSub
-                };
-            });
-
-            const finalStitchingItems = hasProducts ? processedNonDiscountTargets : processedDiscountTargets;
-            const finalProductItems = hasProducts ? processedDiscountTargets : [];
+            const finalStitchingItems = processedTargets.filter(item => item._isStitch);
+            const finalProductItems = processedTargets.filter(item => !item._isStitch);
 
             const payload = {
                 customerId: formData.customerId,

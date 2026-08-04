@@ -185,7 +185,7 @@ export async function POST(req) {
 
             if (itemsLeftBehind) {
                 newStatus = "PARTIALLY_DELIVERED";
-                newBillStatus = newRemainingAmount <= 0 ? "Clear" : (newAdvance <= 0 ? "Pending" : "Partially Pending");
+                newBillStatus = newRemainingAmount <= 0 ? "Clear" : (newAdvanceAmount <= 0 ? "Pending" : "Partially Pending");
             } else {
                 // All items delivered
                 if (newRemainingAmount === 0) {
