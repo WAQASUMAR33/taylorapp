@@ -692,7 +692,12 @@ export default function AnalyticsClient({ employees }) {
                                     )}
                                     {data.bookings.map((b, i) => {
                                         const sc = STATUS_COLOR[b.status] || { bg: "#f3f4f6", color: "#6b7280", label: b.status };
-                                        const rem = parseFloat(b.remainingAmount) || 0;
+                                        const total = parseFloat(b.totalAmount) || 0;
+                                        const adv = parseFloat(b.advanceAmount) || 0;
+                                        const rawRem = parseFloat(b.remainingAmount) || 0;
+                                        const isCleared = b.billStatus === "Clear" || b.billStatus === "Clear Bill" || b.status === "PAID" || rawRem <= 0 || (adv >= total && total > 0);
+                                        const rem = isCleared ? 0 : Math.max(0, Math.min(rawRem, total));
+                                        const received = isCleared ? total : Math.max(adv, Math.max(0, total - rem));
                                         return (
                                             <TableRow key={b.id} sx={{ "&:hover": { bgcolor: "#f9fafb" }, transition: "background-color 0.15s" }}>
                                                 <TableCell sx={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.75rem" }}>{i + 1}</TableCell>
@@ -717,10 +722,10 @@ export default function AnalyticsClient({ employees }) {
                                                         sx={{ bgcolor: sc.bg, color: sc.color, fontWeight: 600, fontSize: "0.65rem", height: 20, border: "none" }} />
                                                 </TableCell>
                                                 <TableCell sx={{ fontWeight: 700, color: "#1f2937", fontSize: "0.78rem" }}>
-                                                    Rs. {fmt(b.totalAmount)}
+                                                    Rs. {fmt(total)}
                                                 </TableCell>
                                                 <TableCell sx={{ fontWeight: 600, color: "#059669", fontSize: "0.78rem" }}>
-                                                    Rs. {fmt(b.advanceAmount)}
+                                                    Rs. {fmt(received)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography variant="caption" fontWeight={700}

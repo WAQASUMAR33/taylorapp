@@ -41,6 +41,8 @@ import {
     TablePagination,
     LinearProgress,
     TableSortLabel,
+    Tabs,
+    Tab,
 } from "@mui/material";
 import {
     Edit,
@@ -56,7 +58,72 @@ import {
     Tag,
     Camera,
     X,
+    Shirt,
+    Square,
+    Calendar,
 } from "lucide-react";
+
+// ── Urdu labels for all measurement fields ──────────────────────────────────
+const SQ_RIGHT_FIELDS = [
+    { name: "qameez_lambai", label: "قمیض" },
+    { name: "teera", label: "تیرہ" },
+    { name: "bazoo", label: "بازو" },
+    { name: "galaa", label: "گلا" },
+    { name: "chaati_around", label: "چھاتی گرد" },
+    { name: "gehra_gird", label: "گھیرا گرد" },
+    { name: "shalwar_lambai", label: "شلوار لمبائی" },
+    { name: "puhncha", label: "پہنچہ" },
+];
+
+const SQ_LEFT_FIELDS = [
+    { name: "kandha", label: "کندھا" },
+    { name: "chaati", label: "چھاتی" },
+    { name: "kamar_around", label: "کمر" },
+    { name: "gheera", label: "گھیرا" },
+    { name: "kaf", label: "کف" },
+];
+
+const SQ_ADDITIONAL_FIELDS = [
+    { name: "hip_around", label: "ہپ گرد" },
+    { name: "shalwar_gheera", label: "شلوار گھیرا" },
+];
+
+const WAISTCOAT_FIELDS = [
+    { name: "wskot_lambai", label: "واسکٹ لمبائی" },
+    { name: "wskot_teera", label: "تیرہ" },
+    { name: "wskot_gala", label: "گلا" },
+    { name: "wskot_chaati", label: "چھاتی" },
+    { name: "wskot_kamar", label: "کمر" },
+    { name: "wskot_hip", label: "ہپ" },
+];
+
+const EMPTY_MEASUREMENT_FORM = {
+    customerId: "",
+    unit: "in",
+    notes: "",
+    qameez_lambai: "", bazoo: "", teera: "", galaa: "", chaati: "", gheera: "",
+    kaf: "", gehra_gird: "", shalwar_lambai: "", puhncha: "", shalwar_gheera: "", chaati_around: "",
+    kamar_around: "", hip_around: "", kandha: "",
+    wskot_lambai: "", wskot_teera: "", wskot_gala: "", wskot_chaati: "",
+    wskot_kamar: "", wskot_hip: "",
+    front_pocket: "", side_pocket: "", shalwar_pocket: "",
+};
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const formatMeasurementDate = (dateInput) => {
+    if (!dateInput) return "—";
+    try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return "—";
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = MONTH_NAMES[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    } catch {
+        return "—";
+    }
+};
 
 export default function CustomerManagementClient({ initialCustomers, initialTotalCount, accountCategories }) {
     const { data: session } = useSession();
@@ -289,6 +356,186 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             setAddLedgerError(err.message || "Failed to save ledger entry.");
         } finally {
             setAddLedgerLoading(false);
+        }
+    };
+
+    // ── Measurement Modal State & Handlers ─────────────────────────────────────
+    const [measurementModalOpen, setMeasurementModalOpen] = useState(false);
+    const [measurementCustomer, setMeasurementCustomer] = useState(null);
+    const [measurementFormData, setMeasurementFormData] = useState(EMPTY_MEASUREMENT_FORM);
+    const [measurementModalTab, setMeasurementModalTab] = useState(0);
+    const [measurementShowAdditional, setMeasurementShowAdditional] = useState(false);
+    const [measurementHistory, setMeasurementHistory] = useState([]);
+    const [measurementLoadingHistory, setMeasurementLoadingHistory] = useState(false);
+    const [measurementSubmitting, setMeasurementSubmitting] = useState(false);
+    const [measurementError, setMeasurementError] = useState("");
+    const [measurementEditMode, setMeasurementEditMode] = useState(false);
+    const [measurementSelectedId, setMeasurementSelectedId] = useState(null);
+
+    const handleOpenMeasurementModal = async (customer) => {
+        setMeasurementCustomer(customer);
+        setMeasurementModalTab(0);
+        setMeasurementShowAdditional(false);
+        setMeasurementError("");
+        setMeasurementEditMode(false);
+        setMeasurementSelectedId(null);
+        setMeasurementFormData({
+            ...EMPTY_MEASUREMENT_FORM,
+            customerId: customer.id,
+        });
+        setMeasurementHistory([]);
+        setMeasurementModalOpen(true);
+
+        setMeasurementLoadingHistory(true);
+        try {
+            const res = await fetch(`/api/measurements?customerId=${customer.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                const historyList = Array.isArray(data) ? data : [];
+                setMeasurementHistory(historyList);
+
+                if (historyList.length > 0) {
+                    const latest = historyList[0];
+                    setMeasurementEditMode(true);
+                    setMeasurementSelectedId(latest.id);
+                    setMeasurementFormData({
+                        customerId: customer.id,
+                        unit: latest.unit || "in",
+                        notes: latest.notes || "",
+                        qameez_lambai: latest.qameez_lambai || "",
+                        bazoo: latest.bazoo || "",
+                        teera: latest.teera || "",
+                        galaa: latest.galaa || "",
+                        chaati: latest.chaati || "",
+                        gheera: latest.gheera || "",
+                        kaf: latest.kaf || "",
+                        gehra_gird: latest.gehra_gird || "",
+                        shalwar_lambai: latest.shalwar_lambai || "",
+                        puhncha: latest.puhncha || "",
+                        shalwar_gheera: latest.shalwar_gheera || "",
+                        chaati_around: latest.chaati_around || "",
+                        kamar_around: latest.kamar_around || "",
+                        hip_around: latest.hip_around || "",
+                        kandha: latest.kandha || "",
+                        wskot_lambai: latest.wskot_lambai || "",
+                        wskot_teera: latest.wskot_teera || "",
+                        wskot_gala: latest.wskot_gala || "",
+                        wskot_chaati: latest.wskot_chaati || "",
+                        wskot_kamar: latest.wskot_kamar || "",
+                        wskot_hip: latest.wskot_hip || "",
+                        front_pocket: latest.front_pocket || "",
+                        side_pocket: latest.side_pocket || "",
+                        shalwar_pocket: latest.shalwar_pocket || "",
+                    });
+                } else {
+                    // No existing measurement records -> ensure form is completely empty
+                    setMeasurementEditMode(false);
+                    setMeasurementSelectedId(null);
+                    setMeasurementFormData({
+                        ...EMPTY_MEASUREMENT_FORM,
+                        customerId: customer.id,
+                    });
+                }
+            } else {
+                setMeasurementEditMode(false);
+                setMeasurementSelectedId(null);
+                setMeasurementFormData({
+                    ...EMPTY_MEASUREMENT_FORM,
+                    customerId: customer.id,
+                });
+            }
+        } catch (err) {
+            console.error("Error fetching measurement history:", err);
+            setMeasurementEditMode(false);
+            setMeasurementSelectedId(null);
+            setMeasurementFormData({
+                ...EMPTY_MEASUREMENT_FORM,
+                customerId: customer.id,
+            });
+        } finally {
+            setMeasurementLoadingHistory(false);
+        }
+    };
+
+    const handleCloseMeasurementModal = () => {
+        if (!measurementSubmitting) {
+            setMeasurementModalOpen(false);
+            setMeasurementCustomer(null);
+            setMeasurementFormData(EMPTY_MEASUREMENT_FORM);
+            setMeasurementHistory([]);
+            setMeasurementEditMode(false);
+            setMeasurementSelectedId(null);
+        }
+    };
+
+    const handleMeasurementInputChange = (e) => {
+        const { name, value } = e.target;
+        setMeasurementFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleCopyMeasurementHistory = (historyItem) => {
+        setMeasurementEditMode(true);
+        setMeasurementSelectedId(historyItem.id);
+        setMeasurementFormData({
+            customerId: historyItem.customerId || measurementCustomer?.id || "",
+            unit: historyItem.unit || "in",
+            notes: historyItem.notes || "",
+            qameez_lambai: historyItem.qameez_lambai || "",
+            bazoo: historyItem.bazoo || "",
+            teera: historyItem.teera || "",
+            galaa: historyItem.galaa || "",
+            chaati: historyItem.chaati || "",
+            gheera: historyItem.gheera || "",
+            kaf: historyItem.kaf || "",
+            gehra_gird: historyItem.gehra_gird || "",
+            shalwar_lambai: historyItem.shalwar_lambai || "",
+            puhncha: historyItem.puhncha || "",
+            shalwar_gheera: historyItem.shalwar_gheera || "",
+            chaati_around: historyItem.chaati_around || "",
+            kamar_around: historyItem.kamar_around || "",
+            hip_around: historyItem.hip_around || "",
+            kandha: historyItem.kandha || "",
+            wskot_lambai: historyItem.wskot_lambai || "",
+            wskot_teera: historyItem.wskot_teera || "",
+            wskot_gala: historyItem.wskot_gala || "",
+            wskot_chaati: historyItem.wskot_chaati || "",
+            wskot_kamar: historyItem.wskot_kamar || "",
+            wskot_hip: historyItem.wskot_hip || "",
+            front_pocket: historyItem.front_pocket || "",
+            side_pocket: historyItem.side_pocket || "",
+            shalwar_pocket: historyItem.shalwar_pocket || "",
+        });
+        setSuccessMessage("Previous measurements loaded into the form!");
+    };
+
+    const handleSaveMeasurement = async () => {
+        if (!measurementCustomer) return;
+        setMeasurementSubmitting(true);
+        setMeasurementError("");
+        try {
+            const method = measurementEditMode ? "PUT" : "POST";
+            const payload = measurementEditMode
+                ? { ...measurementFormData, id: measurementSelectedId }
+                : measurementFormData;
+
+            const res = await fetch("/api/measurements", {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || `Failed to ${measurementEditMode ? "update" : "save"} measurement`);
+            }
+
+            setSuccessMessage(`Measurement ${measurementEditMode ? "updated" : "saved"} successfully!`);
+            setMeasurementModalOpen(false);
+            setRefreshTrigger((prev) => prev + 1);
+        } catch (err) {
+            setMeasurementError(err.message);
+        } finally {
+            setMeasurementSubmitting(false);
         }
     };
 
@@ -1599,9 +1846,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                             <Tooltip title="Measurements">
                                                 <IconButton
                                                     size="small"
-                                                    color="info"
-                                                    component={Link}
-                                                    href={`/dashboard/measurements?customerId=${customer.id}`}
+                                                    sx={{ color: "#8b5cf6", "&:hover": { bgcolor: "#f5f3ff" } }}
+                                                    onClick={() => handleOpenMeasurementModal(customer)}
                                                 >
                                                     <Ruler size={17} />
                                                 </IconButton>
@@ -2301,6 +2547,419 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         </Button>
                     </DialogActions>
                 </form>
+            </Dialog>
+
+            {/* ── Measurement Dialog ───────────────────────────── */}
+            <Dialog
+                open={measurementModalOpen}
+                onClose={handleCloseMeasurementModal}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="h6" fontWeight={700}>
+                        {measurementEditMode ? "Edit Measurement" : "Record New Measurement"}
+                    </Typography>
+                    <IconButton size="small" onClick={handleCloseMeasurementModal}>
+                        <X size={18} />
+                    </IconButton>
+                </DialogTitle>
+
+                {measurementLoadingHistory && <LinearProgress />}
+
+                <DialogContent sx={{ pt: 2.5, pb: 2 }}>
+                    {measurementError && (
+                        <Alert severity="error" onClose={() => setMeasurementError("")} sx={{ mb: 2, borderRadius: 2 }}>
+                            {measurementError}
+                        </Alert>
+                    )}
+
+                    {/* Customer Selection Row */}
+                    <Box sx={{ mb: 3 }}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            label="Select Customer"
+                            variant="outlined"
+                            disabled
+                            value={measurementCustomer ? `${measurementCustomer.name}${measurementCustomer.fatherName ? ` (${measurementCustomer.fatherName})` : ""}${measurementCustomer.phone ? ` - ${measurementCustomer.phone}` : ""}` : ""}
+                        />
+                    </Box>
+
+                    {!measurementCustomer ? (
+                        <Box sx={{ py: 8, textAlign: "center", bgcolor: "action.hover", borderRadius: 3, border: "2px dashed", borderColor: "divider" }}>
+                            <User size={44} color="#d1d5db" />
+                            <Typography color="text.secondary" variant="h6" sx={{ mt: 1 }}>Select a customer to continue</Typography>
+                        </Box>
+                    ) : (
+                        <Grid container spacing={3}>
+                            {/* Left Side: Measurement Form */}
+                            <Grid size={{ xs: 12, md: 8 }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                    <Typography variant="h6" fontWeight={700}>Measurement Values</Typography>
+                                    <TextField
+                                        select
+                                        size="small"
+                                        label="Unit"
+                                        name="unit"
+                                        value={measurementFormData.unit || "in"}
+                                        onChange={handleMeasurementInputChange}
+                                        variant="outlined"
+                                        sx={{ minWidth: 150 }}
+                                    >
+                                        <MenuItem value="in">Inches (in)</MenuItem>
+                                        <MenuItem value="cm">Centimeters (cm)</MenuItem>
+                                    </TextField>
+                                </Box>
+
+                                <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+                                    <Tabs value={measurementModalTab} onChange={(_, v) => setMeasurementModalTab(v)}>
+                                        <Tab icon={<Shirt size={17} />} iconPosition="start" label="شلوار قمیض" sx={{ fontWeight: 700 }} />
+                                        <Tab icon={<Square size={17} />} iconPosition="start" label="واسکٹ" sx={{ fontWeight: 700 }} />
+                                    </Tabs>
+                                </Box>
+
+                                {/* Shalwar Qameez Tab */}
+                                {measurementModalTab === 0 && (
+                                    <Box>
+                                        <Grid container spacing={3}>
+                                            {/* Right Column */}
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 0.5 }}>
+                                                    قمیض (دائیں طرف)
+                                                </Typography>
+                                                <Grid container spacing={2}>
+                                                    {SQ_RIGHT_FIELDS.map((f) => (
+                                                        <Grid key={f.name} size={{ xs: 12 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label={
+                                                                    <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                        {f.label}
+                                                                    </span>
+                                                                }
+                                                                name={f.name}
+                                                                value={measurementFormData[f.name] || ""}
+                                                                onChange={handleMeasurementInputChange}
+                                                                InputProps={{
+                                                                    endAdornment: (
+                                                                        <InputAdornment position="end">
+                                                                            <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                {measurementFormData.unit || "in"}
+                                                                            </Typography>
+                                                                        </InputAdornment>
+                                                                    ),
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                    ))}
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* Left Column */}
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 0.5 }}>
+                                                    کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
+                                                </Typography>
+                                                <Grid container spacing={2}>
+                                                    {SQ_LEFT_FIELDS.map((f) => (
+                                                        <Grid key={f.name} size={{ xs: 12 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label={
+                                                                    <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                        {f.label}
+                                                                    </span>
+                                                                }
+                                                                name={f.name}
+                                                                value={measurementFormData[f.name] || ""}
+                                                                onChange={handleMeasurementInputChange}
+                                                                InputProps={{
+                                                                    endAdornment: (
+                                                                        <InputAdornment position="end">
+                                                                            <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                {measurementFormData.unit || "in"}
+                                                                            </Typography>
+                                                                        </InputAdornment>
+                                                                    ),
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                    ))}
+                                                </Grid>
+
+                                                {/* جیب (Pockets) */}
+                                                <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "rgba(139, 92, 246, 0.01)" }}>
+                                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: "block", mb: 1.5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                                        جیب (Pockets)
+                                                    </Typography>
+                                                    <Grid container spacing={1.5}>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="F"
+                                                                name="front_pocket"
+                                                                value={measurementFormData.front_pocket || ""}
+                                                                onChange={handleMeasurementInputChange}
+                                                            />
+                                                        </Grid>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Side"
+                                                                name="side_pocket"
+                                                                value={measurementFormData.side_pocket || ""}
+                                                                onChange={handleMeasurementInputChange}
+                                                            />
+                                                        </Grid>
+                                                        <Grid size={{ xs: 4 }}>
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Shalwar"
+                                                                name="shalwar_pocket"
+                                                                value={measurementFormData.shalwar_pocket || ""}
+                                                                onChange={handleMeasurementInputChange}
+                                                            />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
+
+                                        {/* Collapsible Section for the remaining 2 fields */}
+                                        <Box sx={{ mt: 2.5 }}>
+                                            <Button
+                                                size="small"
+                                                variant="text"
+                                                onClick={() => setMeasurementShowAdditional(!measurementShowAdditional)}
+                                                sx={{ textTransform: "none", fontWeight: 600 }}
+                                            >
+                                                {measurementShowAdditional ? "Hide Additional Fields" : "Show Additional Fields (ہپ گرد، شلوار گھیرا)"}
+                                            </Button>
+                                            {measurementShowAdditional && (
+                                                <Paper variant="outlined" sx={{ p: 2, mt: 1, bgcolor: "action.hover", borderRadius: 2 }}>
+                                                    <Grid container spacing={2}>
+                                                        {SQ_ADDITIONAL_FIELDS.map((f) => (
+                                                            <Grid key={f.name} size={{ xs: 12, sm: 4 }}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    label={
+                                                                        <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                            {f.label}
+                                                                        </span>
+                                                                    }
+                                                                    name={f.name}
+                                                                    value={measurementFormData[f.name] || ""}
+                                                                    onChange={handleMeasurementInputChange}
+                                                                    InputProps={{
+                                                                        endAdornment: (
+                                                                            <InputAdornment position="end">
+                                                                                <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                                    {measurementFormData.unit || "in"}
+                                                                                </Typography>
+                                                                            </InputAdornment>
+                                                                        ),
+                                                                    }}
+                                                                />
+                                                            </Grid>
+                                                        ))}
+                                                    </Grid>
+                                                </Paper>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {/* Waistcoat Tab */}
+                                {measurementModalTab === 1 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ mb: 1.5, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}>
+                                            واسکٹ (Waistcoat)
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {WAISTCOAT_FIELDS.map((f) => (
+                                                <Grid key={f.name} size={{ xs: 6, sm: 4 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={
+                                                            <span style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "0.85rem" }}>
+                                                                {f.label}
+                                                            </span>
+                                                        }
+                                                        name={f.name}
+                                                        value={measurementFormData[f.name] || ""}
+                                                        onChange={handleMeasurementInputChange}
+                                                        InputProps={{
+                                                            endAdornment: (
+                                                                <InputAdornment position="end">
+                                                                    <Typography variant="caption" sx={{ color: "text.disabled", fontWeight: 600 }}>
+                                                                        {measurementFormData.unit || "in"}
+                                                                    </Typography>
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                    />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                <Box sx={{ mt: 3 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Additional Notes"
+                                        name="notes"
+                                        placeholder="Enter any additional instructions..."
+                                        multiline
+                                        rows={2}
+                                        value={measurementFormData.notes || ""}
+                                        onChange={handleMeasurementInputChange}
+                                        variant="outlined"
+                                    />
+                                </Box>
+                            </Grid>
+
+                            {/* Right Side: Profile & History */}
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <Paper variant="outlined" sx={{ p: 2, bgcolor: "action.hover", borderRadius: 2, border: "1px solid", borderColor: "divider", height: "100%", display: "flex", flexDirection: "column" }}>
+                                    {/* Profile */}
+                                    <Typography variant="subtitle1" fontWeight={700} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <User size={18} />
+                                        Customer Profile
+                                    </Typography>
+                                    <Divider sx={{ my: 1 }} />
+
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>NAME</Typography>
+                                            <Typography variant="body2" fontWeight={700}>{measurementCustomer.name}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>FATHER'S NAME</Typography>
+                                            <Typography variant="body2" fontWeight={600}>{measurementCustomer.fatherName || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>MEASUREMENT NO (M#)</Typography>
+                                            <Typography variant="body2" fontWeight={700} color="primary.main">{measurementCustomer.measurementNo || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>CODE</Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{measurementCustomer.code || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>PHONE</Typography>
+                                            <Typography variant="body2">{measurementCustomer.phone || "—"}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>CATEGORY</Typography>
+                                            <Chip label={measurementCustomer.accountCategory?.name || "Customer"} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>BALANCE</Typography>
+                                            <Typography variant="body2" fontWeight={700} color={parseFloat(measurementCustomer.balance || 0) >= 0 ? "success.main" : "error.main"}>
+                                                Rs. {Math.abs(parseFloat(measurementCustomer.balance || 0)).toFixed(2)}
+                                                {parseFloat(measurementCustomer.balance || 0) > 0 ? " (Cr)" : parseFloat(measurementCustomer.balance || 0) < 0 ? " (Dr)" : ""}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", flexDirection: "column" }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5 }}>ADDRESS</Typography>
+                                            <Typography variant="body2" color="text.primary" sx={{ bgcolor: "background.paper", p: 1, borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                                                {measurementCustomer.address || "—"}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+
+                                    {/* History */}
+                                    <Typography variant="subtitle1" fontWeight={700} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <Calendar size={18} />
+                                        Past Measurements
+                                    </Typography>
+                                    <Divider sx={{ my: 1 }} />
+
+                                    <Box sx={{ flexGrow: 1, overflowY: "auto", maxHeight: 300 }}>
+                                        {measurementLoadingHistory ? (
+                                            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                                                <CircularProgress size={24} />
+                                            </Box>
+                                        ) : measurementHistory.length === 0 ? (
+                                            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+                                                No previous measurement records found.
+                                            </Typography>
+                                        ) : (
+                                            <Stack spacing={1.5} sx={{ py: 1 }}>
+                                                {measurementHistory.map((item) => (
+                                                    <Paper key={item.id} variant="outlined" sx={{ p: 1.5, bgcolor: "background.paper", display: "flex", flexDirection: "column", gap: 1 }}>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                {formatMeasurementDate(item.takenAt)}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="primary.main" fontWeight={600} sx={{ textTransform: "uppercase" }}>
+                                                                Unit: {item.unit}
+                                                            </Typography>
+                                                        </Box>
+
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3 }}>
+                                                            {[
+                                                                item.qameez_lambai && `Length: ${item.qameez_lambai}`,
+                                                                item.bazoo && `Bazoo: ${item.bazoo}`,
+                                                                item.teera && `Teera: ${item.teera}`,
+                                                                item.chaati && `Chest: ${item.chaati}`,
+                                                                item.wskot_lambai && `W-Length: ${item.wskot_lambai}`,
+                                                            ].filter(Boolean).join(", ")}
+                                                        </Typography>
+
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="secondary"
+                                                            startIcon={<Ruler size={13} />}
+                                                            onClick={() => handleCopyMeasurementHistory(item)}
+                                                            sx={{ borderRadius: 1.5, textTransform: "none", fontSize: "0.75rem", py: 0.5, mt: 0.5 }}
+                                                        >
+                                                            Use These Values
+                                                        </Button>
+                                                    </Paper>
+                                                ))}
+                                            </Stack>
+                                        )}
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                        </Grid>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={handleCloseMeasurementModal}
+                        variant="outlined"
+                        color="inherit"
+                        disabled={measurementSubmitting}
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSaveMeasurement}
+                        disabled={measurementSubmitting || !measurementCustomer?.id}
+                        sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
+                    >
+                        {measurementSubmitting
+                            ? <CircularProgress size={20} color="inherit" />
+                            : measurementEditMode ? "Update Measurement" : "Save Measurement"}
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             {/* ── Success Snackbar ──────────────────────────── */}

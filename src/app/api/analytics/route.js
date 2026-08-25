@@ -141,14 +141,27 @@ export async function GET(req) {
         // Cutter map: cutterId → { name, amount, count }
         const cutterMap = {};
 
+        const processedBookings = [];
+
         for (const b of bookings) {
             const total = parseFloat(b.totalAmount) || 0;
             const advance = parseFloat(b.advanceAmount) || 0;
-            const remaining = parseFloat(b.remainingAmount) || 0;
+            const rawRemaining = parseFloat(b.remainingAmount) || 0;
             const itemCost = b.items.reduce((sum, i) => sum + (parseFloat(i.costPrice) || 0), 0);
 
+            // Determine if bill is cleared or fully paid
+            const isCleared = b.billStatus === "Clear" || b.billStatus === "Clear Bill" || b.status === "PAID" || rawRemaining <= 0 || (advance >= total && total > 0);
+            const remaining = isCleared ? 0 : Math.max(0, Math.min(rawRemaining, total));
+            const received = isCleared ? total : Math.max(advance, Math.max(0, total - remaining));
+
+            processedBookings.push({
+                ...b,
+                advanceAmount: received,
+                remainingAmount: remaining,
+            });
+
             totalBookingAmount += total;
-            totalReceived += advance;
+            totalReceived += received;
             totalPending += remaining;
             totalCost += itemCost;
 
@@ -230,7 +243,7 @@ export async function GET(req) {
         const totalReceivables = customers.reduce((s, c) => s + parseFloat(c.balance), 0);
 
         return NextResponse.json({
-            bookings: JSON.parse(JSON.stringify(bookings)),
+            bookings: JSON.parse(JSON.stringify(processedBookings)),
             summary: {
                 totalBookingAmount,
                 totalReceived,

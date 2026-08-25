@@ -2025,6 +2025,10 @@ ${allBookingsHtml}
             const finalStitchingItems = processedTargets.filter(item => item._isStitch);
             const finalProductItems = processedTargets.filter(item => !item._isStitch);
 
+            const finalTotal = Math.max(0, totalSub - submitDiscount);
+            const finalAdvance = parseFloat(formData.advanceAmount) || 0;
+            const finalBalance = Math.max(0, finalTotal - finalAdvance);
+
             const payload = {
                 customerId: formData.customerId,
                 billingCustomerId: (!formData.sameBilling && formData.billingCustomerId) ? formData.billingCustomerId : null,
@@ -2035,9 +2039,9 @@ ${allBookingsHtml}
                 trialDate: formData.trialDate || null,
                 tailorIds: formData.tailorIds || [],
                 cutterIds: formData.cutterIds || [],
-                totalAmount,
-                advanceAmount,
-                remainingAmount: balanceAmount,
+                totalAmount: finalTotal,
+                advanceAmount: finalAdvance,
+                remainingAmount: finalBalance,
                 notes: formData.notes,
                 items: [
                     ...finalStitchingItems.map(item => ({
@@ -3150,9 +3154,9 @@ ${allBookingsHtml}
         // Customer Balance (from billing customer or main customer)
         const custObj = payBooking.billingCustomer || payBooking.customer || {};
         const custCurrentLedgerBal = parseFloat(custObj.balance || 0);
-        // Customer Total Due Before = ledger balance + current booking remaining
-        const custTotalDueBefore = custCurrentLedgerBal + currentRemaining;
-        const custRemainingBalanceAfter = Math.max(0, custTotalDueBefore - totalDeduction);
+        // Customer Total Due Before = customer ledger balance (which already reflects this booking's due)
+        const custTotalDueBefore = custCurrentLedgerBal;
+        const custRemainingBalanceAfter = Math.max(0, custTotalDueBefore - payAmount);
 
         return (
             <Dialog 
@@ -4579,7 +4583,7 @@ ${allBookingsHtml}
                                                         </Typography>
                                                     )}
                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Adv: Rs.&nbsp;{adv.toFixed(0)}</Typography>
-                                                    <Typography variant="caption" sx={{ display: 'block', color: '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{rem.toFixed(0)}</Typography>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: rem <= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>Rem: Rs.&nbsp;{rem.toFixed(0)}</Typography>
                                                     <Chip 
                                                         label={label} 
                                                         size="small" 
@@ -4876,7 +4880,7 @@ ${allBookingsHtml}
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #ddd', pt: 1 }}>
                                         <Typography variant="body2">Remaining:</Typography>
-                                        <Typography variant="body2" fontWeight="bold" color="error">Rs. {parseFloat(selectedBooking.remainingAmount).toFixed(2)}</Typography>
+                                        <Typography variant="body2" fontWeight="bold" color={parseFloat(selectedBooking.remainingAmount || 0) <= 0 ? "success.main" : "error"}>Rs. {parseFloat(selectedBooking.remainingAmount).toFixed(2)}</Typography>
                                     </Box>
                                 </Box>
                             </Box>
