@@ -25,6 +25,7 @@ import {
     TrendingDown,
     Receipt,
     RotateCcw,
+    ReceiptText,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -57,6 +58,7 @@ const navItems = [
     { name: "Stitching Expenses", href: "/dashboard/stitching-expenses", icon: Receipt, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Expense Titles", href: "/dashboard/stitching-expense-titles", icon: Tags, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
     { name: "Ledger", href: "/dashboard/ledger", icon: BookText, moduleKey: "ledger", roles: ["ADMIN", "MANAGER"] },
+    { name: "Transaction Roster", href: "/dashboard/receiving-transactions", icon: ReceiptText, moduleKey: "ledger", roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, moduleKey: "categories", roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Option Pricing", href: "/dashboard/stitching-options", icon: SlidersHorizontal, moduleKey: "stitching", roles: ["ADMIN", "MANAGER"] },
     { name: "User Management", href: "/dashboard/users", icon: Settings, moduleKey: "users", roles: ["ADMIN"] },
