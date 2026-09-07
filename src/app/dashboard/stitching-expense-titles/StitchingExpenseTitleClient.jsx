@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table,
     TableBody,
@@ -30,6 +32,12 @@ import {
 import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Receipt } from "lucide-react";
 
 export default function StitchingExpenseTitleClient({ initialTitles }) {
+    const { data: session } = useSession();
+    const canView = checkPermission(session, "stitching-expense-titles", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = checkPermission(session, "stitching-expense-titles", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = checkPermission(session, "stitching-expense-titles", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = checkPermission(session, "stitching-expense-titles", "delete") || checkPermission(session, "stitching", "delete");
+
     const [titles, setTitles] = useState(initialTitles);
     const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);
@@ -38,6 +46,16 @@ export default function StitchingExpenseTitleClient({ initialTitles }) {
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [titleName, setTitleName] = useState("");
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Stitching Expense Titles.
+                </Alert>
+            </Box>
+        );
+    }
 
     /* ── handlers ───────────────────────────────────── */
 

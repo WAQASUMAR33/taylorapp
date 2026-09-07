@@ -86,7 +86,25 @@ export default async function ReceivingTransactionsPage() {
                     : 0);
 
             const pendingBalance = Math.max(0, rawPending);
-            const amountNum = parseFloat(entry.amount.toString());
+
+            // Extract pure cash receiving if legacy entry had "(Cash: Rs. X, Discount: Rs. Y)"
+            let amountNum = parseFloat(entry.amount.toString());
+            if (entry.description) {
+                const cashMatch = entry.description.match(/Cash:\s*Rs\.?\s*([\d,]+)/i);
+                if (cashMatch) {
+                    const parsedCash = parseFloat(cashMatch[1].replace(/,/g, ""));
+                    if (!isNaN(parsedCash) && parsedCash > 0) {
+                        amountNum = parsedCash;
+                    }
+                }
+            }
+
+            // Sanitize raw description to remove any discount mentions
+            let sanitizedRawDesc = (entry.description || "")
+                .replace(/\s*\(Discount:\s*Rs\.?\s*[\d,.]+\)/gi, "")
+                .replace(/\s*\(Cash:\s*Rs\.?\s*[\d,.]+(?:,\s*Discount:\s*Rs\.?\s*[\d,.]+)?\)/gi, "")
+                .replace(/\s*,?\s*Discount:\s*Rs\.?\s*[\d,.]+/gi, "")
+                .trim();
 
             let formattedDescription = "";
             if (isBooking) {
@@ -94,10 +112,10 @@ export default async function ReceivingTransactionsPage() {
                 formattedDescription = `Received Rs. ${amountNum.toLocaleString()} | ${bTag} | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
             } else {
                 const cstTag = entry.customer?.code ? entry.customer.code.replace(/^CUST-/i, "CST-") : "CST (Ledger)";
-                if (entry.description && entry.description.toLowerCase().includes("received")) {
-                    formattedDescription = `${entry.description} | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
-                } else if (entry.description && !entry.description.startsWith("Payment") && entry.description.length > 2) {
-                    formattedDescription = `Received Rs. ${amountNum.toLocaleString()} (${entry.description}) | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
+                if (sanitizedRawDesc && sanitizedRawDesc.toLowerCase().includes("received")) {
+                    formattedDescription = `${sanitizedRawDesc} | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
+                } else if (sanitizedRawDesc && !sanitizedRawDesc.startsWith("Payment") && sanitizedRawDesc.length > 2) {
+                    formattedDescription = `Received Rs. ${amountNum.toLocaleString()} (${sanitizedRawDesc}) | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
                 } else {
                     formattedDescription = `Received through ${cstTag} | Pending Balance: Rs. ${pendingBalance.toLocaleString()}`;
                 }

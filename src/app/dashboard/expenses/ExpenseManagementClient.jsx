@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Button,
@@ -37,6 +39,12 @@ const emptyForm = {
 };
 
 export default function ExpenseManagementClient({ initialExpenses }) {
+    const { data: session } = useSession();
+    const canView = checkPermission(session, "expenses", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = checkPermission(session, "expenses", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = checkPermission(session, "expenses", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = checkPermission(session, "expenses", "delete") || checkPermission(session, "stitching", "delete");
+
     const [expenses, setExpenses] = useState(initialExpenses);
 
     // Filters
@@ -182,6 +190,16 @@ export default function ExpenseManagementClient({ initialExpenses }) {
     }
 
     const hasFilters = filterTitle || filterDateFrom || filterDateTo;
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Expenses.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ px: 3, pb: 4 }}>

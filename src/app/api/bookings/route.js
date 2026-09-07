@@ -179,19 +179,26 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         const customerId = searchParams.get("customerId");
+        const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
+        const dateTo = searchParams.get("dateTo") || searchParams.get("to");
+        const deliveryFrom = searchParams.get("deliveryFrom");
+        const deliveryTo = searchParams.get("deliveryTo");
+        const search = searchParams.get("search");
+        const all = searchParams.get("all") === "true";
 
         const STAFF_INCLUDE = {
             staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } }
         };
         const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
 
-        const BILLING_SELECT = { select: { id: true, name: true, phone: true } };
+        const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true } };
+        const CUSTOMER_SELECT = { select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true } };
 
         if (id) {
             const booking = await prisma.booking.findUnique({
                 where: { id: parseInt(id) },
                 include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
+                    customer: CUSTOMER_SELECT,
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
@@ -207,27 +214,6 @@ export async function GET(req) {
             return NextResponse.json(booking);
         }
 
-        if (customerId) {
-            const bookings = await prisma.booking.findMany({
-                where: { customerId: parseInt(customerId) },
-                include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
-                    billingCustomer: BILLING_SELECT,
-                    tailor: TAILOR_CUTTER_SELECT,
-                    cutter: TAILOR_CUTTER_SELECT,
-                    ...STAFF_INCLUDE,
-                    items: {
-                        include: {
-                            product: { select: { id: true, name: true, sku: true } },
-                            selectedOptions: { include: { stitchingOption: true } }
-                        }
-                    }
-                },
-                orderBy: { bookingDate: "desc" }
-            });
-            return NextResponse.json(bookings);
-        }
-
         const ITEMS_INCLUDE = {
             items: {
                 include: {
@@ -237,11 +223,58 @@ export async function GET(req) {
             }
         };
 
+        const where = {};
+
+        if (customerId) {
+            where.customerId = parseInt(customerId);
+        }
+
+        if (dateFrom || dateTo) {
+            where.bookingDate = {};
+            if (dateFrom) {
+                where.bookingDate.gte = new Date(`${dateFrom}T00:00:00.000Z`);
+            }
+            if (dateTo) {
+                where.bookingDate.lte = new Date(`${dateTo}T23:59:59.999Z`);
+            }
+        } else if (!all && !customerId && !deliveryFrom && !deliveryTo && !search) {
+            // Default to today's date when no filters are provided and all is not requested
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${y}-${m}-${d}`;
+            where.bookingDate = {
+                gte: new Date(`${todayStr}T00:00:00.000Z`),
+                lte: new Date(`${todayStr}T23:59:59.999Z`),
+            };
+        }
+
+        if (deliveryFrom || deliveryTo) {
+            where.deliveryDate = {};
+            if (deliveryFrom) {
+                where.deliveryDate.gte = new Date(`${deliveryFrom}T00:00:00.000Z`);
+            }
+            if (deliveryTo) {
+                where.deliveryDate.lte = new Date(`${deliveryTo}T23:59:59.999Z`);
+            }
+        }
+
+        if (search && search.trim()) {
+            const q = search.trim();
+            where.OR = [
+                { bookingNumber: { contains: q } },
+                { customer: { name: { contains: q } } },
+                { customer: { phone: { contains: q } } },
+                { customer: { address: { contains: q } } },
+                { customer: { measurementNo: { contains: q } } },
+            ];
+        }
+
         const bookings = await prisma.booking.findMany({
+            where,
             include: {
-                customer: {
-                    select: { id: true, name: true, phone: true, email: true, measurementNo: true }
-                },
+                customer: CUSTOMER_SELECT,
                 billingCustomer: BILLING_SELECT,
                 tailor: {
                     select: { id: true, name: true }
@@ -896,10 +929,10 @@ export async function PUT(req) {
                 data: updateData,
                 include: {
                     customer: {
-                        select: { id: true, name: true, phone: true, email: true, measurementNo: true }
+                        select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true }
                     },
                     billingCustomer: {
-                        select: { id: true, name: true, phone: true }
+                        select: { id: true, code: true, name: true, phone: true, address: true }
                     },
                     tailor: {
                         select: { id: true, name: true, accountCategory: { select: { name: true } } }

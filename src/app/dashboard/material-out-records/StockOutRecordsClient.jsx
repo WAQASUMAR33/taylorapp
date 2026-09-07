@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box,
     Typography,
@@ -22,10 +24,14 @@ import {
     Grid,
     Button,
     Tooltip,
+    Alert
 } from "@mui/material";
 import { Search, TrendingDown, Package, X as XIcon } from "lucide-react";
 
 export default function StockOutRecordsClient({ initialRecords, materials }) {
+    const { data: session } = useSession();
+    const canView = checkPermission(session, "material-out-records", "view") || checkPermission(session, "materials", "view");
+
     const [records] = useState(initialRecords);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterMaterial, setFilterMaterial] = useState("all");
@@ -33,6 +39,16 @@ export default function StockOutRecordsClient({ initialRecords, materials }) {
     const [dateTo, setDateTo] = useState("");
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Stock Out Records.
+                </Alert>
+            </Box>
+        );
+    }
 
     const hasDateFilter = dateFrom || dateTo;
 

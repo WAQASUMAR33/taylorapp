@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Table,
     TableBody,
@@ -31,6 +33,12 @@ import {
 import { Plus, Search, Eye, Trash2, RotateCcw, Printer } from "lucide-react";
 
 export default function SaleReturnsClient({ initialReturns, customers, products, banks }) {
+    const { data: session } = useSession();
+    const canView = checkPermission(session, "sale-returns", "view") || checkPermission(session, "bookings", "view");
+    const canCreate = checkPermission(session, "sale-returns", "create") || checkPermission(session, "bookings", "create");
+    const canEdit = checkPermission(session, "sale-returns", "edit") || checkPermission(session, "bookings", "edit");
+    const canDelete = checkPermission(session, "sale-returns", "delete") || checkPermission(session, "bookings", "delete");
+
     const [returns, setReturns] = useState(initialReturns || []);
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [openViewDialog, setOpenViewDialog] = useState(false);
@@ -40,6 +48,16 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     const [searchQuery, setSearchQuery] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Sale Returns.
+                </Alert>
+            </Box>
+        );
+    }
 
     // Pagination
     const [page, setPage] = useState(0);

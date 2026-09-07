@@ -282,7 +282,15 @@ export default function MaterialManagementClient({ initialMaterials }) {
         m.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    /* ── render ──────────────────────────────────────── */
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Material Stock.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>

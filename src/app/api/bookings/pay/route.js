@@ -178,9 +178,7 @@ export async function POST(req) {
 
             // 3. Ledger Entries for Payment
             if (payAmt > 0) {
-                const descNotes = discountAmt > 0 
-                    ? `Payment received: Rs. ${payAmt.toLocaleString()} (Discount: Rs. ${discountAmt.toLocaleString()}) for Booking #${booking.bookingNumber || booking.id}`
-                    : `Payment received for Booking #${booking.bookingNumber || booking.id}`;
+                const descNotes = `Payment received for Booking #${booking.bookingNumber || booking.id}`;
 
                 await tx.ledgerentry.create({
                     data: {

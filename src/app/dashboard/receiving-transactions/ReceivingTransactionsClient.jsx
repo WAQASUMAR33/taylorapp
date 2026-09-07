@@ -45,7 +45,7 @@ import { checkPermission } from "@/lib/permissions";
 export default function ReceivingTransactionsClient({ initialData }) {
     const theme = useTheme();
     const { data: session } = useSession();
-    const canView = checkPermission(session, "ledger", "view");
+    const canView = checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
 
     // Filter states
     const [source, setSource] = useState("ALL"); // ALL | BOOKING | LEDGER

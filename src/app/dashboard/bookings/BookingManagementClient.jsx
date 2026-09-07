@@ -33,7 +33,8 @@ import {
     FormControlLabel,
     FormControl,
     Checkbox,
-    GlobalStyles
+    GlobalStyles,
+    LinearProgress
 } from "@mui/material";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -1041,11 +1042,19 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         return () => clearTimeout(timer);
     }, [customerSearchInput]);
 
+    const getTodayStr = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const [bookings, setBookings] = useState(Array.isArray(initialBookings) ? initialBookings : []);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCustomerId, setFilterCustomerId] = useState(null);
-    const [filterDateFrom, setFilterDateFrom] = useState("");
-    const [filterDateTo, setFilterDateTo] = useState("");
+    const [filterDateFrom, setFilterDateFrom] = useState(getTodayStr());
+    const [filterDateTo, setFilterDateTo] = useState(getTodayStr());
     const [filterDeliveryFrom, setFilterDeliveryFrom] = useState("");
     const [filterDeliveryTo, setFilterDeliveryTo] = useState("");
     const [filterItemStatus, setFilterItemStatus] = useState("");
@@ -1053,8 +1062,68 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [sortBy, setSortBy] = useState("bookingDate_desc");
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [loadingBookings, setLoadingBookings] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+
+    // Billing Account search filters
+    const [billingSearchFilters, setBillingSearchFilters] = useState({
+        name: "",
+        fatherName: "",
+        phone: "",
+        address: "",
+        measurementNo: ""
+    });
+    const [showBillingGrid, setShowBillingGrid] = useState(false);
+
+    const filteredBillingCustomers = (customerOptions || []).filter(c => {
+        if (!c) return false;
+        const matchName = !billingSearchFilters.name || (c.name || "").toLowerCase().includes(billingSearchFilters.name.toLowerCase());
+        const matchFather = !billingSearchFilters.fatherName || (c.fatherName || "").toLowerCase().includes(billingSearchFilters.fatherName.toLowerCase());
+        const matchPhone = !billingSearchFilters.phone || (c.phone || "").toLowerCase().includes(billingSearchFilters.phone.toLowerCase());
+        const matchAddress = !billingSearchFilters.address || (c.address || "").toLowerCase().includes(billingSearchFilters.address.toLowerCase());
+        const matchMeas = !billingSearchFilters.measurementNo || (c.measurementNo || "").toLowerCase().includes(billingSearchFilters.measurementNo.toLowerCase());
+        return matchName && matchFather && matchPhone && matchAddress && matchMeas;
+    });
+
+    const hasActiveBillingSearch = Object.values(billingSearchFilters).some(val => val.trim() !== "");
+
+    const loadBookingsData = async (dateFrom, dateTo, search, delivFrom, delivTo, custId) => {
+        try {
+            setLoadingBookings(true);
+            const params = new URLSearchParams();
+            if (dateFrom) params.set("dateFrom", dateFrom);
+            if (dateTo) params.set("dateTo", dateTo);
+            if (search && search.trim()) params.set("search", search.trim());
+            if (delivFrom) params.set("deliveryFrom", delivFrom);
+            if (delivTo) params.set("deliveryTo", delivTo);
+            if (custId) params.set("customerId", custId);
+            if (!dateFrom && !dateTo && !delivFrom && !delivTo && !search && !custId) {
+                params.set("all", "true");
+            }
+            const res = await fetch(`/api/bookings?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setBookings(Array.isArray(data) ? data : []);
+            }
+        } catch (err) {
+            console.error("Failed to load bookings:", err);
+        } finally {
+            setLoadingBookings(false);
+        }
+    };
+
+    const isInitialMount = useRef(true);
+    React.useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        const timer = setTimeout(() => {
+            loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId]);
 
     // Payment Modal State
     const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -1131,9 +1200,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 throw new Error(errData.error || "Failed to process checkout");
             }
 
-            const refreshRes = await fetch("/api/bookings");
-            const refreshed = await refreshRes.json();
-            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
 
             setSuccessMessage("Checkout processed successfully!");
             setCheckoutOpen(false);
@@ -1177,9 +1244,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             }
 
             // Refresh bookings
-            const refreshRes = await fetch("/api/bookings");
-            const refreshed = await refreshRes.json();
-            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
 
             setSuccessMessage("Updated successfully!");
             setPayDialogOpen(false);
@@ -1780,6 +1845,20 @@ ${allBookingsHtml}
         }
     };
 
+    const handleBillingFilterChange = (field, value) => {
+        const updatedFilters = { ...billingSearchFilters, [field]: value };
+        setBillingSearchFilters(updatedFilters);
+        
+        const isAnyFieldActive = Object.values(updatedFilters).some(v => v.trim() !== "");
+        if (!isAnyFieldActive) {
+            setFormData(prev => ({ ...prev, billingCustomerId: "" }));
+            setShowBillingGrid(false);
+        } else {
+            setShowBillingGrid(true);
+            setCustomerSearchInput(value);
+        }
+    };
+
     const handleProductChange = (index, productId) => {
         const newItems = [...cartItems];
         if (!productId) {
@@ -2104,9 +2183,7 @@ ${allBookingsHtml}
                 throw new Error(data.error || (isEdit ? "Failed to update booking" : "Failed to create booking"));
             }
 
-            const refreshRes = await fetch("/api/bookings");
-            const refreshed = await refreshRes.json();
-            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
 
             setSuccessMessage(isEdit ? "Booking updated successfully!" : "Booking created successfully!");
             setShowForm(false);
@@ -2219,6 +2296,25 @@ ${allBookingsHtml}
             measurementNo: booking.customer?.measurementNo || ""
         });
         setShowCustomerGrid(false);
+
+        if (booking.billingCustomer) {
+            setBillingSearchFilters({
+                name: booking.billingCustomer.name || "",
+                fatherName: booking.billingCustomer.fatherName || "",
+                phone: booking.billingCustomer.phone || "",
+                address: booking.billingCustomer.address || "",
+                measurementNo: booking.billingCustomer.measurementNo || ""
+            });
+        } else {
+            setBillingSearchFilters({
+                name: "",
+                fatherName: "",
+                phone: "",
+                address: "",
+                measurementNo: ""
+            });
+        }
+        setShowBillingGrid(false);
         setShowForm(true);
     };
 
@@ -2277,6 +2373,14 @@ ${allBookingsHtml}
             measurementNo: ""
         });
         setShowCustomerGrid(false);
+        setBillingSearchFilters({
+            name: "",
+            fatherName: "",
+            phone: "",
+            address: "",
+            measurementNo: ""
+        });
+        setShowBillingGrid(false);
     };
 
     const handleDelete = async (id) => {
@@ -2340,9 +2444,7 @@ ${allBookingsHtml}
                 throw new Error(data.error || "Failed to update status");
             }
 
-            const refreshRes = await fetch("/api/bookings");
-            const refreshed = await refreshRes.json();
-            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
 
             setSuccessMessage("Status updated successfully!");
         } catch (err) {
@@ -2377,9 +2479,7 @@ ${allBookingsHtml}
                 }),
             });
             if (!response.ok) throw new Error("Failed to update staff");
-            const refreshRes = await fetch("/api/bookings");
-            const refreshed = await refreshRes.json();
-            setBookings(Array.isArray(refreshed) ? refreshed : []);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
             setStaffEditOpen(false);
             setSuccessMessage("Staff updated successfully!");
         } catch (err) {
@@ -2678,63 +2778,130 @@ ${allBookingsHtml}
                                 </Grid>
                                 {!formData.sameBilling && (
                                     <Grid size={{ xs: 12 }}>
-                                        <Autocomplete
-                                            options={customerOptions}
-                                            getOptionLabel={(option) => option.name || ""}
-                                            filterOptions={(options, { inputValue }) => {
-                                                const q = (inputValue || "").toLowerCase().trim();
-                                                if (!q) return options;
-                                                return options.filter(c =>
-                                                    (c.name || "").toLowerCase().includes(q) ||
-                                                    (c.measurementNo || "").toLowerCase().includes(q) ||
-                                                    (c.phone || "").toLowerCase().includes(q) ||
-                                                    (c.address || "").toLowerCase().includes(q)
-                                                );
-                                            }}
-                                            value={(customerOptions || []).find(c => c.id === formData.billingCustomerId) || null}
-                                            onChange={(_, newValue) => setFormData(prev => ({ ...prev, billingCustomerId: newValue ? newValue.id : "" }))}
-                                            onInputChange={(event, newInputValue, reason) => {
-                                                if (reason === "input") {
-                                                    setCustomerSearchInput(newInputValue);
-                                                }
-                                            }}
-                                            loading={searchingCustomers}
-                                            renderOption={(props, option) => {
-                                                const { key, ...rest } = props;
-                                                return (
-                                                    <li key={key} {...rest}>
-                                                        <Box sx={{ py: 0.3 }}>
-                                                            <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
-                                                            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.2 }}>
-                                                                {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                                {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                                {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
-                                                            </Box>
-                                                        </Box>
-                                                    </li>
-                                                );
-                                            }}
-                                            renderInput={(params) => (
-                                                <TextField
-                                                    {...params}
-                                                    label="Billing Account *"
-                                                    size="small"
-                                                    fullWidth
-                                                    required
-                                                    placeholder="Select who will be billed"
-                                                    InputProps={{
-                                                        ...params.InputProps,
-                                                        endAdornment: (
-                                                            <>
-                                                                {searchingCustomers ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                {params.InputProps.endAdornment}
-                                                            </>
-                                                        )
-                                                    }}
-                                                    sx={FIELD_SX}
-                                                />
+                                        <Box sx={{ p: 2, bgcolor: '#fbfbfe', borderRadius: 2, border: '1px solid #e0e7ff', mb: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#4338ca' }}>
+                                                    Billing Account Selection
+                                                </Typography>
+                                                {formData.billingCustomerId && (
+                                                    <Chip
+                                                        label={`Selected: ${(customerOptions || []).find(c => c.id === formData.billingCustomerId)?.name || formData.billingCustomerId}`}
+                                                        size="small"
+                                                        onDelete={() => {
+                                                            setFormData(prev => ({ ...prev, billingCustomerId: "" }));
+                                                            setBillingSearchFilters({ name: "", fatherName: "", phone: "", address: "", measurementNo: "" });
+                                                            setShowBillingGrid(false);
+                                                        }}
+                                                        sx={{ bgcolor: '#7c3aed', color: 'white', fontWeight: 600 }}
+                                                    />
+                                                )}
+                                            </Box>
+
+                                            {/* Billing Customer Search Inputs in a single row */}
+                                            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', lg: 'row' }, width: '100%', alignItems: 'center' }}>
+                                                <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Billing Name *"
+                                                        value={billingSearchFilters.name}
+                                                        onChange={(e) => handleBillingFilterChange("name", e.target.value)}
+                                                        required={!formData.sameBilling}
+                                                        sx={FIELD_SX}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Father Name"
+                                                        value={billingSearchFilters.fatherName}
+                                                        onChange={(e) => handleBillingFilterChange("fatherName", e.target.value)}
+                                                        sx={FIELD_SX}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Phone Number"
+                                                        value={billingSearchFilters.phone}
+                                                        onChange={(e) => handleBillingFilterChange("phone", e.target.value)}
+                                                        sx={FIELD_SX}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ flex: 1.6, minWidth: 0, width: '100%' }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Address"
+                                                        value={billingSearchFilters.address}
+                                                        onChange={(e) => handleBillingFilterChange("address", e.target.value)}
+                                                        sx={FIELD_SX}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ flex: 0.8, minWidth: 0, width: '100%' }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Measurement No"
+                                                        value={billingSearchFilters.measurementNo}
+                                                        onChange={(e) => handleBillingFilterChange("measurementNo", e.target.value)}
+                                                        sx={FIELD_SX}
+                                                    />
+                                                </Box>
+                                            </Box>
+
+                                            {/* Clickable Billing Search Results Grid */}
+                                            {showBillingGrid && hasActiveBillingSearch && filteredBillingCustomers.length > 0 && (
+                                                <Card variant="outlined" sx={{ mt: 2, border: '1px solid #c7d2fe', borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                                                    <TableContainer sx={{ maxHeight: 250 }}>
+                                                        <Table size="small" stickyHeader>
+                                                            <TableHead>
+                                                                <TableRow>
+                                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Name</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Father Name</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Phone Number</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Address</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Measurement No</TableCell>
+                                                                </TableRow>
+                                                            </TableHead>
+                                                            <TableBody>
+                                                                {filteredBillingCustomers.map((cust) => (
+                                                                    <TableRow 
+                                                                        key={cust.id} 
+                                                                        hover 
+                                                                        onClick={() => {
+                                                                            setFormData(prev => ({ ...prev, billingCustomerId: cust.id }));
+                                                                            setBillingSearchFilters({
+                                                                                name: cust.name || "",
+                                                                                fatherName: cust.fatherName || "",
+                                                                                phone: cust.phone || "",
+                                                                                address: cust.address || "",
+                                                                                measurementNo: cust.measurementNo || ""
+                                                                            });
+                                                                            setShowBillingGrid(false);
+                                                                        }}
+                                                                        sx={{ 
+                                                                            cursor: 'pointer',
+                                                                            '&:hover': {
+                                                                                backgroundColor: '#e0e7ff !important'
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <TableCell sx={{ fontWeight: 600, color: '#1f2937' }}>{cust.name}</TableCell>
+                                                                        <TableCell color="text.secondary">{cust.fatherName || "—"}</TableCell>
+                                                                        <TableCell color="text.secondary">{cust.phone || "—"}</TableCell>
+                                                                        <TableCell color="text.secondary">{cust.address || "—"}</TableCell>
+                                                                        <TableCell sx={{ color: '#4338ca', fontWeight: 700 }}>M# {cust.measurementNo || "—"}</TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </Card>
                                             )}
-                                        />
+                                        </Box>
                                     </Grid>
                                 )}
                             </Grid>
@@ -4116,6 +4283,16 @@ ${allBookingsHtml}
         );
     })();
 
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Bookings.
+                </Alert>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ width: '100%', p: 3 }}>
             {formDialog}
@@ -4287,6 +4464,18 @@ ${allBookingsHtml}
                         />
                     )}
                 />
+                <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                        const today = getTodayStr();
+                        setFilterDateFrom(today);
+                        setFilterDateTo(today);
+                    }}
+                    sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#8b5cf6', color: '#7c3aed', whiteSpace: 'nowrap', fontWeight: 600 }}
+                >
+                    Today
+                </Button>
                 {(filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterCustomerId || filterItemStatus || filterMeasurementNo) && (
                     <Button
                         size="small"
@@ -4333,6 +4522,7 @@ ${allBookingsHtml}
             </Box>
 
             <TableContainer component={Card} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                {loadingBookings && <LinearProgress sx={{ height: 3, bgcolor: '#e0e7ff', '& .MuiLinearProgress-bar': { bgcolor: '#7c3aed' } }} />}
                 <Table sx={{ minWidth: 650 }}>
                     <TableHead>
                         <TableRow sx={{ bgcolor: '#f8fafc' }}>
@@ -4347,6 +4537,7 @@ ${allBookingsHtml}
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>#</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Book Date</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Address</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Tailor</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Cutter</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Items</TableCell>
@@ -4399,6 +4590,11 @@ ${allBookingsHtml}
                                             <Box>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{booking.customer?.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{booking.customer?.phone}</Typography>
+                                                {booking.customer?.address && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={booking.customer.address}>
+                                                        📍 {booking.customer.address}
+                                                    </Typography>
+                                                )}
                                                 {booking.customer?.measurementNo && (
                                                     <Typography variant="caption" sx={{ display: 'block', color: '#059669', fontWeight: 600 }}>
                                                         M# {booking.customer.measurementNo}
@@ -4411,6 +4607,12 @@ ${allBookingsHtml}
                                                 )}
                                             </Box>
                                         </Box>
+                                    </TableCell>
+                                    {/* Address */}
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{ maxWidth: 220, fontSize: '0.8rem', color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                                            {booking.customer?.address || '—'}
+                                        </Typography>
                                     </TableCell>
                                     {/* Tailor */}
                                     <TableCell>
@@ -4641,7 +4843,7 @@ ${allBookingsHtml}
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={12} align="center" sx={{ py: 8 }}>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                                         <ShoppingCart size={40} style={{ opacity: 0.25 }} />
                                         <Typography color="text.secondary" fontWeight={500}>No bookings found.</Typography>

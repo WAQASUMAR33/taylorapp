@@ -1305,6 +1305,16 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         return matchesFrom && matchesTo;
     }).sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
 
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Account Management.
+                </Alert>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ width: "100%", p: 3 }}>
 

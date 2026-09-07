@@ -23,14 +23,24 @@ const FIELD_SX = {
 export default function StitchingOptionsClient({ initialOptions }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "stitching", "view");
-    const canCreate = checkPermission(session, "stitching", "create");
-    const canEdit = checkPermission(session, "stitching", "edit");
-    const canDelete = checkPermission(session, "stitching", "delete");
+    const canView = checkPermission(session, "stitching-options", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = checkPermission(session, "stitching-options", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = checkPermission(session, "stitching-options", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = checkPermission(session, "stitching-options", "delete") || checkPermission(session, "stitching", "delete");
     const [options, setOptions] = useState(initialOptions || []);
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [error, setError] = useState("");
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Stitching Option Pricing.
+                </Alert>
+            </Box>
+        );
+    }
 
     // Dialog state
     const [dialogOpen, setDialogOpen] = useState(false);

@@ -210,16 +210,14 @@ export async function POST(req) {
             });
 
             // 5. Update Ledger Bookkeeping
-            const totalCreditAmt = cashAmt + discAmt;
-
-            // A. Credit Billing Customer's Ledger
-            if (totalCreditAmt > 0) {
+            // Pure receiving: credit only the actual cash received
+            if (cashAmt > 0) {
                 await tx.ledgerentry.create({
                     data: {
                         customerId: effectiveBillingId,
                         type: 'CREDIT',
-                        amount: totalCreditAmt,
-                        description: `Checkout Payment - Booking #${booking.bookingNumber || booking.id} (Cash: Rs. ${cashAmt}, Discount: Rs. ${discAmt})`,
+                        amount: cashAmt,
+                        description: `Checkout Payment - Booking #${booking.bookingNumber || booking.id}`,
                         bookingId: bId
                     }
                 });
@@ -227,7 +225,17 @@ export async function POST(req) {
                 await tx.customer.update({
                     where: { id: effectiveBillingId },
                     data: {
-                        balance: { decrement: totalCreditAmt }
+                        balance: { decrement: cashAmt }
+                    }
+                });
+            }
+
+            // If a discount is granted, adjust customer balance with a separate discount entry if needed, or don't mix it with receivings
+            if (discAmt > 0) {
+                await tx.customer.update({
+                    where: { id: effectiveBillingId },
+                    data: {
+                        balance: { decrement: discAmt }
                     }
                 });
             }

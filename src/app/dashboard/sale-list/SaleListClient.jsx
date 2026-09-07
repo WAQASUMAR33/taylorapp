@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { checkPermission } from "@/lib/permissions";
 import {
     Box, Card, CardContent, Typography, TextField, InputAdornment,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, IconButton, Collapse, Grid, Divider, Button, Stack,
-    Tooltip,
+    Tooltip, Alert,
 } from "@mui/material";
 import {
     Search, ChevronDown, ChevronUp, ReceiptText, TrendingUp,
@@ -141,10 +143,23 @@ function ExpandableRow({ bill }) {
 }
 
 export default function SaleListClient({ initialBills }) {
+    const { data: session } = useSession();
+    const canView = checkPermission(session, "sale-list", "view") || checkPermission(session, "bookings", "view");
+
     const [search, setSearch] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [activeQuick, setActiveQuick] = useState(null);
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Sale History.
+                </Alert>
+            </Box>
+        );
+    }
 
     const applyQuickRange = (range) => {
         const [from, to] = range.getDates();

@@ -48,6 +48,16 @@ export default function AccountCategoryClient({ initialCategories }) {
     const [successMessage, setSuccessMessage] = useState("");
     const [categoryName, setCategoryName] = useState("");
 
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Account Categories.
+                </Alert>
+            </Box>
+        );
+    }
+
     /* ── handlers ───────────────────────────────────── */
 
     const handleOpen = (category = null) => {

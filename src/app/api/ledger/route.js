@@ -362,45 +362,10 @@ export async function POST(req) {
     }
 }
 
-// DELETE - Delete a ledger entry
+// DELETE - Delete a ledger entry (Disabled: ledger entries cannot be deleted)
 export async function DELETE(req) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const id = searchParams.get("id");
-
-        if (!id) {
-            return NextResponse.json({ error: "ID is required" }, { status: 400 });
-        }
-
-        await prisma.$transaction(async (tx) => {
-            const entry = await tx.ledgerentry.findUnique({
-                where: { id: parseInt(id) },
-            });
-
-            if (!entry) {
-                throw new Error("Entry not found");
-            }
-
-            // Reverse balance adjustment
-            const balanceAdjustment = entry.type === 'DEBIT' ? -parseFloat(entry.amount || 0) : parseFloat(entry.amount || 0);
-            await tx.customer.update({
-                where: { id: entry.customerId },
-                data: {
-                    balance: { increment: balanceAdjustment }
-                }
-            });
-
-            await tx.ledgerentry.delete({
-                where: { id: parseInt(id) },
-            });
-        });
-
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error("Failed to delete ledger entry:", error);
-        return NextResponse.json(
-            { error: error.message || "Failed to delete" },
-            { status: 500 }
-        );
-    }
+    return NextResponse.json(
+        { error: "Ledger entries cannot be deleted." },
+        { status: 403 }
+    );
 }

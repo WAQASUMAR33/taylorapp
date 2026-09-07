@@ -345,17 +345,7 @@ export default function LedgerManagementClient({
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm("Are you sure you want to delete this ledger entry?")) return;
-        try {
-            const res = await fetch(`/api/ledger?id=${id}`, { method: "DELETE" });
-            if (!res.ok) throw new Error("Failed to delete ledger entry");
-            setRefetchTrigger(prev => prev + 1);
-            setSuccessMessage("Ledger entry deleted successfully!");
-        } catch (err) {
-            alert(err.message);
-        }
-    };
+
 
     const hasActiveFilters = searchQuery || searchName || searchFatherName || searchPhone || filterCustomer || dateFrom || dateTo;
 
@@ -378,7 +368,15 @@ export default function LedgerManagementClient({
 
 
 
-    /* ── render ──────────────────────────────────────── */
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Ledger.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>
@@ -799,11 +797,6 @@ export default function LedgerManagementClient({
                                                                     </IconButton>
                                                                 </Tooltip>
                                                             )}
-                                                            <Tooltip title="Delete Entry">
-                                                                <IconButton size="small" color="error" onClick={() => handleDelete(entry.id)}>
-                                                                    <Trash2 size={17} />
-                                                                </IconButton>
-                                                            </Tooltip>
                                                         </Box>
                                                     </TableCell>
                                                 </TableRow>

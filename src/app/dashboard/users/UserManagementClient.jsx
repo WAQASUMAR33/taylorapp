@@ -16,6 +16,7 @@ import {
     Lock, User, Save, Users, ShieldCheck, UserCog, Shield,
     LayoutDashboard, Calendar, BarChart3, Package, Boxes,
     BookText, Ruler, ShoppingCart, Tags, Settings, Scissors,
+    ReceiptText, RotateCcw, TrendingDown, Receipt, SlidersHorizontal, ClipboardList,
 } from "lucide-react";
 
 // ─── Role config ──────────────────────────────────────────────────────────────
@@ -30,18 +31,25 @@ const ROLE_META = {
 // ─── Module definitions ───────────────────────────────────────────────────────
 const MODULES = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, actions: ["view"] },
-    { key: "bookings", label: "Bookings", icon: Calendar, actions: ["view", "create", "edit", "delete"] },
-    { key: "analytics", label: "Analytics", icon: BarChart3, actions: ["view"] },
     { key: "customers", label: "Account Management", icon: Users, actions: ["view", "create", "edit", "delete"] },
     { key: "measurements", label: "Measurements", icon: Ruler, actions: ["view", "create", "edit", "delete"] },
-    { key: "employees", label: "Employees", icon: UserCog, actions: ["view", "create", "edit", "delete"] },
+    { key: "bookings", label: "Bookings", icon: Calendar, actions: ["view", "create", "edit", "delete"] },
+    { key: "analytics", label: "Analytics", icon: BarChart3, actions: ["view"] },
+    { key: "sale-list", label: "Sale History", icon: ClipboardList, actions: ["view"] },
+    { key: "sale-returns", label: "Sale Returns", icon: RotateCcw, actions: ["view", "create", "edit", "delete"] },
     { key: "products", label: "Products", icon: Package, actions: ["view", "create", "edit", "delete"] },
     { key: "materials", label: "Material Stock", icon: Boxes, actions: ["view", "create", "edit", "delete"] },
+    { key: "material-out-records", label: "Stock Out Records", icon: TrendingDown, actions: ["view", "create", "delete"] },
     { key: "purchases", label: "Purchases", icon: ShoppingCart, actions: ["view", "create", "edit", "delete"] },
-    { key: "ledger", label: "Ledger", icon: BookText, actions: ["view"] },
+    { key: "expenses", label: "General Expenses", icon: Receipt, actions: ["view", "create", "edit", "delete"] },
+    { key: "stitching-expenses", label: "Stitching Expenses", icon: Receipt, actions: ["view", "create", "edit", "delete"] },
+    { key: "stitching-expense-titles", label: "Stitching Expense Titles", icon: Tags, actions: ["view", "create", "edit", "delete"] },
+    { key: "ledger", label: "Ledger", icon: BookText, actions: ["view", "create"] },
+    { key: "receiving-transactions", label: "Transaction Roster", icon: ReceiptText, actions: ["view"] },
     { key: "categories", label: "Account Categories", icon: Tags, actions: ["view", "create", "edit", "delete"] },
-    { key: "stitching", label: "Stitching Orders", icon: Scissors, actions: ["view", "create", "edit", "delete"] },
+    { key: "stitching-options", label: "Stitching Option Pricing", icon: SlidersHorizontal, actions: ["view", "create", "edit", "delete"] },
     { key: "users", label: "User Management", icon: Settings, actions: ["view", "create", "edit", "delete"] },
+    { key: "settings", label: "System Settings", icon: SlidersHorizontal, actions: ["view", "create", "edit", "delete"] },
 ];
 
 // Default full-access permissions (for ADMIN)
@@ -50,8 +58,21 @@ const FULL_PERMISSIONS = Object.fromEntries(
 );
 
 // Default restricted permissions (for STAFF - view only on allowed modules)
+const STAFF_ALLOWED_MODULES = [
+    "dashboard",
+    "bookings",
+    "customers",
+    "measurements",
+    "receiving-transactions",
+    "sale-list",
+    "sale-returns"
+];
+
 const DEFAULT_STAFF_PERMISSIONS = Object.fromEntries(
-    MODULES.map(m => [m.key, Object.fromEntries(m.actions.map(a => [a, a === "view"]))])
+    MODULES.map(m => [
+        m.key,
+        Object.fromEntries(m.actions.map(a => [a, STAFF_ALLOWED_MODULES.includes(m.key) && a === "view"]))
+    ])
 );
 
 const ACTION_COLORS = {
@@ -65,7 +86,7 @@ function getDefaultPermissions(role) {
     if (role === "ADMIN") return FULL_PERMISSIONS;
     if (role === "MANAGER") return Object.fromEntries(
         MODULES.map(m => [m.key, Object.fromEntries(
-            m.actions.map(a => [a, m.key !== "users"])
+            m.actions.map(a => [a, m.key !== "users" && m.key !== "settings"])
         )])
     );
     return DEFAULT_STAFF_PERMISSIONS;

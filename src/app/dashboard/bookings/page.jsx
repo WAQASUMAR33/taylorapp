@@ -12,7 +12,19 @@ export const metadata = {
 
 async function getBookings() {
     try {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${y}-${m}-${d}`;
+
         const bookings = await prisma.booking.findMany({
+            where: {
+                bookingDate: {
+                    gte: new Date(`${todayStr}T00:00:00.000Z`),
+                    lte: new Date(`${todayStr}T23:59:59.999Z`),
+                }
+            },
             include: {
                 customer: {
                     select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true }
@@ -31,7 +43,7 @@ async function getBookings() {
                     }
                 },
                 billingCustomer: {
-                    select: { id: true, name: true, phone: true }
+                    select: { id: true, code: true, name: true, phone: true, address: true }
                 },
                 items: {
                     include: {

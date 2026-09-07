@@ -181,12 +181,26 @@ export default function AnalyticsClient({ employees }) {
         }
     }, [from, to, filterTailor, filterCutter]);
 
-    useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
+    useEffect(() => { 
+        if (canView) {
+            fetchAnalytics(); 
+        }
+    }, [fetchAnalytics, canView]);
 
     const s = data?.summary || {};
     const profitMargin = s.totalBookingAmount > 0 ? ((s.totalProfit / s.totalBookingAmount) * 100) : 0;
     const tailorMax = Math.max(...(data?.tailorBreakdown || []).map(t => t.amount), 1);
     const cutterMax = Math.max(...(data?.cutterBreakdown || []).map(c => c.amount), 1);
+
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Analytics.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: 3 }}>

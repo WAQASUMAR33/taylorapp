@@ -300,6 +300,16 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         }
     };
 
+    if (!canView && session) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
+                    Access Denied: You do not have permission to view Products.
+                </Alert>
+            </Box>
+        );
+    }
+
     const filteredProducts = (products || []).filter(prod =>
         (prod.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (prod.sku || "").toLowerCase().includes(searchQuery.toLowerCase())

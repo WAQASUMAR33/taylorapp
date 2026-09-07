@@ -23,11 +23,19 @@ export function checkPermission(session, moduleKey, action = "view") {
 
     // Fallback logic when permissions are not explicitly defined
     if (role === "MANAGER") {
-        return moduleKey !== "users";
+        return moduleKey !== "users" && moduleKey !== "settings";
     }
     if (role === "STAFF") {
         if (action === "view") {
-            return ["dashboard", "bookings", "customers", "measurements"].includes(moduleKey);
+            return [
+                "dashboard", 
+                "bookings", 
+                "customers", 
+                "measurements", 
+                "receiving-transactions", 
+                "sale-list", 
+                "sale-returns"
+            ].includes(moduleKey);
         }
         return false;
     }

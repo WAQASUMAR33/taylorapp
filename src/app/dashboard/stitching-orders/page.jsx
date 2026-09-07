@@ -1,4 +1,8 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { checkPermission } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 import BookingManagementClient from "../bookings/BookingManagementClient";
 import { Container, Box, Typography } from "@mui/material";
 import { Scissors } from "lucide-react";
@@ -121,6 +125,12 @@ async function getBanks() {
 }
 
 export default async function StitchingOrdersPage() {
+    const session = await getServerSession(authOptions);
+    const canView = checkPermission(session, "stitching-orders", "view") || checkPermission(session, "bookings", "view");
+    if (!canView) {
+        redirect("/dashboard");
+    }
+
     const bookings = await getBookings();
     const customers = await getCustomers();
     const products = await getProducts();
