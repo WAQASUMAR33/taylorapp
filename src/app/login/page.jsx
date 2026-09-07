@@ -37,7 +37,7 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Invalid email or password. Please try again.");
+                setError("Invalid username or password. Please try again.");
             } else {
                 router.push("/dashboard");
             }
@@ -124,12 +124,12 @@ export default function LoginPage() {
                     <form onSubmit={handleSubmit}>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
                             <TextField
-                                id="email"
-                                label="Email"
+                                id="username"
+                                label="Username"
                                 variant="outlined"
                                 fullWidth
                                 required
-                                autoComplete="email"
+                                autoComplete="username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 sx={{
