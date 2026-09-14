@@ -64,7 +64,7 @@ function makeBarcodesvg(value) {
 }
 
 export default function ProductManagementClient({ initialProducts }) {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "products", "view");
     const canCreate = checkPermission(session, "products", "create");
@@ -229,13 +229,24 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         setError("");
     };
 
-    const handleOpen = () => { resetForm(); setOpen(true); };
+    const handleOpen = () => {
+        if (!canCreate) {
+            setError("You do not have permission to add products.");
+            return;
+        }
+        resetForm();
+        setOpen(true);
+    };
 
     const handleClose = () => {
         if (!loading) { setOpen(false); resetForm(); }
     };
 
     const handleEdit = (prod) => {
+        if (!canEdit) {
+            setError("You do not have permission to edit products.");
+            return;
+        }
         setEditMode(true);
         setSelectedProdId(prod.id);
         setFormData({
@@ -256,6 +267,15 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
     };
 
     const handleSubmit = async () => {
+        if (editMode && !canEdit) {
+            setError("You do not have permission to edit products.");
+            return;
+        }
+        if (!editMode && !canCreate) {
+            setError("You do not have permission to add products.");
+            return;
+        }
+
         setLoading(true);
         setError("");
         try {
@@ -286,6 +306,10 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
     };
 
     const handleDelete = async (id) => {
+        if (!canDelete) {
+            alert("You do not have permission to delete products.");
+            return;
+        }
         if (!confirm("Are you sure you want to delete this product?")) return;
         try {
             const response = await fetch(`/api/products?id=${id}`, { method: "DELETE" });
@@ -300,7 +324,15 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         }
     };
 
-    if (!canView && session) {
+    if (status === "loading") {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (!canView) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
@@ -401,14 +433,16 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                         ),
                     }}
                 />
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={handleOpen}
-                    sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
-                >
-                    Add Product
-                </Button>
+                {canCreate && (
+                    <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        onClick={handleOpen}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                    >
+                        Add Product
+                    </Button>
+                )}
             </Box>
 
             {/* ── Products table ──────────────────────────────── */}
@@ -488,16 +522,20 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                                         <Printer size={17} />
                                                     </IconButton>
                                                 </Tooltip>
-                                                <Tooltip title="Edit Product">
-                                                    <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
-                                                        <Edit size={17} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Delete Product">
-                                                    <IconButton size="small" color="error" onClick={() => handleDelete(prod.id)}>
-                                                        <Trash2 size={17} />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                {canEdit && (
+                                                    <Tooltip title="Edit Product">
+                                                        <IconButton size="small" color="primary" onClick={() => handleEdit(prod)}>
+                                                            <Edit size={17} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
+                                                {canDelete && (
+                                                    <Tooltip title="Delete Product">
+                                                        <IconButton size="small" color="error" onClick={() => handleDelete(prod.id)}>
+                                                            <Trash2 size={17} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
                                             </Box>
                                         </TableCell>
                                     </TableRow>
@@ -717,7 +755,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                     </Button>
                     <Button
                         variant="contained" onClick={handleSubmit}
-                        disabled={loading || !formData.name?.trim() || !formData.sku?.trim()}
+                        disabled={loading || !formData.name?.trim() || !formData.sku?.trim() || (editMode ? !canEdit : !canCreate)}
                         startIcon={loading ? null : <Save size={17} />}
                         sx={{ borderRadius: 2, textTransform: "none", px: 3, fontWeight: 600 }}
                     >

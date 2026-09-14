@@ -41,6 +41,8 @@ import {
     Tooltip
 } from "@mui/material";
 
+import { checkPermission } from "@/lib/permissions";
+
 const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, moduleKey: "dashboard", roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Account Management", href: "/dashboard/customers", icon: Users, moduleKey: "customers", roles: ["ADMIN", "MANAGER", "STAFF"] },
@@ -77,14 +79,21 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
         const role = session.user.role;
         if (role === "ADMIN") return true;
 
-        const perms = session.user.permissions;
+        let perms = session.user.permissions;
+        if (typeof perms === "string") {
+            try {
+                perms = JSON.parse(perms);
+            } catch {
+                perms = null;
+            }
+        }
         if (item.moduleKey && perms && typeof perms === "object") {
             const modPerm = perms[item.moduleKey];
             if (modPerm !== undefined) {
                 return Boolean(modPerm.view || modPerm.create || modPerm.edit || modPerm.delete);
             }
         }
-        return item.roles.includes(role);
+        return checkPermission(session, item.moduleKey, "view");
     });
 
     return (

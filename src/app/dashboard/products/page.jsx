@@ -2,6 +2,10 @@ import prisma from "@/lib/prisma";
 import ProductManagementClient from "./ProductManagementClient";
 import { Container, Box, Typography } from "@mui/material";
 import { PackageSearch } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { checkPermission } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +27,12 @@ async function getProducts() {
 }
 
 export default async function ProductManagementPage() {
+    const session = await getServerSession(authOptions);
+    const canView = checkPermission(session, "products", "view");
+    if (!canView) {
+        redirect("/dashboard");
+    }
+
     const products = await getProducts();
 
     return (
