@@ -212,13 +212,31 @@ export async function POST(req) {
             // 5. Update Ledger Bookkeeping
             // Pure receiving: credit only the actual cash received
             if (cashAmt > 0) {
+                const checkoutEntryDate = new Date();
+                const descNotes = `Checkout Payment - Booking #${booking.bookingNumber || booking.id}`;
+
+                // Record in dedicated receiving model
+                const receiving = await tx.receiving.create({
+                    data: {
+                        receiptNo: `REC-${booking.bookingNumber || booking.id}-CHK`,
+                        customerId: effectiveBillingId,
+                        bookingId: bId,
+                        amount: cashAmt,
+                        paymentMode: 'CASH',
+                        receivingDate: checkoutEntryDate,
+                        description: descNotes
+                    }
+                });
+
                 await tx.ledgerentry.create({
                     data: {
                         customerId: effectiveBillingId,
                         type: 'CREDIT',
                         amount: cashAmt,
-                        description: `Checkout Payment - Booking #${booking.bookingNumber || booking.id}`,
-                        bookingId: bId
+                        description: descNotes,
+                        bookingId: bId,
+                        receivingId: receiving.id,
+                        entryDate: checkoutEntryDate
                     }
                 });
 
@@ -228,20 +246,8 @@ export async function POST(req) {
                         balance: { decrement: cashAmt }
                     }
                 });
-            }
 
-            // If a discount is granted, adjust customer balance with a separate discount entry if needed, or don't mix it with receivings
-            if (discAmt > 0) {
-                await tx.customer.update({
-                    where: { id: effectiveBillingId },
-                    data: {
-                        balance: { decrement: discAmt }
-                    }
-                });
-            }
-
-            // B. Debit Cash Account (for cash received)
-            if (cashAmt > 0) {
+                // B. Debit Cash Account (for cash received)
                 const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
                 if (cashAccount) {
                     await tx.ledgerentry.create({
@@ -250,7 +256,9 @@ export async function POST(req) {
                             type: 'DEBIT',
                             amount: cashAmt,
                             description: `Cash received at Checkout from ${billingName} (Booking #${booking.bookingNumber || booking.id})`,
-                            bookingId: bId
+                            bookingId: bId,
+                            receivingId: receiving.id,
+                            entryDate: checkoutEntryDate
                         }
                     });
 
@@ -261,6 +269,16 @@ export async function POST(req) {
                         }
                     });
                 }
+            }
+
+            // If a discount is granted, adjust customer balance with a separate discount entry if needed, or don't mix it with receivings
+            if (discAmt > 0) {
+                await tx.customer.update({
+                    where: { id: effectiveBillingId },
+                    data: {
+                        balance: { decrement: discAmt }
+                    }
+                });
             }
 
             // C. Debit Customer Ledger Account when Transferred to Ledger (All suits delivered & balance > 0)

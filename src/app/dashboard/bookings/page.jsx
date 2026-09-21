@@ -27,7 +27,19 @@ async function getBookings() {
             },
             include: {
                 customer: {
-                    select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true }
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        phone: true,
+                        email: true,
+                        address: true,
+                        measurementNo: true,
+                        measurements: {
+                            orderBy: { takenAt: "desc" },
+                            take: 1
+                        }
+                    }
                 },
                 tailor: {
                     select: { id: true, name: true, accountCategory: { select: { name: true } } }
@@ -50,6 +62,17 @@ async function getBookings() {
                         product: { select: { id: true, name: true, sku: true } },
                         selectedOptions: { include: { stitchingOption: true } }
                     }
+                },
+                ledgerEntries: {
+                    select: {
+                        id: true,
+                        type: true,
+                        amount: true,
+                        description: true,
+                        entryDate: true,
+                        customerId: true
+                    },
+                    orderBy: { entryDate: "desc" }
                 }
             },
             orderBy: { bookingDate: "desc" },

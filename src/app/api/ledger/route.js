@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+async function getOrCreateCashAccount(tx) {
+    let acc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: 'Cash Account', code: 'CASH-SYS-001', notes: 'System cash ledger account' }
+        });
+    }
+    return acc;
+}
+
+async function getOrCreateBankAccount(tx, bankId) {
+    const bank = await tx.bank.findUnique({ where: { id: bankId } });
+    if (!bank) throw new Error(`Bank with ID ${bankId} not found`);
+    const accountName = `Bank Account - ${bank.name}`;
+    let acc = await tx.customer.findFirst({ where: { name: accountName } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: accountName, code: `BANK-${bankId}`, notes: `System receiving account for ${bank.name}` }
+        });
+    }
+    return { acc, bank };
+}
+
 // GET - Fetch paginated and filtered ledger entries
 export async function GET(req) {
     try {
@@ -89,6 +112,7 @@ export async function GET(req) {
                 include: {
                     customer: true,
                     purchase: true,
+                    receiving: true,
                     booking: {
                         include: {
                             customer: true,
@@ -272,6 +296,10 @@ export async function GET(req) {
         const serializedEntries = entries.map(entry => ({
             ...entry,
             amount: entry.amount.toString(),
+            receiving: entry.receiving ? {
+                ...entry.receiving,
+                amount: entry.receiving.amount.toString()
+            } : null,
             customer: entry.customer ? {
                 ...entry.customer,
                 balance: entry.customer.balance ? parseFloat(entry.customer.balance.toString()) : 0
@@ -303,7 +331,7 @@ export async function GET(req) {
     } catch (error) {
         console.error("Failed to fetch ledger entries:", error);
         return NextResponse.json(
-            { error: "Failed to fetch ledger entries" },
+            { error: "Failed to fetch ledger entries", details: error.message },
             { status: 500 }
         );
     }
@@ -313,7 +341,7 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { customerId, type, amount, description, purchaseId } = body;
+        const { customerId, type, amount, description, purchaseId, bookingId, paymentMethod, bankId, entryDate } = body;
 
         if (!customerId || !type || !amount) {
             return NextResponse.json(
@@ -322,34 +350,113 @@ export async function POST(req) {
             );
         }
 
-        // Run only the two atomic writes inside the transaction.
-        // Avoid any `include` inside tx — nested queries cause P2028 timeout.
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return NextResponse.json(
+                { error: "Amount must be a positive number" },
+                { status: 400 }
+            );
+        }
+
+        const resolvedDate = entryDate ? new Date(entryDate) : new Date();
+
+        // Run only the atomic writes inside the transaction.
         const { id: newEntryId } = await prisma.$transaction(async (tx) => {
-            // 1. Create the ledger entry (no include)
+            let receivingId = null;
+
+            // If entry is CREDIT (money received from customer), record in the new receiving model
+            if (type === 'CREDIT') {
+                const today = new Date();
+                const datePrefix = `REC-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+                const countToday = await tx.receiving.count({
+                    where: { receiptNo: { startsWith: datePrefix } }
+                });
+                const receiptNo = `${datePrefix}-${String(countToday + 1).padStart(4, '0')}`;
+
+                const isBank = (paymentMethod === 'BANK') || (/bank/i.test(description || ''));
+                const paymentMode = isBank ? 'BANK' : 'CASH';
+
+                const receiving = await tx.receiving.create({
+                    data: {
+                        receiptNo,
+                        customerId: parseInt(customerId),
+                        bookingId: bookingId ? parseInt(bookingId) : null,
+                        amount: parsedAmount,
+                        paymentMode,
+                        bankId: (isBank && bankId) ? parseInt(bankId) : null,
+                        receivingDate: resolvedDate,
+                        description: description || 'Ledger Receiving Entry'
+                    }
+                });
+                receivingId = receiving.id;
+            }
+
+            // 1. Create the customer ledger entry
             const ledgerEntry = await tx.ledgerentry.create({
                 data: {
                     customerId: parseInt(customerId),
                     type,
-                    amount: parseFloat(amount),
+                    amount: parsedAmount,
                     description,
                     purchaseId: purchaseId ? parseInt(purchaseId) : null,
+                    bookingId: bookingId ? parseInt(bookingId) : null,
+                    receivingId: receivingId || null,
+                    entryDate: resolvedDate,
                 },
             });
 
             // 2. Update customer balance
-            const balanceAdjustment = type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount);
+            const balanceAdjustment = type === 'DEBIT' ? parsedAmount : -parsedAmount;
             await tx.customer.update({
                 where: { id: parseInt(customerId) },
                 data: { balance: { increment: balanceAdjustment } },
             });
 
-            return ledgerEntry;
-        });
+            // 3. If CREDIT (receiving) and not Cash/Bank account itself, sync double-entry to Cash Account or Bank Account
+            if (type === 'CREDIT') {
+                const cust = await tx.customer.findUnique({ where: { id: parseInt(customerId) } });
+                if (cust && cust.name !== 'Cash Account' && !cust.name.startsWith('Bank Account')) {
+                    const isBank = (paymentMethod === 'BANK') || (/bank/i.test(description || ''));
+                    if (isBank && bankId) {
+                        const { acc: bankAcc, bank } = await getOrCreateBankAccount(tx, parseInt(bankId));
+                        await tx.ledgerentry.create({
+                            data: {
+                                customerId: bankAcc.id,
+                                type: 'DEBIT',
+                                amount: parsedAmount,
+                                description: `Bank Received from ${cust.name} - ${description || 'Ledger Entry'}`,
+                                bookingId: bookingId ? parseInt(bookingId) : null,
+                                receivingId: receivingId || null,
+                                entryDate: resolvedDate
+                            }
+                        });
+                        await tx.customer.update({ where: { id: bankAcc.id }, data: { balance: { increment: parsedAmount } } });
+                        await tx.bank.update({ where: { id: parseInt(bankId) }, data: { balance: { increment: parsedAmount } } });
+                    } else {
+                        const cashAcc = await getOrCreateCashAccount(tx);
+                        await tx.ledgerentry.create({
+                            data: {
+                                customerId: cashAcc.id,
+                                type: 'DEBIT',
+                                amount: parsedAmount,
+                                description: `Cash Received from ${cust.name} - ${description || 'Ledger Entry'}`,
+                                bookingId: bookingId ? parseInt(bookingId) : null,
+                                receivingId: receivingId || null,
+                                entryDate: resolvedDate
+                            }
+                        });
+                        await tx.customer.update({ where: { id: cashAcc.id }, data: { balance: { increment: parsedAmount } } });
+                    }
+                }
+            }
 
-        // Fetch the full entry with relations OUTSIDE the transaction (safe, no timeout risk)
+            return ledgerEntry;
+        }, { timeout: 25000, maxWait: 15000 });
+
+        // Fetch the full entry with relations OUTSIDE the transaction
         const result = await prisma.ledgerentry.findUnique({
             where: { id: newEntryId },
-            include: { customer: true, purchase: true },
+            include: { customer: true, purchase: true, booking: true, receiving: true },
         });
 
         return NextResponse.json(result, { status: 201 });

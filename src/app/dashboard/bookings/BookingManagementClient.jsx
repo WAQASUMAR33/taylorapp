@@ -782,8 +782,15 @@ function TailorTicket({ booking, measurements }) {
                 const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
                 return stitchingItems.slice(0, 1).map((item, idx) => {
                     const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                    const src = measurements && Object.keys(measurements).length > 0 ? measurements : item;
+                    const activeMeas = measurements || booking.customer?.measurements?.[0];
+                    const src = (activeMeas && Object.keys(activeMeas).length > 0)
+                        ? { ...activeMeas, ...item, ...Object.fromEntries(Object.entries(activeMeas).filter(([_, v]) => v != null && v !== '')) }
+                        : item;
                     const measureRows = getMeasureRows(src, isWskot);
+
+                    const measNotes = activeMeas?.notes?.trim() || '';
+                    const itemNotes = item.itemNote?.trim() || '';
+                    const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
 
                     return (
                         <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
@@ -806,29 +813,15 @@ function TailorTicket({ booking, measurements }) {
                                     border: '1px solid #000',
                                     margin: '5px',
                                     padding: '8px 10px',
-                                    fontSize: 15,
-                                    minHeight: 150,
+                                    fontSize: 14,
+                                    minHeight: 140,
                                     fontWeight: 600,
                                     lineHeight: 1.6,
                                     whiteSpace: 'pre-wrap',
+                                    fontFamily: "Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif"
                                 }}>
-                                    {item.itemNote || ''}
+                                    {displayNotes || ''}
                                 </div>
-                                {measurements?.notes && (
-                                    <div style={{
-                                        borderTop: '1px dashed #999',
-                                        margin: '0 5px 5px 5px',
-                                        padding: '6px 10px',
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        lineHeight: 1.5,
-                                        whiteSpace: 'pre-wrap',
-                                        color: '#333',
-                                    }}>
-                                        <span style={{ fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Meas. Notes: </span>
-                                        {measurements.notes}
-                                    </div>
-                                )}
                             </div>
 
                             {/* ── Stitching options column ── */}
@@ -1131,12 +1124,16 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [payReceived, setPayReceived] = useState("");
     const [payDiscount, setPayDiscount] = useState("0");
     const [payDeliverQuantities, setPayDeliverQuantities] = useState({});
+    const [payPaymentMethod, setPayPaymentMethod] = useState("CASH");
+    const [payBankId, setPayBankId] = useState("");
     const [paying, setPaying] = useState(false);
 
     const handleOpenPayDialog = (booking) => {
         setPayBooking(booking);
         setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
         setPayDiscount("0");
+        setPayPaymentMethod("CASH");
+        setPayBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
 
         // Initialize delivery quantities for undelivered items
         const initialDel = {};
@@ -1234,7 +1231,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     bookingId: payBooking.id,
                     paymentAmount: amount,
                     discountAmount: discount,
-                    itemsDelivery
+                    itemsDelivery,
+                    paymentMethod: payPaymentMethod,
+                    bankId: payPaymentMethod === 'BANK' && payBankId ? parseInt(payBankId) : null
                 })
             });
 
@@ -1412,17 +1411,33 @@ ${periodHtml}
     const applyMeasurementToItem = (item, measurement) => ({
         ...item,
         ...Object.fromEntries(MEASUREMENT_KEYS.map(k => [k, measurement?.[k] ?? item[k] ?? ""])),
+        itemNote: item.itemNote || measurement?.notes || "",
     });
 
     // Fetch measurements when needed; returns the record for immediate use
-    const fetchMeasurements = async (customerId) => {
+    const fetchMeasurements = async (customerId, measurementNo = null, phone = null) => {
         try {
-            const res = await fetch(`/api/measurements?customerId=${customerId}`);
-            if (res.ok) {
-                const data = await res.json();
-                const measurement = data.length > 0 ? data[0] : null;
-                setCustomerMeasurements(measurement);
-                return measurement;
+            if (customerId) {
+                const res = await fetch(`/api/measurements?customerId=${customerId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        setCustomerMeasurements(data[0]);
+                        return data[0];
+                    }
+                }
+            }
+            if (measurementNo || phone) {
+                const searchQ = measurementNo || phone;
+                const res = await fetch(`/api/measurements?search=${encodeURIComponent(searchQ)}&limit=1`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = data.measurements || (Array.isArray(data) ? data : []);
+                    if (list.length > 0) {
+                        setCustomerMeasurements(list[0]);
+                        return list[0];
+                    }
+                }
             }
         } catch (error) {
             console.error("Failed to fetch measurements", error);
@@ -1435,9 +1450,22 @@ ${periodHtml}
         setPrintDialogOpen(true);
     };
 
-    const openStitchingTicketWindow = (bookingOrBookings, measurements) => {
+    const openStitchingTicketWindow = async (bookingOrBookings, measurements) => {
         const bookingList = Array.isArray(bookingOrBookings) ? bookingOrBookings : [bookingOrBookings];
         if (bookingList.length === 0) return;
+
+        const bookingMeasMap = new Map();
+        for (const b of bookingList) {
+            let m = (bookingList.length === 1 && measurements) ? measurements : null;
+            if (!m && b.customer?.measurements?.length > 0) {
+                m = b.customer.measurements[0];
+            }
+            if (!m && (b.customerId || b.customer?.id)) {
+                const cId = b.customerId || b.customer?.id;
+                m = await fetchMeasurements(cId, b.customer?.measurementNo, b.customer?.phone);
+            }
+            bookingMeasMap.set(b.id, m);
+        }
 
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
@@ -1464,7 +1492,10 @@ ${periodHtml}
 
             const itemsHtml = stitchingItems.slice(0, 1).map((item, idx) => {
                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                const src = meas && Object.keys(meas).length > 0 ? meas : item;
+                const activeMeas = meas || booking.customer?.measurements?.[0];
+                const src = (activeMeas && Object.keys(activeMeas).length > 0)
+                    ? { ...activeMeas, ...item, ...Object.fromEntries(Object.entries(activeMeas).filter(([_, v]) => v != null && v !== '')) }
+                    : item;
 
                 const measureFields = isWskot ? [
                     ['واسکٹ لمبائی', 'wskot_lambai'],
@@ -1516,6 +1547,10 @@ ${periodHtml}
                     return `<div class="sbox" style="border:1px solid #000;margin:3px 0;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val}</div>`;
                 }).join('');
 
+                const measNotes = activeMeas?.notes?.trim() || '';
+                const itemNotes = item.itemNote?.trim() || '';
+                const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
+
                 return `
                 <div class="suit" style="margin-top:10px;">
                     <div class="suit-hdr">
@@ -1525,8 +1560,7 @@ ${periodHtml}
                     <div class="suit-body">
                         <div class="col-notes" style="border-right:1px solid #000;">
                             <div class="col-hdr">Notes</div>
-                            <div class="nbox">${item.itemNote || ''}</div>
-                            ${meas?.notes ? `<div class="meas-note"><span class="meas-note-label">Meas. Notes: </span>${meas.notes}</div>` : ''}
+                            <div class="nbox">${displayNotes || ''}</div>
                         </div>
                         <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid #000;">
                             <div>
@@ -1619,7 +1653,10 @@ ${periodHtml}
             ? `Tailor Ticket — ${bookingList[0].bookingNumber || bookingList[0].id}`
             : `Tailor Tickets — ${bookingList.length} Bookings`;
 
-        const allBookingsHtml = bookingList.map(b => buildBookingHtml(b, measurements)).join('');
+        const allBookingsHtml = bookingList.map(b => {
+            const m = bookingMeasMap.get(b.id);
+            return buildBookingHtml(b, m);
+        }).join('');
 
         const html = `<!DOCTYPE html>
 <html>
@@ -1662,7 +1699,7 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
 .sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
-.nbox{border:1px solid #000;margin:5px;padding:8px;min-height:140px;font-size:13px;white-space:pre-wrap}
+.nbox{border:1px solid #000;margin:5px;padding:8px 10px;min-height:140px;font-size:14px;font-weight:600;line-height:1.6;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
 .order-note{border:1px solid #000;padding:5px 8px;font-size:11px;margin-top:4px}
 @media print{
     body{padding:0}
@@ -1692,7 +1729,7 @@ ${allBookingsHtml}
             const selected = filteredBookings.filter(b => selectedIds.has(b.id));
             setIsBulkPrint(false);
             if (type === 'STITCHING') {
-                openStitchingTicketWindow(selected, null);
+                await openStitchingTicketWindow(selected, null);
                 return;
             }
             setPrintType(type);
@@ -1705,9 +1742,9 @@ ${allBookingsHtml}
 
         if (type === 'STITCHING') {
             const measurements = tempPrintBooking?.customerId
-                ? await fetchMeasurements(tempPrintBooking.customerId)
+                ? await fetchMeasurements(tempPrintBooking.customerId, tempPrintBooking.customer?.measurementNo, tempPrintBooking.customer?.phone)
                 : null;
-            openStitchingTicketWindow(tempPrintBooking, measurements);
+            await openStitchingTicketWindow(tempPrintBooking, measurements);
             return;
         }
 
@@ -3585,6 +3622,57 @@ ${allBookingsHtml}
                         </Grid>
                     </Grid>
 
+                    {/* Payment Account / Method Selection */}
+                    {banks && banks.length > 0 && (
+                        <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                            <Grid size={{ xs: 12, sm: payPaymentMethod === 'BANK' ? 6 : 12 }}>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    size="small"
+                                    label="Payment Receiving Account"
+                                    value={payPaymentMethod}
+                                    onChange={(e) => setPayPaymentMethod(e.target.value)}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            fontWeight: 700,
+                                            bgcolor: 'white'
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="CASH">💵 Cash Account (Drawer)</MenuItem>
+                                    <MenuItem value="BANK">🏦 Bank Account</MenuItem>
+                                </TextField>
+                            </Grid>
+                            {payPaymentMethod === 'BANK' && (
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        label="Select Bank"
+                                        value={payBankId}
+                                        onChange={(e) => setPayBankId(e.target.value)}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                fontWeight: 700,
+                                                bgcolor: 'white'
+                                            }
+                                        }}
+                                    >
+                                        {banks.map((b) => (
+                                            <MenuItem key={b.id} value={String(b.id)}>
+                                                {b.name} {b.accountNumber ? `(${b.accountNumber})` : ''}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+                            )}
+                        </Grid>
+                    )}
+
                     {/* Booking Financial Breakdown Cards */}
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Booking Financial Breakdown
@@ -5086,6 +5174,51 @@ ${allBookingsHtml}
                                     </Box>
                                 </Box>
                             </Box>
+
+                            {/* Transactions & Receiving History */}
+                            {selectedBooking.ledgerEntries && selectedBooking.ledgerEntries.length > 0 && (
+                                <Box sx={{ mt: 3 }}>
+                                    <Divider sx={{ mb: 2 }}><Typography fontWeight={700} color="text.secondary">Transactions & Receiving History</Typography></Divider>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                                        <Table size="small">
+                                            <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                                                <TableRow>
+                                                    <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {selectedBooking.ledgerEntries.map((entry) => (
+                                                    <TableRow key={entry.id}>
+                                                        <TableCell sx={{ fontSize: '0.8rem' }}>
+                                                            {entry.entryDate ? new Date(entry.entryDate).toLocaleDateString('en-GB') : '—'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                size="small"
+                                                                label={entry.type === 'CREDIT' ? 'RECEIVING' : 'DEBIT'}
+                                                                sx={{
+                                                                    height: 20,
+                                                                    fontSize: '0.68rem',
+                                                                    fontWeight: 700,
+                                                                    bgcolor: entry.type === 'CREDIT' ? '#dcfce7' : '#fee2e2',
+                                                                    color: entry.type === 'CREDIT' ? '#15803d' : '#b91c1c'
+                                                                }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '0.82rem' }}>{entry.description}</TableCell>
+                                                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.85rem', color: entry.type === 'CREDIT' ? '#15803d' : '#0f172a' }}>
+                                                            Rs. {parseFloat(entry.amount || 0).toLocaleString()}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Box>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
@@ -5116,7 +5249,7 @@ ${allBookingsHtml}
                         <div className="print-page">
                             {printType === 'BILL'
                                 ? <CustomerBill booking={printBooking} />
-                                : <TailorTicket booking={printBooking} measurements={customerMeasurements} />
+                                : <TailorTicket booking={printBooking} measurements={customerMeasurements || printBooking.customer?.measurements?.[0]} />
                             }
                         </div>
                     )}
@@ -5131,7 +5264,7 @@ ${allBookingsHtml}
                                 <div key={bk.id} className="print-page">
                                     {printType === 'BILL'
                                         ? <CustomerBill booking={bk} />
-                                        : <TailorTicket booking={bk} measurements={null} />
+                                        : <TailorTicket booking={bk} measurements={bk.customer?.measurements?.[0] || null} />
                                     }
                                 </div>
                             ))

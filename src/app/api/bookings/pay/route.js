@@ -1,10 +1,34 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+// ── Account helpers ───────────────────────────────────────────────────────────
+async function getOrCreateCashAccount(tx) {
+    let acc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: 'Cash Account', code: 'CASH-001', notes: 'System account for cash transactions' }
+        });
+    }
+    return acc;
+}
+
+async function getOrCreateBankAccount(tx, bankId) {
+    const bank = await tx.bank.findUnique({ where: { id: bankId } });
+    if (!bank) throw new Error(`Bank with ID ${bankId} not found`);
+    const accountName = `Bank Account - ${bank.name}`;
+    let acc = await tx.customer.findFirst({ where: { name: accountName } });
+    if (!acc) {
+        acc = await tx.customer.create({
+            data: { name: accountName, code: `BANK-${bankId}`, notes: `System receiving account for ${bank.name}` }
+        });
+    }
+    return { acc, bank };
+}
+
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { bookingId, paymentAmount = 0, discountAmount = 0, itemsDelivery } = body;
+        const { bookingId, paymentAmount = 0, discountAmount = 0, itemsDelivery, paymentMethod = 'CASH', bankId = null } = body;
 
         if (!bookingId) {
             return NextResponse.json(
@@ -17,6 +41,8 @@ export async function POST(req) {
         const payAmt = parseFloat(paymentAmount) || 0;
         const discountAmt = parseFloat(discountAmount) || 0;
         const totalDeduction = payAmt + discountAmt;
+        const resolvedBankId = bankId ? parseInt(bankId) : null;
+        const resolvedMethod = (paymentMethod || 'CASH').toUpperCase();
 
         const result = await prisma.$transaction(async (tx) => {
             const booking = await tx.booking.findUnique({
@@ -176,9 +202,25 @@ export async function POST(req) {
                 }
             });
 
-            // 3. Ledger Entries for Payment
+            const payEntryDate = new Date();
+
+            // 3. Ledger Entries for Payment (Receiving Transaction)
             if (payAmt > 0) {
                 const descNotes = `Payment received for Booking #${booking.bookingNumber || booking.id}`;
+
+                // Record in dedicated receiving model
+                const receiving = await tx.receiving.create({
+                    data: {
+                        receiptNo: `REC-${booking.bookingNumber || booking.id}-${Date.now().toString().slice(-4)}`,
+                        customerId: effectiveBillingId,
+                        bookingId: bId,
+                        amount: payAmt,
+                        paymentMode: resolvedMethod,
+                        bankId: resolvedBankId,
+                        receivingDate: payEntryDate,
+                        description: descNotes
+                    }
+                });
 
                 await tx.ledgerentry.create({
                     data: {
@@ -186,7 +228,9 @@ export async function POST(req) {
                         type: 'CREDIT',
                         amount: payAmt,
                         description: descNotes,
-                        bookingId: bId
+                        bookingId: bId,
+                        receivingId: receiving.id,
+                        entryDate: payEntryDate
                     }
                 });
 
@@ -196,28 +240,59 @@ export async function POST(req) {
                         balance: { decrement: payAmt }
                     }
                 });
-            }
 
-            if (payAmt > 0) {
-                const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
-                if (cashAccount) {
+                // Sync receiving to Cash or Bank Account
+                if (resolvedMethod === 'BANK' && resolvedBankId) {
+                    const { acc: bankAcc, bank } = await getOrCreateBankAccount(tx, resolvedBankId);
                     await tx.ledgerentry.create({
                         data: {
-                            customerId: cashAccount.id,
+                            customerId: bankAcc.id,
+                            type: 'DEBIT',
+                            amount: payAmt,
+                            description: `Bank Received via ${bank.name} from ${billingName} for Booking #${booking.bookingNumber || booking.id}`,
+                            bookingId: bId,
+                            receivingId: receiving.id,
+                            entryDate: payEntryDate
+                        }
+                    });
+                    await tx.customer.update({
+                        where: { id: bankAcc.id },
+                        data: { balance: { increment: payAmt } }
+                    });
+                    await tx.bank.update({
+                        where: { id: resolvedBankId },
+                        data: { balance: { increment: payAmt } }
+                    });
+                } else {
+                    const cashAcc = await getOrCreateCashAccount(tx);
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: cashAcc.id,
                             type: 'DEBIT',
                             amount: payAmt,
                             description: `Cash received from ${billingName} for Booking #${booking.bookingNumber || booking.id}`,
-                            bookingId: bId
+                            bookingId: bId,
+                            receivingId: receiving.id,
+                            entryDate: payEntryDate
                         }
                     });
-
                     await tx.customer.update({
-                        where: { id: cashAccount.id },
+                        where: { id: cashAcc.id },
                         data: {
                             balance: { increment: payAmt }
                         }
                     });
                 }
+            }
+
+            // Adjust customer ledger balance for discount granted
+            if (discountAmt > 0) {
+                await tx.customer.update({
+                    where: { id: effectiveBillingId },
+                    data: {
+                        balance: { decrement: discountAmt }
+                    }
+                });
             }
 
             return updatedBooking;

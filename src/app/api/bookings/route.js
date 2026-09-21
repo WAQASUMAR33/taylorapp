@@ -29,15 +29,24 @@ async function getOrCreateBankAccount(tx, bankId) {
 
 // Sync advance payment to the appropriate ledger account(s).
 // paymentMethod: 'CASH' | 'BANK' | 'BOTH'
-async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt, description, bookingId }) {
+async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt, description, bookingId, entryDate, receivingId }) {
     if (advAmt <= 0) return;
+    const resolvedDate = entryDate ? new Date(entryDate) : new Date();
 
-    if (paymentMethod === 'CASH' || paymentMethod === 'BOTH') {
+    if (paymentMethod === 'CASH' || paymentMethod === 'BOTH' || !paymentMethod) {
         const amount = paymentMethod === 'BOTH' ? cashAmt : advAmt;
         if (amount > 0) {
             const cashAcc = await getOrCreateCashAccount(tx);
             await tx.ledgerentry.create({
-                data: { customerId: cashAcc.id, type: 'DEBIT', amount, description: `Cash Received - ${description}`, bookingId }
+                data: {
+                    customerId: cashAcc.id,
+                    type: 'DEBIT',
+                    amount,
+                    description: `Cash Received - ${description}`,
+                    bookingId: bookingId || null,
+                    receivingId: receivingId || null,
+                    entryDate: resolvedDate
+                }
             });
             await tx.customer.update({ where: { id: cashAcc.id }, data: { balance: { increment: amount } } });
         }
@@ -48,7 +57,15 @@ async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAm
         if (amount > 0) {
             const { acc: bankAcc, bank } = await getOrCreateBankAccount(tx, bankId);
             await tx.ledgerentry.create({
-                data: { customerId: bankAcc.id, type: 'DEBIT', amount, description: `Bank Received via ${bank.name} - ${description}`, bookingId }
+                data: {
+                    customerId: bankAcc.id,
+                    type: 'DEBIT',
+                    amount,
+                    description: `Bank Received via ${bank.name} - ${description}`,
+                    bookingId: bookingId || null,
+                    receivingId: receivingId || null,
+                    entryDate: resolvedDate
+                }
             });
             await tx.customer.update({ where: { id: bankAcc.id }, data: { balance: { increment: amount } } });
             await tx.bank.update({ where: { id: bankId }, data: { balance: { increment: amount } } });
@@ -192,7 +209,21 @@ export async function GET(req) {
         const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
 
         const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true } };
-        const CUSTOMER_SELECT = { select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true } };
+        const CUSTOMER_SELECT = {
+            select: {
+                id: true,
+                code: true,
+                name: true,
+                phone: true,
+                email: true,
+                address: true,
+                measurementNo: true,
+                measurements: {
+                    orderBy: { takenAt: "desc" },
+                    take: 1
+                }
+            }
+        };
 
         if (id) {
             const booking = await prisma.booking.findUnique({
@@ -208,6 +239,17 @@ export async function GET(req) {
                             product: { select: { id: true, name: true, sku: true } },
                             selectedOptions: { include: { stitchingOption: true } }
                         }
+                    },
+                    ledgerEntries: {
+                        select: {
+                            id: true,
+                            type: true,
+                            amount: true,
+                            description: true,
+                            entryDate: true,
+                            customerId: true
+                        },
+                        orderBy: { entryDate: "desc" }
                     }
                 }
             });
@@ -284,6 +326,17 @@ export async function GET(req) {
                 },
                 staff: {
                     include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } }
+                },
+                ledgerEntries: {
+                    select: {
+                        id: true,
+                        type: true,
+                        amount: true,
+                        description: true,
+                        entryDate: true,
+                        customerId: true
+                    },
+                    orderBy: { entryDate: "desc" }
                 },
                 ...ITEMS_INCLUDE
             },
@@ -549,6 +602,8 @@ export async function POST(req) {
                     ? (await tx.customer.findUnique({ where: { id: effectiveBillingId }, select: { name: true } }))?.name
                     : booking.customer.name;
 
+                const bookingEntryDate = booking.bookingDate ? new Date(booking.bookingDate) : new Date();
+
                 // A. Debit for full booking amount
                 await tx.ledgerentry.create({
                     data: {
@@ -556,37 +611,52 @@ export async function POST(req) {
                         type: 'DEBIT',
                         amount: parseFloat(totalAmount),
                         description: `Booking Order: ${bookingNumber} - ${bookingType}`,
+                        bookingId: booking.id,
+                        entryDate: bookingEntryDate
                     }
                 });
 
-                // B. Credit for advance payment if any
+                // B. Credit for advance payment if any (Receiving Transaction)
                 const advAmt = parseFloat(advanceAmount || 0);
                 if (advAmt > 0) {
+                    // Record in dedicated receiving model
+                    const receiving = await tx.receiving.create({
+                        data: {
+                            receiptNo: `REC-${bookingNumber}-ADV`,
+                            customerId: effectiveBillingId,
+                            bookingId: booking.id,
+                            amount: advAmt,
+                            paymentMode: resolvedPaymentMethod,
+                            bankId: resolvedBankId,
+                            receivingDate: bookingEntryDate,
+                            description: `Advance Payment for Booking: ${bookingNumber}`
+                        }
+                    });
+
                     await tx.ledgerentry.create({
                         data: {
                             customerId: effectiveBillingId,
                             type: 'CREDIT',
                             amount: advAmt,
                             description: `Advance Payment for Booking: ${bookingNumber}`,
+                            bookingId: booking.id,
+                            receivingId: receiving.id,
+                            entryDate: bookingEntryDate
                         }
                     });
 
-                    // SYNC TO CASH ACCOUNT
-                    const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
-                    if (cashAccount) {
-                        await tx.ledgerentry.create({
-                            data: {
-                                customerId: cashAccount.id,
-                                type: 'DEBIT', // Cash in
-                                amount: advAmt,
-                                description: `Advance from ${billingName} (Booking #${bookingNumber})`,
-                            }
-                        });
-                        await tx.customer.update({
-                            where: { id: cashAccount.id },
-                            data: { balance: { increment: advAmt } }
-                        });
-                    }
+                    // SYNC TO CASH / BANK ACCOUNT(S)
+                    await syncPaymentToAccounts(tx, {
+                        paymentMethod: resolvedPaymentMethod,
+                        bankId: resolvedBankId,
+                        advAmt,
+                        cashAmt: resolvedCashAmt,
+                        bankAmt: resolvedBankAmt,
+                        description: `Advance from ${billingName} (Booking #${bookingNumber})`,
+                        bookingId: booking.id,
+                        receivingId: receiving.id,
+                        entryDate: bookingEntryDate
+                    });
                 }
 
                 // 4. Update Billing Customer Balance
@@ -754,6 +824,8 @@ export async function PUT(req) {
                             type: advanceDiff > 0 ? 'DEBIT' : 'CREDIT',
                             amount: Math.abs(advanceDiff),
                             description: `Booking Advance Adjustment - ${billingName} (Booking #${currentBooking.bookingNumber})`,
+                            bookingId: currentBooking.id,
+                            entryDate: new Date()
                         }
                     });
                     await tx.customer.update({

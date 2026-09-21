@@ -32,6 +32,10 @@ import {
     TableHead,
     TableRow,
     Paper,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from "@mui/material";
 import {
     Trash2,
@@ -132,11 +136,23 @@ export default function LedgerManagementClient({
     const [payDialogOpen, setPayDialogOpen] = useState(false);
     const [payBooking, setPayBooking] = useState(null);
     const [payReceived, setPayReceived] = useState("");
+    const [payPaymentMethod, setPayPaymentMethod] = useState("CASH");
+    const [payBankId, setPayBankId] = useState("");
     const [paying, setPaying] = useState(false);
+    const [banks, setBanks] = useState([]);
+
+    useEffect(() => {
+        fetch("/api/banks")
+            .then(res => res.json())
+            .then(data => setBanks(data.banks || data || []))
+            .catch(err => console.error("Failed to fetch banks:", err));
+    }, []);
 
     const handleOpenPayDialog = (booking) => {
         setPayBooking(booking);
         setPayReceived(parseFloat(booking.remainingAmount || 0).toString());
+        setPayPaymentMethod("CASH");
+        setPayBankId("");
         setPayDialogOpen(true);
     };
 
@@ -159,7 +175,9 @@ export default function LedgerManagementClient({
                 body: JSON.stringify({
                     bookingId: payBooking.id,
                     paymentAmount: amount,
-                    workflow
+                    workflow,
+                    paymentMethod: payPaymentMethod,
+                    bankId: payPaymentMethod === 'BANK' && payBankId ? parseInt(payBankId) : undefined
                 })
             });
 
@@ -183,6 +201,8 @@ export default function LedgerManagementClient({
         type: "DEBIT",
         amount: "",
         description: "",
+        paymentMethod: "CASH",
+        bankId: "",
     });
 
     // Derived: selected customer object for the form
@@ -313,7 +333,7 @@ export default function LedgerManagementClient({
     /* ── helpers ──────────────────────────────────────── */
 
     const handleOpen = () => {
-        setFormData({ customerId: "", type: "DEBIT", amount: "", description: "" });
+        setFormData({ customerId: "", type: "DEBIT", amount: "", description: "", paymentMethod: "CASH", bankId: "" });
         setError("");
         setShowForm(true);
     };
@@ -989,6 +1009,45 @@ export default function LedgerManagementClient({
                             />
                         </Grid>
 
+                        {/* Payment Receiving Method if CREDIT */}
+                        {formData.type === "CREDIT" && (
+                            <>
+                                <Grid size={{ xs: 6 }}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel id="ledger-paymethod-label">Payment Receiving Account</InputLabel>
+                                        <Select
+                                            labelId="ledger-paymethod-label"
+                                            label="Payment Receiving Account"
+                                            value={formData.paymentMethod || "CASH"}
+                                            onChange={(e) => setFormData(p => ({ ...p, paymentMethod: e.target.value, bankId: e.target.value === 'BANK' ? p.bankId : "" }))}
+                                        >
+                                            <MenuItem value="CASH">Cash Account</MenuItem>
+                                            <MenuItem value="BANK">Bank Account</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                {formData.paymentMethod === "BANK" && (
+                                    <Grid size={{ xs: 6 }}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel id="ledger-bank-label">Select Bank</InputLabel>
+                                            <Select
+                                                labelId="ledger-bank-label"
+                                                label="Select Bank"
+                                                value={formData.bankId || ""}
+                                                onChange={(e) => setFormData(p => ({ ...p, bankId: e.target.value }))}
+                                            >
+                                                {banks.map(b => (
+                                                    <MenuItem key={b.id} value={b.id}>
+                                                        {b.name} ({b.accountNumber || b.branch || 'Bank'})
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                )}
+                            </>
+                        )}
+
                         {/* Balance info banner — shown when an account is selected */}
                         {selectedFormCustomer && (
                             <Grid size={{ xs: 12 }}>
@@ -1135,8 +1194,47 @@ export default function LedgerManagementClient({
                             InputProps={{
                                 startAdornment: <InputAdornment position="start">Rs.</InputAdornment>
                             }}
-                            sx={{ mb: 1 }}
+                            sx={{ mb: 2 }}
                         />
+
+                        <Grid container spacing={1.5} sx={{ mb: 1 }}>
+                            <Grid size={{ xs: payPaymentMethod === "BANK" ? 6 : 12 }}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel id="pay-method-label">Receiving Account</InputLabel>
+                                    <Select
+                                        labelId="pay-method-label"
+                                        label="Receiving Account"
+                                        value={payPaymentMethod}
+                                        onChange={(e) => {
+                                            setPayPaymentMethod(e.target.value);
+                                            if (e.target.value !== 'BANK') setPayBankId("");
+                                        }}
+                                    >
+                                        <MenuItem value="CASH">Cash Account</MenuItem>
+                                        <MenuItem value="BANK">Bank Account</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            {payPaymentMethod === "BANK" && (
+                                <Grid size={{ xs: 6 }}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel id="pay-bank-label">Select Bank</InputLabel>
+                                        <Select
+                                            labelId="pay-bank-label"
+                                            label="Select Bank"
+                                            value={payBankId}
+                                            onChange={(e) => setPayBankId(e.target.value)}
+                                        >
+                                            {banks.map(b => (
+                                                <MenuItem key={b.id} value={b.id}>
+                                                    {b.name} ({b.accountNumber || b.branch || 'Bank'})
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            )}
+                        </Grid>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
                         <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>

@@ -516,7 +516,26 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                 borderColor: "divider"
                             }}
                         >
-                            {/* 1. Date */}
+                            {/* 1. Receipt # */}
+                            <TableCell
+                                onClick={() => handleSort("receiptNo")}
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: "0.85rem",
+                                    color: "text.secondary",
+                                    py: 1.5,
+                                    px: 2,
+                                    cursor: "pointer",
+                                    userSelect: "none",
+                                    width: "130px"
+                                }}
+                            >
+                                <Box sx={{ display: "inline-flex", alignItems: "center" }}>
+                                    Receipt # {renderSortIcon("receiptNo")}
+                                </Box>
+                            </TableCell>
+
+                            {/* 2. Date */}
                             <TableCell
                                 onClick={() => handleSort("date")}
                                 sx={{
@@ -527,7 +546,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     px: 2,
                                     cursor: "pointer",
                                     userSelect: "none",
-                                    width: "110px"
+                                    width: "120px"
                                 }}
                             >
                                 <Box sx={{ display: "inline-flex", alignItems: "center" }}>
@@ -535,7 +554,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                 </Box>
                             </TableCell>
 
-                            {/* 2. Receiving Type */}
+                            {/* 3. Receiving Type */}
                             <TableCell
                                 onClick={() => handleSort("type")}
                                 sx={{
@@ -546,7 +565,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     px: 2,
                                     cursor: "pointer",
                                     userSelect: "none",
-                                    width: "190px"
+                                    width: "170px"
                                 }}
                             >
                                 <Box sx={{ display: "inline-flex", alignItems: "center" }}>
@@ -554,7 +573,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                 </Box>
                             </TableCell>
 
-                            {/* 3. Accounts */}
+                            {/* 4. Accounts */}
                             <TableCell
                                 sx={{
                                     fontWeight: 600,
@@ -562,13 +581,27 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     color: "text.secondary",
                                     py: 1.5,
                                     px: 2,
-                                    width: "160px"
+                                    width: "150px"
                                 }}
                             >
-                                Accounts
+                                Customer / Account
                             </TableCell>
 
-                            {/* 4. Description */}
+                            {/* 5. Address */}
+                            <TableCell
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: "0.85rem",
+                                    color: "text.secondary",
+                                    py: 1.5,
+                                    px: 2,
+                                    width: "140px"
+                                }}
+                            >
+                                Address
+                            </TableCell>
+
+                            {/* 6. Description */}
                             <TableCell
                                 sx={{
                                     fontWeight: 600,
@@ -581,7 +614,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                 Description
                             </TableCell>
 
-                            {/* 5. Payment Method */}
+                            {/* 7. Payment Method */}
                             <TableCell
                                 sx={{
                                     fontWeight: 600,
@@ -589,13 +622,13 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     color: "text.secondary",
                                     py: 1.5,
                                     px: 2,
-                                    width: "150px"
+                                    width: "140px"
                                 }}
                             >
-                                Payment Method
+                                Payment Mode
                             </TableCell>
 
-                            {/* 6. Receiving Amount */}
+                            {/* 8. Receiving Amount */}
                             <TableCell
                                 align="right"
                                 onClick={() => handleSort("amount")}
@@ -607,7 +640,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     px: 2.5,
                                     cursor: "pointer",
                                     userSelect: "none",
-                                    width: "170px"
+                                    width: "160px"
                                 }}
                             >
                                 <Box sx={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end" }}>
@@ -620,16 +653,16 @@ export default function ReceivingTransactionsClient({ initialData }) {
                     <TableBody>
                         {loading && transactions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                                     <CircularProgress size={30} />
                                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        Loading receiving transactions...
+                                        Loading receiving transactions from receiving table...
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : transactions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                                     <Typography variant="body1" color="text.secondary" fontWeight={500}>
                                         No receiving transactions found
                                     </Typography>
@@ -651,33 +684,74 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                         transition: "background-color 0.15s ease"
                                     }}
                                 >
-                                    {/* 1. Date */}
+                                    {/* 1. Receipt # */}
                                     <TableCell
                                         sx={{
                                             py: 1.25,
                                             px: 2,
-                                            fontSize: "0.88rem",
-                                            color: "text.primary",
-                                            fontWeight: 500,
                                             whiteSpace: "nowrap"
                                         }}
                                     >
-                                        {tx.formattedDate}
+                                        <Chip
+                                            label={`#${tx.receiptNo}`}
+                                            size="small"
+                                            sx={{
+                                                fontWeight: 700,
+                                                fontSize: "0.76rem",
+                                                bgcolor: theme.palette.mode === "dark" ? "rgba(59, 130, 246, 0.15)" : "#eff6ff",
+                                                color: "#2563eb",
+                                                border: "1px solid",
+                                                borderColor: theme.palette.mode === "dark" ? "rgba(59, 130, 246, 0.3)" : "#bfdbfe",
+                                                borderRadius: 1.5
+                                            }}
+                                        />
                                     </TableCell>
 
-                                    {/* 2. Receiving Type */}
+                                    {/* 2. Date */}
                                     <TableCell
                                         sx={{
                                             py: 1.25,
                                             px: 2,
-                                            fontSize: "0.88rem",
-                                            color: "text.primary"
+                                            whiteSpace: "nowrap"
                                         }}
                                     >
-                                        {tx.receivingType}
+                                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.85rem", color: "text.primary" }}>
+                                            {tx.formattedDate}
+                                        </Typography>
+                                        {tx.formattedTime && (
+                                            <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.72rem", display: "block" }}>
+                                                {tx.formattedTime}
+                                            </Typography>
+                                        )}
                                     </TableCell>
 
-                                    {/* 3. Accounts */}
+                                    {/* 3. Receiving Type / Source */}
+                                    <TableCell
+                                        sx={{
+                                            py: 1.25,
+                                            px: 2
+                                        }}
+                                    >
+                                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.86rem", color: "text.primary" }}>
+                                                {tx.receivingType}
+                                            </Typography>
+                                            {tx.sourceRef && tx.sourceRef !== "Customer Ledger" && (
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: "text.secondary",
+                                                        fontWeight: 500,
+                                                        fontSize: "0.74rem"
+                                                    }}
+                                                >
+                                                    {tx.sourceRef}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </TableCell>
+
+                                    {/* 4. Accounts */}
                                     <TableCell sx={{ py: 1.25, px: 2 }}>
                                         <Typography
                                             variant="body2"
@@ -704,7 +778,37 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                         </Typography>
                                     </TableCell>
 
-                                    {/* 4. Description */}
+                                    {/* 5. Address */}
+                                    <TableCell
+                                        sx={{
+                                            py: 1.25,
+                                            px: 2,
+                                            maxWidth: "150px"
+                                        }}
+                                    >
+                                        {tx.address ? (
+                                            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.5 }}>
+                                                <span style={{ fontSize: "0.82rem", opacity: 0.7, marginTop: "1px" }}>📍</span>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontSize: "0.84rem",
+                                                        color: "text.primary",
+                                                        lineHeight: 1.3,
+                                                        wordBreak: "break-word"
+                                                    }}
+                                                >
+                                                    {tx.address}
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="caption" sx={{ color: "text.disabled" }}>
+                                                —
+                                            </Typography>
+                                        )}
+                                    </TableCell>
+
+                                    {/* 6. Description */}
                                     <TableCell
                                         sx={{
                                             py: 1.25,
@@ -716,27 +820,38 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                         {tx.description}
                                     </TableCell>
 
-                                    {/* 5. Payment Method */}
+                                    {/* 7. Payment Method */}
                                     <TableCell
                                         sx={{
                                             py: 1.25,
                                             px: 2,
-                                            fontSize: "0.88rem",
-                                            color: "text.primary"
+                                            whiteSpace: "nowrap"
                                         }}
                                     >
-                                        {tx.paymentMethod}
+                                        <Chip
+                                            label={tx.paymentMethod}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                fontWeight: 600,
+                                                fontSize: "0.75rem",
+                                                borderColor: tx.paymentMethod.toLowerCase().includes("bank") ? "#8b5cf6" : "#10b981",
+                                                color: tx.paymentMethod.toLowerCase().includes("bank") ? "#8b5cf6" : "#059669",
+                                                bgcolor: tx.paymentMethod.toLowerCase().includes("bank") ? "rgba(139, 92, 246, 0.06)" : "rgba(16, 185, 129, 0.06)",
+                                                borderRadius: 1.5
+                                            }}
+                                        />
                                     </TableCell>
 
-                                    {/* 6. Receiving Amount */}
+                                    {/* 8. Receiving Amount */}
                                     <TableCell
                                         align="right"
                                         sx={{
                                             py: 1.25,
                                             px: 2.5,
                                             fontSize: "0.92rem",
-                                            fontWeight: 600,
-                                            color: "text.primary",
+                                            fontWeight: 700,
+                                            color: "success.main",
                                             whiteSpace: "nowrap"
                                         }}
                                     >
