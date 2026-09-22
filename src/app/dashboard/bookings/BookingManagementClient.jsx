@@ -935,7 +935,7 @@ function TailorTicket({ booking, measurements }) {
     );
 }
 
-export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions }) {
+export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "bookings", "view");
