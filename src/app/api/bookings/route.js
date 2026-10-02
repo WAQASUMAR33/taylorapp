@@ -29,7 +29,7 @@ async function getOrCreateBankAccount(tx, bankId) {
 
 // Sync advance payment to the appropriate ledger account(s).
 // paymentMethod: 'CASH' | 'BANK' | 'BOTH'
-async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt, description, bookingId, entryDate, receivingId }) {
+async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAmt, bankAmt, description, bookingId, entryDate, receivingId, branchId }) {
     if (advAmt <= 0) return;
     const resolvedDate = entryDate ? new Date(entryDate) : new Date();
 
@@ -45,6 +45,7 @@ async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAm
                     description: `Cash Received - ${description}`,
                     bookingId: bookingId || null,
                     receivingId: receivingId || null,
+                    branchId: branchId || null,
                     entryDate: resolvedDate
                 }
             });
@@ -64,6 +65,7 @@ async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAm
                     description: `Bank Received via ${bank.name} - ${description}`,
                     bookingId: bookingId || null,
                     receivingId: receivingId || null,
+                    branchId: branchId || null,
                     entryDate: resolvedDate
                 }
             });
@@ -233,6 +235,7 @@ export async function GET(req) {
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
+                    branch: true,
                     ...STAFF_INCLUDE,
                     items: {
                         include: {
@@ -324,6 +327,7 @@ export async function GET(req) {
                 cutter: {
                     select: { id: true, name: true }
                 },
+                branch: true,
                 staff: {
                     include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } }
                 },
@@ -356,6 +360,7 @@ export async function GET(req) {
 // POST - Create a new booking
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await req.json();
         const {
             customerId,
@@ -379,6 +384,7 @@ export async function POST(req) {
             bankId,
             cashAmount,
             bankAmount,
+            branchId: reqBranchId,
             // Stitching Details
             cuffType,
             pohnchaType,
@@ -391,6 +397,7 @@ export async function POST(req) {
             hasFrontPockets
         } = body;
 
+        const resolvedBranchId = reqBranchId ? parseInt(reqBranchId) : (session?.user?.branchId || 1);
         const resolvedPaymentMethod = paymentMethod || 'CASH';
         const resolvedBankId = bankId ? parseInt(bankId) : null;
         const resolvedCashAmt = parseFloat(cashAmount || 0);
@@ -472,6 +479,7 @@ export async function POST(req) {
                     billStatus: calcRemaining <= 0 ? "Clear" : (parsedAdvance <= 0 ? "Pending" : "Partially Pending"),
                     notes,
                     status: "PENDING",
+                    branchId: resolvedBranchId || null,
                     staff: {
                         create: [
                             ...resolvedTailorIds.map(id => ({ customerId: id, role: "TAILOR" })),
@@ -539,6 +547,7 @@ export async function POST(req) {
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
+                    branch: true,
                     ...STAFF_INCLUDE,
                     items: {
                         include: {
@@ -612,6 +621,7 @@ export async function POST(req) {
                         amount: parseFloat(totalAmount),
                         description: `Booking Order: ${bookingNumber} - ${bookingType}`,
                         bookingId: booking.id,
+                        branchId: resolvedBranchId || null,
                         entryDate: bookingEntryDate
                     }
                 });
@@ -629,6 +639,7 @@ export async function POST(req) {
                             paymentMode: resolvedPaymentMethod,
                             bankId: resolvedBankId,
                             source: 'Advance',
+                            branchId: resolvedBranchId || null,
                             receivingDate: bookingEntryDate,
                             description: `Advance Payment for Booking: ${bookingNumber}`
                         }
@@ -642,6 +653,7 @@ export async function POST(req) {
                             description: `Advance Payment for Booking: ${bookingNumber}`,
                             bookingId: booking.id,
                             receivingId: receiving.id,
+                            branchId: resolvedBranchId || null,
                             entryDate: bookingEntryDate
                         }
                     });
@@ -656,6 +668,7 @@ export async function POST(req) {
                         description: `Advance from ${billingName} (Booking #${bookingNumber})`,
                         bookingId: booking.id,
                         receivingId: receiving.id,
+                        branchId: resolvedBranchId || null,
                         entryDate: bookingEntryDate
                     });
                 }

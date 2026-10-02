@@ -106,6 +106,7 @@ export async function GET(req) {
                 include: {
                     customer: true,
                     bank: true,
+                    branch: true,
                     booking: {
                         select: {
                             id: true,
@@ -276,7 +277,8 @@ export async function GET(req) {
                 bookingId: rec.bookingId,
                 bookingNumber: bookingNum || null,
                 customerId: rec.customerId,
-                receivingId: rec.id
+                receivingId: rec.id,
+                branch: rec.branch ? { id: rec.branch.id, name: rec.branch.name, code: rec.branch.code } : null
             };
         });
 

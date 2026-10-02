@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // ── Account helpers ───────────────────────────────────────────────────────────
 async function getOrCreateCashAccount(tx) {
@@ -27,6 +29,7 @@ async function getOrCreateBankAccount(tx, bankId) {
 
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await req.json();
         const { bookingId, paymentAmount = 0, discountAmount = 0, itemsDelivery, paymentMethod = 'CASH', bankId = null } = body;
 
@@ -203,6 +206,7 @@ export async function POST(req) {
             });
 
             const payEntryDate = new Date();
+            const branchId = booking.branchId || session?.user?.branchId || 1;
 
             // 3. Ledger Entries for Payment (Receiving Transaction)
             if (payAmt > 0) {
@@ -218,6 +222,7 @@ export async function POST(req) {
                         paymentMode: resolvedMethod,
                         bankId: resolvedBankId,
                         source: 'Receiving',
+                        branchId: branchId || null,
                         receivingDate: payEntryDate,
                         description: descNotes
                     }
@@ -231,6 +236,7 @@ export async function POST(req) {
                         description: descNotes,
                         bookingId: bId,
                         receivingId: receiving.id,
+                        branchId: branchId || null,
                         entryDate: payEntryDate
                     }
                 });
@@ -253,6 +259,7 @@ export async function POST(req) {
                             description: `Bank Received via ${bank.name} from ${billingName} for Booking #${booking.bookingNumber || booking.id}`,
                             bookingId: bId,
                             receivingId: receiving.id,
+                            branchId: branchId || null,
                             entryDate: payEntryDate
                         }
                     });
@@ -274,6 +281,7 @@ export async function POST(req) {
                             description: `Cash received from ${billingName} for Booking #${booking.bookingNumber || booking.id}`,
                             bookingId: bId,
                             receivingId: receiving.id,
+                            branchId: branchId || null,
                             entryDate: payEntryDate
                         }
                     });

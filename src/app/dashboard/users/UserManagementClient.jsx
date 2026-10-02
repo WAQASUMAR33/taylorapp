@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 import {
@@ -17,6 +17,7 @@ import {
     LayoutDashboard, Calendar, BarChart3, Package, Boxes,
     BookText, Ruler, ShoppingCart, Tags, Settings, Scissors,
     ReceiptText, RotateCcw, TrendingDown, Receipt, SlidersHorizontal, ClipboardList,
+    Store,
 } from "lucide-react";
 
 // ─── Role config ──────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ const MODULES = [
     { key: "receiving-transactions", label: "Transaction Roster", icon: ReceiptText, actions: ["view"] },
     { key: "categories", label: "Account Categories", icon: Tags, actions: ["view", "create", "edit", "delete"] },
     { key: "stitching-options", label: "Stitching Option Pricing", icon: SlidersHorizontal, actions: ["view", "create", "edit", "delete"] },
+    { key: "branches", label: "Branch Management", icon: Store, actions: ["view", "create", "edit", "delete"] },
     { key: "users", label: "User Management", icon: Settings, actions: ["view", "create", "edit", "delete"] },
     { key: "settings", label: "System Settings", icon: SlidersHorizontal, actions: ["view", "create", "edit", "delete"] },
 ];
@@ -218,7 +220,7 @@ const FIELD_SX = {
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function UserManagementClient({ initialUsers }) {
+export default function UserManagementClient({ initialUsers, initialBranches = [] }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "users", "view");
@@ -226,6 +228,7 @@ export default function UserManagementClient({ initialUsers }) {
     const canEdit = checkPermission(session, "users", "edit");
     const canDelete = checkPermission(session, "users", "delete");
     const [users, setUsers] = useState(initialUsers);
+    const [branches, setBranches] = useState(initialBranches);
     const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -238,13 +241,30 @@ export default function UserManagementClient({ initialUsers }) {
     const [formData, setFormData] = useState({
         fullName: "", username: "", email: "",
         phone: "", role: "STAFF", password: "", isActive: true,
+        branchId: initialBranches.length > 0 ? initialBranches[0].id : 1,
         permissions: getDefaultPermissions("STAFF"),
     });
+
+    useEffect(() => {
+        if (!branches || branches.length === 0) {
+            fetch("/api/branches")
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setBranches(data);
+                })
+                .catch(err => console.error("Failed to load branches:", err));
+        }
+    }, [branches]);
 
     /* ── helpers ──────────────────────────────────────── */
 
     const resetForm = () => {
-        setFormData({ fullName: "", username: "", email: "", phone: "", role: "STAFF", password: "", isActive: true, permissions: getDefaultPermissions("STAFF") });
+        setFormData({
+            fullName: "", username: "", email: "", phone: "",
+            role: "STAFF", password: "", isActive: true,
+            branchId: branches.length > 0 ? branches[0].id : 1,
+            permissions: getDefaultPermissions("STAFF")
+        });
         setEditMode(false);
         setSelectedUserId(null);
         setError("");
@@ -265,6 +285,7 @@ export default function UserManagementClient({ initialUsers }) {
             role: user.role || "STAFF",
             password: "",
             isActive: user.isActive ?? true,
+            branchId: user.branchId || user.branch?.id || (branches.length > 0 ? branches[0].id : 1),
             permissions: user.permissions || getDefaultPermissions(user.role || "STAFF"),
         });
         setActiveTab(0);
@@ -290,8 +311,8 @@ export default function UserManagementClient({ initialUsers }) {
         try {
             const method = editMode ? "PUT" : "POST";
             const payload = editMode
-                ? { ...formData, id: selectedUserId }
-                : formData;
+                ? { ...formData, id: selectedUserId, branchId: formData.branchId ? Number(formData.branchId) : null }
+                : { ...formData, branchId: formData.branchId ? Number(formData.branchId) : null };
 
             const res = await fetch("/api/users", {
                 method,
@@ -305,8 +326,10 @@ export default function UserManagementClient({ initialUsers }) {
             }
 
             const savedUser = await res.json();
+            const matchingBranch = branches.find(b => b.id === Number(formData.branchId));
             const serialized = {
                 ...savedUser,
+                branch: savedUser.branch || matchingBranch || null,
                 createdAt: savedUser.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
@@ -452,6 +475,7 @@ export default function UserManagementClient({ initialUsers }) {
                         <TableRow sx={{ bgcolor: "#f9fafb" }}>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>User</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Username</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Branch</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Role</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: "#374151" }}>Contact</TableCell>
@@ -490,6 +514,21 @@ export default function UserManagementClient({ initialUsers }) {
                                             <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
                                                 @{user.username}
                                             </Typography>
+                                        </TableCell>
+
+                                        {/* Branch */}
+                                        <TableCell>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                <Store size={14} color="#6366f1" />
+                                                <Typography variant="body2" fontWeight={600} color="#1f2937">
+                                                    {user.branch?.name || (branches.find(b => b.id === user.branchId)?.name) || "Main Branch"}
+                                                </Typography>
+                                            </Box>
+                                            {(user.branch?.code || branches.find(b => b.id === user.branchId)?.code) && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+                                                    Code: {user.branch?.code || branches.find(b => b.id === user.branchId)?.code}
+                                                </Typography>
+                                            )}
                                         </TableCell>
 
                                         {/* Role */}
@@ -558,7 +597,7 @@ export default function UserManagementClient({ initialUsers }) {
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                                     <Users size={40} color="#d1d5db" />
                                     <Typography color="text.secondary" sx={{ mt: 1.5 }}>No users found.</Typography>
                                 </TableCell>
@@ -639,6 +678,20 @@ export default function UserManagementClient({ initialUsers }) {
                                     renderInput={(params) => (
                                         <TextField {...params} label="Role" required sx={{ minWidth: 200, ...FIELD_SX }}
                                             placeholder="Select role" />
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <Autocomplete
+                                    size="small"
+                                    options={branches}
+                                    getOptionLabel={(option) => option.name ? `${option.name} (${option.code})` : ""}
+                                    value={branches.find(b => b.id === Number(formData.branchId)) || null}
+                                    onChange={(_, val) => setFormData(prev => ({ ...prev, branchId: val ? val.id : null }))}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Assigned Branch" required sx={FIELD_SX}
+                                            placeholder="Select branch" />
                                     )}
                                 />
                             </Grid>

@@ -29,7 +29,9 @@ export default async function ReceivingTransactionsPage() {
             total: { amount: 0, count: 0 },
             advance: { amount: 0, count: 0 },
             receiving: { amount: 0, count: 0 },
-            ledger: { amount: 0, count: 0 }
+            ledger: { amount: 0, count: 0 },
+            cash: { amount: 0, count: 0 },
+            bank: { amount: 0, count: 0 }
         }
     };
 
@@ -45,7 +47,7 @@ export default async function ReceivingTransactionsPage() {
             }
         };
 
-        const [receivings, totalCount, totalAmountAgg, sourceGroups] = await Promise.all([
+        const [receivings, totalCount, totalAmountAgg, sourceGroups, modeGroups] = await Promise.all([
             prisma.receiving.findMany({
                 where,
                 include: {
@@ -78,6 +80,12 @@ export default async function ReceivingTransactionsPage() {
                 where,
                 _sum: { amount: true },
                 _count: { id: true }
+            }),
+            prisma.receiving.groupBy({
+                by: ['paymentMode'],
+                where,
+                _sum: { amount: true },
+                _count: { id: true }
             })
         ]);
 
@@ -85,7 +93,9 @@ export default async function ReceivingTransactionsPage() {
             total: { amount: 0, count: 0 },
             advance: { amount: 0, count: 0 },
             receiving: { amount: 0, count: 0 },
-            ledger: { amount: 0, count: 0 }
+            ledger: { amount: 0, count: 0 },
+            cash: { amount: 0, count: 0 },
+            bank: { amount: 0, count: 0 }
         };
 
         for (const g of sourceGroups) {
@@ -110,9 +120,27 @@ export default async function ReceivingTransactionsPage() {
             }
         }
 
+        for (const m of modeGroups) {
+            const amt = parseFloat(m._sum?.amount || 0);
+            const cnt = m._count?.id || 0;
+            const mode = (m.paymentMode || "").toUpperCase();
+            if (mode === "BANK") {
+                summary.bank.amount += amt;
+                summary.bank.count += cnt;
+            } else {
+                summary.cash.amount += amt;
+                summary.cash.count += cnt;
+            }
+        }
+
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
-            const receivingType = isBooking ? "From Booking" : "Received through Ledger";
+            const source = rec.source || (isBooking ? "Advance" : "Ledger");
+            const receivingType = source === "Advance"
+                ? "Advance Payment"
+                : source === "Receiving"
+                    ? "Bill Payment"
+                    : (isBooking ? "From Booking" : "Received through Ledger");
 
             let bookingNum = rec.booking?.bookingNumber;
             if (!bookingNum && rec.description) {
@@ -176,6 +204,7 @@ export default async function ReceivingTransactionsPage() {
                 rawDate: rec.receivingDate.toISOString(),
                 formattedDate,
                 formattedTime,
+                source,
                 receivingType,
                 sourceRef,
                 accountName: rec.customer?.name || "Customer",

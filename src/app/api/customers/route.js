@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await req.json();
         const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
+        const branchId = body.branchId ? parseInt(body.branchId) : (session?.user?.branchId || 1);
 
         if (!name) {
             return NextResponse.json(
@@ -42,6 +46,7 @@ export async function POST(req) {
                     balance: 0, // Start at 0, ledger will update it
                     code: code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
                     accountCategoryId: accountCategoryId ? parseInt(accountCategoryId) : null,
+                    branchId: branchId || null,
                 },
             });
 
@@ -54,6 +59,7 @@ export async function POST(req) {
                         amount: Math.abs(openingBalance),
                         description: "Opening Balance",
                         entryDate: new Date(),
+                        branchId: branchId || null,
                     }
                 });
 
@@ -64,14 +70,18 @@ export async function POST(req) {
                         balance: openingBalance
                     },
                     include: {
-                        accountCategory: true
+                        accountCategory: true,
+                        branch: true,
                     }
                 });
             }
 
             return await tx.customer.findUnique({
                 where: { id: newCustomer.id },
-                include: { accountCategory: true }
+                include: {
+                    accountCategory: true,
+                    branch: true,
+                }
             });
         });
 
@@ -187,7 +197,8 @@ export async function GET(req) {
             prisma.customer.findMany({
                 where,
                 include: {
-                    accountCategory: true
+                    accountCategory: true,
+                    branch: true,
                 },
                 orderBy,
                 skip,

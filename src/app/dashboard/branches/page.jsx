@@ -1,44 +1,34 @@
 export const dynamic = "force-dynamic";
 
 import prisma from "@/lib/prisma";
-import UserManagementClient from "./UserManagementClient";
+import BranchManagementClient from "./BranchManagementClient";
 import { Box, Typography } from "@mui/material";
-import { Users } from "lucide-react";
+import { Store } from "lucide-react";
 
 export const metadata = {
-    title: "User Management - GRACE TAILORS",
+    title: "Branch Management - GRACE TAILORS",
 };
 
-export default async function UsersPage() {
-    const [users, branches] = await Promise.all([
-        prisma.user.findMany({
-            include: {
-                branch: true,
-            },
-            orderBy: { createdAt: "desc" },
-        }),
-        prisma.branch.findMany({
-            where: { isActive: true },
-            orderBy: { name: "asc" },
-        }),
-    ]);
+export default async function BranchesPage() {
+    const branches = await prisma.branch.findMany({
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                    customers: true,
+                    bookings: true,
+                    ledgerEntries: true,
+                    receivings: true,
+                }
+            }
+        },
+        orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+    });
 
-    // Serialize dates for client components
-    const serializedUsers = users.map(user => ({
-        ...user,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-        branch: user.branch ? {
-            ...user.branch,
-            createdAt: user.branch.createdAt.toISOString(),
-            updatedAt: user.branch.updatedAt.toISOString(),
-        } : null,
-    }));
-
-    const serializedBranches = branches.map(b => ({
-        ...b,
-        createdAt: b.createdAt.toISOString(),
-        updatedAt: b.updatedAt.toISOString(),
+    const serializedBranches = branches.map(branch => ({
+        ...branch,
+        createdAt: branch.createdAt.toISOString(),
+        updatedAt: branch.updatedAt.toISOString(),
     }));
 
     return (
@@ -63,20 +53,20 @@ export default async function UsersPage() {
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}>
-                        <Users size={28} />
+                        <Store size={28} />
                     </Box>
                     <Box>
                         <Typography variant="h4" fontWeight="bold" color="text.primary">
-                            User Management
+                            Branch Management
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Manage system users, roles and permissions.
+                            Configure business branches, logos, contact information, and branding.
                         </Typography>
                     </Box>
                 </Box>
             </Box>
 
-            <UserManagementClient initialUsers={serializedUsers} initialBranches={serializedBranches} />
+            <BranchManagementClient initialBranches={serializedBranches} />
         </Box>
     );
 }

@@ -288,7 +288,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     // New Ledger Entry Modal State
     const [addLedgerOpen, setAddLedgerOpen] = useState(false);
     const [addLedgerCustomer, setAddLedgerCustomer] = useState(null);
-    const [addLedgerType, setAddLedgerType] = useState("DEBIT");
+    const [addLedgerType, setAddLedgerType] = useState("CREDIT");
     const [addLedgerAmount, setAddLedgerAmount] = useState("");
     const [addLedgerDescription, setAddLedgerDescription] = useState("");
     const [addLedgerLoading, setAddLedgerLoading] = useState(false);
@@ -299,7 +299,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             ? (customers.find((c) => String(c.id) === String(customer.id)) || customer)
             : ((customers && customers.length > 0) ? customers[0] : null);
         setAddLedgerCustomer(targetCustomer);
-        setAddLedgerType("DEBIT");
+        setAddLedgerType("CREDIT");
         setAddLedgerAmount("");
         setAddLedgerDescription("");
         setAddLedgerError("");
@@ -888,6 +888,13 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             ledgerDateTo ? `To: ${dateLabel(ledgerDateTo)}` : null,
         ].filter(Boolean).join("  –  ") || "All Time";
 
+        const activeBranch = ledgerCustomer.branch || session?.user?.branch;
+        const branchName = activeBranch?.name || "Grace Tailors";
+        const branchTagline = activeBranch?.slogan || "Premium Stitching & Tailoring Services";
+        const branchPhone = activeBranch?.phone || "";
+        const branchAddress = activeBranch?.address || "";
+        const branchLogo = activeBranch?.logo || "";
+
         const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -954,15 +961,20 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
 
   <!-- PAGE HEADER -->
   <div class="page-header">
-    <div class="brand">
-      <div class="shop-name">Grace Tailors</div>
-      <div class="shop-tagline">Premium Stitching &amp; Tailoring Services</div>
+    <div class="brand" style="display: flex; align-items: center; gap: 12px;">
+      ${branchLogo ? `<img src="${branchLogo}" alt="Logo" style="height: 48px; max-width: 80px; object-fit: contain;" />` : ""}
+      <div>
+        <div class="shop-name">${branchName}</div>
+        <div class="shop-tagline">${branchTagline}</div>
+      </div>
     </div>
     <div class="doc-title">
       <div class="doc-title-text">Account Ledger</div>
     </div>
     <div class="shop-contact">
-      <strong>Grace Tailors</strong><br/>
+      <strong>${branchName}</strong><br/>
+      ${branchPhone ? `<span>📞 ${branchPhone}</span><br/>` : ""}
+      ${branchAddress ? `<span>📍 ${branchAddress}</span><br/>` : ""}
       Print Date: ${printDate}
     </div>
   </div>
@@ -1022,7 +1034,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     </div>
     <div class="print-note">
       This is a computer-generated ledger.<br/>
-      Printed on ${printDate} &nbsp;|&nbsp; Grace Tailors
+      Printed on ${printDate} &nbsp;|&nbsp; ${branchName}
     </div>
   </div>
 
@@ -1057,6 +1069,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             
             const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
             const totalBalance = activeCustomers.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
+            const activeBranch = session?.user?.branch;
+            const branchName = activeBranch?.name || "Grace Tailors";
+            const branchTagline = activeBranch?.slogan || "Premium Stitching & Tailoring Services";
+            const branchPhone = activeBranch?.phone || "";
+            const branchLogo = activeBranch?.logo || "";
             
             // Build applied filters string
             const appliedFilters = [];
@@ -1138,11 +1155,16 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
 
   <!-- PAGE HEADER -->
   <div class="page-header">
-    <div class="brand">
-      <div class="shop-name">Grace Tailors</div>
-      <div class="shop-tagline">Premium Stitching &amp; Tailoring Services</div>
+    <div class="brand" style="display: flex; align-items: center; gap: 12px;">
+      ${branchLogo ? `<img src="${branchLogo}" alt="Logo" style="height: 48px; max-width: 80px; object-fit: contain;" />` : ""}
+      <div>
+        <div class="shop-name">${branchName}</div>
+        <div class="shop-tagline">${branchTagline}</div>
+      </div>
     </div>
     <div class="shop-contact">
+      <strong>${branchName}</strong><br/>
+      ${branchPhone ? `<span>📞 ${branchPhone}</span><br/>` : ""}
       Print Date: ${printDate}
     </div>
   </div>
@@ -1198,7 +1220,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
       <div class="sig-label">Authorized By</div>
     </div>
     <div class="print-note">
-      Printed on ${printDate} &nbsp;|&nbsp; Grace Tailors
+      Printed on ${printDate} &nbsp;|&nbsp; ${branchName}
     </div>
   </div>
 
@@ -2485,8 +2507,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                             value={addLedgerType}
                                             onChange={(e) => setAddLedgerType(e.target.value)}
                                         >
-                                            <MenuItem value="DEBIT">Debit (Receivable)</MenuItem>
-                                            <MenuItem value="CREDIT">Credit (Payable)</MenuItem>
+                                            <MenuItem value="CREDIT">Payment Received / Credit (Jama)</MenuItem>
+                                            <MenuItem value="DEBIT">Charge / Debit (Banam)</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Box>

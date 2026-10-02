@@ -26,6 +26,7 @@ import {
     Receipt,
     RotateCcw,
     ReceiptText,
+    Store,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -63,6 +64,7 @@ const navItems = [
     { name: "Transaction Roster", href: "/dashboard/receiving-transactions", icon: ReceiptText, moduleKey: "receiving-transactions", roles: ["ADMIN", "MANAGER", "STAFF"] },
     { name: "Account Categories", href: "/dashboard/account-categories", icon: Tags, moduleKey: "categories", roles: ["ADMIN", "MANAGER"] },
     { name: "Stitching Option Pricing", href: "/dashboard/stitching-options", icon: SlidersHorizontal, moduleKey: "stitching-options", roles: ["ADMIN", "MANAGER"] },
+    { name: "Branch Management", href: "/dashboard/branches", icon: Store, moduleKey: "branches", roles: ["ADMIN"] },
     { name: "User Management", href: "/dashboard/users", icon: Settings, moduleKey: "users", roles: ["ADMIN"] },
     { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal, moduleKey: "settings", roles: ["ADMIN"] },
 ];

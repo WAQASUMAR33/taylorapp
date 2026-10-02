@@ -1,8 +1,11 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await req.json();
         const { bookingId, itemsToDeliver, discount = 0, cashReceived = 0 } = body;
 
@@ -211,6 +214,8 @@ export async function POST(req) {
 
             // 5. Update Ledger Bookkeeping
             // Pure receiving: credit only the actual cash received
+            const branchId = booking.branchId || session?.user?.branchId || 1;
+
             if (cashAmt > 0) {
                 const checkoutEntryDate = new Date();
                 const descNotes = `Checkout Payment - Booking #${booking.bookingNumber || booking.id}`;
@@ -224,6 +229,7 @@ export async function POST(req) {
                         amount: cashAmt,
                         paymentMode: 'CASH',
                         source: 'Receiving',
+                        branchId: branchId || null,
                         receivingDate: checkoutEntryDate,
                         description: descNotes
                     }
@@ -237,6 +243,7 @@ export async function POST(req) {
                         description: descNotes,
                         bookingId: bId,
                         receivingId: receiving.id,
+                        branchId: branchId || null,
                         entryDate: checkoutEntryDate
                     }
                 });
@@ -259,6 +266,7 @@ export async function POST(req) {
                             description: `Cash received at Checkout from ${billingName} (Booking #${booking.bookingNumber || booking.id})`,
                             bookingId: bId,
                             receivingId: receiving.id,
+                            branchId: branchId || null,
                             entryDate: checkoutEntryDate
                         }
                     });
@@ -290,7 +298,8 @@ export async function POST(req) {
                         type: 'DEBIT',
                         amount: newRemainingAmount,
                         description: `Transferred to Ledger - Remaining Balance for Booking #${booking.bookingNumber || booking.id}`,
-                        bookingId: bId
+                        bookingId: bId,
+                        branchId: branchId || null
                     }
                 });
 

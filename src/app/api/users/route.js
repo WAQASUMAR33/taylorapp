@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { fullName, username, email, phone, role, password, permissions } = body;
+        const { fullName, username, email, phone, role, password, permissions, branchId } = body;
 
         if (!fullName || !username || !password) {
             return NextResponse.json(
@@ -26,7 +26,11 @@ export async function POST(req) {
                 passwordHash: hashedPassword,
                 isActive: true,
                 permissions: permissions || null,
+                branchId: branchId ? parseInt(branchId) : null,
             },
+            include: {
+                branch: true,
+            }
         });
 
         const { passwordHash, ...userWithoutPassword } = user;
@@ -46,7 +50,7 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, fullName, username, email, phone, role, password, isActive, permissions } = body;
+        const { id, fullName, username, email, phone, role, password, isActive, permissions, branchId } = body;
 
         if (!id) {
             return NextResponse.json({ error: "User ID is required" }, { status: 400 });
@@ -61,6 +65,10 @@ export async function PUT(req) {
             isActive: isActive !== undefined ? isActive : true,
         };
 
+        if (branchId !== undefined) {
+            updateData.branchId = branchId ? parseInt(branchId) : null;
+        }
+
         if (permissions !== undefined) {
             updateData.permissions = permissions;
         }
@@ -72,6 +80,9 @@ export async function PUT(req) {
         const updatedUser = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
+            include: {
+                branch: true,
+            }
         });
 
         const { passwordHash, ...userWithoutPassword } = updatedUser;
@@ -117,6 +128,18 @@ export async function GET() {
                 role: true,
                 isActive: true,
                 permissions: true,
+                branchId: true,
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                        phone: true,
+                        address: true,
+                        slogan: true,
+                        logo: true,
+                    }
+                },
                 createdAt: true,
                 updatedAt: true,
             },

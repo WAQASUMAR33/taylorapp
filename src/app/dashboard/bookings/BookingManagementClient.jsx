@@ -70,26 +70,77 @@ const BOOKING_STATUSES = [
 ];
 
 // ─── Shared print header ─────────────────────────────────────────────────────
-function PrintHeader() {
+function PrintHeader({ branch }) {
+    const brandName = branch?.name || "Grace Cloth and Tailors";
+    const slogan = branch?.slogan || "Where Style Meets Perfection";
+    const logo = branch?.logo || "/logo.png";
+    const phone = branch?.phone || "03006284318 | 03186284318";
+    const address = branch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+
     return (
         <div style={{ borderBottom: '3px solid #1a1a2e', paddingBottom: 10, marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <img src="/logo.png" alt="Logo" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                <img src={logo} alt="Logo" style={{ width: 72, height: 72, objectFit: 'contain' }} onError={(e) => { e.target.src = "/logo.png"; }} />
                 <div style={{ flex: 1, textAlign: 'center' }}>
                     <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1, color: '#1a1a2e', textTransform: 'uppercase' }}>
-                        Grace Cloth and Tailors
+                        {brandName}
                     </div>
-                    <div style={{ fontSize: 12, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
-                        Where Style Meets Perfection
-                    </div>
-                    <div style={{ fontSize: 12, marginTop: 4, color: '#222' }}>
-                        📞 03006284318 &nbsp;|&nbsp; 03186284318
-                    </div>
-                    <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
-                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
-                    </div>
+                    {slogan && (
+                        <div style={{ fontSize: 12, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
+                            {slogan}
+                        </div>
+                    )}
+                    {phone && (
+                        <div style={{ fontSize: 12, marginTop: 4, color: '#222' }}>
+                            📞 {phone}
+                        </div>
+                    )}
+                    {address && (
+                        <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
+                            {address}
+                        </div>
+                    )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function POSBranchHeader({ branch, title = "Customer Bill / Invoice" }) {
+    const brandName = branch?.name || "Grace Cloth and Tailors";
+    const slogan = branch?.slogan || "Where Style Meets Perfection";
+    const logo = branch?.logo || "/logo.png";
+    const phone = branch?.phone || "03006284318 | 03186284318";
+    const address = branch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+
+    return (
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <img src={logo} alt="Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} onError={(e) => { e.target.src = "/logo.png"; }} />
+                <div style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px', color: '#000', textTransform: 'uppercase' }}>
+                    {brandName}
+                </div>
+                {slogan && (
+                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginTop: '-2px' }}>
+                        {slogan}
+                    </div>
+                )}
+                {phone && (
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#000', marginTop: '2px' }}>
+                        📞 {phone}
+                    </div>
+                )}
+                {address && (
+                    <div style={{ fontSize: '9px', color: '#333' }}>
+                        {address}
+                    </div>
+                )}
+            </div>
+            <div style={{ borderBottom: '1px dashed #000', margin: '8px 0 6px 0' }} />
+            <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {title}
+            </div>
+            <div style={{ borderBottom: '1px dashed #000', margin: '6px 0 8px 0' }} />
         </div>
     );
 }
@@ -105,7 +156,7 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box', fontSize: 11 }}>
-            <PrintHeader />
+            <PrintHeader branch={bookings?.[0]?.branch} />
             <div style={{ textAlign: 'center', margin: '8px 0', fontSize: 14, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
                 Booking List Report
             </div>
@@ -189,29 +240,8 @@ function CustomerBill({ booking }) {
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
             {/* Dynamic printing styles handled by GlobalStyles below */}
 
-            {/* Custom POS Header */}
-            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <img src="/logo.png" alt="Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
-                    <div style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px', color: '#000', textTransform: 'uppercase' }}>
-                        Grace Cloth and Tailors
-                    </div>
-                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginTop: '-2px' }}>
-                        Where Style Meets Perfection
-                    </div>
-                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#000', marginTop: '2px' }}>
-                        📞 03006284318 | 03186284318
-                    </div>
-                    <div style={{ fontSize: '9px', color: '#333' }}>
-                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
-                    </div>
-                </div>
-                <div style={{ borderBottom: '1px dashed #000', margin: '8px 0 6px 0' }} />
-                <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Customer Bill / Invoice
-                </div>
-                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0 8px 0' }} />
-            </div>
+            {/* Custom POS Header with Branch Branding */}
+            <POSBranchHeader branch={booking.branch} title="Customer Bill / Invoice" />
 
             {/* Booking & Customer details */}
             <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
@@ -411,10 +441,17 @@ function CustomerBill({ booking }) {
                 </div>
             )}
 
+            {/* Branch Note */}
+            {booking.branch?.notes && (
+                <div style={{ border: '1px dashed #bbb', borderRadius: '4px', padding: '4px 6px', margin: '6px 0', fontSize: '9px', color: '#444', textAlign: 'center' }}>
+                    {booking.branch.notes}
+                </div>
+            )}
+
             {/* Footer */}
             <div style={{ textAlign: 'center', marginTop: '12px', marginBottom: '6px', fontSize: '9px', color: '#555' }}>
                 <div style={{ borderBottom: '1px dashed #000', marginBottom: '6px' }} />
-                <div>Thank you for choosing Grace Cloth and Tailors!</div>
+                <div>Thank you for choosing {booking.branch?.name || "Grace Cloth and Tailors"}!</div>
             </div>
 
         </div>
@@ -471,29 +508,8 @@ function MergedCustomerBill({ bookings }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            {/* Custom POS Header */}
-            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <img src="/logo.png" alt="Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
-                    <div style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px', color: '#000', textTransform: 'uppercase' }}>
-                        Grace Cloth and Tailors
-                    </div>
-                    <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginTop: '-2px' }}>
-                        Where Style Meets Perfection
-                    </div>
-                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#000', marginTop: '2px' }}>
-                        📞 03006284318 | 03186284318
-                    </div>
-                    <div style={{ fontSize: '9px', color: '#333' }}>
-                        Basement of Faazal Plaza, Dhulyan Chowk Dinga
-                    </div>
-                </div>
-                <div style={{ borderBottom: '1px dashed #000', margin: '8px 0 6px 0' }} />
-                <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Merged Customer Bill
-                </div>
-                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0 8px 0' }} />
-            </div>
+            {/* Custom POS Header with Branch Branding */}
+            <POSBranchHeader branch={sortedBookings?.[0]?.branch} title="Merged Customer Bill" />
 
             {/* Booking & Customer details */}
             <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
@@ -685,10 +701,17 @@ function MergedCustomerBill({ bookings }) {
                 </div>
             )}
 
+            {/* Branch Note */}
+            {sortedBookings?.[0]?.branch?.notes && (
+                <div style={{ border: '1px dashed #bbb', borderRadius: '4px', padding: '4px 6px', margin: '6px 0', fontSize: '9px', color: '#444', textAlign: 'center' }}>
+                    {sortedBookings[0].branch.notes}
+                </div>
+            )}
+
             {/* Footer */}
             <div style={{ textAlign: 'center', marginTop: '12px', marginBottom: '6px', fontSize: '9px', color: '#555' }}>
                 <div style={{ borderBottom: '1px dashed #000', marginBottom: '6px' }} />
-                <div>Thank you for choosing Grace Cloth and Tailors!</div>
+                <div>Thank you for choosing {sortedBookings?.[0]?.branch?.name || "Grace Cloth and Tailors"}!</div>
             </div>
 
         </div>
@@ -745,7 +768,7 @@ function TailorTicket({ booking, measurements }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            <PrintHeader />
+            <PrintHeader branch={booking.branch} />
 
             {/* Title */}
             <div style={{ textAlign: 'center', margin: '6px 0', fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>

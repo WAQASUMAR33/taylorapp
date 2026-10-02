@@ -53,8 +53,8 @@ import {
 } from "lucide-react";
 
 const ENTRY_TYPES = [
-    { label: "Debit (Receivable)", value: "DEBIT" },
-    { label: "Credit (Payable)", value: "CREDIT" },
+    { label: "Payment Received / Credit (Jama)", value: "CREDIT" },
+    { label: "Charge / Debit (Banam)", value: "DEBIT" },
 ];
 
 const getBriefDescription = (desc) => {
@@ -200,11 +200,12 @@ export default function LedgerManagementClient({
 
     const [formData, setFormData] = useState({
         customerId: "",
-        type: "DEBIT",
+        type: "CREDIT",
         amount: "",
         description: "",
         paymentMethod: "CASH",
         bankId: "",
+        entryDate: new Date().toISOString().split("T")[0],
     });
 
     // Derived: selected customer object for the form
@@ -380,7 +381,15 @@ export default function LedgerManagementClient({
     /* ── helpers ──────────────────────────────────────── */
 
     const handleOpen = () => {
-        setFormData({ customerId: "", type: "DEBIT", amount: "", description: "", paymentMethod: "CASH", bankId: "" });
+        setFormData({
+            customerId: filterCustomer?.id || "",
+            type: "CREDIT",
+            amount: "",
+            description: "",
+            paymentMethod: "CASH",
+            bankId: "",
+            entryDate: new Date().toISOString().split("T")[0],
+        });
         setModalCustomerSearchInput("");
         setDebouncedModalCustomerSearch("");
         setError("");
@@ -967,8 +976,8 @@ export default function LedgerManagementClient({
                     )}
 
                     <Grid container spacing={2}>
-                        {/* Row 1: Account | Type | Amount */}
-                        <Grid size={{ xs: 4 }}>
+                        {/* Row 1: Account & Entry Date */}
+                        <Grid size={{ xs: 12, sm: 8 }}>
                             <Autocomplete
                                 size="small"
                                 options={customerOptions}
@@ -984,7 +993,6 @@ export default function LedgerManagementClient({
                                 loading={searchingCustomers}
                                 filterOptions={filterCustomerOptions}
                                 componentsProps={{ paper: { sx: { minWidth: 320 } } }}
-                                sx={{ minWidth: 300 }}
                                 renderOption={(props, option) => {
                                     const { key, ...optionProps } = props;
                                     return (
@@ -1040,22 +1048,34 @@ export default function LedgerManagementClient({
                             />
                         </Grid>
 
-                        <Grid size={{ xs: 4 }}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                type="date"
+                                label="Entry Date"
+                                value={formData.entryDate || ""}
+                                onChange={(e) => setFormData(p => ({ ...p, entryDate: e.target.value }))}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+
+                        {/* Row 2: Entry Type & Amount */}
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Autocomplete
                                 size="small"
                                 options={ENTRY_TYPES}
                                 getOptionLabel={(o) => o.label}
                                 value={ENTRY_TYPES.find(o => o.value === formData.type) || null}
-                                onChange={(_, v) => setFormData(p => ({ ...p, type: v?.value || "DEBIT" }))}
+                                onChange={(_, v) => setFormData(p => ({ ...p, type: v?.value || "CREDIT" }))}
                                 componentsProps={{ paper: { sx: { minWidth: 260 } } }}
-                                sx={{ minWidth: 260 }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Entry Type" required variant="outlined" />
                                 )}
                             />
                         </Grid>
 
-                        <Grid size={{ xs: 4 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -1075,7 +1095,7 @@ export default function LedgerManagementClient({
                         {/* Payment Receiving Method if CREDIT */}
                         {formData.type === "CREDIT" && (
                             <>
-                                <Grid size={{ xs: 6 }}>
+                                <Grid size={{ xs: 12, sm: formData.paymentMethod === "BANK" ? 6 : 12 }}>
                                     <FormControl fullWidth size="small">
                                         <InputLabel id="ledger-paymethod-label">Payment Receiving Account</InputLabel>
                                         <Select
@@ -1090,7 +1110,7 @@ export default function LedgerManagementClient({
                                     </FormControl>
                                 </Grid>
                                 {formData.paymentMethod === "BANK" && (
-                                    <Grid size={{ xs: 6 }}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
                                         <FormControl fullWidth size="small">
                                             <InputLabel id="ledger-bank-label">Select Bank</InputLabel>
                                             <Select
@@ -1108,7 +1128,20 @@ export default function LedgerManagementClient({
                                         </FormControl>
                                     </Grid>
                                 )}
+                                <Grid size={{ xs: 12 }}>
+                                    <Alert severity="success" variant="outlined" sx={{ py: 0.5, borderRadius: 2 }}>
+                                        ✓ <b>Payment Received:</b> This will reduce customer balance and record a <b>Receiving Transaction</b> in the Transaction Roster.
+                                    </Alert>
+                                </Grid>
                             </>
+                        )}
+
+                        {formData.type === "DEBIT" && (
+                            <Grid size={{ xs: 12 }}>
+                                <Alert severity="info" variant="outlined" sx={{ py: 0.5, borderRadius: 2 }}>
+                                    ℹ <b>Charge / Debit:</b> This will increase the customer's balance/debt.
+                                </Alert>
+                            </Grid>
                         )}
 
                         {/* Balance info banner — shown when an account is selected */}
@@ -1146,21 +1179,19 @@ export default function LedgerManagementClient({
                             </Grid>
                         )}
 
-                        {/* Description — full width, minWidth 600 */}
+                        {/* Description — full width */}
                         <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 size="small"
-                                label="Description"
+                                label="Description / Remarks"
                                 name="description"
                                 multiline
-                                rows={3}
-                                required
+                                rows={2}
                                 value={formData.description}
                                 onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
-                                placeholder="Enter description or remarks…"
+                                placeholder="Enter description or remarks (e.g. Payment received for bill, cash payment)..."
                                 variant="outlined"
-                                sx={{ minWidth: 600 }}
                             />
                         </Grid>
                     </Grid>

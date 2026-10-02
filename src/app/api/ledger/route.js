@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 async function getOrCreateCashAccount(tx) {
@@ -111,11 +113,17 @@ export async function GET(req) {
                 where,
                 include: {
                     customer: true,
+                    branch: true,
                     purchase: true,
-                    receiving: true,
+                    receiving: {
+                        include: {
+                            branch: true
+                        }
+                    },
                     booking: {
                         include: {
                             customer: true,
+                            branch: true,
                             items: {
                                 include: {
                                     product: true,
@@ -340,8 +348,10 @@ export async function GET(req) {
 // POST - Create a new ledger entry
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await req.json();
-        const { customerId, type, amount, description, purchaseId, bookingId, paymentMethod, bankId, entryDate } = body;
+        const { customerId, type, amount, description, purchaseId, bookingId, paymentMethod, bankId, entryDate, branchId: reqBranchId } = body;
+        const branchId = reqBranchId ? parseInt(reqBranchId) : (session?.user?.branchId || 1);
 
         if (!customerId || !type || !amount) {
             return NextResponse.json(
@@ -363,6 +373,7 @@ export async function POST(req) {
         // Run only the atomic writes inside the transaction.
         const { id: newEntryId } = await prisma.$transaction(async (tx) => {
             let receivingId = null;
+            const cleanDesc = (description && description.trim()) ? description.trim() : (type === 'CREDIT' ? 'Payment received through Ledger' : 'Ledger Entry');
 
             // If entry is CREDIT (money received from customer), record in the new receiving model
             if (type === 'CREDIT') {
@@ -371,9 +382,19 @@ export async function POST(req) {
                 const countToday = await tx.receiving.count({
                     where: { receiptNo: { startsWith: datePrefix } }
                 });
-                const receiptNo = `${datePrefix}-${String(countToday + 1).padStart(4, '0')}`;
 
-                const isBank = (paymentMethod === 'BANK') || (/bank/i.test(description || ''));
+                let receiptNo;
+                let suffix = countToday + 1;
+                do {
+                    receiptNo = `${datePrefix}-${String(suffix).padStart(4, '0')}`;
+                    const existing = await tx.receiving.findUnique({
+                        where: { receiptNo }
+                    });
+                    if (!existing) break;
+                    suffix++;
+                } while (true);
+
+                const isBank = (paymentMethod === 'BANK') || (/bank/i.test(cleanDesc));
                 const paymentMode = isBank ? 'BANK' : 'CASH';
 
                 const receiving = await tx.receiving.create({
@@ -385,8 +406,9 @@ export async function POST(req) {
                         paymentMode,
                         bankId: (isBank && bankId) ? parseInt(bankId) : null,
                         source: 'Ledger',
+                        branchId: branchId || null,
                         receivingDate: resolvedDate,
-                        description: description || 'Ledger Receiving Entry'
+                        description: cleanDesc
                     }
                 });
                 receivingId = receiving.id;
@@ -398,10 +420,11 @@ export async function POST(req) {
                     customerId: parseInt(customerId),
                     type,
                     amount: parsedAmount,
-                    description,
+                    description: cleanDesc,
                     purchaseId: purchaseId ? parseInt(purchaseId) : null,
                     bookingId: bookingId ? parseInt(bookingId) : null,
                     receivingId: receivingId || null,
+                    branchId: branchId || null,
                     entryDate: resolvedDate,
                 },
             });
@@ -417,7 +440,7 @@ export async function POST(req) {
             if (type === 'CREDIT') {
                 const cust = await tx.customer.findUnique({ where: { id: parseInt(customerId) } });
                 if (cust && cust.name !== 'Cash Account' && !cust.name.startsWith('Bank Account')) {
-                    const isBank = (paymentMethod === 'BANK') || (/bank/i.test(description || ''));
+                    const isBank = (paymentMethod === 'BANK') || (/bank/i.test(cleanDesc));
                     if (isBank && bankId) {
                         const { acc: bankAcc, bank } = await getOrCreateBankAccount(tx, parseInt(bankId));
                         await tx.ledgerentry.create({
@@ -425,9 +448,10 @@ export async function POST(req) {
                                 customerId: bankAcc.id,
                                 type: 'DEBIT',
                                 amount: parsedAmount,
-                                description: `Bank Received from ${cust.name} - ${description || 'Ledger Entry'}`,
+                                description: `Bank Received from ${cust.name} - ${cleanDesc}`,
                                 bookingId: bookingId ? parseInt(bookingId) : null,
                                 receivingId: receivingId || null,
+                                branchId: branchId || null,
                                 entryDate: resolvedDate
                             }
                         });
@@ -440,9 +464,10 @@ export async function POST(req) {
                                 customerId: cashAcc.id,
                                 type: 'DEBIT',
                                 amount: parsedAmount,
-                                description: `Cash Received from ${cust.name} - ${description || 'Ledger Entry'}`,
+                                description: `Cash Received from ${cust.name} - ${cleanDesc}`,
                                 bookingId: bookingId ? parseInt(bookingId) : null,
                                 receivingId: receivingId || null,
+                                branchId: branchId || null,
                                 entryDate: resolvedDate
                             }
                         });

@@ -26,6 +26,7 @@ export const authOptions = {
                                 { email: credentials.username }
                             ]
                         },
+                        include: { branch: true },
                     });
 
                     if (!user || !user.passwordHash) {
@@ -47,6 +48,17 @@ export const authOptions = {
                         email: user.email,
                         role: user.role,
                         permissions: user.permissions,
+                        branchId: user.branchId,
+                        branch: user.branch ? {
+                            id: user.branch.id,
+                            name: user.branch.name,
+                            code: user.branch.code,
+                            phone: user.branch.phone,
+                            address: user.branch.address,
+                            slogan: user.branch.slogan,
+                            logo: user.branch.logo,
+                            notes: user.branch.notes,
+                        } : null,
                     };
                 } catch (error) {
                     console.error("Authorization error:", error);
@@ -62,16 +74,30 @@ export const authOptions = {
                 token.id = user.id;
                 token.name = user.name;
                 token.permissions = user.permissions;
+                token.branchId = user.branchId;
+                token.branch = user.branch;
             } else if (token.sub) {
                 try {
                     const dbUser = await prisma.user.findUnique({
                         where: { id: parseInt(token.sub) },
+                        include: { branch: true },
                     });
                     if (dbUser) {
                         token.role = dbUser.role;
                         token.id = dbUser.id.toString();
                         token.name = dbUser.fullName;
                         token.permissions = dbUser.permissions;
+                        token.branchId = dbUser.branchId;
+                        token.branch = dbUser.branch ? {
+                            id: dbUser.branch.id,
+                            name: dbUser.branch.name,
+                            code: dbUser.branch.code,
+                            phone: dbUser.branch.phone,
+                            address: dbUser.branch.address,
+                            slogan: dbUser.branch.slogan,
+                            logo: dbUser.branch.logo,
+                            notes: dbUser.branch.notes,
+                        } : null;
                     }
                 } catch (error) {
                     console.error("Error fetching user in jwt callback", error);
@@ -84,6 +110,8 @@ export const authOptions = {
                 session.user.role = token.role || "STAFF"; // Fallback to avoid empty sidebar
                 session.user.id = token.id;
                 session.user.permissions = token.permissions || null;
+                session.user.branchId = token.branchId || null;
+                session.user.branch = token.branch || null;
                 if (token.name) {
                     session.user.name = token.name;
                 }
