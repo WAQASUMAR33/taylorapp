@@ -15,7 +15,13 @@ export default async function ReceivingTransactionsPage() {
         transactions: [],
         totalCount: 0,
         totalPages: 1,
-        totalReceivedSum: 0
+        totalReceivedSum: 0,
+        summary: {
+            total: { amount: 0, count: 0 },
+            advance: { amount: 0, count: 0 },
+            receiving: { amount: 0, count: 0 },
+            ledger: { amount: 0, count: 0 }
+        }
     };
 
     try {
@@ -26,7 +32,7 @@ export default async function ReceivingTransactionsPage() {
             }
         };
 
-        const [receivings, totalCount, totalAmountAgg] = await Promise.all([
+        const [receivings, totalCount, totalAmountAgg, sourceGroups] = await Promise.all([
             prisma.receiving.findMany({
                 where,
                 include: {
@@ -53,8 +59,43 @@ export default async function ReceivingTransactionsPage() {
             prisma.receiving.aggregate({
                 where,
                 _sum: { amount: true }
+            }),
+            prisma.receiving.groupBy({
+                by: ['source'],
+                where,
+                _sum: { amount: true },
+                _count: { id: true }
             })
         ]);
+
+        const summary = {
+            total: { amount: 0, count: 0 },
+            advance: { amount: 0, count: 0 },
+            receiving: { amount: 0, count: 0 },
+            ledger: { amount: 0, count: 0 }
+        };
+
+        for (const g of sourceGroups) {
+            const amt = parseFloat(g._sum?.amount || 0);
+            const cnt = g._count?.id || 0;
+            summary.total.amount += amt;
+            summary.total.count += cnt;
+
+            const s = (g.source || "").toLowerCase();
+            if (s === "advance") {
+                summary.advance.amount += amt;
+                summary.advance.count += cnt;
+            } else if (s === "receiving") {
+                summary.receiving.amount += amt;
+                summary.receiving.count += cnt;
+            } else if (s === "ledger") {
+                summary.ledger.amount += amt;
+                summary.ledger.count += cnt;
+            } else {
+                summary.ledger.amount += amt;
+                summary.ledger.count += cnt;
+            }
+        }
 
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
@@ -144,7 +185,8 @@ export default async function ReceivingTransactionsPage() {
             transactions,
             totalCount,
             totalPages: Math.ceil(totalCount / limit) || 1,
-            totalReceivedSum: parseFloat(totalAmountAgg._sum.amount || 0)
+            totalReceivedSum: summary.total.amount,
+            summary
         };
     } catch (error) {
         console.error("Database error on Receiving Transactions page:", error);

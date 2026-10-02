@@ -613,6 +613,7 @@ model receiving {
   amount        Decimal       @db.Decimal(10, 2)
   paymentMode   String        @default("CASH") // "CASH", "BANK"
   bankId        Int?
+  source        String        @default("Advance") // "Advance", "Receiving", "Ledger"
   receivingDate DateTime      @default(now())
   description   String?       @db.Text
   createdAt     DateTime      @default(now())

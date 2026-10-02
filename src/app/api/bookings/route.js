@@ -190,6 +190,28 @@ async function handleReturnedStatusTransition(tx, bookingId, currentBooking, new
     }
 }
 
+// Query constants for bookings
+const STAFF_INCLUDE = {
+    staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } }
+};
+const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
+const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true } };
+const CUSTOMER_SELECT = {
+    select: {
+        id: true,
+        code: true,
+        name: true,
+        phone: true,
+        email: true,
+        address: true,
+        measurementNo: true,
+        measurements: {
+            orderBy: { takenAt: "desc" },
+            take: 1
+        }
+    }
+};
+
 // GET - Fetch all bookings or a specific booking
 export async function GET(req) {
     try {
@@ -202,28 +224,6 @@ export async function GET(req) {
         const deliveryTo = searchParams.get("deliveryTo");
         const search = searchParams.get("search");
         const all = searchParams.get("all") === "true";
-
-        const STAFF_INCLUDE = {
-            staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } }
-        };
-        const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
-
-        const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true } };
-        const CUSTOMER_SELECT = {
-            select: {
-                id: true,
-                code: true,
-                name: true,
-                phone: true,
-                email: true,
-                address: true,
-                measurementNo: true,
-                measurements: {
-                    orderBy: { takenAt: "desc" },
-                    take: 1
-                }
-            }
-        };
 
         if (id) {
             const booking = await prisma.booking.findUnique({
@@ -535,11 +535,11 @@ export async function POST(req) {
                     }
                 },
                 include: {
-                    customer: { select: { id: true, name: true, phone: true, email: true, measurementNo: true } },
-                    billingCustomer: { select: { id: true, name: true, phone: true } },
-                    tailor: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
-                    cutter: { select: { id: true, name: true, accountCategory: { select: { name: true } } } },
-                    staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } },
+                    customer: CUSTOMER_SELECT,
+                    billingCustomer: BILLING_SELECT,
+                    tailor: TAILOR_CUTTER_SELECT,
+                    cutter: TAILOR_CUTTER_SELECT,
+                    ...STAFF_INCLUDE,
                     items: {
                         include: {
                             product: { select: { id: true, name: true, sku: true } },
@@ -628,6 +628,7 @@ export async function POST(req) {
                             amount: advAmt,
                             paymentMode: resolvedPaymentMethod,
                             bankId: resolvedBankId,
+                            source: 'Advance',
                             receivingDate: bookingEntryDate,
                             description: `Advance Payment for Booking: ${bookingNumber}`
                         }
@@ -1000,21 +1001,11 @@ export async function PUT(req) {
                 where: { id: parseInt(id) },
                 data: updateData,
                 include: {
-                    customer: {
-                        select: { id: true, code: true, name: true, phone: true, email: true, address: true, measurementNo: true }
-                    },
-                    billingCustomer: {
-                        select: { id: true, code: true, name: true, phone: true, address: true }
-                    },
-                    tailor: {
-                        select: { id: true, name: true, accountCategory: { select: { name: true } } }
-                    },
-                    cutter: {
-                        select: { id: true, name: true, accountCategory: { select: { name: true } } }
-                    },
-                    staff: {
-                        include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } }
-                    },
+                    customer: CUSTOMER_SELECT,
+                    billingCustomer: BILLING_SELECT,
+                    tailor: TAILOR_CUTTER_SELECT,
+                    cutter: TAILOR_CUTTER_SELECT,
+                    ...STAFF_INCLUDE,
                     items: {
                         include: {
                             product: { select: { id: true, name: true, sku: true } },

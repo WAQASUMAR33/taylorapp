@@ -223,6 +223,7 @@ export async function POST(req) {
                         bookingId: bId,
                         amount: cashAmt,
                         paymentMode: 'CASH',
+                        source: 'Receiving',
                         receivingDate: checkoutEntryDate,
                         description: descNotes
                     }

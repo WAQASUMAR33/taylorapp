@@ -15,30 +15,23 @@ export async function GET(req) {
 
         const skip = Math.max(0, (page - 1) * limit);
 
-        // Base filter on receiving model
-        const where = {
+        // Base filter on receiving model (without source filter so widgets reflect the active period/search)
+        const baseWhere = {
             customer: {
                 name: { not: "Cash Account" }
             }
         };
 
-        // Source filter
-        if (source === "BOOKING") {
-            where.bookingId = { not: null };
-        } else if (source === "LEDGER") {
-            where.bookingId = null;
-        }
-
         // Date range filter
         if (dateFrom || dateTo) {
-            where.receivingDate = {};
+            baseWhere.receivingDate = {};
             if (dateFrom) {
-                where.receivingDate.gte = new Date(dateFrom);
+                baseWhere.receivingDate.gte = new Date(dateFrom);
             }
             if (dateTo) {
                 const toDate = new Date(dateTo);
                 toDate.setHours(23, 59, 59, 999);
-                where.receivingDate.lte = toDate;
+                baseWhere.receivingDate.lte = toDate;
             }
         }
 
@@ -70,8 +63,28 @@ export async function GET(req) {
                 searchOr.push({ amount: searchNum });
             }
 
-            where.AND = where.AND || [];
-            where.AND.push({ OR: searchOr });
+            baseWhere.AND = baseWhere.AND || [];
+            baseWhere.AND.push({ OR: searchOr });
+        }
+
+        // Table query filter (includes source filter)
+        const where = { ...baseWhere };
+
+        // Source filter
+        if (source === "ADVANCE") {
+            where.source = "Advance";
+        } else if (source === "RECEIVING") {
+            where.source = "Receiving";
+        } else if (source === "BOOKING") {
+            where.OR = [
+                { source: { in: ["Advance", "Receiving"] } },
+                { bookingId: { not: null } }
+            ];
+        } else if (source === "LEDGER") {
+            where.OR = [
+                { source: "Ledger" },
+                { bookingId: null }
+            ];
         }
 
         // Determine orderBy
@@ -87,7 +100,7 @@ export async function GET(req) {
             orderBy = [{ receivingDate: sortOrder }, { id: sortOrder }];
         }
 
-        const [receivings, totalCount, totalAmountAgg] = await Promise.all([
+        const [receivings, totalCount, totalAmountAgg, sourceGroups, modeGroups] = await Promise.all([
             prisma.receiving.findMany({
                 where,
                 include: {
@@ -112,12 +125,73 @@ export async function GET(req) {
             prisma.receiving.aggregate({
                 where,
                 _sum: { amount: true }
+            }),
+            prisma.receiving.groupBy({
+                by: ['source'],
+                where: baseWhere,
+                _sum: { amount: true },
+                _count: { id: true }
+            }),
+            prisma.receiving.groupBy({
+                by: ['paymentMode'],
+                where: baseWhere,
+                _sum: { amount: true },
+                _count: { id: true }
             })
         ]);
 
+        const summary = {
+            total: { amount: 0, count: 0 },
+            advance: { amount: 0, count: 0 },
+            receiving: { amount: 0, count: 0 },
+            ledger: { amount: 0, count: 0 },
+            cash: { amount: 0, count: 0 },
+            bank: { amount: 0, count: 0 }
+        };
+
+        for (const g of sourceGroups) {
+            const amt = parseFloat(g._sum?.amount || 0);
+            const cnt = g._count?.id || 0;
+            summary.total.amount += amt;
+            summary.total.count += cnt;
+
+            const s = (g.source || "").toLowerCase();
+            if (s === "advance") {
+                summary.advance.amount += amt;
+                summary.advance.count += cnt;
+            } else if (s === "receiving") {
+                summary.receiving.amount += amt;
+                summary.receiving.count += cnt;
+            } else if (s === "ledger") {
+                summary.ledger.amount += amt;
+                summary.ledger.count += cnt;
+            } else {
+                summary.ledger.amount += amt;
+                summary.ledger.count += cnt;
+            }
+        }
+
+        for (const m of modeGroups) {
+            const amt = parseFloat(m._sum?.amount || 0);
+            const cnt = m._count?.id || 0;
+            const mode = (m.paymentMode || "").toUpperCase();
+            if (mode === "BANK") {
+                summary.bank.amount += amt;
+                summary.bank.count += cnt;
+            } else {
+                summary.cash.amount += amt;
+                summary.cash.count += cnt;
+            }
+        }
+
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
-            const receivingType = isBooking ? "From Booking" : "Received through Ledger";
+            const source = rec.source || (isBooking ? "Advance" : "Ledger");
+            const receivingType = source === "Advance"
+                ? "Advance Payment"
+                : source === "Receiving"
+                    ? "Bill Payment"
+                    : (isBooking ? "From Booking" : "Received through Ledger");
 
             let bookingNum = rec.booking?.bookingNumber;
             if (!bookingNum && rec.description) {
@@ -187,6 +261,7 @@ export async function GET(req) {
                 rawDate: rec.receivingDate.toISOString(),
                 formattedDate,
                 formattedTime,
+                source,
                 receivingType,
                 sourceRef,
                 accountName: rec.customer?.name || "Customer",
@@ -213,7 +288,9 @@ export async function GET(req) {
             page,
             limit,
             totalPages,
-            totalReceivedSum: parseFloat(totalAmountAgg._sum.amount || 0)
+            totalReceivedSum: summary.total.amount,
+            filteredTotalSum: parseFloat(totalAmountAgg._sum?.amount || 0),
+            summary
         });
     } catch (error) {
         console.error("Error in receiving-transactions API:", error);

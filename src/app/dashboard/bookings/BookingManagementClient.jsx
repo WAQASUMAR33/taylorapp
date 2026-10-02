@@ -782,9 +782,11 @@ function TailorTicket({ booking, measurements }) {
                 const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
                 return stitchingItems.slice(0, 1).map((item, idx) => {
                     const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                    const activeMeas = measurements || booking.customer?.measurements?.[0];
+                    const activeMeas = (measurements && (!measurements.customerId || measurements.customerId === booking.customerId))
+                        ? measurements
+                        : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
                     const src = (activeMeas && Object.keys(activeMeas).length > 0)
-                        ? { ...activeMeas, ...item, ...Object.fromEntries(Object.entries(activeMeas).filter(([_, v]) => v != null && v !== '')) }
+                        ? { ...activeMeas, ...Object.fromEntries(Object.entries(item).filter(([_, v]) => v != null && v !== '')) }
                         : item;
                     const measureRows = getMeasureRows(src, isWskot);
 
@@ -1414,29 +1416,15 @@ ${periodHtml}
         itemNote: item.itemNote || measurement?.notes || "",
     });
 
-    // Fetch measurements when needed; returns the record for immediate use
-    const fetchMeasurements = async (customerId, measurementNo = null, phone = null) => {
+    // Fetch measurements strictly by customerId; returns the record for immediate use
+    const fetchMeasurements = async (customerId) => {
+        if (!customerId) return null;
         try {
-            if (customerId) {
-                const res = await fetch(`/api/measurements?customerId=${customerId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.length > 0) {
-                        setCustomerMeasurements(data[0]);
-                        return data[0];
-                    }
-                }
-            }
-            if (measurementNo || phone) {
-                const searchQ = measurementNo || phone;
-                const res = await fetch(`/api/measurements?search=${encodeURIComponent(searchQ)}&limit=1`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const list = data.measurements || (Array.isArray(data) ? data : []);
-                    if (list.length > 0) {
-                        setCustomerMeasurements(list[0]);
-                        return list[0];
-                    }
+            const res = await fetch(`/api/measurements?customerId=${customerId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    return data[0];
                 }
             }
         } catch (error) {
@@ -1456,13 +1444,22 @@ ${periodHtml}
 
         const bookingMeasMap = new Map();
         for (const b of bookingList) {
-            let m = (bookingList.length === 1 && measurements) ? measurements : null;
-            if (!m && b.customer?.measurements?.length > 0) {
-                m = b.customer.measurements[0];
+            const cId = b.customerId || b.customer?.id;
+            let m = null;
+            // 1. If passed measurements strictly match this booking's customerId
+            if (measurements && measurements.customerId === cId) {
+                m = measurements;
             }
-            if (!m && (b.customerId || b.customer?.id)) {
-                const cId = b.customerId || b.customer?.id;
-                m = await fetchMeasurements(cId, b.customer?.measurementNo, b.customer?.phone);
+            // 2. If booking already has measurements for this customerId
+            if (!m && b.customer?.measurements?.length > 0) {
+                const custMeas = b.customer.measurements[0];
+                if (!custMeas.customerId || custMeas.customerId === cId) {
+                    m = custMeas;
+                }
+            }
+            // 3. Otherwise fetch from API strictly against customerId
+            if (!m && cId) {
+                m = await fetchMeasurements(cId);
             }
             bookingMeasMap.set(b.id, m);
         }
@@ -1470,6 +1467,7 @@ ${periodHtml}
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
         const buildBookingHtml = (booking, meas) => {
+            const cust = booking.customer || (customerOptions || []).find(c => c.id === booking.customerId);
             const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
             const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
             const stitchingItems = (booking.items || []).filter(item => !item.productId);
@@ -1492,9 +1490,11 @@ ${periodHtml}
 
             const itemsHtml = stitchingItems.slice(0, 1).map((item, idx) => {
                 const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                const activeMeas = meas || booking.customer?.measurements?.[0];
+                const activeMeas = (meas && (!meas.customerId || meas.customerId === booking.customerId))
+                    ? meas
+                    : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
                 const src = (activeMeas && Object.keys(activeMeas).length > 0)
-                    ? { ...activeMeas, ...item, ...Object.fromEntries(Object.entries(activeMeas).filter(([_, v]) => v != null && v !== '')) }
+                    ? { ...activeMeas, ...Object.fromEntries(Object.entries(item).filter(([_, v]) => v != null && v !== '')) }
                     : item;
 
                 const measureFields = isWskot ? [
@@ -1622,9 +1622,9 @@ ${periodHtml}
                     <tbody>
                         <tr>
                             <td style="font-weight:700;width:13%">Customer:</td>
-                            <td style="font-weight:700;width:22%">${booking.customer?.name || ''}</td>
+                            <td style="font-weight:700;width:22%">${cust?.name || booking.customer?.name || ''}</td>
                             <td style="font-weight:700;width:11%">Meas. No:</td>
-                            <td style="font-weight:700;width:14%">${booking.customer?.measurementNo || '—'}</td>
+                            <td style="font-weight:700;width:14%">${cust?.measurementNo || booking.customer?.measurementNo || '—'}</td>
                             <td style="font-weight:700;width:10%">Booking #:</td>
                             <td style="font-weight:800;color:#1a1a2e;width:15%">${booking.bookingNumber || booking.id}</td>
                             <td style="font-weight:700;width:7%">Date:</td>
@@ -1640,7 +1640,7 @@ ${periodHtml}
                         </tr>
                         <tr>
                             <td style="font-weight:700">Address:</td>
-                            <td colspan="7">${booking.customer?.address || '—'}</td>
+                            <td colspan="7">${cust?.address || booking.customer?.address || '—'}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1742,7 +1742,7 @@ ${allBookingsHtml}
 
         if (type === 'STITCHING') {
             const measurements = tempPrintBooking?.customerId
-                ? await fetchMeasurements(tempPrintBooking.customerId, tempPrintBooking.customer?.measurementNo, tempPrintBooking.customer?.phone)
+                ? await fetchMeasurements(tempPrintBooking.customerId)
                 : null;
             await openStitchingTicketWindow(tempPrintBooking, measurements);
             return;
@@ -1860,6 +1860,7 @@ ${allBookingsHtml}
             }));
             // Fetch saved measurements and pre-fill any stitching cart items
             const measurement = await fetchMeasurements(customer.id);
+            setCustomerMeasurements(measurement);
             if (measurement) {
                 setCartItems(prev => prev.map(item =>
                     item.isStitching ? applyMeasurementToItem(item, measurement) : item
@@ -4900,20 +4901,28 @@ ${allBookingsHtml}
                                                 <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
                                             </Tooltip>
                                             {(() => {
-                                                const stitchItems = (booking.items || []).filter(i => !i.productId);
-                                                const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
-                                                const deliveredQty = stitchItems.filter(i => i.itemStatus === "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
-                                                const remainingSuitQty = Math.max(0, totalSuitQty - deliveredQty);
-                                                const hasPendingSuits = stitchItems.length > 0 && remainingSuitQty > 0;
-                                                const hasRemAmt = parseFloat(booking.remainingAmount || 0) > 0;
-
-                                                if (!hasRemAmt && !hasPendingSuits) return null;
+                                                const rem = parseFloat(booking.remainingAmount || 0);
+                                                const adv = parseFloat(booking.advanceAmount || 0);
+                                                const total = parseFloat(booking.totalAmount || 0);
+                                                const isPaymentClear = rem <= 0 || (adv >= total && total > 0) || booking.billStatus === "Clear" || booking.billStatus === "Clear Bill" || booking.status === "PAID";
 
                                                 return (
-                                                    <Tooltip title={hasRemAmt ? "Pay / Clear Bill / Deliver Suits" : "Deliver Remaining Suits"}>
-                                                        <IconButton size="small" sx={{ color: hasRemAmt ? '#10b981' : '#8b5cf6' }} onClick={() => handleOpenPayDialog(booking)}>
-                                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
-                                                        </IconButton>
+                                                    <Tooltip title={isPaymentClear ? "Payment Cleared" : "Pay / Clear Bill"}>
+                                                        <span>
+                                                            <IconButton 
+                                                                size="small" 
+                                                                disabled={isPaymentClear}
+                                                                sx={{ 
+                                                                    color: isPaymentClear ? '#cbd5e1' : '#10b981',
+                                                                    '&.Mui-disabled': {
+                                                                        color: '#cbd5e1'
+                                                                    }
+                                                                }} 
+                                                                onClick={() => handleOpenPayDialog(booking)}
+                                                            >
+                                                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                                            </IconButton>
+                                                        </span>
                                                     </Tooltip>
                                                 );
                                             })()}
@@ -5249,7 +5258,14 @@ ${allBookingsHtml}
                         <div className="print-page">
                             {printType === 'BILL'
                                 ? <CustomerBill booking={printBooking} />
-                                : <TailorTicket booking={printBooking} measurements={customerMeasurements || printBooking.customer?.measurements?.[0]} />
+                                : <TailorTicket 
+                                    booking={printBooking} 
+                                    measurements={
+                                        (customerMeasurements && customerMeasurements.customerId === printBooking.customerId)
+                                            ? customerMeasurements
+                                            : (printBooking.customer?.measurements?.[0]?.customerId === printBooking.customerId ? printBooking.customer.measurements[0] : null)
+                                    } 
+                                  />
                             }
                         </div>
                     )}
@@ -5264,7 +5280,10 @@ ${allBookingsHtml}
                                 <div key={bk.id} className="print-page">
                                     {printType === 'BILL'
                                         ? <CustomerBill booking={bk} />
-                                        : <TailorTicket booking={bk} measurements={bk.customer?.measurements?.[0] || null} />
+                                        : <TailorTicket 
+                                            booking={bk} 
+                                            measurements={bk.customer?.measurements?.[0]?.customerId === bk.customerId ? bk.customer.measurements[0] : null} 
+                                          />
                                     }
                                 </div>
                             ))

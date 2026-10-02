@@ -23,7 +23,8 @@ import {
     useTheme,
     Chip,
     Card,
-    Grid
+    Grid,
+    LinearProgress
 } from "@mui/material";
 import {
     Search,
@@ -37,7 +38,10 @@ import {
     ChevronLeft,
     ChevronRight,
     CheckCircle2,
-    TrendingUp
+    TrendingUp,
+    Coins,
+    Receipt,
+    BookOpen
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
@@ -48,7 +52,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
     const canView = checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
 
     // Filter states
-    const [source, setSource] = useState("ALL"); // ALL | BOOKING | LEDGER
+    const [source, setSource] = useState("ALL"); // ALL | ADVANCE | RECEIVING | LEDGER | BOOKING
     const [status, setStatus] = useState("RECEIVED"); // RECEIVED | ALL
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -72,6 +76,14 @@ export default function ReceivingTransactionsClient({ initialData }) {
     const [totalCount, setTotalCount] = useState(initialData?.totalCount || 0);
     const [totalPages, setTotalPages] = useState(initialData?.totalPages || 1);
     const [totalReceivedSum, setTotalReceivedSum] = useState(initialData?.totalReceivedSum || 0);
+    const [summary, setSummary] = useState(initialData?.summary || {
+        total: { amount: initialData?.totalReceivedSum || 0, count: initialData?.totalCount || 0 },
+        advance: { amount: 0, count: 0 },
+        receiving: { amount: 0, count: 0 },
+        ledger: { amount: 0, count: 0 },
+        cash: { amount: 0, count: 0 },
+        bank: { amount: 0, count: 0 }
+    });
     const [loading, setLoading] = useState(false);
 
     // Search debounce
@@ -113,6 +125,9 @@ export default function ReceivingTransactionsClient({ initialData }) {
                 setTotalCount(data.totalCount || 0);
                 setTotalPages(data.totalPages || 1);
                 setTotalReceivedSum(data.totalReceivedSum || 0);
+                if (data.summary) {
+                    setSummary(data.summary);
+                }
             }
         } catch (error) {
             console.error("Failed to load receiving transactions:", error);
@@ -221,6 +236,96 @@ export default function ReceivingTransactionsClient({ initialData }) {
         );
     };
 
+    // Handle card click to filter by type
+    const handleCardClick = (cardSource) => {
+        if (source === cardSource && cardSource !== "ALL") {
+            setSource("ALL");
+        } else {
+            setSource(cardSource);
+        }
+        setPage(1);
+    };
+
+    // Calculate percentage safely
+    const calcPercent = (val, total) => {
+        if (!total || total <= 0) return 0;
+        return Math.min(100, Math.max(0, (val / total) * 100));
+    };
+
+    const isCardActive = (cardSource) => {
+        if (cardSource === "ALL") return source === "ALL";
+        return source === cardSource;
+    };
+
+    const isDark = theme.palette.mode === "dark";
+
+    const statCards = [
+        {
+            key: "ALL",
+            title: "Total Receiving",
+            subtitle: "All Roster Transactions",
+            amount: summary.total?.amount || 0,
+            count: summary.total?.count || 0,
+            percent: 100,
+            icon: <TrendingUp size={22} />,
+            color: "#10b981", // Emerald
+            bgLight: isDark ? "rgba(16, 185, 129, 0.16)" : "rgba(16, 185, 129, 0.08)",
+            borderLight: isDark ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.2)",
+            gradientLight: "linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(5, 150, 105, 0.03))",
+            gradientDark: "linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(5, 150, 105, 0.06))",
+            sourceValue: "ALL",
+            badge: "All Roster"
+        },
+        {
+            key: "ADVANCE",
+            title: "Advance Type",
+            subtitle: "Booking Initial Advances",
+            amount: summary.advance?.amount || 0,
+            count: summary.advance?.count || 0,
+            percent: calcPercent(summary.advance?.amount, summary.total?.amount),
+            icon: <Coins size={22} />,
+            color: "#2563eb", // Blue
+            bgLight: isDark ? "rgba(37, 99, 235, 0.16)" : "rgba(37, 99, 235, 0.08)",
+            borderLight: isDark ? "rgba(37, 99, 235, 0.3)" : "rgba(37, 99, 235, 0.2)",
+            gradientLight: "linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(29, 78, 216, 0.03))",
+            gradientDark: "linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(29, 78, 216, 0.06))",
+            sourceValue: "ADVANCE",
+            badge: "Advance"
+        },
+        {
+            key: "RECEIVING",
+            title: "Bill Payment Type",
+            subtitle: "Receiving & Delivery",
+            amount: summary.receiving?.amount || 0,
+            count: summary.receiving?.count || 0,
+            percent: calcPercent(summary.receiving?.amount, summary.total?.amount),
+            icon: <Receipt size={22} />,
+            color: "#7c3aed", // Purple
+            bgLight: isDark ? "rgba(124, 58, 237, 0.16)" : "rgba(124, 58, 237, 0.08)",
+            borderLight: isDark ? "rgba(124, 58, 237, 0.3)" : "rgba(124, 58, 237, 0.2)",
+            gradientLight: "linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(109, 40, 217, 0.03))",
+            gradientDark: "linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(109, 40, 217, 0.06))",
+            sourceValue: "RECEIVING",
+            badge: "Bill Payment"
+        },
+        {
+            key: "LEDGER",
+            title: "Ledger Type",
+            subtitle: "Customer Direct Ledger",
+            amount: summary.ledger?.amount || 0,
+            count: summary.ledger?.count || 0,
+            percent: calcPercent(summary.ledger?.amount, summary.total?.amount),
+            icon: <BookOpen size={22} />,
+            color: "#d97706", // Amber
+            bgLight: isDark ? "rgba(217, 119, 6, 0.16)" : "rgba(217, 119, 6, 0.08)",
+            borderLight: isDark ? "rgba(217, 119, 6, 0.3)" : "rgba(217, 119, 6, 0.2)",
+            gradientLight: "linear-gradient(135deg, rgba(217, 119, 6, 0.10), rgba(180, 83, 9, 0.03))",
+            gradientDark: "linear-gradient(135deg, rgba(217, 119, 6, 0.16), rgba(180, 83, 9, 0.06))",
+            sourceValue: "LEDGER",
+            badge: "Ledger Entry"
+        }
+    ];
+
     if (!canView) {
         return (
             <Box sx={{ p: 4, textAlign: "center" }}>
@@ -234,29 +339,221 @@ export default function ReceivingTransactionsClient({ initialData }) {
     return (
         <Box sx={{ width: "100%", maxWidth: "100%", py: 2, px: { xs: 1, sm: 2 } }}>
             {/* Header section matching design */}
-            <Box sx={{ mb: 2.5 }}>
-                <Typography
-                    variant="h5"
-                    sx={{
-                        fontWeight: 700,
-                        letterSpacing: "-0.01em",
-                        color: "text.primary",
-                        fontSize: { xs: "1.3rem", sm: "1.55rem" }
-                    }}
-                >
-                    Transaction Roster
-                </Typography>
-                <Typography
-                    variant="body2"
-                    sx={{
-                        color: "text.secondary",
-                        mt: 0.25,
-                        fontSize: "0.875rem"
-                    }}
-                >
-                    All Recent Transactions
-                </Typography>
+            <Box sx={{ mb: 2.5, display: "flex", justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, flexWrap: "wrap", gap: 1 }}>
+                <Box>
+                    <Typography
+                        variant="h5"
+                        sx={{
+                            fontWeight: 700,
+                            letterSpacing: "-0.01em",
+                            color: "text.primary",
+                            fontSize: { xs: "1.3rem", sm: "1.55rem" }
+                        }}
+                    >
+                        Transaction Roster
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: "text.secondary",
+                            mt: 0.25,
+                            fontSize: "0.875rem"
+                        }}
+                    >
+                        Real-time Receiving Statistics by Transaction Type
+                    </Typography>
+                </Box>
+
+                {/* Quick breakdown of Cash vs Bank if available */}
+                {(summary.cash?.amount > 0 || summary.bank?.amount > 0) && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, bgcolor: "action.hover", px: 1.5, py: 0.75, borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                            Cash: <Box component="span" sx={{ color: "text.primary", fontWeight: 700 }}>Rs. {summary.cash?.amount?.toLocaleString()}</Box>
+                        </Typography>
+                        <Box sx={{ width: "1px", height: 12, bgcolor: "divider" }} />
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                            Bank: <Box component="span" sx={{ color: "text.primary", fontWeight: 700 }}>Rs. {summary.bank?.amount?.toLocaleString()}</Box>
+                        </Typography>
+                    </Box>
+                )}
             </Box>
+
+            {/* Transaction Type Summary Widgets (Roaster Trnx Types) */}
+            <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                {statCards.map((card) => {
+                    const active = isCardActive(card.sourceValue);
+                    return (
+                        <Grid item xs={12} sm={6} lg={3} key={card.key}>
+                            <Tooltip
+                                title={active ? "Active filter • Click to show all transactions" : `Click to filter by ${card.title}`}
+                                arrow
+                                placement="top"
+                            >
+                                <Card
+                                    elevation={0}
+                                    onClick={() => handleCardClick(card.sourceValue)}
+                                    sx={{
+                                        p: 2.25,
+                                        borderRadius: 2.5,
+                                        cursor: "pointer",
+                                        position: "relative",
+                                        overflow: "hidden",
+                                        height: "100%",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        border: active ? "2px solid" : "1px solid",
+                                        borderColor: active
+                                            ? card.color
+                                            : isDark
+                                                ? "rgba(255, 255, 255, 0.08)"
+                                                : "divider",
+                                        background: active
+                                            ? (isDark ? card.gradientDark : card.gradientLight)
+                                            : (isDark ? "rgba(255, 255, 255, 0.02)" : "#ffffff"),
+                                        boxShadow: active
+                                            ? `0 6px 20px ${card.color}25`
+                                            : "none",
+                                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        "&:hover": {
+                                            transform: "translateY(-3px)",
+                                            borderColor: card.color,
+                                            boxShadow: `0 8px 24px ${card.color}20`
+                                        }
+                                    }}
+                                >
+                                    {/* Top Row: Icon & Status Badges */}
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
+                                        <Box
+                                            sx={{
+                                                width: 42,
+                                                height: 42,
+                                                borderRadius: 2,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                bgcolor: card.bgLight,
+                                                color: card.color,
+                                                border: "1px solid",
+                                                borderColor: card.borderLight
+                                            }}
+                                        >
+                                            {card.icon}
+                                        </Box>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                            {active && (
+                                                <Chip
+                                                    size="small"
+                                                    icon={<CheckCircle2 size={12} style={{ color: "#fff" }} />}
+                                                    label="Active"
+                                                    sx={{
+                                                        height: 20,
+                                                        fontSize: "0.68rem",
+                                                        fontWeight: 700,
+                                                        bgcolor: card.color,
+                                                        color: "#fff",
+                                                        "& .MuiChip-icon": { ml: 0.5 }
+                                                    }}
+                                                />
+                                            )}
+                                            <Chip
+                                                size="small"
+                                                label={card.badge}
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: "0.7rem",
+                                                    fontWeight: 600,
+                                                    bgcolor: card.bgLight,
+                                                    color: card.color,
+                                                    border: "1px solid",
+                                                    borderColor: card.borderLight
+                                                }}
+                                            />
+                                        </Box>
+                                    </Box>
+
+                                    {/* Titles */}
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: "text.secondary",
+                                            fontWeight: 700,
+                                            letterSpacing: "0.04em",
+                                            textTransform: "uppercase",
+                                            fontSize: "0.72rem",
+                                            display: "block"
+                                        }}
+                                    >
+                                        {card.title}
+                                    </Typography>
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: "text.disabled",
+                                            fontSize: "0.7rem",
+                                            display: "block",
+                                            mb: 0.75
+                                        }}
+                                    >
+                                        {card.subtitle}
+                                    </Typography>
+
+                                    {/* Main Amount */}
+                                    <Typography
+                                        variant="h5"
+                                        sx={{
+                                            fontWeight: 800,
+                                            color: card.color,
+                                            letterSpacing: "-0.02em",
+                                            lineHeight: 1.2,
+                                            mb: 1.5,
+                                            fontSize: { xs: "1.25rem", md: "1.4rem" }
+                                        }}
+                                    >
+                                        Rs. {card.amount.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+
+                                    {/* Footer: Count & Progress */}
+                                    <Box sx={{ mt: "auto", pt: 0.5 }}>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                                            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, fontSize: "0.74rem" }}>
+                                                {card.count.toLocaleString()} transaction{card.count !== 1 ? "s" : ""}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: card.color, fontWeight: 700, fontSize: "0.74rem" }}>
+                                                {card.key === "ALL" ? "100%" : `${card.percent.toFixed(1)}%`}
+                                            </Typography>
+                                        </Box>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={Math.min(100, Math.max(0, card.percent))}
+                                            sx={{
+                                                height: 5,
+                                                borderRadius: 3,
+                                                bgcolor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+                                                "& .MuiLinearProgress-bar": {
+                                                    bgcolor: card.color,
+                                                    borderRadius: 3
+                                                }
+                                            }}
+                                        />
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: "text.disabled",
+                                                fontSize: "0.68rem",
+                                                mt: 0.75,
+                                                display: "block",
+                                                textAlign: "right"
+                                            }}
+                                        >
+                                            {active ? "Click to view all" : "Click to filter"}
+                                        </Typography>
+                                    </Box>
+                                </Card>
+                            </Tooltip>
+                        </Grid>
+                    );
+                })}
+            </Grid>
 
             {/* Filter Row matching exact layout in reference image */}
             <Paper
@@ -323,9 +620,11 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             "& .MuiSelect-select": { py: 0.25, pr: 3 }
                         }}
                     >
-                        <MenuItem value="ALL">All</MenuItem>
-                        <MenuItem value="BOOKING">From Booking</MenuItem>
-                        <MenuItem value="LEDGER">Received through Ledger</MenuItem>
+                        <MenuItem value="ALL">All Sources</MenuItem>
+                        <MenuItem value="ADVANCE">Advance (Booking)</MenuItem>
+                        <MenuItem value="RECEIVING">Receiving (Bill Payment)</MenuItem>
+                        <MenuItem value="LEDGER">Ledger Entry</MenuItem>
+                        <MenuItem value="BOOKING">All Bookings</MenuItem>
                     </Select>
                 </Box>
 
@@ -952,58 +1251,6 @@ export default function ReceivingTransactionsClient({ initialData }) {
                     </Button>
                 </Box>
             </Box>
-
-            {/* Total Receiving Summary Card */}
-            <Grid container spacing={2} sx={{ mt: 2.5 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                        elevation={0}
-                        sx={{
-                            p: 2.5,
-                            borderRadius: 3,
-                            background: theme.palette.mode === "dark"
-                                ? "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.08))"
-                                : "linear-gradient(135deg, #10B98111, #05966911)",
-                            border: "1px solid",
-                            borderColor: theme.palette.mode === "dark" ? "rgba(16,185,129,0.25)" : "#10B98133",
-                            transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                            "&:hover": {
-                                transform: "translateY(-2px)",
-                                boxShadow: theme.palette.mode === "dark"
-                                    ? "0 4px 20px rgba(16,185,129,0.15)"
-                                    : "0 4px 20px rgba(16,185,129,0.12)"
-                            }
-                        }}
-                    >
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: 2,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    bgcolor: theme.palette.mode === "dark" ? "rgba(16,185,129,0.18)" : "#10B98118",
-                                }}
-                            >
-                                <TrendingUp size={20} color="#10B981" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, letterSpacing: "0.02em" }}>
-                                    Total Receiving
-                                </Typography>
-                                <Typography variant="h5" sx={{ fontWeight: 800, color: "#10B981", mt: 0.25, lineHeight: 1.2 }}>
-                                    Rs. {totalReceivedSum.toLocaleString("en-PK", { minimumFractionDigits: 2 })}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.72rem" }}>
-                                    {totalCount} transaction{totalCount !== 1 ? "s" : ""}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Card>
-                </Grid>
-            </Grid>
         </Box>
     );
 }

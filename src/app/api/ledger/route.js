@@ -384,6 +384,7 @@ export async function POST(req) {
                         amount: parsedAmount,
                         paymentMode,
                         bankId: (isBank && bankId) ? parseInt(bankId) : null,
+                        source: 'Ledger',
                         receivingDate: resolvedDate,
                         description: description || 'Ledger Receiving Entry'
                     }

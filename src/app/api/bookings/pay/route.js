@@ -217,6 +217,7 @@ export async function POST(req) {
                         amount: payAmt,
                         paymentMode: resolvedMethod,
                         bankId: resolvedBankId,
+                        source: 'Receiving',
                         receivingDate: payEntryDate,
                         description: descNotes
                     }
