@@ -11,11 +11,20 @@ export const metadata = {
 };
 
 export default async function ReceivingTransactionsPage() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const todayStr = `${year}-${month}-${day}`;
+
     let initialData = {
         transactions: [],
         totalCount: 0,
         totalPages: 1,
         totalReceivedSum: 0,
+        dateFrom: todayStr,
+        dateTo: todayStr,
+        datePreset: "TODAY",
         summary: {
             total: { amount: 0, count: 0 },
             advance: { amount: 0, count: 0 },
@@ -29,6 +38,10 @@ export default async function ReceivingTransactionsPage() {
         const where = {
             customer: {
                 name: { not: "Cash Account" }
+            },
+            receivingDate: {
+                gte: new Date(`${todayStr}T00:00:00.000Z`),
+                lte: new Date(`${todayStr}T23:59:59.999Z`)
             }
         };
 
@@ -186,6 +199,9 @@ export default async function ReceivingTransactionsPage() {
             totalCount,
             totalPages: Math.ceil(totalCount / limit) || 1,
             totalReceivedSum: summary.total.amount,
+            dateFrom: todayStr,
+            dateTo: todayStr,
+            datePreset: "TODAY",
             summary
         };
     } catch (error) {

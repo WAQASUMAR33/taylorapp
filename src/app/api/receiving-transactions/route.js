@@ -26,12 +26,12 @@ export async function GET(req) {
         if (dateFrom || dateTo) {
             baseWhere.receivingDate = {};
             if (dateFrom) {
-                baseWhere.receivingDate.gte = new Date(dateFrom);
+                const fStr = dateFrom.includes("T") ? dateFrom : `${dateFrom}T00:00:00.000Z`;
+                baseWhere.receivingDate.gte = new Date(fStr);
             }
             if (dateTo) {
-                const toDate = new Date(dateTo);
-                toDate.setHours(23, 59, 59, 999);
-                baseWhere.receivingDate.lte = toDate;
+                const tStr = dateTo.includes("T") ? dateTo : `${dateTo}T23:59:59.999Z`;
+                baseWhere.receivingDate.lte = new Date(tStr);
             }
         }
 

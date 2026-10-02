@@ -19,7 +19,6 @@ import {
     IconButton,
     CircularProgress,
     Tooltip,
-    Popover,
     useTheme,
     Chip,
     Card,
@@ -57,11 +56,20 @@ export default function ReceivingTransactionsClient({ initialData }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    // Date range filter states
-    const [datePreset, setDatePreset] = useState("ALL"); // ALL | TODAY | THIS_MONTH | LAST_MONTH | CUSTOM
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
-    const [datePickerAnchor, setDatePickerAnchor] = useState(null);
+    const getTodayString = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+
+    const initialToday = initialData?.dateFrom || getTodayString();
+
+    // Date range filter states - default to current date (TODAY)
+    const [datePreset, setDatePreset] = useState(initialData?.datePreset || "TODAY");
+    const [dateFrom, setDateFrom] = useState(initialData?.dateFrom !== undefined ? initialData.dateFrom : initialToday);
+    const [dateTo, setDateTo] = useState(initialData?.dateTo !== undefined ? initialData.dateTo : initialToday);
 
     // Sorting states
     const [sortBy, setSortBy] = useState("date"); // date | type | amount
@@ -142,7 +150,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
         if (isFirstRun.current) {
             isFirstRun.current = false;
             // If initialData exists and filters are at defaults, we don't need immediate refetch
-            if (initialData?.transactions?.length > 0) return;
+            if (initialData?.transactions !== undefined) return;
         }
         fetchTransactions();
     }, [page, source, status, debouncedSearch, dateFrom, dateTo, sortBy, sortOrder]);
@@ -158,7 +166,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
         setPage(1);
     };
 
-    // Calculate human-friendly Date Range label matching screenshot
+    // Calculate human-friendly Date Range label
     const dateRangeLabel = useMemo(() => {
         if (!dateFrom && !dateTo) {
             if (datePreset === "ALL") return "All Time";
@@ -172,11 +180,20 @@ export default function ReceivingTransactionsClient({ initialData }) {
         };
 
         if (dateFrom && dateTo) {
+            if (dateFrom === dateTo) return formatMonthDay(dateFrom);
             return `${formatMonthDay(dateFrom)} - ${formatMonthDay(dateTo)}`;
         }
         if (dateFrom) return `From ${formatMonthDay(dateFrom)}`;
         return `Until ${formatMonthDay(dateTo)}`;
     }, [dateFrom, dateTo, datePreset]);
+
+    // Format Date helper YYYY-MM-DD
+    const formatYMD = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
 
     // Handle preset changes
     const applyDatePreset = (preset) => {
@@ -186,22 +203,27 @@ export default function ReceivingTransactionsClient({ initialData }) {
             setDateFrom("");
             setDateTo("");
         } else if (preset === "TODAY") {
-            const todayStr = now.toISOString().split("T")[0];
+            const todayStr = formatYMD(now);
             setDateFrom(todayStr);
             setDateTo(todayStr);
+        } else if (preset === "YESTERDAY") {
+            const y = new Date(now);
+            y.setDate(y.getDate() - 1);
+            const yStr = formatYMD(y);
+            setDateFrom(yStr);
+            setDateTo(yStr);
         } else if (preset === "THIS_MONTH") {
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-            setDateFrom(firstDay);
-            setDateTo(lastDay);
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            setDateFrom(formatYMD(firstDay));
+            setDateTo(formatYMD(lastDay));
         } else if (preset === "LAST_MONTH") {
-            const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
-            const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
-            setDateFrom(firstDay);
-            setDateTo(lastDay);
+            const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+            setDateFrom(formatYMD(firstDay));
+            setDateTo(formatYMD(lastDay));
         }
         setPage(1);
-        setDatePickerAnchor(null);
     };
 
     // Pagination helper
@@ -555,7 +577,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                 })}
             </Grid>
 
-            {/* Filter Row matching exact layout in reference image */}
+            {/* Filter Row with 2 Date Pickers */}
             <Paper
                 elevation={0}
                 sx={{
@@ -563,45 +585,110 @@ export default function ReceivingTransactionsClient({ initialData }) {
                     mb: 2,
                     border: "1px solid",
                     borderColor: "divider",
-                    borderRadius: 2,
+                    borderRadius: 2.5,
                     bgcolor: "background.paper",
                     display: "flex",
                     flexWrap: "wrap",
                     alignItems: "center",
-                    gap: { xs: 1.5, md: 2 }
+                    gap: { xs: 1.25, md: 1.5 }
                 }}
             >
-                {/* 1. Date Range Filter */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 500, whiteSpace: "nowrap" }}>
-                        Date Range:
-                    </Typography>
-                    <Button
+                {/* 1. Date Range: Two Date Pickers */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                    <TextField
                         size="small"
-                        onClick={(e) => setDatePickerAnchor(e.currentTarget)}
-                        sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            color: "text.primary",
-                            fontSize: "0.875rem",
-                            px: 1,
-                            py: 0.25,
-                            minWidth: "auto",
-                            borderRadius: 1,
-                            bgcolor: "action.hover",
-                            "&:hover": { bgcolor: "action.selected" }
+                        label="From Date"
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => {
+                            setDateFrom(e.target.value);
+                            setDatePreset("CUSTOM");
+                            setPage(1);
                         }}
-                    >
-                        {dateRangeLabel}
-                    </Button>
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                            width: { xs: "100%", sm: 145 },
+                            "& .MuiInputBase-root": {
+                                height: 35,
+                                fontSize: "0.82rem",
+                                borderRadius: 1.5
+                            }
+                        }}
+                    />
+
+                    <Typography variant="body2" sx={{ color: "text.disabled", fontWeight: 600, display: { xs: "none", sm: "block" } }}>
+                        to
+                    </Typography>
+
+                    <TextField
+                        size="small"
+                        label="To Date"
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => {
+                            setDateTo(e.target.value);
+                            setDatePreset("CUSTOM");
+                            setPage(1);
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                            width: { xs: "100%", sm: 145 },
+                            "& .MuiInputBase-root": {
+                                height: 35,
+                                fontSize: "0.82rem",
+                                borderRadius: 1.5
+                            }
+                        }}
+                    />
+
+                    {/* Quick Range Presets */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
+                        {[
+                            { label: "Today", value: "TODAY" },
+                            { label: "Yesterday", value: "YESTERDAY" },
+                            { label: "This Month", value: "THIS_MONTH" },
+                            { label: "All Time", value: "ALL" }
+                        ].map((p) => {
+                            const isPresetActive = datePreset === p.value;
+                            return (
+                                <Chip
+                                    key={p.value}
+                                    label={p.label}
+                                    size="small"
+                                    clickable
+                                    onClick={() => applyDatePreset(p.value)}
+                                    color={isPresetActive ? "primary" : "default"}
+                                    variant={isPresetActive ? "filled" : "outlined"}
+                                    sx={{
+                                        height: 28,
+                                        fontSize: "0.75rem",
+                                        fontWeight: isPresetActive ? 700 : 500,
+                                        borderRadius: 1.5,
+                                        cursor: "pointer",
+                                        ...(isPresetActive
+                                            ? {
+                                                bgcolor: theme.palette.primary.main,
+                                                color: "#fff",
+                                                boxShadow: "0 2px 8px rgba(37,99,235,0.25)"
+                                            }
+                                            : {
+                                                bgcolor: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
+                                                borderColor: "divider",
+                                                "&:hover": { bgcolor: "action.hover" }
+                                            })
+                                    }}
+                                />
+                            );
+                        })}
+                    </Box>
                 </Box>
 
                 {/* Vertical Divider */}
-                <Box sx={{ height: 18, width: "1px", bgcolor: "divider", display: { xs: "none", sm: "block" } }} />
+                <Box sx={{ height: 24, width: "1px", bgcolor: "divider", display: { xs: "none", lg: "block" } }} />
 
                 {/* 2. Source Filter */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 500, whiteSpace: "nowrap" }}>
+                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600, fontSize: "0.82rem", whiteSpace: "nowrap" }}>
                         Source:
                     </Typography>
                     <Select
@@ -611,13 +698,14 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             setSource(e.target.value);
                             setPage(1);
                         }}
-                        variant="standard"
-                        disableUnderline
+                        variant="outlined"
                         sx={{
                             fontWeight: 600,
-                            fontSize: "0.875rem",
+                            fontSize: "0.82rem",
+                            height: 35,
+                            borderRadius: 1.5,
                             color: "text.primary",
-                            "& .MuiSelect-select": { py: 0.25, pr: 3 }
+                            "& .MuiSelect-select": { py: 0.75, pr: 3 }
                         }}
                     >
                         <MenuItem value="ALL">All Sources</MenuItem>
@@ -629,47 +717,15 @@ export default function ReceivingTransactionsClient({ initialData }) {
                 </Box>
 
                 {/* Vertical Divider */}
-                <Box sx={{ height: 18, width: "1px", bgcolor: "divider", display: { xs: "none", sm: "block" } }} />
+                <Box sx={{ height: 24, width: "1px", bgcolor: "divider", display: { xs: "none", md: "block" } }} />
 
-                {/* 3. Status Filter */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 500, whiteSpace: "nowrap" }}>
-                        Status:
-                    </Typography>
-                    <Select
-                        size="small"
-                        value={status}
-                        onChange={(e) => {
-                            setStatus(e.target.value);
-                            setPage(1);
-                        }}
-                        variant="standard"
-                        disableUnderline
-                        sx={{
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            color: "text.primary",
-                            "& .MuiSelect-select": { py: 0.25, pr: 3 }
-                        }}
-                    >
-                        <MenuItem value="RECEIVED">Received</MenuItem>
-                        <MenuItem value="ALL">All</MenuItem>
-                    </Select>
-                </Box>
-
-                {/* Vertical Divider */}
-                <Box sx={{ height: 18, width: "1px", bgcolor: "divider", display: { xs: "none", md: "block" } }} />
-
-                {/* 4. Search Filter */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: { xs: 1, md: 0 }, ml: { md: "auto" } }}>
-                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 500, whiteSpace: "nowrap" }}>
-                        Search:
-                    </Typography>
+                {/* 3. Search Filter */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: { xs: 1, md: 0 }, ml: { lg: "auto" } }}>
                     <TextField
                         size="small"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search transactions..."
+                        placeholder="Search receipt, customer..."
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -677,9 +733,9 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                 </InputAdornment>
                             ),
                             sx: {
-                                height: 34,
-                                fontSize: "0.84rem",
-                                width: { xs: "100%", sm: 220, md: 240 },
+                                height: 35,
+                                fontSize: "0.82rem",
+                                width: { xs: "100%", sm: 200, md: 220 },
                                 borderRadius: 1.5,
                                 bgcolor: "background.paper",
                                 "& fieldset": { borderColor: "divider" }
@@ -702,97 +758,6 @@ export default function ReceivingTransactionsClient({ initialData }) {
                     </Tooltip>
                 </Box>
             </Paper>
-
-            {/* Date Range Picker Popover */}
-            <Popover
-                open={Boolean(datePickerAnchor)}
-                anchorEl={datePickerAnchor}
-                onClose={() => setDatePickerAnchor(null)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                transformOrigin={{ vertical: "top", horizontal: "left" }}
-                PaperProps={{
-                    sx: { p: 2, width: 280, borderRadius: 2, border: "1px solid", borderColor: "divider", mt: 0.5 }
-                }}
-            >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-                    Select Date Range
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75, mb: 2 }}>
-                    <Button
-                        size="small"
-                        variant={datePreset === "ALL" ? "contained" : "outlined"}
-                        onClick={() => applyDatePreset("ALL")}
-                        sx={{ justifyContent: "flex-start", textTransform: "none", fontSize: "0.8rem" }}
-                    >
-                        All Time
-                    </Button>
-                    <Button
-                        size="small"
-                        variant={datePreset === "TODAY" ? "contained" : "outlined"}
-                        onClick={() => applyDatePreset("TODAY")}
-                        sx={{ justifyContent: "flex-start", textTransform: "none", fontSize: "0.8rem" }}
-                    >
-                        Today
-                    </Button>
-                    <Button
-                        size="small"
-                        variant={datePreset === "THIS_MONTH" ? "contained" : "outlined"}
-                        onClick={() => applyDatePreset("THIS_MONTH")}
-                        sx={{ justifyContent: "flex-start", textTransform: "none", fontSize: "0.8rem" }}
-                    >
-                        This Month
-                    </Button>
-                    <Button
-                        size="small"
-                        variant={datePreset === "LAST_MONTH" ? "contained" : "outlined"}
-                        onClick={() => applyDatePreset("LAST_MONTH")}
-                        sx={{ justifyContent: "flex-start", textTransform: "none", fontSize: "0.8rem" }}
-                    >
-                        Last Month
-                    </Button>
-                </Box>
-
-                <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, mb: 1, display: "block" }}>
-                    Custom Date Range:
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <TextField
-                        size="small"
-                        label="From"
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => {
-                            setDateFrom(e.target.value);
-                            setDatePreset("CUSTOM");
-                        }}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                    />
-                    <TextField
-                        size="small"
-                        label="To"
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => {
-                            setDateTo(e.target.value);
-                            setDatePreset("CUSTOM");
-                        }}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                    />
-                    <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => {
-                            setPage(1);
-                            setDatePickerAnchor(null);
-                        }}
-                        sx={{ mt: 0.5, textTransform: "none" }}
-                    >
-                        Apply Filter
-                    </Button>
-                </Box>
-            </Popover>
 
             {/* Table Container matching reference image styling */}
             <TableContainer
