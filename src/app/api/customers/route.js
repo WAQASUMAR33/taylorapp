@@ -149,7 +149,8 @@ export async function GET(req) {
                     { fatherName: { contains: search } },
                     { phone: { contains: search } },
                     { address: { contains: search } },
-                    { measurementNo: { contains: search } }
+                    { measurementNo: { contains: search } },
+                    { code: { contains: search } }
                 ]
             });
         }

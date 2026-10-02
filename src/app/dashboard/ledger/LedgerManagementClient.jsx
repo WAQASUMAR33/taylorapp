@@ -115,8 +115,10 @@ export default function LedgerManagementClient({
 
     const [customerOptions, setCustomerOptions] = useState(initialCustomers);
     const [customerSearchInput, setCustomerSearchInput] = useState("");
+    const [modalCustomerSearchInput, setModalCustomerSearchInput] = useState("");
     const [searchingCustomers, setSearchingCustomers] = useState(false);
     const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
+    const [debouncedModalCustomerSearch, setDebouncedModalCustomerSearch] = useState("");
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -220,7 +222,7 @@ export default function LedgerManagementClient({
         return () => clearTimeout(timer);
     }, [searchQuery, searchName, searchFatherName, searchPhone]);
 
-    // Handle debouncing for customer search input
+    // Handle debouncing for customer search input (filter bar)
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedCustomerSearch(customerSearchInput);
@@ -228,37 +230,82 @@ export default function LedgerManagementClient({
         return () => clearTimeout(timer);
     }, [customerSearchInput]);
 
-    // Fetch matching customers for dropdown options
+    // Handle debouncing for customer search input (modal)
     useEffect(() => {
-        const searchCustomers = async () => {
-            if (!debouncedCustomerSearch.trim()) return;
-            setSearchingCustomers(true);
-            try {
-                const res = await fetch(`/api/customers?search=${encodeURIComponent(debouncedCustomerSearch)}&limit=50`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const fetched = data.customers || [];
-                    setCustomerOptions(prev => {
-                        const map = new Map(prev.map(c => [c.id, c]));
-                        fetched.forEach(c => {
-                            if (c && c.id) {
-                                map.set(c.id, {
-                                    ...c,
-                                    balance: c.balance ? parseFloat(c.balance.toString()) : 0
-                                });
-                            }
-                        });
-                        return Array.from(map.values());
+        const timer = setTimeout(() => {
+            setDebouncedModalCustomerSearch(modalCustomerSearchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [modalCustomerSearchInput]);
+
+    // Fetch matching customers for dropdown options
+    const searchCustomers = async (searchTerm) => {
+        if (!searchTerm || !searchTerm.trim()) return;
+        setSearchingCustomers(true);
+        try {
+            const res = await fetch(`/api/customers?search=${encodeURIComponent(searchTerm.trim())}&limit=50`);
+            if (res.ok) {
+                const data = await res.json();
+                const fetched = data.customers || [];
+                setCustomerOptions(prev => {
+                    const map = new Map();
+                    // Place newly fetched matching results first so they appear at the top
+                    fetched.forEach(c => {
+                        if (c && c.id) {
+                            map.set(c.id, {
+                                ...c,
+                                balance: c.balance ? parseFloat(c.balance.toString()) : 0
+                            });
+                        }
                     });
-                }
-            } catch (err) {
-                console.error("Failed to search customers:", err);
-            } finally {
-                setSearchingCustomers(false);
+                    // Retain any existing options not returned in fetched
+                    prev.forEach(c => {
+                        if (c && c.id && !map.has(c.id)) {
+                            map.set(c.id, c);
+                        }
+                    });
+                    return Array.from(map.values());
+                });
             }
-        };
-        searchCustomers();
+        } catch (err) {
+            console.error("Failed to search customers:", err);
+        } finally {
+            setSearchingCustomers(false);
+        }
+    };
+
+    useEffect(() => {
+        if (debouncedCustomerSearch) {
+            searchCustomers(debouncedCustomerSearch);
+        }
     }, [debouncedCustomerSearch]);
+
+    useEffect(() => {
+        if (debouncedModalCustomerSearch) {
+            searchCustomers(debouncedModalCustomerSearch);
+        }
+    }, [debouncedModalCustomerSearch]);
+
+    // Filter customer options locally based on name, father name, phone, code, measurementNo, address
+    const filterCustomerOptions = (options, { inputValue }) => {
+        const q = (inputValue || "").toLowerCase().trim();
+        if (!q) return options;
+        return options.filter(c => {
+            if (!c) return false;
+            const name = (c.name || "").toLowerCase();
+            const fatherName = (c.fatherName || "").toLowerCase();
+            const phone = (c.phone || "").toLowerCase();
+            const code = (c.code || "").toLowerCase();
+            const address = (c.address || "").toLowerCase();
+            const measurementNo = (c.measurementNo || "").toLowerCase();
+            return name.includes(q) ||
+                   fatherName.includes(q) ||
+                   phone.includes(q) ||
+                   code.includes(q) ||
+                   address.includes(q) ||
+                   measurementNo.includes(q);
+        });
+    };
 
     // Auto-filter if customerId passed via URL
     useEffect(() => {
@@ -334,6 +381,8 @@ export default function LedgerManagementClient({
 
     const handleOpen = () => {
         setFormData({ customerId: "", type: "DEBIT", amount: "", description: "", paymentMethod: "CASH", bankId: "" });
+        setModalCustomerSearchInput("");
+        setDebouncedModalCustomerSearch("");
         setError("");
         setShowForm(true);
     };
@@ -549,6 +598,7 @@ export default function LedgerManagementClient({
                         <Autocomplete
                             size="small"
                             options={customerOptions}
+                            isOptionEqualToValue={(option, val) => !val || option?.id === val?.id}
                             getOptionLabel={(o) => o ? `${o.name || ""}${o.fatherName ? ` s/o ${o.fatherName}` : ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
                             value={filterCustomer}
                             onChange={(_, v) => setFilterCustomer(v)}
@@ -558,13 +608,13 @@ export default function LedgerManagementClient({
                                 }
                             }}
                             loading={searchingCustomers}
-                            filterOptions={(options) => options}
+                            filterOptions={filterCustomerOptions}
                             componentsProps={{ paper: { sx: { minWidth: 320 } } }}
                             sx={{ minWidth: 240 }}
                             renderOption={(props, option) => {
                                 const { key, ...optionProps } = props;
                                 return (
-                                    <li key={key} {...optionProps}>
+                                    <li key={key || option.id} {...optionProps}>
                                         <Box sx={{ py: 0.5, width: '100%' }}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                 {option.name} {option.fatherName ? `s/o ${option.fatherName}` : ""}
@@ -573,6 +623,11 @@ export default function LedgerManagementClient({
                                                 {option.phone && (
                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                         📞 {option.phone}
+                                                    </Typography>
+                                                )}
+                                                {option.code && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        🆔 {option.code}
                                                     </Typography>
                                                 )}
                                                 {option.measurementNo && (
@@ -595,6 +650,7 @@ export default function LedgerManagementClient({
                                     {...params} 
                                     label="Filter by Account" 
                                     variant="outlined" 
+                                    placeholder="Search account..."
                                     InputProps={{
                                         ...params.InputProps,
                                         endAdornment: (
@@ -916,22 +972,23 @@ export default function LedgerManagementClient({
                             <Autocomplete
                                 size="small"
                                 options={customerOptions}
+                                isOptionEqualToValue={(option, val) => !val || option?.id === val?.id}
                                 getOptionLabel={(o) => o ? `${o.name || ""}${o.fatherName ? ` s/o ${o.fatherName}` : ""}${o.phone ? ` (${o.phone})` : ""}` : ""}
                                 value={selectedFormCustomer}
                                 onChange={(_, v) => setFormData(p => ({ ...p, customerId: v?.id || "" }))}
                                 onInputChange={(event, newInputValue, reason) => {
                                     if (reason === "input") {
-                                        setCustomerSearchInput(newInputValue);
+                                        setModalCustomerSearchInput(newInputValue);
                                     }
                                 }}
                                 loading={searchingCustomers}
-                                filterOptions={(options) => options}
+                                filterOptions={filterCustomerOptions}
                                 componentsProps={{ paper: { sx: { minWidth: 320 } } }}
                                 sx={{ minWidth: 300 }}
                                 renderOption={(props, option) => {
                                     const { key, ...optionProps } = props;
                                     return (
-                                        <li key={key} {...optionProps}>
+                                        <li key={key || option.id} {...optionProps}>
                                             <Box sx={{ py: 0.5, width: '100%' }}>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                     {option.name} {option.fatherName ? `s/o ${option.fatherName}` : ""}
@@ -940,6 +997,11 @@ export default function LedgerManagementClient({
                                                     {option.phone && (
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                             📞 {option.phone}
+                                                        </Typography>
+                                                    )}
+                                                    {option.code && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            🆔 {option.code}
                                                         </Typography>
                                                     )}
                                                     {option.measurementNo && (
@@ -962,7 +1024,8 @@ export default function LedgerManagementClient({
                                         {...params} 
                                         label="Account" 
                                         required 
-                                        variant="outlined"
+                                        variant="outlined" 
+                                        placeholder="Search by name, phone, code..."
                                         InputProps={{
                                             ...params.InputProps,
                                             endAdornment: (
