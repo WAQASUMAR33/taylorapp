@@ -135,14 +135,14 @@ export default function ProductManagementClient({ initialProducts = [], initialB
         }
     }, [initialProducts]);
 
+    // Active Store / Branch Filter
+    // Default to "ALL" so all products and branch stocks are visible by default
+    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
+
     // Reset pagination when search or branch filter changes
     useEffect(() => {
         setPage(0);
     }, [searchQuery, selectedBranchId]);
-
-    // Active Store / Branch Filter
-    // Default to "ALL" so all products and branch stocks are visible by default
-    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
 
     useEffect(() => {
         // Only default to specific branch if non-admin user is explicitly tied to a branch
