@@ -235,6 +235,16 @@ export default function BranchManagementClient({ initialBranches }) {
     const totalUsers = branches.reduce((sum, b) => sum + (b._count?.users || 0), 0);
     const totalBookings = branches.reduce((sum, b) => sum + (b._count?.bookings || 0), 0);
 
+    if (session && !isAdmin) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
+                    Access Denied: Only Admin accounts can access Branch Management.
+                </Alert>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ width: "100%", p: 3 }}>
             {/* ── Summary Cards ────────────────────────────── */}

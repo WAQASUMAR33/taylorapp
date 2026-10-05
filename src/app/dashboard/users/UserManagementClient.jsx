@@ -88,7 +88,7 @@ function getDefaultPermissions(role) {
     if (role === "ADMIN") return FULL_PERMISSIONS;
     if (role === "MANAGER") return Object.fromEntries(
         MODULES.map(m => [m.key, Object.fromEntries(
-            m.actions.map(a => [a, m.key !== "users" && m.key !== "settings"])
+            m.actions.map(a => [a, m.key !== "users" && m.key !== "branches" && m.key !== "settings"])
         )])
     );
     return DEFAULT_STAFF_PERMISSIONS;
@@ -395,6 +395,16 @@ export default function UserManagementClient({ initialUsers, initialBranches = [
     };
 
     /* ── render ──────────────────────────────────────── */
+
+    if (session && !isAdmin) {
+        return (
+            <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+                <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
+                    Access Denied: Only Admin accounts can access User Management.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ width: "100%", p: 3 }}>

@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 403 });
+        }
+
         const body = await req.json();
         const { fullName, username, email, phone, role, password, permissions, branchId } = body;
 
@@ -49,6 +56,11 @@ export async function POST(req) {
 
 export async function PUT(req) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 403 });
+        }
+
         const body = await req.json();
         const { id, fullName, username, email, phone, role, password, isActive, permissions, branchId } = body;
 
@@ -101,6 +113,11 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 403 });
+        }
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
 
@@ -118,6 +135,11 @@ export async function DELETE(req) {
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 403 });
+        }
+
         const users = await prisma.user.findMany({
             select: {
                 id: true,

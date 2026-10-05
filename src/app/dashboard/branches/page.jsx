@@ -1,5 +1,8 @@
 export const dynamic = "force-dynamic";
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import BranchManagementClient from "./BranchManagementClient";
 import { Box, Typography } from "@mui/material";
@@ -10,6 +13,13 @@ export const metadata = {
 };
 
 export default async function BranchesPage() {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        redirect("/login");
+    }
+    if (session.user?.role !== "ADMIN") {
+        redirect("/dashboard");
+    }
     const branches = await prisma.branch.findMany({
         include: {
             _count: {

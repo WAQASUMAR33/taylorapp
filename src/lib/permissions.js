@@ -5,6 +5,11 @@ export function checkPermission(session, moduleKey, action = "view") {
     // ADMIN always has full permissions across all modules
     if (role === "ADMIN") return true;
 
+    // User Management, Branch Management, and Settings are strictly restricted to ADMIN
+    if (moduleKey === "users" || moduleKey === "branches" || moduleKey === "settings") {
+        return false;
+    }
+
     let permissions = session.user.permissions;
     if (typeof permissions === "string") {
         try {
@@ -23,7 +28,7 @@ export function checkPermission(session, moduleKey, action = "view") {
 
     // Fallback logic when permissions are not explicitly defined
     if (role === "MANAGER") {
-        return moduleKey !== "users" && moduleKey !== "settings";
+        return moduleKey !== "users" && moduleKey !== "branches" && moduleKey !== "settings";
     }
     if (role === "STAFF") {
         if (action === "view") {

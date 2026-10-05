@@ -5,6 +5,11 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(req, { params }) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const { id } = await params;
         const branchId = parseInt(id);
 
@@ -36,8 +41,8 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || (session.user?.role !== "ADMIN" && session.user?.role !== "MANAGER")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin role required." }, { status: 403 });
         }
 
         const { id } = await params;

@@ -5,6 +5,11 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(req) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const branches = await prisma.branch.findMany({
             include: {
                 _count: {
@@ -30,8 +35,8 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || (session.user?.role !== "ADMIN" && session.user?.role !== "MANAGER")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        if (!session || session.user?.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized. Admin role required." }, { status: 403 });
         }
 
         const body = await req.json();

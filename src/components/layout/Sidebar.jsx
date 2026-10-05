@@ -81,6 +81,16 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
         const role = session.user.role;
         if (role === "ADMIN") return true;
 
+        // User Management, Branch Management, and Settings should ONLY show to the admin account
+        if (item.moduleKey === "users" || item.moduleKey === "branches" || item.moduleKey === "settings") {
+            return false;
+        }
+
+        // Respect role array restriction if defined on nav item
+        if (item.roles && !item.roles.includes(role)) {
+            return false;
+        }
+
         let perms = session.user.permissions;
         if (typeof perms === "string") {
             try {
