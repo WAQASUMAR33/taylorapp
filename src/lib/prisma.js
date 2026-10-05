@@ -4,7 +4,13 @@ const prismaClientSingleton = () => {
   return new PrismaClient();
 };
 
-const prisma = globalThis.prisma ?? prismaClientSingleton();
+// If cached client is missing newly generated models, recreate it
+const existingPrisma = globalThis.prisma;
+const isStale = existingPrisma && !existingPrisma.branch_product_stock;
+
+const prisma = (!existingPrisma || isStale)
+  ? prismaClientSingleton()
+  : existingPrisma;
 
 export default prisma;
 

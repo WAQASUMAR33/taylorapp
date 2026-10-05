@@ -16,9 +16,24 @@ export const metadata = {
 
 async function getProducts() {
     try {
-        const products = await prisma.product.findMany({
-            orderBy: { name: "asc" },
-        });
+        let products = [];
+        try {
+            products = await prisma.product.findMany({
+                include: {
+                    branchStocks: {
+                        include: {
+                            branch: true
+                        }
+                    }
+                },
+                orderBy: { name: "asc" },
+            });
+        } catch (includeErr) {
+            console.warn("Retrying products query:", includeErr.message);
+            products = await prisma.product.findMany({
+                orderBy: { name: "asc" },
+            });
+        }
         return JSON.parse(JSON.stringify(products));
     } catch (error) {
         console.error("Failed to fetch products:", error);
@@ -26,14 +41,29 @@ async function getProducts() {
     }
 }
 
+async function getBranches() {
+    try {
+        const branches = await prisma.branch.findMany({
+            where: { isActive: true },
+            orderBy: [{ createdAt: "asc" }]
+        });
+        return JSON.parse(JSON.stringify(branches));
+    } catch (error) {
+        console.error("Failed to fetch branches:", error);
+        return [];
+    }
+}
+
 export default async function ProductManagementPage() {
     const session = await getServerSession(authOptions);
-    const canView = checkPermission(session, "products", "view");
-    if (!canView) {
-        redirect("/dashboard");
+    if (!session) {
+        redirect("/login");
     }
 
-    const products = await getProducts();
+    const [products, branches] = await Promise.all([
+        getProducts(),
+        getBranches(),
+    ]);
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -70,7 +100,7 @@ export default async function ProductManagementPage() {
                 </Box>
             </Box>
 
-            <ProductManagementClient initialProducts={products} />
+            <ProductManagementClient initialProducts={products} initialBranches={branches} />
         </Box>
     );
 }

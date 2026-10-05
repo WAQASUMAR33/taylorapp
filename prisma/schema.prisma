@@ -183,6 +183,7 @@ model product {
   category      category?       @relation(fields: [categoryId], references: [id])
   purchaseItems purchase_item[]
   saleReturnItems sale_return_item[]
+  branchStocks  branch_product_stock[]
 
   @@index([categoryId], map: "Product_categoryId_fkey")
 }
@@ -326,12 +327,16 @@ model stockmovement {
   quantity  Decimal            @db.Decimal(10, 2)
   unitCost  Decimal?           @db.Decimal(10, 2)
   notes     String?
+  branchId  Int?
   movedAt   DateTime           @default(now())
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
+  branch    branch?            @relation(fields: [branchId], references: [id])
+
   @@index([productId], map: "StockMovement_productId_fkey")
   @@index([userId], map: "StockMovement_userId_fkey")
+  @@index([branchId], map: "StockMovement_branchId_fkey")
 }
 
 model booking {
@@ -663,6 +668,26 @@ model branch {
   bookings      booking[]
   ledgerEntries ledgerentry[]
   receivings    receiving[]
+  productStocks branch_product_stock[]
+  stockMovements stockmovement[]
 
   @@map("branch")
 }
+
+model branch_product_stock {
+  id        Int      @id @default(autoincrement())
+  branchId  Int
+  productId Int
+  quantity  Decimal  @default(0.00) @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch    branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  product   product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, productId], map: "branch_product_stock_branchId_productId_key")
+  @@index([branchId], map: "branch_product_stock_branchId_fkey")
+  @@index([productId], map: "branch_product_stock_productId_fkey")
+  @@map("branch_product_stock")
+}
+

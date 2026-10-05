@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req) {
     try {
         const session = await getServerSession(authOptions);
         if (!checkPermission(session, "products", "view")) {
@@ -14,9 +14,29 @@ export async function GET() {
             );
         }
 
-        const products = await prisma.product.findMany({
-            orderBy: { name: "asc" },
-        });
+        let products = [];
+        try {
+            products = await prisma.product.findMany({
+                include: {
+                    category: true,
+                    branchStocks: {
+                        include: {
+                            branch: {
+                                select: { id: true, name: true, code: true, isActive: true }
+                            }
+                        }
+                    }
+                },
+                orderBy: { name: "asc" },
+            });
+        } catch (includeErr) {
+            console.warn("Retrying api products without branchStocks:", includeErr.message);
+            products = await prisma.product.findMany({
+                include: { category: true },
+                orderBy: { name: "asc" },
+            });
+        }
+
         return NextResponse.json(products);
     } catch (error) {
         console.error("Failed to fetch products:", error);
@@ -38,7 +58,7 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { sku, name, description, quantity, costPrice, unitPrice } = body;
+        const { sku, name, description, costPrice, unitPrice, branchStocks, quantity, branchId } = body;
 
         if (!sku || !name) {
             return NextResponse.json(
@@ -47,15 +67,85 @@ export async function POST(req) {
             );
         }
 
-        const product = await prisma.product.create({
-            data: {
-                sku,
-                name,
-                description,
-                quantity: quantity ? parseFloat(quantity) : 0,
-                costPrice: costPrice ? parseFloat(costPrice) : null,
-                unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-            },
+        // Calculate branch-wise stocks
+        let branchStockEntries = [];
+        let totalQuantity = 0;
+
+        if (branchStocks && typeof branchStocks === "object") {
+            // Can be { "1": 5, "2": 3 } or array
+            if (Array.isArray(branchStocks)) {
+                branchStockEntries = branchStocks.map(bs => ({
+                    branchId: parseInt(bs.branchId),
+                    quantity: parseFloat(bs.quantity) || 0
+                }));
+            } else {
+                branchStockEntries = Object.entries(branchStocks).map(([bId, qty]) => ({
+                    branchId: parseInt(bId),
+                    quantity: parseFloat(qty) || 0
+                }));
+            }
+            totalQuantity = branchStockEntries.reduce((sum, item) => sum + item.quantity, 0);
+        } else if (quantity !== undefined) {
+            const qtyNum = parseFloat(quantity) || 0;
+            const bId = branchId ? parseInt(branchId) : (session?.user?.branchId || 1);
+            branchStockEntries = [{ branchId: bId, quantity: qtyNum }];
+            totalQuantity = qtyNum;
+        }
+
+        const product = await prisma.$transaction(async (tx) => {
+            const newProd = await tx.product.create({
+                data: {
+                    sku,
+                    name,
+                    description,
+                    quantity: totalQuantity,
+                    costPrice: costPrice ? parseFloat(costPrice) : null,
+                    unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+                },
+            });
+
+            // If we have branch stock entries, insert them
+            if (branchStockEntries.length > 0) {
+                for (const item of branchStockEntries) {
+                    if (item.branchId) {
+                        await tx.branch_product_stock.create({
+                            data: {
+                                branchId: item.branchId,
+                                productId: newProd.id,
+                                quantity: item.quantity
+                            }
+                        });
+
+                        // Optionally record initial stock movement
+                        if (item.quantity > 0) {
+                            await tx.stockmovement.create({
+                                data: {
+                                    productId: newProd.id,
+                                    branchId: item.branchId,
+                                    type: "IN",
+                                    quantity: item.quantity,
+                                    unitCost: costPrice ? parseFloat(costPrice) : null,
+                                    notes: "Initial branch store stock",
+                                    userId: session?.user?.id ? parseInt(session.user.id) : null
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            return tx.product.findUnique({
+                where: { id: newProd.id },
+                include: {
+                    branchStocks: {
+                        include: {
+                            branch: {
+                                select: { id: true, name: true, code: true, isActive: true }
+                            }
+                        }
+                    }
+                }
+            });
         });
 
         return NextResponse.json(product, { status: 201 });
@@ -68,7 +158,7 @@ export async function POST(req) {
             );
         }
         return NextResponse.json(
-            { error: "Internal Server Error" },
+            { error: error.message || "Internal Server Error" },
             { status: 500 }
         );
     }
@@ -85,7 +175,7 @@ export async function PUT(req) {
         }
 
         const body = await req.json();
-        const { id, sku, name, description, quantity, costPrice, unitPrice } = body;
+        const { id, sku, name, description, costPrice, unitPrice, branchStocks, quantity, branchId } = body;
 
         if (!id || !sku || !name) {
             return NextResponse.json(
@@ -94,16 +184,95 @@ export async function PUT(req) {
             );
         }
 
-        const updatedProduct = await prisma.product.update({
-            where: { id: parseInt(id) },
-            data: {
-                sku,
-                name,
-                description,
-                quantity: quantity ? parseFloat(quantity) : 0,
-                costPrice: costPrice ? parseFloat(costPrice) : null,
-                unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-            },
+        const prodId = parseInt(id);
+
+        const updatedProduct = await prisma.$transaction(async (tx) => {
+            // Process branch-wise stock updates if provided
+            if (branchStocks && typeof branchStocks === "object") {
+                let entries = [];
+                if (Array.isArray(branchStocks)) {
+                    entries = branchStocks.map(bs => ({
+                        branchId: parseInt(bs.branchId),
+                        quantity: parseFloat(bs.quantity) || 0
+                    }));
+                } else {
+                    entries = Object.entries(branchStocks).map(([bId, qty]) => ({
+                        branchId: parseInt(bId),
+                        quantity: parseFloat(qty) || 0
+                    }));
+                }
+
+                for (const item of entries) {
+                    if (item.branchId) {
+                        await tx.branch_product_stock.upsert({
+                            where: {
+                                branchId_productId: {
+                                    branchId: item.branchId,
+                                    productId: prodId
+                                }
+                            },
+                            create: {
+                                branchId: item.branchId,
+                                productId: prodId,
+                                quantity: item.quantity
+                            },
+                            update: {
+                                quantity: item.quantity
+                            }
+                        });
+                    }
+                }
+            } else if (quantity !== undefined && branchId) {
+                const bId = parseInt(branchId);
+                const qty = parseFloat(quantity) || 0;
+                await tx.branch_product_stock.upsert({
+                    where: {
+                        branchId_productId: {
+                            branchId: bId,
+                            productId: prodId
+                        }
+                    },
+                    create: {
+                        branchId: bId,
+                        productId: prodId,
+                        quantity: qty
+                    },
+                    update: {
+                        quantity: qty
+                    }
+                });
+            }
+
+            // Recalculate total stock from all branch stores
+            const allBranchStocks = await tx.branch_product_stock.findMany({
+                where: { productId: prodId }
+            });
+
+            const totalQuantity = allBranchStocks.reduce(
+                (sum, bs) => sum + parseFloat(bs.quantity || 0),
+                0
+            );
+
+            return tx.product.update({
+                where: { id: prodId },
+                data: {
+                    sku,
+                    name,
+                    description,
+                    quantity: allBranchStocks.length > 0 ? totalQuantity : (quantity ? parseFloat(quantity) : 0),
+                    costPrice: costPrice !== undefined && costPrice !== "" ? parseFloat(costPrice) : null,
+                    unitPrice: unitPrice !== undefined && unitPrice !== "" ? parseFloat(unitPrice) : null,
+                },
+                include: {
+                    branchStocks: {
+                        include: {
+                            branch: {
+                                select: { id: true, name: true, code: true, isActive: true }
+                            }
+                        }
+                    }
+                }
+            });
         });
 
         return NextResponse.json(updatedProduct);
@@ -116,7 +285,7 @@ export async function PUT(req) {
             );
         }
         return NextResponse.json(
-            { error: "Internal Server Error" },
+            { error: error.message || "Internal Server Error" },
             { status: 500 }
         );
     }
@@ -142,9 +311,11 @@ export async function DELETE(req) {
             );
         }
 
+        const prodId = parseInt(id);
+
         // Check if product is being used in any purchase items or booking items
         const product = await prisma.product.findUnique({
-            where: { id: parseInt(id) },
+            where: { id: prodId },
             include: {
                 _count: {
                     select: {
@@ -163,7 +334,7 @@ export async function DELETE(req) {
         }
 
         await prisma.product.delete({
-            where: { id: parseInt(id) },
+            where: { id: prodId },
         });
 
         return NextResponse.json({ message: "Product deleted successfully" });

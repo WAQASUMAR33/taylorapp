@@ -32,6 +32,7 @@ export function checkPermission(session, moduleKey, action = "view") {
                 "bookings", 
                 "customers", 
                 "measurements", 
+                "products",
                 "receiving-transactions", 
                 "sale-list", 
                 "sale-returns"
