@@ -19,11 +19,12 @@ export const authOptions = {
                 }
 
                 try {
+                    const identifier = credentials.username.trim();
                     const user = await prisma.user.findFirst({
                         where: {
                             OR: [
-                                { username: credentials.username },
-                                { email: credentials.username }
+                                { username: identifier },
+                                { email: identifier }
                             ]
                         },
                         include: { branch: true },
