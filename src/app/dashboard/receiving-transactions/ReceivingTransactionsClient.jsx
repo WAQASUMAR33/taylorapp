@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Typography,
@@ -21,8 +21,7 @@ import {
     Printer,
     TrendingUp,
     Percent,
-    FileText,
-    Calendar
+    FileText
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
@@ -30,8 +29,20 @@ import { checkPermission } from "@/lib/permissions";
 export default function ReceivingTransactionsClient({ initialData }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
-    const { data: session } = useSession();
-    const canView = checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
+    const { data: session, status: authStatus } = useSession();
+
+    // Helper formatters ensuring no undefined/null/NaN errors
+    const formatCurrency = (val) => {
+        const num = parseFloat(val);
+        if (isNaN(num)) return "Rs. 0.00";
+        return `Rs. ${num.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const formatCount = (val) => {
+        const num = parseInt(val, 10);
+        if (isNaN(num)) return "0";
+        return num.toLocaleString();
+    };
 
     const getTodayString = () => {
         const now = new Date();
@@ -65,14 +76,14 @@ export default function ReceivingTransactionsClient({ initialData }) {
     const [transactions, setTransactions] = useState(initialData?.transactions || []);
     const [totalCount, setTotalCount] = useState(initialData?.totalCount || 0);
     const [totalPages, setTotalPages] = useState(initialData?.totalPages || 1);
-    const [summary, setSummary] = useState(initialData?.summary || {
-        total: { amount: 0, count: 0 },
-        product: { amount: 0, count: 0 },
-        stitching: { amount: 0, count: 0 },
-        ledger: { amount: 0, count: 0 },
-        cash: { amount: 0, count: 0 },
-        bank: { amount: 0, count: 0 }
-    });
+    const [summary, setSummary] = useState(() => ({
+        total: { amount: initialData?.summary?.total?.amount ?? 0, count: initialData?.summary?.total?.count ?? 0 },
+        product: { amount: initialData?.summary?.product?.amount ?? 0, count: initialData?.summary?.product?.count ?? 0 },
+        stitching: { amount: initialData?.summary?.stitching?.amount ?? 0, count: initialData?.summary?.stitching?.count ?? 0 },
+        ledger: { amount: initialData?.summary?.ledger?.amount ?? 0, count: initialData?.summary?.ledger?.count ?? 0 },
+        cash: { amount: initialData?.summary?.cash?.amount ?? 0, count: 0 },
+        bank: { amount: initialData?.summary?.bank?.amount ?? 0, count: 0 }
+    }));
     const [loading, setLoading] = useState(false);
 
     // Search debounce
@@ -113,7 +124,14 @@ export default function ReceivingTransactionsClient({ initialData }) {
                 setTotalCount(data.totalCount || 0);
                 setTotalPages(data.totalPages || 1);
                 if (data.summary) {
-                    setSummary(data.summary);
+                    setSummary({
+                        total: { amount: data.summary.total?.amount ?? 0, count: data.summary.total?.count ?? 0 },
+                        product: { amount: data.summary.product?.amount ?? 0, count: data.summary.product?.count ?? 0 },
+                        stitching: { amount: data.summary.stitching?.amount ?? 0, count: data.summary.stitching?.count ?? 0 },
+                        ledger: { amount: data.summary.ledger?.amount ?? 0, count: data.summary.ledger?.count ?? 0 },
+                        cash: { amount: data.summary.cash?.amount ?? 0, count: 0 },
+                        bank: { amount: data.summary.bank?.amount ?? 0, count: 0 }
+                    });
                 }
             }
         } catch (error) {
@@ -124,12 +142,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
     };
 
     // Refetch when dependencies change
-    const isFirstRun = useRef(true);
     useEffect(() => {
-        if (isFirstRun.current) {
-            isFirstRun.current = false;
-            return;
-        }
         fetchTransactions();
     }, [page, source, debouncedSearch, dateFrom, dateTo, sortBy, sortOrder]);
 
@@ -193,7 +206,17 @@ export default function ReceivingTransactionsClient({ initialData }) {
         setPage(1);
     };
 
-    if (!canView) {
+    if (authStatus === "loading") {
+        return (
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    const canView = checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
+
+    if (!canView && authStatus === "authenticated") {
         return (
             <Box sx={{ p: 4, textAlign: "center" }}>
                 <Typography variant="h6" color="error">
@@ -253,7 +276,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                     </Typography>
                 </Box>
 
-                {/* Top Pagination matching reference */}
+                {/* Top Pagination */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     <Button
                         size="small"
@@ -472,6 +495,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                         <Box sx={{ minWidth: 960, width: "100%" }}>
                             {transactions.map((tx, idx) => {
                                 const isFirst = idx === 0;
+                                const amtNum = parseFloat(tx.amount || 0);
                                 return (
                                     <Box
                                         key={tx.id || idx}
@@ -644,7 +668,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                             </Box>
                                         </Box>
 
-                                        {/* Col 8: Receiving Amount (with Header on row 1 matching design) */}
+                                        {/* Col 8: Receiving Amount */}
                                         <Box sx={{ textAlign: "right", pl: 1 }}>
                                             {isFirst && (
                                                 <Typography
@@ -667,7 +691,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                                     lineHeight: 1.2
                                                 }}
                                             >
-                                                {tx.amount === 0 ? "0" : tx.amount.toLocaleString()}
+                                                {isNaN(amtNum) || amtNum === 0 ? "0" : amtNum.toLocaleString()}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -841,11 +865,11 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             mb: 0.75
                         }}
                     >
-                        Rs. {summary.total.amount.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrency(summary?.total?.amount)}
                     </Typography>
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
-                        {summary.total.count.toLocaleString()} transactions
+                        {formatCount(summary?.total?.count)} transactions
                     </Typography>
                 </Card>
 
@@ -889,11 +913,11 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             mb: 0.75
                         }}
                     >
-                        Rs. {summary.product.amount.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrency(summary?.product?.amount)}
                     </Typography>
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
-                        {summary.product.count.toLocaleString()} product sales recorded
+                        {formatCount(summary?.product?.count)} product sales recorded
                     </Typography>
                 </Card>
 
@@ -951,11 +975,11 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             mb: 0.75
                         }}
                     >
-                        Rs. {summary.stitching.amount.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrency(summary?.stitching?.amount)}
                     </Typography>
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
-                        {summary.stitching.count.toLocaleString()} stitching transactions
+                        {formatCount(summary?.stitching?.count)} stitching transactions
                     </Typography>
                 </Card>
 
@@ -1013,11 +1037,11 @@ export default function ReceivingTransactionsClient({ initialData }) {
                             mb: 0.75
                         }}
                     >
-                        Rs. {summary.ledger.amount.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrency(summary?.ledger?.amount)}
                     </Typography>
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
-                        {summary.ledger.count.toLocaleString()} ledger transactions
+                        {formatCount(summary?.ledger?.count)} ledger transactions
                     </Typography>
                 </Card>
             </Box>
