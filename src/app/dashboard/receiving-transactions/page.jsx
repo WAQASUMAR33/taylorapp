@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import prisma from "@/lib/prisma";
 import ReceivingTransactionsClient from "./ReceivingTransactionsClient";
 import { Box, CircularProgress } from "@mui/material";
+import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,8 @@ export default async function ReceivingTransactionsPage() {
         datePreset: "TODAY",
         summary: {
             total: { amount: 0, count: 0 },
-            advance: { amount: 0, count: 0 },
-            receiving: { amount: 0, count: 0 },
+            product: { amount: 0, count: 0 },
+            stitching: { amount: 0, count: 0 },
             ledger: { amount: 0, count: 0 },
             cash: { amount: 0, count: 0 },
             bank: { amount: 0, count: 0 }
@@ -37,7 +38,7 @@ export default async function ReceivingTransactionsPage() {
 
     try {
         const limit = 12;
-        const where = {
+        const baseWhere = {
             customer: {
                 name: { not: "Cash Account" }
             },
@@ -47,12 +48,15 @@ export default async function ReceivingTransactionsPage() {
             }
         };
 
-        const [receivings, totalCount, totalAmountAgg, sourceGroups, modeGroups] = await Promise.all([
+        const { summary, bookingAllocationMap } = await calculateReceivingSummary(prisma, baseWhere);
+
+        const [receivings, totalCount] = await Promise.all([
             prisma.receiving.findMany({
-                where,
+                where: baseWhere,
                 include: {
                     customer: true,
                     bank: true,
+                    branch: true,
                     booking: {
                         select: {
                             id: true,
@@ -70,77 +74,13 @@ export default async function ReceivingTransactionsPage() {
                 ],
                 take: limit
             }),
-            prisma.receiving.count({ where }),
-            prisma.receiving.aggregate({
-                where,
-                _sum: { amount: true }
-            }),
-            prisma.receiving.groupBy({
-                by: ['source'],
-                where,
-                _sum: { amount: true },
-                _count: { id: true }
-            }),
-            prisma.receiving.groupBy({
-                by: ['paymentMode'],
-                where,
-                _sum: { amount: true },
-                _count: { id: true }
-            })
+            prisma.receiving.count({ where: baseWhere })
         ]);
-
-        const summary = {
-            total: { amount: 0, count: 0 },
-            advance: { amount: 0, count: 0 },
-            receiving: { amount: 0, count: 0 },
-            ledger: { amount: 0, count: 0 },
-            cash: { amount: 0, count: 0 },
-            bank: { amount: 0, count: 0 }
-        };
-
-        for (const g of sourceGroups) {
-            const amt = parseFloat(g._sum?.amount || 0);
-            const cnt = g._count?.id || 0;
-            summary.total.amount += amt;
-            summary.total.count += cnt;
-
-            const s = (g.source || "").toLowerCase();
-            if (s === "advance") {
-                summary.advance.amount += amt;
-                summary.advance.count += cnt;
-            } else if (s === "receiving") {
-                summary.receiving.amount += amt;
-                summary.receiving.count += cnt;
-            } else if (s === "ledger") {
-                summary.ledger.amount += amt;
-                summary.ledger.count += cnt;
-            } else {
-                summary.ledger.amount += amt;
-                summary.ledger.count += cnt;
-            }
-        }
-
-        for (const m of modeGroups) {
-            const amt = parseFloat(m._sum?.amount || 0);
-            const cnt = m._count?.id || 0;
-            const mode = (m.paymentMode || "").toUpperCase();
-            if (mode === "BANK") {
-                summary.bank.amount += amt;
-                summary.bank.count += cnt;
-            } else {
-                summary.cash.amount += amt;
-                summary.cash.count += cnt;
-            }
-        }
 
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
             const source = rec.source || (isBooking ? "Advance" : "Ledger");
-            const receivingType = source === "Advance"
-                ? "Advance Payment"
-                : source === "Receiving"
-                    ? "Bill Payment"
-                    : (isBooking ? "From Booking" : "Received through Ledger");
+            const receivingType = isBooking ? "From Booking" : "Received through Ledger";
 
             let bookingNum = rec.booking?.bookingNumber;
             if (!bookingNum && rec.description) {
@@ -197,6 +137,12 @@ export default async function ReceivingTransactionsPage() {
             const formattedDate = `${day}/${month}/${year}`;
             const formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 
+            const alloc = bookingAllocationMap.get(rec.id) || {
+                productAmount: 0,
+                stitchingAmount: isBooking ? amountNum : 0,
+                ledgerAmount: !isBooking ? amountNum : 0
+            };
+
             return {
                 id: rec.id,
                 receiptNo,
@@ -215,6 +161,9 @@ export default async function ReceivingTransactionsPage() {
                 paymentMethod,
                 amount: amountNum,
                 amountDisplay: `${amountNum.toLocaleString()} PKR`,
+                productAmount: alloc.productAmount,
+                stitchingAmount: alloc.stitchingAmount,
+                ledgerAmount: alloc.ledgerAmount,
                 pendingBalance,
                 bookingId: rec.bookingId,
                 bookingNumber: bookingNum || null,
@@ -227,7 +176,6 @@ export default async function ReceivingTransactionsPage() {
             transactions,
             totalCount,
             totalPages: Math.ceil(totalCount / limit) || 1,
-            totalReceivedSum: summary.total.amount,
             dateFrom: todayStr,
             dateTo: todayStr,
             datePreset: "TODAY",

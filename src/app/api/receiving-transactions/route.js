@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
 
 export async function GET(req) {
     try {
@@ -15,7 +16,7 @@ export async function GET(req) {
 
         const skip = Math.max(0, (page - 1) * limit);
 
-        // Base filter on receiving model (without source filter so widgets reflect the active period/search)
+        // Base filter on receiving model
         const baseWhere = {
             customer: {
                 name: { not: "Cash Account" }
@@ -67,11 +68,34 @@ export async function GET(req) {
             baseWhere.AND.push({ OR: searchOr });
         }
 
-        // Table query filter (includes source filter)
+        // Calculate receiving breakdown and summary
+        const { summary, bookingAllocationMap } = await calculateReceivingSummary(prisma, baseWhere);
+
+        // Build where filter for specific source
         const where = { ...baseWhere };
 
-        // Source filter
-        if (source === "ADVANCE") {
+        if (source === "PRODUCT") {
+            const prodRecIds = [];
+            for (const [id, alloc] of bookingAllocationMap.entries()) {
+                if (alloc.productAmount > 0) {
+                    prodRecIds.push(id);
+                }
+            }
+            where.id = { in: prodRecIds };
+        } else if (source === "STITCHING") {
+            const stitchRecIds = [];
+            for (const [id, alloc] of bookingAllocationMap.entries()) {
+                if (alloc.stitchingAmount > 0) {
+                    stitchRecIds.push(id);
+                }
+            }
+            where.id = { in: stitchRecIds };
+        } else if (source === "LEDGER") {
+            where.OR = [
+                { source: "Ledger" },
+                { bookingId: null }
+            ];
+        } else if (source === "ADVANCE") {
             where.source = "Advance";
         } else if (source === "RECEIVING") {
             where.source = "Receiving";
@@ -79,11 +103,6 @@ export async function GET(req) {
             where.OR = [
                 { source: { in: ["Advance", "Receiving"] } },
                 { bookingId: { not: null } }
-            ];
-        } else if (source === "LEDGER") {
-            where.OR = [
-                { source: "Ledger" },
-                { bookingId: null }
             ];
         }
 
@@ -96,11 +115,10 @@ export async function GET(req) {
         } else if (sortBy === "receiptNo") {
             orderBy = [{ receiptNo: sortOrder }, { id: sortOrder }];
         } else {
-            // Default: by date
             orderBy = [{ receivingDate: sortOrder }, { id: sortOrder }];
         }
 
-        const [receivings, totalCount, totalAmountAgg, sourceGroups, modeGroups] = await Promise.all([
+        const [receivings, totalCount] = await Promise.all([
             prisma.receiving.findMany({
                 where,
                 include: {
@@ -122,77 +140,13 @@ export async function GET(req) {
                 skip,
                 take: limit
             }),
-            prisma.receiving.count({ where }),
-            prisma.receiving.aggregate({
-                where,
-                _sum: { amount: true }
-            }),
-            prisma.receiving.groupBy({
-                by: ['source'],
-                where: baseWhere,
-                _sum: { amount: true },
-                _count: { id: true }
-            }),
-            prisma.receiving.groupBy({
-                by: ['paymentMode'],
-                where: baseWhere,
-                _sum: { amount: true },
-                _count: { id: true }
-            })
+            prisma.receiving.count({ where })
         ]);
-
-        const summary = {
-            total: { amount: 0, count: 0 },
-            advance: { amount: 0, count: 0 },
-            receiving: { amount: 0, count: 0 },
-            ledger: { amount: 0, count: 0 },
-            cash: { amount: 0, count: 0 },
-            bank: { amount: 0, count: 0 }
-        };
-
-        for (const g of sourceGroups) {
-            const amt = parseFloat(g._sum?.amount || 0);
-            const cnt = g._count?.id || 0;
-            summary.total.amount += amt;
-            summary.total.count += cnt;
-
-            const s = (g.source || "").toLowerCase();
-            if (s === "advance") {
-                summary.advance.amount += amt;
-                summary.advance.count += cnt;
-            } else if (s === "receiving") {
-                summary.receiving.amount += amt;
-                summary.receiving.count += cnt;
-            } else if (s === "ledger") {
-                summary.ledger.amount += amt;
-                summary.ledger.count += cnt;
-            } else {
-                summary.ledger.amount += amt;
-                summary.ledger.count += cnt;
-            }
-        }
-
-        for (const m of modeGroups) {
-            const amt = parseFloat(m._sum?.amount || 0);
-            const cnt = m._count?.id || 0;
-            const mode = (m.paymentMode || "").toUpperCase();
-            if (mode === "BANK") {
-                summary.bank.amount += amt;
-                summary.bank.count += cnt;
-            } else {
-                summary.cash.amount += amt;
-                summary.cash.count += cnt;
-            }
-        }
 
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
             const source = rec.source || (isBooking ? "Advance" : "Ledger");
-            const receivingType = source === "Advance"
-                ? "Advance Payment"
-                : source === "Receiving"
-                    ? "Bill Payment"
-                    : (isBooking ? "From Booking" : "Received through Ledger");
+            const receivingType = isBooking ? "From Booking" : "Received through Ledger";
 
             let bookingNum = rec.booking?.bookingNumber;
             if (!bookingNum && rec.description) {
@@ -214,7 +168,6 @@ export async function GET(req) {
                 accountOver = "over --";
             }
 
-            // Pending balance calculation
             const rawPending = rec.booking?.remainingAmount !== undefined && rec.booking?.remainingAmount !== null
                 ? parseFloat(rec.booking.remainingAmount.toString())
                 : (rec.customer?.balance !== undefined && rec.customer?.balance !== null
@@ -224,7 +177,6 @@ export async function GET(req) {
             const pendingBalance = Math.max(0, rawPending);
             const amountNum = parseFloat(rec.amount.toString());
 
-            // Clean formatted receipt number
             let receiptNo = rec.receiptNo || `REC-${rec.id}`;
             if (receiptNo.startsWith("REC-LEGACY-")) {
                 receiptNo = receiptNo.replace("REC-LEGACY-", "REC-");
@@ -234,12 +186,10 @@ export async function GET(req) {
                 ? (bookingNum ? `Booking #${bookingNum}` : `Booking #${rec.bookingId}`)
                 : "Customer Ledger";
 
-            // Description: actual description from the receiving model/table
             const actualDescription = (rec.description && rec.description.trim())
                 ? rec.description.trim()
                 : (isBooking ? `Payment received for ${sourceRef}` : "Payment received through Ledger");
 
-            // Determine payment method
             let paymentMethod = "Cash";
             if (rec.paymentMode === "BANK" || (rec.bank && rec.bank.name)) {
                 paymentMethod = rec.bank ? `Bank (${rec.bank.name})` : "Bank Account";
@@ -247,13 +197,18 @@ export async function GET(req) {
                 paymentMethod = "Bank Account";
             }
 
-            // Format date and time
             const d = new Date(rec.receivingDate);
             const day = String(d.getDate()).padStart(2, "0");
             const month = String(d.getMonth() + 1);
             const year = d.getFullYear();
             const formattedDate = `${day}/${month}/${year}`;
             const formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+            const alloc = bookingAllocationMap.get(rec.id) || {
+                productAmount: 0,
+                stitchingAmount: isBooking ? amountNum : 0,
+                ledgerAmount: !isBooking ? amountNum : 0
+            };
 
             return {
                 id: rec.id,
@@ -273,6 +228,9 @@ export async function GET(req) {
                 paymentMethod,
                 amount: amountNum,
                 amountDisplay: `${amountNum.toLocaleString()} PKR`,
+                productAmount: alloc.productAmount,
+                stitchingAmount: alloc.stitchingAmount,
+                ledgerAmount: alloc.ledgerAmount,
                 pendingBalance,
                 bookingId: rec.bookingId,
                 bookingNumber: bookingNum || null,
@@ -291,7 +249,6 @@ export async function GET(req) {
             limit,
             totalPages,
             totalReceivedSum: summary.total.amount,
-            filteredTotalSum: parseFloat(totalAmountAgg._sum?.amount || 0),
             summary
         });
     } catch (error) {
