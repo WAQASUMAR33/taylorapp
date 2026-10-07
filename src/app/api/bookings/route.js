@@ -197,7 +197,7 @@ const STAFF_INCLUDE = {
     staff: { include: { customer: { select: { id: true, name: true, accountCategory: { select: { name: true } } } } } }
 };
 const TAILOR_CUTTER_SELECT = { select: { id: true, name: true, accountCategory: { select: { name: true } } } };
-const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true } };
+const BILLING_SELECT = { select: { id: true, code: true, name: true, phone: true, address: true, balance: true } };
 const CUSTOMER_SELECT = {
     select: {
         id: true,
@@ -206,6 +206,7 @@ const CUSTOMER_SELECT = {
         phone: true,
         email: true,
         address: true,
+        balance: true,
         measurementNo: true,
         measurements: {
             orderBy: { takenAt: "desc" },
@@ -217,9 +218,14 @@ const CUSTOMER_SELECT = {
 // GET - Fetch all bookings or a specific booking
 export async function GET(req) {
     try {
+        const session = await getServerSession(authOptions);
+        const userBranchId = session?.user?.branchId;
+        const isAdmin = session?.user?.role === "ADMIN";
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         const customerId = searchParams.get("customerId");
+        const branchId = searchParams.get("branchId");
         const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
         const dateTo = searchParams.get("dateTo") || searchParams.get("to");
         const deliveryFrom = searchParams.get("deliveryFrom");
@@ -272,6 +278,12 @@ export async function GET(req) {
 
         if (customerId) {
             where.customerId = parseInt(customerId);
+        }
+
+        if (branchId && branchId !== "ALL") {
+            where.branchId = parseInt(branchId);
+        } else if (!isAdmin && userBranchId) {
+            where.branchId = userBranchId;
         }
 
         if (dateFrom || dateTo) {
@@ -751,6 +763,7 @@ export async function PUT(req) {
         if (returnDate !== undefined) updateData.returnDate = returnDate ? new Date(returnDate) : null;
         if (notes !== undefined) updateData.notes = notes;
         if (billingCustomerId !== undefined) updateData.billingCustomerId = billingCustomerId ? parseInt(billingCustomerId) : null;
+        if (body.branchId !== undefined) updateData.branchId = body.branchId ? parseInt(body.branchId) : null;
 
         const booking = await prisma.$transaction(async (tx) => {
             const currentBooking = await tx.booking.findUnique({
@@ -1018,6 +1031,7 @@ export async function PUT(req) {
                     billingCustomer: BILLING_SELECT,
                     tailor: TAILOR_CUTTER_SELECT,
                     cutter: TAILOR_CUTTER_SELECT,
+                    branch: true,
                     ...STAFF_INCLUDE,
                     items: {
                         include: {

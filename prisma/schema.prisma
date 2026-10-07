@@ -342,7 +342,7 @@ model stockmovement {
 model booking {
   id              Int            @id @default(autoincrement())
   bookingNumber   String         @unique
-  customerId        Int
+  customerId        Int?
   billingCustomerId Int?
   bookingType       booking_type
   bookingDate       DateTime       @default(now())
@@ -361,7 +361,7 @@ model booking {
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  customer          customer       @relation(fields: [customerId], references: [id])
+  customer          customer?      @relation(fields: [customerId], references: [id])
   billingCustomer   customer?      @relation("BookingBillingCustomer", fields: [billingCustomerId], references: [id])
   cutter            customer?      @relation("BookingCutter", fields: [cutterId], references: [id])
   tailor            customer?      @relation("BookingTailor", fields: [tailorId], references: [id])
@@ -381,10 +381,10 @@ model booking {
 model booking_staff {
   id         Int      @id @default(autoincrement())
   bookingId  Int
-  customerId Int
+  customerId Int?
   role       String   // "TAILOR" | "CUTTER"
   booking    booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  customer   customer @relation(fields: [customerId], references: [id])
+  customer   customer? @relation(fields: [customerId], references: [id])
 
   @@index([bookingId])
   @@index([customerId])

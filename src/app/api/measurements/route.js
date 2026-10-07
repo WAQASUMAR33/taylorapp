@@ -5,10 +5,21 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
+        const measurementNo = searchParams.get("measurementNo");
 
         if (customerId) {
             const measurements = await prisma.measurement.findMany({
                 where: { customerId: parseInt(customerId) },
+                orderBy: { takenAt: "desc" },
+            });
+            return NextResponse.json(measurements);
+        }
+
+        if (measurementNo && measurementNo.trim()) {
+            const measurements = await prisma.measurement.findMany({
+                where: {
+                    customer: { measurementNo: measurementNo.trim() }
+                },
                 orderBy: { takenAt: "desc" },
             });
             return NextResponse.json(measurements);

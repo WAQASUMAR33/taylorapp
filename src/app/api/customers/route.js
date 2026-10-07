@@ -199,6 +199,10 @@ export async function GET(req) {
                 include: {
                     accountCategory: true,
                     branch: true,
+                    measurements: {
+                        orderBy: { takenAt: "desc" },
+                        take: 1
+                    }
                 },
                 orderBy,
                 skip,

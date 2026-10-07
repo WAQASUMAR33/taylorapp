@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import BookingManagementClient from "./BookingManagementClient";
 import { Box, Container, Typography, Paper } from "@mui/material";
 import { Calendar } from "lucide-react";
@@ -10,7 +12,7 @@ export const metadata = {
     description: "Manage suit and stitching bookings with product billing.",
 };
 
-async function getBookings() {
+async function getBookings(branchId = null) {
     try {
         const now = new Date();
         const y = now.getFullYear();
@@ -18,14 +20,21 @@ async function getBookings() {
         const d = String(now.getDate()).padStart(2, '0');
         const todayStr = `${y}-${m}-${d}`;
 
+        const where = {
+            bookingDate: {
+                gte: new Date(`${todayStr}T00:00:00.000Z`),
+                lte: new Date(`${todayStr}T23:59:59.999Z`),
+            }
+        };
+
+        if (branchId) {
+            where.branchId = branchId;
+        }
+
         const bookings = await prisma.booking.findMany({
-            where: {
-                bookingDate: {
-                    gte: new Date(`${todayStr}T00:00:00.000Z`),
-                    lte: new Date(`${todayStr}T23:59:59.999Z`),
-                }
-            },
+            where,
             include: {
+                branch: true,
                 customer: {
                     select: {
                         id: true,
@@ -34,6 +43,7 @@ async function getBookings() {
                         phone: true,
                         email: true,
                         address: true,
+                        balance: true,
                         measurementNo: true,
                         measurements: {
                             orderBy: { takenAt: "desc" },
@@ -55,7 +65,7 @@ async function getBookings() {
                     }
                 },
                 billingCustomer: {
-                    select: { id: true, code: true, name: true, phone: true, address: true }
+                    select: { id: true, code: true, name: true, phone: true, address: true, balance: true }
                 },
                 items: {
                     include: {
@@ -89,9 +99,20 @@ async function getCustomers() {
         const customers = await prisma.customer.findMany({
             orderBy: { name: "asc" },
             take: 100,
-            select: { id: true, name: true, phone: true, address: true, measurementNo: true }
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                address: true,
+                measurementNo: true,
+                balance: true,
+                measurements: {
+                    orderBy: { takenAt: "desc" },
+                    take: 1
+                }
+            }
         });
-        return customers;
+        return JSON.parse(JSON.stringify(customers));
     } catch (error) {
         console.error("Database error fetching customers:", error);
         return [];
@@ -156,13 +177,35 @@ async function getBanks() {
     }
 }
 
+async function getBranches() {
+    try {
+        const branches = await prisma.branch.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, code: true }
+        });
+        return JSON.parse(JSON.stringify(branches));
+    } catch (error) {
+        console.error("Database error fetching branches:", error);
+        return [];
+    }
+}
+
 export default async function BookingsPage() {
-    const bookings = await getBookings();
-    const customers = await getCustomers();
-    const products = await getProducts();
-    const employees = await getStaffCustomers();
-    const stitchingOptions = await getStitchingOptions();
-    const banks = await getBanks();
+    const session = await getServerSession(authOptions);
+    const isAdmin = session?.user?.role === "ADMIN";
+    const userBranchId = session?.user?.branchId;
+    const branches = await getBranches();
+    const initialBranchFilter = userBranchId || (branches[0]?.id || null);
+
+    const [bookings, customers, products, employees, stitchingOptions, banks] = await Promise.all([
+        getBookings(initialBranchFilter),
+        getCustomers(),
+        getProducts(),
+        getStaffCustomers(),
+        getStitchingOptions(),
+        getBanks(),
+    ]);
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -179,8 +222,8 @@ export default async function BookingsPage() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{
                         p: 1.5,
-                        bgcolor: 'primary.lighter', // Assuming you have this or use literal color
-                        backgroundColor: '#eff6ff', // Fallback/Specific color
+                        bgcolor: 'primary.lighter',
+                        backgroundColor: '#eff6ff',
                         borderRadius: 2,
                         color: 'primary.main',
                         display: 'flex',
@@ -208,6 +251,8 @@ export default async function BookingsPage() {
                     employees={employees}
                     stitchingOptions={stitchingOptions}
                     banks={banks}
+                    branches={branches}
+                    userBranchId={userBranchId}
                 />
             </Box>
         </Box>

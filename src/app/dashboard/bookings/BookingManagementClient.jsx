@@ -32,6 +32,8 @@ import {
     RadioGroup,
     FormControlLabel,
     FormControl,
+    InputLabel,
+    Select,
     Checkbox,
     GlobalStyles,
     LinearProgress
@@ -57,6 +59,7 @@ import {
     MessageCircle,
     ScanLine,
     Lock,
+    Store,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -730,39 +733,39 @@ function TailorTicket({ booking, measurements }) {
     const getMeasureRows = (src, isWskot) => {
         if (isWskot) {
             return [
-                ['واسکٹ لمبائی', src?.wskot_lambai],
-                ['تیرہ', src?.wskot_teera],
-                ['گلا', src?.wskot_gala],
-                ['چھاتی', src?.wskot_chaati],
-                ['کمر', src?.wskot_kamar],
-                ['ہپ', src?.wskot_hip],
+                ['واسکٹ لمبائی', src?.wskot_lambai || ''],
+                ['تیرہ', src?.wskot_teera || ''],
+                ['گلا', src?.wskot_gala || ''],
+                ['چھاتی', src?.wskot_chaati || ''],
+                ['کمر', src?.wskot_kamar || ''],
+                ['ہپ', src?.wskot_hip || ''],
             ];
         }
         return [
-            ['قمیض', src?.qameez_lambai],
-            ['تیرہ', src?.teera],
-            ['بازو', src?.bazoo],
-            ['گلا', src?.galaa],
-            ['چھاتی گرد', src?.chaati_around],
-            ['گھیرا گرد', src?.gehra_gird],
-            ['شلوار لمبائی', src?.shalwar_lambai],
-            ['پہنچہ', src?.puhncha],
-            ['شلوار گھیرا', src?.shalwar_gheera],
-            ['ہپ گرد', src?.hip_around],
+            ['قمیض', src?.qameez_lambai || ''],
+            ['تیرہ', src?.teera || ''],
+            ['بازو', src?.bazoo || ''],
+            ['گلا', src?.galaa || ''],
+            ['چھاتی گرد', src?.chaati_around || ''],
+            ['گھیرا گرد', src?.gehra_gird || ''],
+            ['شلوار لمبائی', src?.shalwar_lambai || ''],
+            ['پہنچہ', src?.puhncha || ''],
+            ['شلوار گھیرا', src?.shalwar_gheera || ''],
+            ['ہپ گرد', src?.hip_around || ''],
         ];
     };
 
-    const getStitchingBoxes = (item) => {
+    const getStitchingBoxes = (item = {}) => {
         const boxes = [];
-        if (item.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
-        if (item.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
-        if (item.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
-        if (item.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
-        if (item.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
-        if (item.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
-        if (item.hasFrontPockets) boxes.push('Front Pockets');
-        if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
-        (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
+        if (item?.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
+        if (item?.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
+        if (item?.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
+        if (item?.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
+        if (item?.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+        if (item?.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
+        if (item?.hasFrontPockets) boxes.push('Front Pockets');
+        if (item?.hasShalwarPocket) boxes.push('Shalwar Pocket');
+        (item?.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
         return boxes;
     };
 
@@ -799,22 +802,25 @@ function TailorTicket({ booking, measurements }) {
                 </tbody>
             </table>
 
-            {/* Per-suit block — first stitching item only */}
+            {/* Per-suit block — first stitching item or default empty suit */}
             {(() => {
                 const stitchingItems = (booking.items || []).filter(item => !item.productId);
                 const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
-                return stitchingItems.slice(0, 1).map((item, idx) => {
-                    const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                const itemsToRender = stitchingItems.length > 0 
+                    ? stitchingItems.slice(0, 1) 
+                    : (booking.items && booking.items.length > 0 ? [booking.items[0]] : [{}]);
+                return itemsToRender.map((item, idx) => {
+                    const isWskot = item?.stitchingType === "WAISTCOAT" || (!item?.qameez_lambai && item?.wskot_lambai);
                     const activeMeas = (measurements && (!measurements.customerId || measurements.customerId === booking.customerId))
                         ? measurements
                         : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
                     const src = (activeMeas && Object.keys(activeMeas).length > 0)
-                        ? { ...activeMeas, ...Object.fromEntries(Object.entries(item).filter(([_, v]) => v != null && v !== '')) }
-                        : item;
+                        ? { ...activeMeas, ...Object.fromEntries(Object.entries(item || {}).filter(([_, v]) => v != null && v !== '')) }
+                        : (item || {});
                     const measureRows = getMeasureRows(src, isWskot);
 
                     const measNotes = activeMeas?.notes?.trim() || '';
-                    const itemNotes = item.itemNote?.trim() || '';
+                    const itemNotes = item?.itemNote?.trim() || '';
                     const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
 
                     return (
@@ -822,8 +828,8 @@ function TailorTicket({ booking, measurements }) {
 
                             {/* Suit header row */}
                             <div style={{ backgroundColor: '#1a1a2e', color: '#fff', padding: '3px 8px', fontWeight: 700, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-                                <span>{isWskot ? 'Waistcoat' : 'Suit'} {idx + 1}{item.product?.name ? ` — ${item.product.name}` : ''}</span>
-                                <span>Qty: {totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
+                                <span>{isWskot ? 'Waistcoat' : 'Suit'} {idx + 1}{item?.product?.name ? ` — ${item.product.name}` : ''}</span>
+                                <span>Qty: {totalSuitsQty > 3 ? totalSuitsQty : (item?.quantity || 1)}</span>
                             </div>
 
                         {/* 3-column body */}
@@ -859,14 +865,14 @@ function TailorTicket({ booking, measurements }) {
                                         <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000' }}>
                                             <tbody>
                                                 {[
-                                                    ['کندھا', src?.kandha],
-                                                    ['چھاتی', src?.chaati],
-                                                    ['کمر', src?.kamar_around],
-                                                    ['گھیرا', src?.gheera],
-                                                    ['کف', src?.kaf],
+                                                    ['کندھا', src?.kandha || ''],
+                                                    ['چھاتی', src?.chaati || ''],
+                                                    ['کمر', src?.kamar_around || ''],
+                                                    ['گھیرا', src?.gheera || ''],
+                                                    ['کف', src?.kaf || ''],
                                                 ].map(([label, val], i) => (
                                                     <tr key={i}>
-                                                        <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle' }}>
+                                                        <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle', height: 38 }}>
                                                             {val || ''}
                                                         </td>
                                                         <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
@@ -934,7 +940,7 @@ function TailorTicket({ booking, measurements }) {
                                     <tbody>
                                         {measureRows.map(([label, val], i) => (
                                             <tr key={i}>
-                                                <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle' }}>
+                                                <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle', height: 38 }}>
                                                     {val || ''}
                                                 </td>
                                                 <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
@@ -960,7 +966,7 @@ function TailorTicket({ booking, measurements }) {
     );
 }
 
-export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks }) {
+export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks, branches = [], userBranchId = null }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "bookings", "view");
@@ -968,6 +974,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const canEdit = checkPermission(session, "bookings", "edit");
     const canDelete = checkPermission(session, "bookings", "delete");
     const stitchingOptions = initialStitchingOptions || [];
+
+    const [selectedBranchId, setSelectedBranchId] = useState(() => {
+        if (userBranchId) {
+            return String(userBranchId);
+        }
+        if (branches.length > 0) {
+            return String(branches[0].id);
+        }
+        return "ALL";
+    });
+
+    React.useEffect(() => {
+        if (session?.user?.branchId) {
+            setSelectedBranchId(String(session.user.branchId));
+        }
+    }, [session?.user?.branchId]);
 
     const isBookingClosedAndPaid = (booking) => {
         if (!booking) return false;
@@ -1106,7 +1128,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
     const hasActiveBillingSearch = Object.values(billingSearchFilters).some(val => val.trim() !== "");
 
-    const loadBookingsData = async (dateFrom, dateTo, search, delivFrom, delivTo, custId) => {
+    const loadBookingsData = async (dateFrom, dateTo, search, delivFrom, delivTo, custId, branchId) => {
         try {
             setLoadingBookings(true);
             const params = new URLSearchParams();
@@ -1116,6 +1138,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             if (delivFrom) params.set("deliveryFrom", delivFrom);
             if (delivTo) params.set("deliveryTo", delivTo);
             if (custId) params.set("customerId", custId);
+            const activeBranch = branchId !== undefined ? branchId : selectedBranchId;
+            if (activeBranch && activeBranch !== "ALL") {
+                params.set("branchId", activeBranch);
+            }
             if (!dateFrom && !dateTo && !delivFrom && !delivTo && !search && !custId) {
                 params.set("all", "true");
             }
@@ -1138,10 +1164,10 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             return;
         }
         const timer = setTimeout(() => {
-            loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
+            loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId, selectedBranchId);
         }, 350);
         return () => clearTimeout(timer);
-    }, [filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId]);
+    }, [filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId, selectedBranchId]);
 
     // Payment Modal State
     const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -1151,6 +1177,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [payDeliverQuantities, setPayDeliverQuantities] = useState({});
     const [payPaymentMethod, setPayPaymentMethod] = useState("CASH");
     const [payBankId, setPayBankId] = useState("");
+    const [payCustomerBalance, setPayCustomerBalance] = useState(null);
+    const [loadingPayCustomer, setLoadingPayCustomer] = useState(false);
     const [paying, setPaying] = useState(false);
 
     const handleOpenPayDialog = (booking) => {
@@ -1159,6 +1187,23 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPayDiscount("0");
         setPayPaymentMethod("CASH");
         setPayBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
+
+        const effectiveCustomerId = booking.billingCustomerId || booking.customerId;
+        const initialBal = booking.billingCustomer?.balance ?? booking.customer?.balance ?? customers.find(c => c.id === effectiveCustomerId)?.balance ?? 0;
+        setPayCustomerBalance(parseFloat(initialBal) || 0);
+
+        if (effectiveCustomerId) {
+            setLoadingPayCustomer(true);
+            fetch(`/api/customers/${effectiveCustomerId}`)
+                .then(res => res.ok ? res.json() : null)
+                .then(cust => {
+                    if (cust && cust.balance !== undefined) {
+                        setPayCustomerBalance(parseFloat(cust.balance) || 0);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch fresh customer balance", err))
+                .finally(() => setLoadingPayCustomer(false));
+        }
 
         // Initialize delivery quantities for undelivered items
         const initialDel = {};
@@ -1310,9 +1355,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const rowsHtml = bookings.map((booking, idx) => {
             const tailorNames = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
             const totalQty = (booking.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
+            const branchName = booking.branch?.name || (branches.find(b => b.id === booking.branchId)?.name) || 'Main Branch';
             const bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff';
             return `<tr style="background:${bg}">
                 <td style="border:1px solid #ddd;padding:4px 6px;font-weight:700;color:#7c3aed">#${booking.bookingNumber || booking.id}</td>
+                <td style="border:1px solid #ddd;padding:4px 6px;font-weight:600">${branchName}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px;font-weight:600">${booking.customer?.name || '—'}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${booking.customer?.address || '—'}</td>
                 <td style="border:1px solid #ddd;padding:4px 6px">${booking.customer?.measurementNo || '—'}</td>
@@ -1367,21 +1414,22 @@ ${periodHtml}
 <table>
     <thead>
         <tr>
-            <th style="width:10%">Booking No</th>
+            <th style="width:9%">Booking No</th>
+            <th style="width:11%">Branch</th>
             <th style="width:12%">Customer Name</th>
-            <th style="width:15%">Address</th>
-            <th style="width:10%">Measurement No</th>
+            <th style="width:14%">Address</th>
+            <th style="width:9%">Measurement No</th>
             <th style="width:9%">Booking Date</th>
             <th style="width:9%">Delivery Date</th>
-            <th style="width:10%">Tailor Name</th>
-            <th style="width:10%">Suit Qty</th>
-            <th style="width:15%">Notes</th>
+            <th style="width:9%">Tailor Name</th>
+            <th style="width:8%">Suit Qty</th>
+            <th style="width:10%">Notes</th>
         </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
     <tfoot>
         <tr style="background:#1a1a2e;color:#fff;font-weight:700;">
-            <td colspan="7" style="border:1px solid #555;padding:5px 6px;text-align:right;">TOTAL (${bookings.length} bookings):</td>
+            <td colspan="8" style="border:1px solid #555;padding:5px 6px;text-align:right;">TOTAL (${bookings.length} bookings):</td>
             <td style="border:1px solid #555;padding:5px 6px;text-align:left;">${totalSuitsSum}</td>
             <td style="border:1px solid #555;padding:5px 6px;"></td>
         </tr>
@@ -1439,15 +1487,26 @@ ${periodHtml}
         itemNote: item.itemNote || measurement?.notes || "",
     });
 
-    // Fetch measurements strictly by customerId; returns the record for immediate use
-    const fetchMeasurements = async (customerId) => {
-        if (!customerId) return null;
+    // Fetch measurements by customerId or fallback measurementNo; returns the record for immediate use
+    const fetchMeasurements = async (customerId, measurementNo = null) => {
+        if (!customerId && !measurementNo) return null;
         try {
-            const res = await fetch(`/api/measurements?customerId=${customerId}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    return data[0];
+            if (customerId) {
+                const res = await fetch(`/api/measurements?customerId=${customerId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        return data[0];
+                    }
+                }
+            }
+            if (measurementNo && measurementNo.toString().trim()) {
+                const res = await fetch(`/api/measurements?measurementNo=${encodeURIComponent(measurementNo.toString().trim())}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        return data[0];
+                    }
                 }
             }
         } catch (error) {
@@ -1468,21 +1527,19 @@ ${periodHtml}
         const bookingMeasMap = new Map();
         for (const b of bookingList) {
             const cId = b.customerId || b.customer?.id;
+            const mNo = b.customer?.measurementNo;
             let m = null;
-            // 1. If passed measurements strictly match this booking's customerId
-            if (measurements && measurements.customerId === cId) {
+            // 1. If passed measurements strictly match this booking's customerId or measurementNo
+            if (measurements && (measurements.customerId === cId || (mNo && measurements.customer?.measurementNo === mNo))) {
                 m = measurements;
             }
-            // 2. If booking already has measurements for this customerId
+            // 2. If booking already has measurements for this customer
             if (!m && b.customer?.measurements?.length > 0) {
-                const custMeas = b.customer.measurements[0];
-                if (!custMeas.customerId || custMeas.customerId === cId) {
-                    m = custMeas;
-                }
+                m = b.customer.measurements[0];
             }
-            // 3. Otherwise fetch from API strictly against customerId
-            if (!m && cId) {
-                m = await fetchMeasurements(cId);
+            // 3. Otherwise fetch from API against customerId or measurementNo
+            if (!m && (cId || mNo)) {
+                m = await fetchMeasurements(cId, mNo);
             }
             bookingMeasMap.set(b.id, m);
         }
@@ -1494,31 +1551,34 @@ ${periodHtml}
             const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
             const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
             const stitchingItems = (booking.items || []).filter(item => !item.productId);
+            const itemsToRender = stitchingItems.length > 0 
+                ? stitchingItems.slice(0, 1) 
+                : (booking.items && booking.items.length > 0 ? [booking.items[0]] : [{}]);
 
-            const getStitchingBoxes = (item) => {
+            const getStitchingBoxes = (item = {}) => {
                 const boxes = [];
-                if (item.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
-                if (item.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
-                if (item.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
-                if (item.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
-                if (item.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
-                if (item.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
-                if (item.hasFrontPockets) boxes.push('Front Pockets');
-                if (item.hasShalwarPocket) boxes.push('Shalwar Pocket');
-                (item.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
+                if (item?.galaType) boxes.push(item.galaType === 'ban' ? `Gala: Ban${item.galaSize ? ` ${item.galaSize}"` : ''}` : `Gala: Collar${item.galaSize ? ` ${item.galaSize}"` : ''}`);
+                if (item?.cuffType) boxes.push(item.cuffType === 'single' ? 'Cuff: Single' : item.cuffType === 'double folding' ? 'Cuff: Double' : 'Cuff: Open');
+                if (item?.pohnchaType) boxes.push(`Poncha: ${item.pohnchaType === 'saada' ? 'Saada' : item.pohnchaType === 'jaali' ? 'Jaali' : item.pohnchaType === 'karhaai' ? 'Karhai' : 'J+K'}`);
+                if (item?.gheraType) boxes.push(`Ghera: ${item.gheraType === 'seedha' ? 'Seedha' : 'Gol'}`);
+                if (item?.pocketType) boxes.push(`Pocket: ${item.pocketType === 'single' ? 'Single' : 'Double'}`);
+                if (item?.shalwarType) boxes.push(`Shalwar: ${item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar'}`);
+                if (item?.hasFrontPockets) boxes.push('Front Pockets');
+                if (item?.hasShalwarPocket) boxes.push('Shalwar Pocket');
+                (item?.selectedOptions || []).forEach(so => { if (so.stitchingOption?.name) boxes.push(so.stitchingOption.name); });
                 return boxes;
             };
 
             const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
 
-            const itemsHtml = stitchingItems.slice(0, 1).map((item, idx) => {
-                const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+            const itemsHtml = itemsToRender.map((item, idx) => {
+                const isWskot = item?.stitchingType === "WAISTCOAT" || (!item?.qameez_lambai && item?.wskot_lambai);
                 const activeMeas = (meas && (!meas.customerId || meas.customerId === booking.customerId))
                     ? meas
                     : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
                 const src = (activeMeas && Object.keys(activeMeas).length > 0)
-                    ? { ...activeMeas, ...Object.fromEntries(Object.entries(item).filter(([_, v]) => v != null && v !== '')) }
-                    : item;
+                    ? { ...activeMeas, ...Object.fromEntries(Object.entries(item || {}).filter(([_, v]) => v != null && v !== '')) }
+                    : (item || {});
 
                 const measureFields = isWskot ? [
                     ['واسکٹ لمبائی', 'wskot_lambai'],
@@ -1541,9 +1601,9 @@ ${periodHtml}
                 ];
 
                 const measureRowsHtml = measureFields.map(([label, key]) => {
-                    const val = src[key];
+                    const val = src?.[key] || '';
                     return `<tr>
-                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : '&nbsp;'}</td>
                         <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
                     </tr>`;
                 }).join('');
@@ -1557,9 +1617,9 @@ ${periodHtml}
                 ];
 
                 const stitchRowsHtml = stitchFields.map(([label, key]) => {
-                    const val = src[key];
+                    const val = src?.[key] || '';
                     return `<tr>
-                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : ''}</td>
+                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : '&nbsp;'}</td>
                         <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
                     </tr>`;
                 }).join('');
@@ -1567,18 +1627,18 @@ ${periodHtml}
                 const options = getStitchingBoxes(item);
                 const boxesHtml = Array.from({ length: Math.max(5, options.length) }, (_, i) => {
                     const val = options[i] || '';
-                    return `<div class="sbox" style="border:1px solid #000;margin:3px 0;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val}</div>`;
+                    return `<div class="sbox" style="border:1px solid #000;margin:3px 0;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val || '&nbsp;'}</div>`;
                 }).join('');
 
                 const measNotes = activeMeas?.notes?.trim() || '';
-                const itemNotes = item.itemNote?.trim() || '';
+                const itemNotes = item?.itemNote?.trim() || '';
                 const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
 
                 return `
                 <div class="suit" style="margin-top:10px;">
                     <div class="suit-hdr">
-                        <span>${isWskot ? 'Waistcoat' : 'Suit'} ${idx + 1}${item.product?.name ? ` — ${item.product.name}` : ''}</span>
-                        <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item.quantity || 1)}</span>
+                        <span>${isWskot ? 'Waistcoat' : 'Suit'} ${idx + 1}${item?.product?.name ? ` — ${item.product.name}` : ''}</span>
+                        <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item?.quantity || 1)}</span>
                     </div>
                     <div class="suit-body">
                         <div class="col-notes" style="border-right:1px solid #000;">
@@ -1606,9 +1666,9 @@ ${periodHtml}
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.front_pocket || ''}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.side_pocket || ''}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src.shalwar_pocket || ''}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.front_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.side_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.shalwar_pocket || '&nbsp;'}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1719,7 +1779,7 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .col-hdr{background:#f0f0f0;padding:5px 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
 .mt{width:100%;border-collapse:collapse;border-top:1px solid #000}
 .ml{padding:16px 8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
-.mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle}
+.mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle;min-height:38px}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
 .sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
 .nbox{border:1px solid #000;margin:5px;padding:8px 10px;min-height:140px;font-size:14px;font-weight:600;line-height:1.6;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
@@ -1764,8 +1824,8 @@ ${allBookingsHtml}
         }
 
         if (type === 'STITCHING') {
-            const measurements = tempPrintBooking?.customerId
-                ? await fetchMeasurements(tempPrintBooking.customerId)
+            const measurements = (tempPrintBooking?.customerId || tempPrintBooking?.customer?.measurementNo)
+                ? await fetchMeasurements(tempPrintBooking.customerId, tempPrintBooking.customer?.measurementNo)
                 : null;
             await openStitchingTicketWindow(tempPrintBooking, measurements);
             return;
@@ -1796,7 +1856,8 @@ ${allBookingsHtml}
         cutterIds: [],
         advanceAmount: "",
         notes: "",
-        discount: ""
+        discount: "",
+        branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : ""))
     });
 
     // Set today's date client-side only to avoid SSR hydration mismatch
@@ -2183,6 +2244,7 @@ ${allBookingsHtml}
                 advanceAmount: finalAdvance,
                 remainingAmount: finalBalance,
                 notes: formData.notes,
+                branchId: formData.branchId ? parseInt(formData.branchId) : (session?.user?.branchId || null),
                 items: [
                     ...finalStitchingItems.map(item => ({
                         productId: item.productId || null,
@@ -2279,6 +2341,7 @@ ${allBookingsHtml}
             cutterIds: (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customerId),
             advanceAmount: booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "",
             notes: booking.notes || "",
+            branchId: booking.branchId ? String(booking.branchId) : "",
         });
         const stitchingBookingItems = (booking.items || []).filter(item => !item.productId);
         const productBookingItems = (booking.items || []).filter(item => !!item.productId);
@@ -2407,7 +2470,8 @@ ${allBookingsHtml}
             pocketType: "",
             shalwarType: "",
             hasShalwarPocket: false,
-            hasFrontPockets: false
+            hasFrontPockets: false,
+            branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : ""))
         });
         setCartItems([
             {
@@ -2569,12 +2633,17 @@ ${allBookingsHtml}
     };
 
     const filteredBookings = (bookings || []).filter(b => {
+        const matchesBranch = selectedBranchId === "ALL" ||
+            String(b.branchId) === String(selectedBranchId);
+        if (!matchesBranch) return false;
+
         const q = (searchQuery || "").toLowerCase();
         const matchesSearch = !q ||
             (b.customer?.name || "").toLowerCase().includes(q) ||
             (b.customer?.phone || "").toLowerCase().includes(q) ||
             (b.customer?.address || "").toLowerCase().includes(q) ||
             (b.customer?.measurementNo || "").toLowerCase().includes(q) ||
+            (b.branch?.name || "").toLowerCase().includes(q) ||
             (b.id || "").toString().includes(q) ||
             (b.bookingNumber || "").toLowerCase().includes(q);
 
@@ -2676,12 +2745,31 @@ ${allBookingsHtml}
                 {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
                 <Box>
-                    {/* ── Row 1: 4 equal header fields ── */}
+                    {/* ── Row 1: Header fields with Branch ── */}
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 6, md: 3 }}>
+                        <Grid size={{ xs: 6, md: 2.4 }}>
                             <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
                         </Grid>
-                        <Grid size={{ xs: 6, md: 3 }}>
+                        <Grid size={{ xs: 6, md: 2.4 }}>
+                            <FormControl fullWidth size="small" sx={FIELD_SX}>
+                                <InputLabel id="booking-form-branch-label">Branch</InputLabel>
+                                <Select
+                                    labelId="booking-form-branch-label"
+                                    label="Branch"
+                                    value={formData.branchId || (branches.length > 0 ? String(branches[0].id) : "")}
+                                    onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                                    disabled={!isAdmin && Boolean(session?.user?.branchId)}
+                                    startAdornment={<InputAdornment position="start"><Store size={16} color="#9ca3af" /></InputAdornment>}
+                                >
+                                    {branches.map(b => (
+                                        <MenuItem key={b.id} value={String(b.id)}>
+                                            {b.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 6, md: 2.4 }}>
                             <TextField fullWidth size="small" label="Booking Date" type="date" name="bookingDate" required
                                 value={formData.bookingDate}
                                 onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
@@ -2689,10 +2777,10 @@ ${allBookingsHtml}
                                 InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={16} color="#9ca3af" /></InputAdornment> }}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid size={{ xs: 6, md: 3 }}>
+                        <Grid size={{ xs: 6, md: 2.4 }}>
                             <TextField fullWidth size="small" label="Order Reference" value="Auto" disabled sx={DISABLED_SX} />
                         </Grid>
-                        <Grid size={{ xs: 6, md: 3 }}>
+                        <Grid size={{ xs: 6, md: 2.4 }}>
                             <TextField fullWidth size="small" label="Delivery Date" type="date" name="deliveryDate" required
                                 value={formData.deliveryDate}
                                 onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
@@ -3381,10 +3469,10 @@ ${allBookingsHtml}
 
         // Customer Balance (from billing customer or main customer)
         const custObj = payBooking.billingCustomer || payBooking.customer || {};
-        const custCurrentLedgerBal = parseFloat(custObj.balance || 0);
+        const custCurrentLedgerBal = payCustomerBalance !== null ? payCustomerBalance : parseFloat(custObj.balance || 0);
         // Customer Total Due Before = customer ledger balance (which already reflects this booking's due)
         const custTotalDueBefore = custCurrentLedgerBal;
-        const custRemainingBalanceAfter = Math.max(0, custTotalDueBefore - payAmount);
+        const custRemainingBalanceAfter = custTotalDueBefore - payAmount - discountAmount;
 
         return (
             <Dialog 
@@ -3418,16 +3506,29 @@ ${allBookingsHtml}
                             </Typography>
                         </Box>
                     </Box>
-                    <Chip 
-                        label={payBooking.status || "PENDING"} 
-                        size="small" 
-                        sx={{ 
-                            fontWeight: 700, 
-                            bgcolor: 'rgba(255,255,255,0.15)', 
-                            color: 'white',
-                            fontSize: '0.72rem' 
-                        }} 
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip 
+                            icon={<Store size={14} color="white" />}
+                            label={payBooking.branch?.name || (branches.find(b => b.id === payBooking.branchId)?.name) || (branches[0]?.name) || 'Main Branch - Dinga'}
+                            size="small" 
+                            sx={{ 
+                                fontWeight: 700, 
+                                bgcolor: 'rgba(255,255,255,0.2)', 
+                                color: 'white',
+                                fontSize: '0.72rem' 
+                            }} 
+                        />
+                        <Chip 
+                            label={payBooking.status || "PENDING"} 
+                            size="small" 
+                            sx={{ 
+                                fontWeight: 700, 
+                                bgcolor: 'rgba(255,255,255,0.15)', 
+                                color: 'white',
+                                fontSize: '0.72rem' 
+                            }} 
+                        />
+                    </Box>
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 3, pt: '20px !important' }}>
@@ -3438,7 +3539,7 @@ ${allBookingsHtml}
                     )}
 
                     {/* Customer & Booking Dates Section */}
-                    <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid #e2e8f0', mb: 2.5 }}>
+                    <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid #e2e8f0', mb: 2 }}>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
@@ -3460,9 +3561,13 @@ ${allBookingsHtml}
                             </Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                                    ORDER DATES & TYPE
+                                    ORDER DATES & BRANCH
                                 </Typography>
-                                <Typography variant="body2" fontWeight={700} color="#334155">
+                                <Typography variant="body2" fontWeight={700} color="#15803d" sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                                    <Store size={14} />
+                                    {payBooking.branch?.name || (branches.find(b => b.id === payBooking.branchId)?.name) || (branches[0]?.name) || "Main Branch - Dinga"}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">
                                     Type: {payBooking.bookingType || "STITCHING"}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" display="block">
@@ -3470,6 +3575,67 @@ ${allBookingsHtml}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" display="block">
                                     Delivery Date: {payBooking.deliveryDate ? new Date(payBooking.deliveryDate).toLocaleDateString('en-GB') : "N/A"}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Box>
+
+                    {/* Prominent Overall Balance & Booking Remaining Banner */}
+                    <Box sx={{
+                        bgcolor: '#f0fdf4',
+                        border: '1.5px solid #86efac',
+                        borderRadius: 2.5,
+                        p: 2,
+                        mb: 2.5,
+                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.08)'
+                    }}>
+                        <Grid container spacing={2} alignItems="center">
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#166534', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                        💳 Overall Customer Balance
+                                    </Typography>
+                                    <Chip
+                                        size="small"
+                                        label={custTotalDueBefore > 0 ? "Pending Due" : custTotalDueBefore < 0 ? "Advance Credit" : "Nil / Cleared"}
+                                        sx={{
+                                            height: 20,
+                                            fontSize: '0.65rem',
+                                            fontWeight: 800,
+                                            bgcolor: custTotalDueBefore > 0 ? '#fee2e2' : '#dcfce7',
+                                            color: custTotalDueBefore > 0 ? '#b91c1c' : '#15803d',
+                                        }}
+                                    />
+                                </Box>
+                                <Typography variant="h5" sx={{ fontWeight: 900, color: custTotalDueBefore > 0 ? '#dc2626' : '#16a34a', lineHeight: 1.2 }}>
+                                    {loadingPayCustomer ? <CircularProgress size={20} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                    Total account ledger balance across all bookings & orders
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }} sx={{ borderLeft: { xs: 'none', sm: '1px dashed #bbf7d0' }, pl: { xs: 0, sm: 2 } }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e3a8a', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                        📋 This Booking Remaining
+                                    </Typography>
+                                    <Chip
+                                        size="small"
+                                        label={currentRemaining > 0 ? "Booking Due" : "Cleared"}
+                                        sx={{
+                                            height: 20,
+                                            fontSize: '0.65rem',
+                                            fontWeight: 800,
+                                            bgcolor: currentRemaining > 0 ? '#fef3c7' : '#dcfce7',
+                                            color: currentRemaining > 0 ? '#92400e' : '#15803d',
+                                        }}
+                                    />
+                                </Box>
+                                <Typography variant="h5" sx={{ fontWeight: 900, color: currentRemaining > 0 ? '#b45309' : '#16a34a', lineHeight: 1.2 }}>
+                                    Rs. {currentRemaining.toLocaleString()}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                    Balance remaining specifically for Booking #{payBooking.bookingNumber || payBooking.id}
                                 </Typography>
                             </Grid>
                         </Grid>
@@ -3598,6 +3764,33 @@ ${allBookingsHtml}
                         </Box>
                     )}
 
+                    {/* Quick Payment Fill Buttons */}
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', mr: 0.5, letterSpacing: 0.5 }}>
+                            QUICK FILL:
+                        </Typography>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => setPayReceived(currentRemaining.toString())}
+                            sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, py: 0.4 }}
+                        >
+                            Pay Booking Due (Rs. {currentRemaining.toLocaleString()})
+                        </Button>
+                        {custTotalDueBefore > 0 && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => setPayReceived(custTotalDueBefore.toString())}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, py: 0.4 }}
+                            >
+                                Pay Overall Balance (Rs. {custTotalDueBefore.toLocaleString()})
+                            </Button>
+                        )}
+                    </Box>
+
                     {/* Amount Entry & Additional Discount Inputs */}
                     <Grid container spacing={2} sx={{ mb: 2.5 }}>
                         <Grid size={{ xs: 12, sm: 6 }}>
@@ -3702,43 +3895,51 @@ ${allBookingsHtml}
                         Booking Financial Breakdown
                     </Typography>
                     <Grid container spacing={1} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                        <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">TOTAL BILL</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.85rem">
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL BILL</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.82rem">
                                     Rs. {totalBill.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                        <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">ALREADY PAID</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.85rem">
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ALREADY PAID</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.82rem">
                                     Rs. {alreadyPaid.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                        <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#fdf2f8', borderRadius: 2, borderColor: '#fbcfe8' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">ADD. DISCOUNT</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#be185d" fontSize="0.85rem">
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ADD. DISCOUNT</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#be185d" fontSize="0.82rem">
                                     Rs. {discountAmount.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 6, sm: 2.4 }}>
+                        <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">NOW PAYING</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#1d4ed8" fontSize="0.85rem">
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">NOW PAYING</Typography>
+                                <Typography variant="body2" fontWeight={800} color="#1d4ed8" fontSize="0.82rem">
                                     Rs. {payAmount.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 2.4 }}>
+                        <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: newBookingRemaining > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: newBookingRemaining > 0 ? '#fecaca' : '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.68rem">BOOKING REMAINING</Typography>
-                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'} fontSize="0.85rem">
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">BOOKING REMAINING</Typography>
+                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'} fontSize="0.82rem">
                                     Rs. {newBookingRemaining.toLocaleString()}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 2 }}>
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: custRemainingBalanceAfter > 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 2, borderColor: custRemainingBalanceAfter > 0 ? '#fed7aa' : '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">OVERALL BALANCE</Typography>
+                                <Typography variant="body2" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#c2410c' : '#15803d'} fontSize="0.82rem">
+                                    Rs. {custRemainingBalanceAfter.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
@@ -3747,17 +3948,25 @@ ${allBookingsHtml}
                     {/* Customer Account Balance Box */}
                     <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd' }}>
                         <Grid container spacing={2} alignItems="center">
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
-                                    CUSTOMER TOTAL BALANCE (BEFORE)
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
+                                    OVERALL CUSTOMER BALANCE (BEFORE)
                                 </Typography>
                                 <Typography variant="subtitle1" fontWeight={800} color="#0c4a6e">
-                                    Rs. {custTotalDueBefore.toLocaleString()}
+                                    {loadingPayCustomer ? <CircularProgress size={16} sx={{ color: '#0369a1' }} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
                                 </Typography>
                             </Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block">
-                                    CUSTOMER REMAINING BALANCE (AFTER)
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                <Typography variant="caption" color="#64748b" fontWeight={700} display="block" fontSize="0.7rem">
+                                    THIS BOOKING REMAINING
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#047857'}>
+                                    Rs. {newBookingRemaining.toLocaleString()}
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 4 }}>
+                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
+                                    OVERALL CUSTOMER BALANCE (AFTER)
                                 </Typography>
                                 <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#b91c1c' : '#047857'}>
                                     Rs. {custRemainingBalanceAfter.toLocaleString()}
@@ -4098,12 +4307,24 @@ ${allBookingsHtml}
                                                 <Typography variant="body2" color="text.secondary">Booking No.</Typography>
                                                 <Typography variant="body2" fontWeight={800} color="#6d28d9">#{checkoutBooking.bookingNumber || checkoutBooking.id}</Typography>
                                             </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="body2" color="text.secondary">Branch</Typography>
+                                                <Typography variant="body2" fontWeight={700} color="#15803d">
+                                                    {checkoutBooking.branch?.name || (branches.find(b => b.id === checkoutBooking.branchId)?.name) || (branches[0]?.name) || "Main Branch - Dinga"}
+                                                </Typography>
+                                            </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2" color="text.secondary">Customer</Typography>
                                                 <Box sx={{ textAlign: 'right' }}>
                                                     <Typography variant="body2" fontWeight={700}>{checkoutBooking.customer?.name}</Typography>
                                                     <Typography variant="caption" color="text.secondary">{checkoutBooking.customer?.phone}</Typography>
                                                 </Box>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="body2" color="text.secondary">Overall Balance</Typography>
+                                                <Typography variant="body2" fontWeight={800} color={parseFloat(checkoutBooking.customer?.balance || 0) > 0 ? '#b91c1c' : '#15803d'}>
+                                                    Rs. {parseFloat(checkoutBooking.customer?.balance || 0).toLocaleString()}
+                                                </Typography>
                                             </Box>
                                             <Divider />
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -4441,6 +4662,33 @@ ${allBookingsHtml}
 
             {/* ── Action Bar ── */}
             <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                {isAdmin ? (
+                    <TextField
+                        select
+                        label="Branch"
+                        size="small"
+                        value={selectedBranchId}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedBranchId(val);
+                            loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId, val);
+                        }}
+                        sx={{ width: 170, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'white' } }}
+                    >
+                        <MenuItem value="ALL">All Branches</MenuItem>
+                        {branches.map(b => (
+                            <MenuItem key={b.id} value={String(b.id)}>{b.name}</MenuItem>
+                        ))}
+                    </TextField>
+                ) : (
+                    userBranchId && (
+                        <Chip
+                            icon={<Store size={14} />}
+                            label={branches.find(b => String(b.id) === String(userBranchId))?.name || "My Branch"}
+                            sx={{ bgcolor: '#e0e7ff', color: '#3730a3', fontWeight: 700, borderRadius: 2, height: 40 }}
+                        />
+                    )
+                )}
                 <TextField
                     placeholder="Name, phone, city, M#…"
                     variant="outlined"
@@ -4647,6 +4895,7 @@ ${allBookingsHtml}
                                 />
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>#</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Branch</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Book Date</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Address</TableCell>
@@ -4682,6 +4931,26 @@ ${allBookingsHtml}
                                             }}
                                         />
                                     </TableCell>
+                                    {/* Branch */}
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                            <Box sx={{ p: 0.5, bgcolor: '#f0fdf4', borderRadius: 1, display: 'flex', color: '#16a34a' }}>
+                                                <Store size={14} />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                                                    {booking.branch?.name || (branches.find(b => b.id === booking.branchId)?.name) || (branches[0]?.name) || 'Main Branch - Dinga'}
+                                                </Typography>
+                                                {((booking.branch?.code) || (branches.find(b => b.id === booking.branchId)?.code)) && (
+                                                    <Chip
+                                                        label={(booking.branch?.code) || (branches.find(b => b.id === booking.branchId)?.code)}
+                                                        size="small"
+                                                        sx={{ height: 16, fontSize: '0.62rem', fontWeight: 800, bgcolor: '#e2e8f0', color: '#475569' }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
                                     {/* Book Date */}
                                     <TableCell>
                                         <Typography variant="body2">{new Date(booking.bookingDate).toLocaleDateString('en-GB')}</Typography>
@@ -4707,9 +4976,13 @@ ${allBookingsHtml}
                                                         📍 {booking.customer.address}
                                                     </Typography>
                                                 )}
-                                                {booking.customer?.measurementNo && (
+                                                {booking.customer?.measurementNo ? (
                                                     <Typography variant="caption" sx={{ display: 'block', color: '#059669', fontWeight: 600 }}>
                                                         M# {booking.customer.measurementNo}
+                                                    </Typography>
+                                                ) : (
+                                                    <Typography variant="caption" sx={{ display: 'block', color: '#9ca3af', fontStyle: 'italic' }}>
+                                                        No Meas.
                                                     </Typography>
                                                 )}
                                                 {booking.billingCustomer && booking.billingCustomer.id !== booking.customerId && (
@@ -5102,6 +5375,9 @@ ${allBookingsHtml}
                                         <Typography variant="body2" sx={{ mb: 0.5 }}>
                                             <strong>بکنگ نمبر:</strong> {selectedBooking.id}
                                         </Typography>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            <strong>برانچ / Branch:</strong> {selectedBooking.branch?.name || (branches.find(b => b.id === selectedBooking.branchId)?.name) || (branches[0]?.name) || 'Main Branch - Dinga'}
+                                        </Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}><strong>تاریخ بکنگ:</strong> {new Date(selectedBooking.bookingDate).toLocaleDateString('en-GB')}</Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}><strong>ڈیلیوری کی تاریخ:</strong> {selectedBooking.deliveryDate ? new Date(selectedBooking.deliveryDate).toLocaleDateString('en-GB') : '-'}</Typography>
                                         <Typography variant="body2"><strong>ٹرائل کی تاریخ:</strong> {selectedBooking.trialDate ? new Date(selectedBooking.trialDate).toLocaleDateString('en-GB') : '-'}</Typography>
@@ -5286,7 +5562,7 @@ ${allBookingsHtml}
                                     measurements={
                                         (customerMeasurements && customerMeasurements.customerId === printBooking.customerId)
                                             ? customerMeasurements
-                                            : (printBooking.customer?.measurements?.[0]?.customerId === printBooking.customerId ? printBooking.customer.measurements[0] : null)
+                                            : (printBooking.customer?.measurements?.[0] || null)
                                     } 
                                   />
                             }
@@ -5305,7 +5581,7 @@ ${allBookingsHtml}
                                         ? <CustomerBill booking={bk} />
                                         : <TailorTicket 
                                             booking={bk} 
-                                            measurements={bk.customer?.measurements?.[0]?.customerId === bk.customerId ? bk.customer.measurements[0] : null} 
+                                            measurements={bk.customer?.measurements?.[0] || null} 
                                           />
                                     }
                                 </div>

@@ -1,6 +1,46 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export async function GET(req, { params }) {
+    try {
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json(
+                { error: "Customer ID is required" },
+                { status: 400 }
+            );
+        }
+        const customer = await prisma.customer.findUnique({
+            where: { id: parseInt(id) },
+            select: {
+                id: true,
+                code: true,
+                name: true,
+                phone: true,
+                email: true,
+                address: true,
+                balance: true,
+                measurementNo: true,
+                branchId: true,
+                branch: true,
+            }
+        });
+        if (!customer) {
+            return NextResponse.json(
+                { error: "Customer not found" },
+                { status: 404 }
+            );
+        }
+        return NextResponse.json(customer);
+    } catch (error) {
+        console.error("Failed to fetch customer:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch customer: " + error.message },
+            { status: 500 }
+        );
+    }
+}
+
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
