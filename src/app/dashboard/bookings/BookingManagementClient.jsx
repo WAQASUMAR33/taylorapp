@@ -728,32 +728,7 @@ function TailorTicket({ booking, measurements }) {
     const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
     const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
 
-    const cell = { border: '1px solid #000', padding: '8px 10px', fontSize: 15 };
-
-    const getMeasureRows = (src, isWskot) => {
-        if (isWskot) {
-            return [
-                ['واسکٹ لمبائی', src?.wskot_lambai || ''],
-                ['تیرہ', src?.wskot_teera || ''],
-                ['گلا', src?.wskot_gala || ''],
-                ['چھاتی', src?.wskot_chaati || ''],
-                ['کمر', src?.wskot_kamar || ''],
-                ['ہپ', src?.wskot_hip || ''],
-            ];
-        }
-        return [
-            ['قمیض', src?.qameez_lambai || ''],
-            ['تیرہ', src?.teera || ''],
-            ['بازو', src?.bazoo || ''],
-            ['گلا', src?.galaa || ''],
-            ['چھاتی گرد', src?.chaati_around || ''],
-            ['گھیرا گرد', src?.gehra_gird || ''],
-            ['شلوار لمبائی', src?.shalwar_lambai || ''],
-            ['پہنچہ', src?.puhncha || ''],
-            ['شلوار گھیرا', src?.shalwar_gheera || ''],
-            ['ہپ گرد', src?.hip_around || ''],
-        ];
-    };
+    const cell = { border: '1px solid #000', padding: '6px 8px', fontSize: 13, verticalAlign: 'middle' };
 
     const getStitchingBoxes = (item = {}) => {
         const boxes = [];
@@ -769,161 +744,198 @@ function TailorTicket({ booking, measurements }) {
         return boxes;
     };
 
+    const stitchingItems = (booking.items || []).filter(item => !item.productId);
+    const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
+    const itemsToRender = stitchingItems.length > 0 
+        ? stitchingItems.slice(0, 1) 
+        : (booking.items && booking.items.length > 0 ? [booking.items[0]] : [{}]);
+    const displaySuitQty = totalSuitsQty > 0 ? totalSuitsQty : (booking.items?.[0]?.quantity || 1);
+
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
             <PrintHeader branch={booking.branch} />
 
             {/* Title */}
-            <div style={{ textAlign: 'center', margin: '6px 0', fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+            <div style={{ textAlign: 'center', margin: '6px 0 10px', fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
                 Stitching Details &nbsp;|&nbsp; بکنگ پرچی
             </div>
 
-            {/* Info bar */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 15, border: '1px solid #000' }}>
+            {/* Top Info Table — 4 rows per sketch */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 13, border: '1px solid #000' }}>
                 <tbody>
                     <tr>
-                        <td style={{ ...cell, fontWeight: 700, width: '13%' }}>Customer:</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '22%', fontSize: 13 }}>{booking.customer?.name}</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '11%' }}>Meas. No:</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '14%' }}>{booking.customer?.measurementNo || '—'}</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '10%' }}>Booking #:</td>
-                        <td style={{ ...cell, width: '15%', fontWeight: 800, color: '#1a1a2e' }}>{booking.bookingNumber || booking.id}</td>
-                        <td style={{ ...cell, fontWeight: 700, width: '7%' }}>Date:</td>
-                        <td style={{ ...cell, width: '8%' }}>{fmt(booking.bookingDate)}</td>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Customer Name:</span>
+                            <span style={{ fontWeight: 700, fontSize: 14 }}>{booking.customer?.name || '—'}</span>
+                        </td>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Address:</span>
+                            <span>{booking.customer?.address || '—'}</span>
+                        </td>
                     </tr>
                     <tr>
-                        <td style={{ ...cell, fontWeight: 700 }}>Tailor:</td>
-                        <td style={{ ...cell }}>{tailors || '—'}</td>
-                        <td style={{ ...cell, fontWeight: 700 }}>Cutter:</td>
-                        <td style={{ ...cell }}>{cutters || '—'}</td>
-                        <td style={{ ...cell, fontWeight: 700 }}>Delivery:</td>
-                        <td style={{ ...cell }}>{fmt(booking.deliveryDate)}</td>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Measurement no:</span>
+                            <span style={{ fontWeight: 700 }}>{booking.customer?.measurementNo || '—'}</span>
+                        </td>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Booking no:</span>
+                            <span style={{ fontWeight: 800, color: '#1a1a2e' }}>{booking.bookingNumber || booking.id}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style={{ ...cell, width: '33.33%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Booking Date:</span>
+                            <span>{fmt(booking.bookingDate)}</span>
+                        </td>
+                        <td style={{ ...cell, width: '33.33%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Delivery Date:</span>
+                            <span>{fmt(booking.deliveryDate)}</span>
+                        </td>
+                        <td style={{ ...cell, width: '33.34%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Suit Qty:</span>
+                            <span style={{ fontWeight: 800 }}>{displaySuitQty}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Tailor name:</span>
+                            <span>{tailors || '—'}</span>
+                        </td>
+                        <td style={{ ...cell, width: '50%' }}>
+                            <span style={{ fontWeight: 700, marginRight: 4 }}>Cutter name:</span>
+                            <span>{cutters || '—'}</span>
+                        </td>
                     </tr>
                 </tbody>
             </table>
 
-            {/* Per-suit block — first stitching item or default empty suit */}
-            {(() => {
-                const stitchingItems = (booking.items || []).filter(item => !item.productId);
-                const totalSuitsQty = stitchingItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0);
-                const itemsToRender = stitchingItems.length > 0 
-                    ? stitchingItems.slice(0, 1) 
-                    : (booking.items && booking.items.length > 0 ? [booking.items[0]] : [{}]);
-                return itemsToRender.map((item, idx) => {
-                    const isWskot = item?.stitchingType === "WAISTCOAT" || (!item?.qameez_lambai && item?.wskot_lambai);
-                    const activeMeas = (measurements && (!measurements.customerId || measurements.customerId === booking.customerId))
-                        ? measurements
-                        : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
-                    const src = (activeMeas && Object.keys(activeMeas).length > 0)
-                        ? { ...activeMeas, ...Object.fromEntries(Object.entries(item || {}).filter(([_, v]) => v != null && v !== '')) }
-                        : (item || {});
-                    const measureRows = getMeasureRows(src, isWskot);
+            {/* Measurements & Notes Grid */}
+            {itemsToRender.map((item, idx) => {
+                const isWskot = item?.stitchingType === "WAISTCOAT" || (!item?.qameez_lambai && item?.wskot_lambai);
+                const activeMeas = (measurements && (!measurements.customerId || measurements.customerId === booking.customerId))
+                    ? measurements
+                    : (booking.customer?.measurements?.[0]?.customerId === booking.customerId ? booking.customer.measurements[0] : null);
+                const src = (activeMeas && Object.keys(activeMeas).length > 0)
+                    ? { ...activeMeas, ...Object.fromEntries(Object.entries(item || {}).filter(([_, v]) => v != null && v !== '')) }
+                    : (item || {});
 
-                    const measNotes = activeMeas?.notes?.trim() || '';
-                    const itemNotes = item?.itemNote?.trim() || '';
-                    const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
+                const rightRows = isWskot ? [
+                    ['واسکٹ لمبائی', src?.wskot_lambai || ''],
+                    ['تیرہ', src?.wskot_teera || ''],
+                    ['گلا', src?.wskot_gala || ''],
+                    ['چھاتی', src?.wskot_chaati || ''],
+                    ['کمر', src?.wskot_kamar || ''],
+                    ['ہپ', src?.wskot_hip || ''],
+                ] : [
+                    ['قمیض', src?.qameez_lambai || ''],
+                    ['تیرہ', src?.teera || ''],
+                    ['بازو', src?.bazoo || ''],
+                    ['گلا', src?.galaa || ''],
+                    ['شلوار لمبائی', src?.shalwar_lambai || ''],
+                    ['پائنچہ', src?.puhncha || ''],
+                    ['شلوار گھیرا', src?.shalwar_gheera || ''],
+                    ['ہپ گرد', src?.hip_around || ''],
+                ];
 
-                    return (
-                        <div key={idx} style={{ border: '1px solid #000', marginBottom: 10, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                const middleRows = isWskot ? [] : [
+                    ['کندھا', src?.kandha || ''],
+                    ['چھاتی', src?.chaati || src?.chaati_around || ''],
+                    ['کمر', src?.kamar_around || ''],
+                    ['گھیرا', src?.gheera || src?.gehra_gird || ''],
+                    ['کف', src?.kaf || ''],
+                ];
 
-                            {/* Suit header row */}
-                            <div style={{ backgroundColor: '#1a1a2e', color: '#fff', padding: '3px 8px', fontWeight: 700, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-                                <span>{isWskot ? 'Waistcoat' : 'Suit'} {idx + 1}{item?.product?.name ? ` — ${item.product.name}` : ''}</span>
-                                <span>Qty: {totalSuitsQty > 3 ? totalSuitsQty : (item?.quantity || 1)}</span>
-                            </div>
+                const options = getStitchingBoxes(item);
+                const measNotes = activeMeas?.notes?.trim() || '';
+                const itemNotes = item?.itemNote?.trim() || '';
+                const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
 
-                        {/* 3-column body */}
+                return (
+                    <div key={idx} style={{ border: '1px solid #000', marginBottom: 8, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                         <div style={{ display: 'flex', alignItems: 'stretch' }}>
-
-                            {/* ── Notes column ── */}
-                            <div style={{ flex: 1, borderRight: '1px solid #000' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #000' }}>
-                                    Notes
+                            {/* ── Left Column: Notes & Order Note ── */}
+                            <div style={{ flex: '0 0 28%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', minHeight: 200 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Notes:</div>
+                                    <div style={{
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
+                                        fontFamily: "Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif",
+                                        flex: 1
+                                    }}>
+                                        {displayNotes || ''}
+                                    </div>
                                 </div>
-                                <div style={{
-                                    border: '1px solid #000',
-                                    margin: '5px',
-                                    padding: '8px 10px',
-                                    fontSize: 14,
-                                    minHeight: 140,
-                                    fontWeight: 600,
-                                    lineHeight: 1.6,
-                                    whiteSpace: 'pre-wrap',
-                                    fontFamily: "Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif"
-                                }}>
-                                    {displayNotes || ''}
+                                <div style={{ borderTop: '1px solid #000', padding: 8, minHeight: 75 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Order note:</div>
+                                    <div style={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        lineHeight: 1.4,
+                                        whiteSpace: 'pre-wrap',
+                                        fontFamily: "Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif"
+                                    }}>
+                                        {booking.notes || ''}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* ── Stitching options column ── */}
-                            <div style={{ flex: '0 0 30%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            {/* ── Middle Column: کندھا، چھاتی، کمر، گھیرا، کف + Options + Pockets ── */}
+                            <div style={{ flex: '0 0 34%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                 <div>
-                                    <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
-                                        کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)
-                                    </div>
-                                    {!isWskot && (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000' }}>
-                                            <tbody>
-                                                {[
-                                                    ['کندھا', src?.kandha || ''],
-                                                    ['چھاتی', src?.chaati || ''],
-                                                    ['کمر', src?.kamar_around || ''],
-                                                    ['گھیرا', src?.gheera || ''],
-                                                    ['کف', src?.kaf || ''],
-                                                ].map(([label, val], i) => (
-                                                    <tr key={i}>
-                                                        <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle', height: 38 }}>
-                                                            {val || ''}
-                                                        </td>
-                                                        <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
-                                                            {label}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <tbody>
+                                            {middleRows.map(([label, val], i) => (
+                                                <tr key={i} style={{ height: 42 }}>
+                                                    <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
+                                                        {val || ''}
+                                                    </td>
+                                                    <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
+                                                        {label}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {options.length > 0 && (
+                                        <div style={{ padding: '4px 6px' }}>
+                                            {options.map((val, i) => (
+                                                <div key={i} style={{
+                                                    border: '1px solid #000',
+                                                    margin: '3px 0',
+                                                    padding: '4px 6px',
+                                                    fontSize: 12,
+                                                    minHeight: 26,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    fontWeight: 700,
+                                                    backgroundColor: '#fafafa',
+                                                }}>
+                                                    {val}
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
-                                    <div style={{ padding: '4px' }}>
-                                        {(() => {
-                                            const options = getStitchingBoxes(item);
-                                            return Array.from({ length: Math.max(5, options.length) }, (_, i) => {
-                                                const val = options[i] || '';
-                                                return (
-                                                    <div key={i} style={{
-                                                        border: '1px solid #000',
-                                                        margin: '3px 0',
-                                                        padding: '6px 8px',
-                                                        fontSize: 12,
-                                                        minHeight: 30,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        fontWeight: val ? 700 : 400,
-                                                        backgroundColor: val ? '#f9fafb' : 'transparent',
-                                                    }}>
-                                                        {val}
-                                                    </div>
-                                                );
-                                            });
-                                        })()}
-                                    </div>
                                 </div>
-                                {/* ── Pockets sub-section for Suit ── */}
                                 {!isWskot && (
-                                    <div style={{ borderTop: '1px solid #000', padding: 6, backgroundColor: '#fcfcfc' }}>
-                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11, marginBottom: 4, color: '#333' }}>جیب (POCKETS)</div>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 10, border: '1px solid #000' }}>
+                                    <div style={{ borderTop: '1px solid #000', padding: '4px 6px 6px', backgroundColor: '#fff' }}>
+                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, marginBottom: 4 }}>Pockets</div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 12, border: '1px solid #000' }}>
                                             <thead>
-                                                <tr style={{ backgroundColor: '#f0f0f0' }}>
-                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>F</th>
-                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>Side</th>
-                                                    <th style={{ border: '1px solid #000', padding: 2, fontWeight: 700, width: '33.33%' }}>Shalwar</th>
+                                                <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                    <th style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 700, width: '33.33%' }}>F</th>
+                                                    <th style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 700, width: '33.33%' }}>Side</th>
+                                                    <th style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 700, width: '33.33%' }}>Shalwar</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.front_pocket || ''}</td>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.side_pocket || ''}</td>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 24, fontWeight: 700, fontSize: 11 }}>{src?.shalwar_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.front_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.side_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.shalwar_pocket || ''}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -931,19 +943,16 @@ function TailorTicket({ booking, measurements }) {
                                 )}
                             </div>
 
-                            {/* ── Measurements column ── */}
-                            <div style={{ flex: '0 0 42%', borderRight: 'none' }}>
-                                <div style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', fontSize: 13, fontWeight: 700, borderBottom: '1px solid #000', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
-                                    قمیض (دائیں طرف)
-                                </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000' }}>
+                            {/* ── Right Column: 8 Measurements ── */}
+                            <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
-                                        {measureRows.map(([label, val], i) => (
-                                            <tr key={i}>
-                                                <td style={{ padding: '16px 8px', fontSize: 15, borderBottom: '1px solid #ddd', textAlign: 'left', verticalAlign: 'middle', height: 38 }}>
+                                        {rightRows.map(([label, val], i) => (
+                                            <tr key={i} style={{ height: 42 }}>
+                                                <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
                                                     {val || ''}
                                                 </td>
-                                                <td style={{ padding: '16px 10px', fontSize: 15, fontWeight: 600, borderBottom: '1px solid #ddd', borderLeft: '1px solid #000', width: '45%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
+                                                <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                                     {label}
                                                 </td>
                                             </tr>
@@ -954,14 +963,7 @@ function TailorTicket({ booking, measurements }) {
                         </div>
                     </div>
                 );
-            })})()}
-
-            {/* Booking-level note */}
-            {booking.notes && (
-                <div style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 11, marginTop: 4 }}>
-                    <strong>Order Note:</strong> {booking.notes}
-                </div>
-            )}
+            })}
         </div>
     );
 }
@@ -1580,114 +1582,91 @@ ${periodHtml}
                     ? { ...activeMeas, ...Object.fromEntries(Object.entries(item || {}).filter(([_, v]) => v != null && v !== '')) }
                     : (item || {});
 
-                const measureFields = isWskot ? [
-                    ['واسکٹ لمبائی', 'wskot_lambai'],
-                    ['تیرہ', 'wskot_teera'],
-                    ['گلا', 'wskot_gala'],
-                    ['چھاتی', 'wskot_chaati'],
-                    ['کمر', 'wskot_kamar'],
-                    ['ہپ', 'wskot_hip'],
+                const rightFields = isWskot ? [
+                    ['واسکٹ لمبائی', src?.wskot_lambai],
+                    ['تیرہ', src?.wskot_teera],
+                    ['گلا', src?.wskot_gala],
+                    ['چھاتی', src?.wskot_chaati],
+                    ['کمر', src?.wskot_kamar],
+                    ['ہپ', src?.wskot_hip],
                 ] : [
-                    ['قمیض', 'qameez_lambai'],
-                    ['تیرہ', 'teera'],
-                    ['بازو', 'bazoo'],
-                    ['گلا', 'galaa'],
-                    ['چھاتی گرد', 'chaati_around'],
-                    ['گھیرا گرد', 'gehra_gird'],
-                    ['شلوار لمبائی', 'shalwar_lambai'],
-                    ['پہنچہ', 'puhncha'],
-                    ['شلوار گھیرا', 'shalwar_gheera'],
-                    ['ہپ گرد', 'hip_around'],
+                    ['قمیض', src?.qameez_lambai],
+                    ['تیرہ', src?.teera],
+                    ['بازو', src?.bazoo],
+                    ['گلا', src?.galaa],
+                    ['شلوار لمبائی', src?.shalwar_lambai],
+                    ['پائنچہ', src?.puhncha],
+                    ['شلوار گھیرا', src?.shalwar_gheera],
+                    ['ہپ گرد', src?.hip_around],
                 ];
 
-                const measureRowsHtml = measureFields.map(([label, key]) => {
-                    const val = src?.[key] || '';
-                    return `<tr>
-                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : '&nbsp;'}</td>
-                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
-                    </tr>`;
-                }).join('');
-
-                const stitchFields = isWskot ? [] : [
-                    ['کندھا', 'kandha'],
-                    ['چھاتی', 'chaati'],
-                    ['کمر', 'kamar_around'],
-                    ['گھیرا', 'gheera'],
-                    ['کف', 'kaf'],
+                const middleFields = isWskot ? [] : [
+                    ['کندھا', src?.kandha],
+                    ['چھاتی', src?.chaati || src?.chaati_around],
+                    ['کمر', src?.kamar_around],
+                    ['گھیرا', src?.gheera || src?.gehra_gird],
+                    ['کف', src?.kaf],
                 ];
 
-                const stitchRowsHtml = stitchFields.map(([label, key]) => {
-                    const val = src?.[key] || '';
-                    return `<tr>
-                        <td class="mv" style="border-left:none;text-align:left;">${val ? `<span class="ul">${val}</span>` : '&nbsp;'}</td>
-                        <td class="ml" style="border-left:1px solid #000;text-align:right;">${label}</td>
-                    </tr>`;
-                }).join('');
+                const rowsHtml = (fields) => fields.map(([label, val]) => `<tr>
+                        <td class="mv">${val ? `<span class="ul">${val}</span>` : '&nbsp;'}</td>
+                        <td class="ml">${label}</td>
+                    </tr>`).join('');
 
                 const options = getStitchingBoxes(item);
-                const boxesHtml = Array.from({ length: Math.max(5, options.length) }, (_, i) => {
-                    const val = options[i] || '';
-                    return `<div class="sbox" style="border:1px solid #000;margin:3px 0;padding:6px;min-height:30px;font-size:12px;display:flex;align-items:center;padding-left:8px;font-weight:${val ? '700' : '400'};background:${val ? '#f9fafb' : 'transparent'};">${val || '&nbsp;'}</div>`;
-                }).join('');
+                const boxesHtml = options.map(val => `<div class="sbox">${val}</div>`).join('');
 
                 const measNotes = activeMeas?.notes?.trim() || '';
                 const itemNotes = item?.itemNote?.trim() || '';
                 const displayNotes = [measNotes, itemNotes && itemNotes !== measNotes ? itemNotes : null].filter(Boolean).join('\n\n');
 
                 return `
-                <div class="suit" style="margin-top:10px;">
-                    <div class="suit-hdr">
-                        <span>${isWskot ? 'Waistcoat' : 'Suit'} ${idx + 1}${item?.product?.name ? ` — ${item.product.name}` : ''}</span>
-                        <span>Qty: ${totalSuitsQty > 3 ? totalSuitsQty : (item?.quantity || 1)}</span>
-                    </div>
+                <div class="suit">
                     <div class="suit-body">
-                        <div class="col-notes" style="border-right:1px solid #000;">
-                            <div class="col-hdr">Notes</div>
-                            <div class="nbox">${displayNotes || ''}</div>
+                        <div class="col-left">
+                            <div class="notes-area">
+                                <div class="lbl">Notes:</div>
+                                <div class="nbox">${displayNotes || ''}</div>
+                            </div>
+                            <div class="order-note">
+                                <div class="lbl">Order note:</div>
+                                <div class="nbox-sm">${booking.notes || ''}</div>
+                            </div>
                         </div>
-                        <div class="col-stitch" style="display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid #000;">
+                        <div class="col-stitch">
                             <div>
-                                <div class="col-hdr">کندھا، چھاتی، کمر، گھیرا، کف (بائیں طرف)</div>
-                                <table class="mt"><tbody>${stitchRowsHtml}</tbody></table>
-                                <div style="padding:4px;">
-                                    ${boxesHtml}
-                                </div>
+                                <table class="mt"><tbody>${rowsHtml(middleFields)}</tbody></table>
+                                ${boxesHtml ? `<div style="padding:4px 6px;">${boxesHtml}</div>` : ''}
                             </div>
                             ${!isWskot ? `
-                            <div class="pockets-section" style="border-top:1px solid #000;padding:6px;background:#fcfcfc;">
-                                <div style="text-align:center;font-weight:700;font-size:11px;margin-bottom:4px;color:#333;">جیب (POCKETS)</div>
-                                <table style="width:100%;border-collapse:collapse;text-align:center;font-size:10px;border:1px solid #000;">
+                            <div class="pockets-section">
+                                <div style="text-align:center;font-weight:700;font-size:12px;margin-bottom:4px;">Pockets</div>
+                                <table style="width:100%;border-collapse:collapse;text-align:center;font-size:12px;border:1px solid #000;">
                                     <thead>
-                                        <tr style="background:#f0f0f0;">
-                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">F</th>
-                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">Side</th>
-                                            <th style="border:1px solid #000;padding:2px;font-weight:700;width:33.33%;">Shalwar</th>
+                                        <tr style="background:#f5f5f5;">
+                                            <th style="border:1px solid #000;padding:3px 2px;font-weight:700;width:33.33%;">F</th>
+                                            <th style="border:1px solid #000;padding:3px 2px;font-weight:700;width:33.33%;">Side</th>
+                                            <th style="border:1px solid #000;padding:3px 2px;font-weight:700;width:33.33%;">Shalwar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.front_pocket || '&nbsp;'}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.side_pocket || '&nbsp;'}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:24px;font-weight:700;font-size:11px;">${src?.shalwar_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.front_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.side_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.shalwar_pocket || '&nbsp;'}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             ` : ''}
                         </div>
-                        <div class="col-meas" style="border-right:none;">
-                            <div>
-                                <div class="col-hdr">قمیض (دائیں طرف)</div>
-                                <table class="mt"><tbody>${measureRowsHtml}</tbody></table>
-                            </div>
+                        <div class="col-meas">
+                            <table class="mt" style="border-top:none;"><tbody>${rowsHtml(rightFields)}</tbody></table>
                         </div>
                     </div>
                 </div>`;
             }).join('');
 
-            const orderNoteHtml = booking.notes
-                ? `<div class="order-note"><strong>Order Note:</strong> ${booking.notes}</div>`
-                : `<div class="order-note"><strong>Order Note:</strong></div>`;
 
             return `
             <div class="booking-page">
@@ -1704,31 +1683,31 @@ ${periodHtml}
                 <table class="info-table">
                     <tbody>
                         <tr>
-                            <td style="font-weight:700;width:13%">Customer:</td>
-                            <td style="font-weight:700;width:22%">${cust?.name || booking.customer?.name || ''}</td>
-                            <td style="font-weight:700;width:11%">Meas. No:</td>
-                            <td style="font-weight:700;width:14%">${cust?.measurementNo || booking.customer?.measurementNo || '—'}</td>
-                            <td style="font-weight:700;width:10%">Booking #:</td>
-                            <td style="font-weight:800;color:#1a1a2e;width:15%">${booking.bookingNumber || booking.id}</td>
-                            <td style="font-weight:700;width:7%">Date:</td>
-                            <td style="width:8%">${fmt(booking.bookingDate)}</td>
+                            <td style="width:50%"><b>Customer Name:</b> <span style="font-weight:700;font-size:14px;">${cust?.name || booking.customer?.name || '—'}</span></td>
+                            <td style="width:50%"><b>Address:</b> ${cust?.address || booking.customer?.address || '—'}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight:700">Tailor:</td>
-                            <td colspan="2">${tailors || '—'}</td>
-                            <td style="font-weight:700">Cutter:</td>
-                            <td colspan="2">${cutters || '—'}</td>
-                            <td style="font-weight:700">Delivery:</td>
-                            <td>${fmt(booking.deliveryDate)}</td>
+                            <td><b>Measurement no:</b> <b>${cust?.measurementNo || booking.customer?.measurementNo || '—'}</b></td>
+                            <td><b>Booking no:</b> <b style="color:#1a1a2e;">${booking.bookingNumber || booking.id}</b></td>
                         </tr>
                         <tr>
-                            <td style="font-weight:700">Address:</td>
-                            <td colspan="7">${cust?.address || booking.customer?.address || '—'}</td>
+                            <td colspan="2" style="padding:0;border:none;">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <tr>
+                                        <td style="border:1px solid #000;padding:6px 8px;width:33.33%"><b>Booking Date:</b> ${fmt(booking.bookingDate)}</td>
+                                        <td style="border:1px solid #000;padding:6px 8px;width:33.33%"><b>Delivery Date:</b> ${fmt(booking.deliveryDate)}</td>
+                                        <td style="border:1px solid #000;padding:6px 8px;width:33.34%"><b>Suit Qty:</b> <b>${totalSuitsQty > 0 ? totalSuitsQty : (itemsToRender[0]?.quantity || 1)}</b></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>Tailor name:</b> ${tailors || '—'}</td>
+                            <td><b>Cutter name:</b> ${cutters || '—'}</td>
                         </tr>
                     </tbody>
                 </table>
                 ${itemsHtml}
-                ${orderNoteHtml}
             </div>`;
         };
 
@@ -1771,19 +1750,22 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
     break-after:auto;
 }
 .suit{border:1px solid #000;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
-.suit-hdr{background:#1a1a2e;color:#fff;padding:4px 8px;font-weight:700;font-size:12px;display:flex;justify-content:space-between}
-.suit-body{display:flex}
-.col-meas{flex:0 0 42%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
-.col-stitch{flex:0 0 30%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
-.col-notes{flex:1}
-.col-hdr{background:#f0f0f0;padding:5px 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #000;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
-.mt{width:100%;border-collapse:collapse;border-top:1px solid #000}
-.ml{padding:16px 8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd;width:44%;white-space:nowrap;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
-.mv{padding:16px 6px;font-size:14px;border-bottom:1px solid #ddd;border-left:1px solid #000;vertical-align:middle;min-height:38px}
+.suit-body{display:flex;align-items:stretch}
+.col-left{flex:0 0 28%;border-right:1px solid #000;display:flex;flex-direction:column}
+.notes-area{flex:1;padding:8px;min-height:200px;display:flex;flex-direction:column}
+.lbl{font-size:13px;font-weight:700;margin-bottom:4px}
+.col-stitch{flex:0 0 34%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
+.col-meas{flex:0 0 38%}
+.mt{width:100%;border-collapse:collapse}
+.ml{padding:0 8px;height:42px;font-size:15px;font-weight:700;border-bottom:1px solid #000;border-left:1px solid #000;width:50%;white-space:nowrap;text-align:right;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
+.mv{padding:0 8px;height:42px;font-size:15px;font-weight:700;border-bottom:1px solid #000;text-align:left;vertical-align:middle;width:50%}
+.col-meas tr:last-child .ml,.col-meas tr:last-child .mv{border-bottom:none}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
-.sbox{border:1px solid #000;margin:4px 5px;padding:10px 8px;min-height:42px}
-.nbox{border:1px solid #000;margin:5px;padding:8px 10px;min-height:140px;font-size:14px;font-weight:600;line-height:1.6;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
-.order-note{border:1px solid #000;padding:5px 8px;font-size:11px;margin-top:4px}
+.sbox{border:1px solid #000;margin:3px 0;padding:4px 6px;min-height:26px;font-size:12px;font-weight:700;background:#fafafa;display:flex;align-items:center}
+.pockets-section{border-top:1px solid #000;padding:4px 6px 6px}
+.nbox{flex:1;font-size:14px;font-weight:600;line-height:1.5;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
+.nbox-sm{font-size:13px;font-weight:600;line-height:1.4;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
+.order-note{border-top:1px solid #000;padding:8px;min-height:75px}
 @media print{
     body{padding:0}
     @page{size:A4 portrait;margin:10mm}
