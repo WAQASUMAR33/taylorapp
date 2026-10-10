@@ -36,6 +36,8 @@ import {
     Paper,
     Badge,
     TablePagination,
+    Tabs,
+    Tab,
 } from "@mui/material";
 import {
     Edit,
@@ -51,6 +53,8 @@ import {
     Store,
     Layers,
     ArrowRightLeft,
+    ArrowRight,
+    History,
     Check,
 } from "lucide-react";
 import JsBarcode from "jsbarcode";
@@ -135,6 +139,20 @@ export default function ProductManagementClient({ initialProducts = [], initialB
         }
     }, [initialProducts]);
 
+    // Fallback fetch if branches are empty
+    useEffect(() => {
+        if (!branches || branches.length === 0) {
+            fetch("/api/branches")
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length > 0) {
+                        setBranches(data.filter(b => b.isActive !== false));
+                    }
+                })
+                .catch(err => console.error("Client fetch branches error:", err));
+        }
+    }, [branches]);
+
     // Active Store / Branch Filter
     // Default to "ALL" so all products and branch stocks are visible by default
     const [selectedBranchId, setSelectedBranchId] = useState("ALL");
@@ -202,8 +220,28 @@ export default function ProductManagementClient({ initialProducts = [], initialB
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
-    // Quick stock edit dialog state
-    const [quickStockProduct, setQuickStockProduct] = useState(null);
+    // Store Stock Management & Transfer dialog state
+    const [stockModalProduct, setStockModalProduct] = useState(null);
+    const [stockModalTab, setStockModalTab] = useState(0); // 0: Transfer, 1: Records, 2: Adjust
+
+    // Transfer fields
+    const [transferFromBranchId, setTransferFromBranchId] = useState("");
+    const [transferToBranchId, setTransferToBranchId] = useState("");
+    const [transferQuantity, setTransferQuantity] = useState("");
+    const [transferNotes, setTransferNotes] = useState("");
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferError, setTransferError] = useState("");
+
+    // Transfer records state
+    const [productTransfers, setProductTransfers] = useState([]);
+    const [loadingProductTransfers, setLoadingProductTransfers] = useState(false);
+    const [globalTransfersOpen, setGlobalTransfersOpen] = useState(false);
+    const [globalTransfers, setGlobalTransfers] = useState([]);
+    const [loadingGlobalTransfers, setLoadingGlobalTransfers] = useState(false);
+    const [transferSearchQuery, setTransferSearchQuery] = useState("");
+    const [transferFilterBranchId, setTransferFilterBranchId] = useState("ALL");
+
+    // Direct stock adjustment values
     const [quickStockValues, setQuickStockValues] = useState({});
     const [quickStockLoading, setQuickStockLoading] = useState(false);
 
@@ -482,31 +520,192 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         }
     };
 
-    // ── Quick Stock Adjustment ───────────────────────────
-    const handleOpenQuickStock = (prod) => {
-        setQuickStockProduct(prod);
+    // ── Store Stock Management & Transfer Handlers ─────────
+    const fetchProductTransfers = async (productId) => {
+        if (!productId) return;
+        setLoadingProductTransfers(true);
+        try {
+            const res = await fetch(`/api/products/transfer?productId=${productId}&limit=50`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setProductTransfers(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch product transfers:", err);
+        } finally {
+            setLoadingProductTransfers(false);
+        }
+    };
+
+    const handleOpenGlobalTransferRecords = async () => {
+        setGlobalTransfersOpen(true);
+        setLoadingGlobalTransfers(true);
+        try {
+            const res = await fetch(`/api/products/transfer?limit=200`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setGlobalTransfers(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch global transfers:", err);
+        } finally {
+            setLoadingGlobalTransfers(false);
+        }
+    };
+
+    const handleOpenStockModal = (prod) => {
+        setStockModalProduct(prod);
+        setStockModalTab(0);
+        setTransferError("");
+        setTransferNotes("");
+        setTransferQuantity("");
+
+        // Populate direct adjustment values
         const stocks = {};
         branches.forEach(b => {
             stocks[b.id] = getProductBranchStock(prod, b.id);
         });
         setQuickStockValues(stocks);
+
+        // Fetch past transfer records for this product
+        fetchProductTransfers(prod.id);
+
+        // 1. Determine Default From Branch (ALWAYS PRE-SELECTED)
+        let defaultFromId = "";
+        if (selectedBranchId && selectedBranchId !== "ALL" && branches.some(b => String(b.id) === String(selectedBranchId))) {
+            defaultFromId = String(selectedBranchId);
+        } else if (session?.user?.branchId && branches.some(b => String(b.id) === String(session.user.branchId))) {
+            defaultFromId = String(session.user.branchId);
+        } else {
+            // Find branch with highest stock for this product
+            const sortedByStock = [...branches].sort((a, b) => getProductBranchStock(prod, b.id) - getProductBranchStock(prod, a.id));
+            if (sortedByStock[0]) {
+                defaultFromId = String(sortedByStock[0].id);
+            } else if (branches[0]) {
+                defaultFromId = String(branches[0].id);
+            }
+        }
+
+        // 2. Determine Default To Branch (first other branch)
+        const otherBranch = branches.find(b => String(b.id) !== String(defaultFromId));
+        const defaultToId = otherBranch ? String(otherBranch.id) : "";
+
+        setTransferFromBranchId(defaultFromId);
+        setTransferToBranchId(defaultToId);
+    };
+
+    // Ensure default From/To branches are always selected even if branches load after modal is opened
+    useEffect(() => {
+        if (stockModalProduct && branches.length > 0 && !transferFromBranchId) {
+            let fromId = "";
+            if (selectedBranchId && selectedBranchId !== "ALL" && branches.some(b => String(b.id) === String(selectedBranchId))) {
+                fromId = String(selectedBranchId);
+            } else if (session?.user?.branchId && branches.some(b => String(b.id) === String(session.user.branchId))) {
+                fromId = String(session.user.branchId);
+            } else {
+                const sorted = [...branches].sort((a, b) => getProductBranchStock(stockModalProduct, b.id) - getProductBranchStock(stockModalProduct, a.id));
+                fromId = sorted[0] ? String(sorted[0].id) : String(branches[0].id);
+            }
+            setTransferFromBranchId(fromId);
+            const other = branches.find(b => String(b.id) !== fromId);
+            if (other && !transferToBranchId) {
+                setTransferToBranchId(String(other.id));
+            }
+        }
+    }, [stockModalProduct, branches, selectedBranchId, session?.user?.branchId, transferFromBranchId, transferToBranchId]);
+
+    const filteredGlobalTransfers = useMemo(() => {
+        return (globalTransfers || []).filter(t => {
+            if (transferFilterBranchId !== "ALL") {
+                const bId = parseInt(transferFilterBranchId);
+                if (t.fromBranchId !== bId && t.toBranchId !== bId) return false;
+            }
+            if (!transferSearchQuery.trim()) return true;
+            const q = transferSearchQuery.toLowerCase();
+            return (
+                (t.productName && t.productName.toLowerCase().includes(q)) ||
+                (t.productSku && t.productSku.toLowerCase().includes(q)) ||
+                (t.fromBranchName && t.fromBranchName.toLowerCase().includes(q)) ||
+                (t.toBranchName && t.toBranchName.toLowerCase().includes(q)) ||
+                (t.userName && t.userName.toLowerCase().includes(q)) ||
+                (t.notes && t.notes.toLowerCase().includes(q))
+            );
+        });
+    }, [globalTransfers, transferFilterBranchId, transferSearchQuery]);
+
+    const handleExecuteTransfer = async () => {
+        if (!stockModalProduct) return;
+        const fromId = parseInt(transferFromBranchId);
+        const toId = parseInt(transferToBranchId);
+        const qty = parseFloat(transferQuantity);
+
+        if (!fromId || !toId) {
+            setTransferError("Please select both source and destination branch stores.");
+            return;
+        }
+        if (fromId === toId) {
+            setTransferError("Source and destination branch stores cannot be the same.");
+            return;
+        }
+        if (isNaN(qty) || qty <= 0) {
+            setTransferError("Please enter a valid transfer quantity greater than 0.");
+            return;
+        }
+
+        const available = getProductBranchStock(stockModalProduct, fromId);
+        if (qty > available) {
+            setTransferError(`Cannot transfer ${qty} units. Only ${available} units available in selected source store.`);
+            return;
+        }
+
+        setTransferLoading(true);
+        setTransferError("");
+        try {
+            const res = await fetch("/api/products/transfer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: stockModalProduct.id,
+                    fromBranchId: fromId,
+                    toBranchId: toId,
+                    quantity: qty,
+                    notes: transferNotes.trim() || undefined,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to transfer stock");
+            }
+
+            if (data.product) {
+                setProducts(prev => prev.map(p => p.id === data.product.id ? data.product : p));
+            }
+            setSuccessMessage(data.message || `Transferred ${qty} units successfully!`);
+            fetchProductTransfers(stockModalProduct.id);
+            setStockModalProduct(null);
+        } catch (err) {
+            setTransferError(err.message || "Failed to transfer stock");
+        } finally {
+            setTransferLoading(false);
+        }
     };
 
     const handleSaveQuickStock = async () => {
-        if (!quickStockProduct) return;
+        if (!stockModalProduct) return;
         setQuickStockLoading(true);
         try {
             const response = await fetch("/api/products", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    id: quickStockProduct.id,
-                    sku: quickStockProduct.sku,
-                    name: quickStockProduct.name,
-                    description: quickStockProduct.description,
-                    costPrice: quickStockProduct.costPrice,
-                    unitPrice: quickStockProduct.unitPrice,
-                    barcode: quickStockProduct.barcode,
+                    id: stockModalProduct.id,
+                    sku: stockModalProduct.sku,
+                    name: stockModalProduct.name,
+                    description: stockModalProduct.description,
+                    costPrice: stockModalProduct.costPrice,
+                    unitPrice: stockModalProduct.unitPrice,
+                    barcode: stockModalProduct.barcode,
                     branchStocks: quickStockValues,
                 }),
             });
@@ -518,8 +717,8 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
 
             const updatedProd = await response.json();
             setProducts(prev => prev.map(p => p.id === updatedProd.id ? updatedProd : p));
-            setSuccessMessage(`Stock for "${quickStockProduct.name}" updated successfully!`);
-            setQuickStockProduct(null);
+            setSuccessMessage(`Stock for "${stockModalProduct.name}" updated successfully!`);
+            setStockModalProduct(null);
         } catch (err) {
             alert(err.message);
         } finally {
@@ -734,6 +933,15 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                 />
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<History size={18} />}
+                        onClick={handleOpenGlobalTransferRecords}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 2.5 }}
+                    >
+                        Transfer Records
+                    </Button>
                     {canCreate && (
                         <Button
                             variant="contained"
@@ -878,11 +1086,11 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                             <TableCell align="right">
                                                 <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
                                                     {canEdit && (
-                                                        <Tooltip title="Manage Store Stock">
+                                                        <Tooltip title="Transfer Stock / Manage Store Stock">
                                                             <IconButton
                                                                 size="small"
                                                                 sx={{ color: "success.main" }}
-                                                                onClick={() => handleOpenQuickStock(prod)}
+                                                                onClick={() => handleOpenStockModal(prod)}
                                                             >
                                                                 <Store size={17} />
                                                             </IconButton>
@@ -939,77 +1147,700 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                 />
             </Card>
 
-            {/* ── Quick Store Stock Adjustment Dialog ──────────── */}
+            {/* ── Stock Transfer & Branch Stock Dialog ────────── */}
             <Dialog
-                open={!!quickStockProduct}
-                onClose={() => !quickStockLoading && setQuickStockProduct(null)}
-                maxWidth="xs"
+                open={!!stockModalProduct}
+                onClose={() => !transferLoading && !quickStockLoading && setStockModalProduct(null)}
+                maxWidth="sm"
                 fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        overflow: "hidden"
+                    }
+                }}
             >
-                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Store size={20} color="#059669" />
-                    Manage Branch Store Stock
+                <DialogTitle sx={{ p: 0 }}>
+                    <Box sx={{
+                        p: 2.5,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "background.paper"
+                    }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Box sx={{
+                                p: 1,
+                                borderRadius: 2,
+                                bgcolor: "primary.50",
+                                color: "primary.main",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                            }}>
+                                <ArrowRightLeft size={22} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ lineHeight: 1.2 }}>
+                                    Transfer Product Stock
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Move stock between branch stores or adjust store counts
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <IconButton
+                            size="small"
+                            onClick={() => !transferLoading && !quickStockLoading && setStockModalProduct(null)}
+                            disabled={transferLoading || quickStockLoading}
+                        >
+                            <XIcon size={18} />
+                        </IconButton>
+                    </Box>
+
+                    {/* Navigation Tabs */}
+                    <Box sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "grey.50", px: 2.5 }}>
+                        <Tabs
+                            value={stockModalTab}
+                            onChange={(e, val) => {
+                                setStockModalTab(val);
+                                if (val === 1 && stockModalProduct) {
+                                    fetchProductTransfers(stockModalProduct.id);
+                                }
+                            }}
+                            textColor="primary"
+                            indicatorColor="primary"
+                            sx={{ minHeight: 44 }}
+                        >
+                            <Tab
+                                label="Transfer Between Stores"
+                                icon={<ArrowRightLeft size={16} />}
+                                iconPosition="start"
+                                sx={{ textTransform: "none", fontWeight: 600, minHeight: 44, fontSize: "0.85rem" }}
+                            />
+                            <Tab
+                                label="Transfer Records"
+                                icon={<History size={16} />}
+                                iconPosition="start"
+                                sx={{ textTransform: "none", fontWeight: 600, minHeight: 44, fontSize: "0.85rem" }}
+                            />
+                            <Tab
+                                label="Direct Adjustment"
+                                icon={<Store size={16} />}
+                                iconPosition="start"
+                                sx={{ textTransform: "none", fontWeight: 600, minHeight: 44, fontSize: "0.85rem" }}
+                            />
+                        </Tabs>
+                    </Box>
                 </DialogTitle>
-                <DialogContent sx={{ pt: "20px !important", pb: 2 }}>
-                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                        {quickStockProduct?.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
-                        Code: {quickStockProduct?.sku} | Current Total: {getProductBranchStock(quickStockProduct, "ALL")} units
-                    </Typography>
 
-                    <Divider sx={{ mb: 2 }} />
+                <DialogContent sx={{ p: 3 }}>
+                    {/* Product Summary Header Card */}
+                    <Card
+                        variant="outlined"
+                        sx={{
+                            p: 2,
+                            mb: 2.5,
+                            borderRadius: 2,
+                            bgcolor: "grey.50",
+                            borderColor: "grey.200"
+                        }}
+                    >
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                            <Box>
+                                <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                                    {stockModalProduct?.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Code / SKU: <strong>{stockModalProduct?.sku}</strong>
+                                    {stockModalProduct?.barcode && ` | Barcode: ${stockModalProduct.barcode}`}
+                                </Typography>
+                            </Box>
+                            <Chip
+                                label={`${getProductBranchStock(stockModalProduct, "ALL")} units total`}
+                                color="primary"
+                                size="small"
+                                sx={{ fontWeight: 700 }}
+                            />
+                        </Box>
 
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {branches.map(b => (
-                            <Box key={b.id} sx={{ p: 1.5, borderRadius: 2, border: "1px solid", borderColor: "divider", bgcolor: "grey.50" }}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                        <Store size={15} color="#4f46e5" />
-                                        <Typography variant="body2" fontWeight={600}>
-                                            {b.name} Store
+                        <Divider sx={{ my: 1.2 }} />
+
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                Current Stock:
+                            </Typography>
+                            {branches.map(b => {
+                                const bStock = getProductBranchStock(stockModalProduct, b.id);
+                                return (
+                                    <Chip
+                                        key={b.id}
+                                        size="small"
+                                        variant="outlined"
+                                        label={`${b.name}: ${bStock} units`}
+                                        sx={{
+                                            fontSize: "0.75rem",
+                                            bgcolor: bStock > 0 ? "white" : "transparent",
+                                            borderColor: bStock > 0 ? "success.light" : "grey.300",
+                                            fontWeight: bStock > 0 ? 600 : 400,
+                                            color: bStock > 0 ? "success.dark" : "text.secondary"
+                                        }}
+                                    />
+                                );
+                            })}
+                        </Box>
+                    </Card>
+
+                    {/* TAB 0: TRANSFER STOCK */}
+                    {stockModalTab === 0 && (
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            {transferError && (
+                                <Alert severity="error" onClose={() => setTransferError("")} sx={{ borderRadius: 2 }}>
+                                    {transferError}
+                                </Alert>
+                            )}
+
+                            {branches.length < 2 && (
+                                <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                                    At least 2 active branch stores are required to transfer stock.
+                                </Alert>
+                            )}
+
+                            {/* From and To Branch Selectors */}
+                            <Grid container spacing={2} alignItems="center">
+                                <Grid item xs={12} sm={5.5}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel id="from-branch-label">From Branch (Source)</InputLabel>
+                                        <Select
+                                            labelId="from-branch-label"
+                                            value={transferFromBranchId}
+                                            label="From Branch (Source)"
+                                            onChange={(e) => {
+                                                const newFrom = e.target.value;
+                                                setTransferFromBranchId(newFrom);
+                                                if (newFrom === transferToBranchId) {
+                                                    const other = branches.find(b => String(b.id) !== String(newFrom));
+                                                    setTransferToBranchId(other ? String(other.id) : "");
+                                                }
+                                            }}
+                                        >
+                                            {branches.map(b => {
+                                                const stock = getProductBranchStock(stockModalProduct, b.id);
+                                                return (
+                                                    <MenuItem key={b.id} value={String(b.id)}>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                                                            <span>{b.name}</span>
+                                                            <Chip
+                                                                size="small"
+                                                                label={`${stock} units`}
+                                                                sx={{
+                                                                    ml: 1,
+                                                                    height: 20,
+                                                                    fontSize: "0.7rem",
+                                                                    bgcolor: stock > 0 ? "success.50" : "grey.100",
+                                                                    color: stock > 0 ? "success.dark" : "text.disabled",
+                                                                    fontWeight: 600
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                    </MenuItem>
+                                                );
+                                            })}
+                                        </Select>
+                                    </FormControl>
+                                    {transferFromBranchId && (
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                mt: 0.5,
+                                                display: "block",
+                                                color: getProductBranchStock(stockModalProduct, transferFromBranchId) > 0 ? "success.main" : "error.main",
+                                                fontWeight: 600
+                                            }}
+                                        >
+                                            Available to transfer: {getProductBranchStock(stockModalProduct, transferFromBranchId)} units
                                         </Typography>
+                                    )}
+                                </Grid>
+
+                                <Grid item xs={12} sm={1} sx={{ display: "flex", justifyContent: "center" }}>
+                                    <Box sx={{
+                                        p: 0.75,
+                                        borderRadius: "50%",
+                                        bgcolor: "primary.50",
+                                        color: "primary.main",
+                                        display: { xs: "none", sm: "flex" },
+                                        alignItems: "center",
+                                        justifyContent: "center"
+                                    }}>
+                                        <ArrowRight size={18} />
                                     </Box>
-                                    {b.code && <Chip label={b.code} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />}
-                                </Box>
+                                </Grid>
+
+                                <Grid item xs={12} sm={5.5}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel id="to-branch-label">To Branch (Destination)</InputLabel>
+                                        <Select
+                                            labelId="to-branch-label"
+                                            value={transferToBranchId}
+                                            label="To Branch (Destination)"
+                                            onChange={(e) => setTransferToBranchId(e.target.value)}
+                                        >
+                                            {branches.map(b => {
+                                                const isSame = String(b.id) === String(transferFromBranchId);
+                                                const stock = getProductBranchStock(stockModalProduct, b.id);
+                                                return (
+                                                    <MenuItem key={b.id} value={String(b.id)} disabled={isSame}>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                                                            <span>{b.name} {isSame ? "(Source)" : ""}</span>
+                                                            <Chip
+                                                                size="small"
+                                                                label={`${stock} units`}
+                                                                sx={{ ml: 1, height: 20, fontSize: "0.7rem", fontWeight: 600 }}
+                                                            />
+                                                        </Box>
+                                                    </MenuItem>
+                                                );
+                                            })}
+                                        </Select>
+                                    </FormControl>
+                                    {transferToBranchId && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                                            Current store stock: {getProductBranchStock(stockModalProduct, transferToBranchId)} units
+                                        </Typography>
+                                    )}
+                                </Grid>
+                            </Grid>
+
+                            {/* Transfer Quantity */}
+                            <Box sx={{ mt: 1 }}>
                                 <TextField
                                     fullWidth
                                     size="small"
                                     type="number"
-                                    label="Stock Quantity"
-                                    value={quickStockValues[b.id] ?? 0}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setQuickStockValues(prev => ({
-                                            ...prev,
-                                            [b.id]: val === "" ? "" : parseFloat(val) || 0
-                                        }));
+                                    label="Quantity to Transfer"
+                                    placeholder="Enter units to move..."
+                                    value={transferQuantity}
+                                    onChange={(e) => setTransferQuantity(e.target.value)}
+                                    inputProps={{
+                                        step: "any",
+                                        min: 0.01,
+                                        max: transferFromBranchId ? getProductBranchStock(stockModalProduct, transferFromBranchId) : undefined
                                     }}
-                                    inputProps={{ step: "any", min: 0 }}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                {transferFromBranchId && getProductBranchStock(stockModalProduct, transferFromBranchId) > 0 && (
+                                                    <Button
+                                                        size="small"
+                                                        variant="text"
+                                                        onClick={() => setTransferQuantity(String(getProductBranchStock(stockModalProduct, transferFromBranchId)))}
+                                                        sx={{ fontSize: "0.75rem", p: 0.5, minWidth: "auto", fontWeight: 700 }}
+                                                    >
+                                                        Max ({getProductBranchStock(stockModalProduct, transferFromBranchId)})
+                                                    </Button>
+                                                )}
+                                                <Typography variant="caption" sx={{ ml: 0.5, color: "text.disabled" }}>
+                                                    units
+                                                </Typography>
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                    error={
+                                        Boolean(transferQuantity) &&
+                                        (parseFloat(transferQuantity) <= 0 ||
+                                         parseFloat(transferQuantity) > (transferFromBranchId ? getProductBranchStock(stockModalProduct, transferFromBranchId) : 0))
+                                    }
+                                    helperText={
+                                        Boolean(transferQuantity) && parseFloat(transferQuantity) > (transferFromBranchId ? getProductBranchStock(stockModalProduct, transferFromBranchId) : 0)
+                                            ? `Transfer quantity exceeds available stock (${getProductBranchStock(stockModalProduct, transferFromBranchId)} units)`
+                                            : ""
+                                    }
                                 />
                             </Box>
-                        ))}
-                    </Box>
+
+                            {/* Live Transfer Preview */}
+                            {transferFromBranchId &&
+                             transferToBranchId &&
+                             transferFromBranchId !== transferToBranchId &&
+                             parseFloat(transferQuantity) > 0 &&
+                             parseFloat(transferQuantity) <= getProductBranchStock(stockModalProduct, transferFromBranchId) && (
+                                <Box
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: "rgba(99, 102, 241, 0.04)",
+                                        border: "1px dashed",
+                                        borderColor: "primary.light"
+                                    }}
+                                >
+                                    <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ display: "block", mb: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                        Preview Transfer Result:
+                                    </Typography>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {branches.find(b => String(b.id) === String(transferFromBranchId))?.name}:
+                                            </Typography>
+                                            <Typography variant="caption" color="error.main" fontWeight={700}>
+                                                {getProductBranchStock(stockModalProduct, transferFromBranchId)} → {getProductBranchStock(stockModalProduct, transferFromBranchId) - parseFloat(transferQuantity)} units (-{parseFloat(transferQuantity)})
+                                            </Typography>
+                                        </Box>
+                                        <ArrowRight size={18} color="#6366f1" />
+                                        <Box sx={{ textAlign: "right" }}>
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {branches.find(b => String(b.id) === String(transferToBranchId))?.name}:
+                                            </Typography>
+                                            <Typography variant="caption" color="success.main" fontWeight={700}>
+                                                {getProductBranchStock(stockModalProduct, transferToBranchId)} → {getProductBranchStock(stockModalProduct, transferToBranchId) + parseFloat(transferQuantity)} units (+{parseFloat(transferQuantity)})
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* Notes Field */}
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Transfer Reason / Notes (Optional)"
+                                placeholder="e.g. Sent with driver, restocking branch store..."
+                                value={transferNotes}
+                                onChange={(e) => setTransferNotes(e.target.value)}
+                            />
+                        </Box>
+                    )}
+
+                    {/* TAB 1: PRODUCT TRANSFER RECORDS */}
+                    {stockModalTab === 1 && (
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Typography variant="subtitle2" fontWeight={700}>
+                                    Transfer History for {stockModalProduct?.name}
+                                </Typography>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => fetchProductTransfers(stockModalProduct?.id)}
+                                    disabled={loadingProductTransfers}
+                                >
+                                    <RefreshCw size={15} />
+                                </IconButton>
+                            </Box>
+
+                            {loadingProductTransfers ? (
+                                <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>
+                                    <CircularProgress size={26} />
+                                </Box>
+                            ) : productTransfers.length === 0 ? (
+                                <Box sx={{ py: 6, textAlign: "center", color: "text.secondary" }}>
+                                    <ArrowRightLeft size={36} color="#d1d5db" style={{ margin: "0 auto 8px" }} />
+                                    <Typography variant="body2" fontWeight={500}>
+                                        No transfer records found for this product.
+                                    </Typography>
+                                    <Typography variant="caption" color="text.disabled">
+                                        Completed transfers between stores will be recorded here automatically.
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 320 }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
+                                            <TableRow sx={{ bgcolor: "grey.50" }}>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Date</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Route</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Quantity</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Transferred By</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Notes</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {productTransfers.map((item) => (
+                                                <TableRow key={item.id} hover>
+                                                    <TableCell sx={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+                                                        {new Date(item.createdAt).toLocaleDateString()}{" "}
+                                                        <span style={{ color: "#9ca3af", fontSize: "0.7rem" }}>
+                                                            {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.75rem" }}>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                            <Chip label={item.fromBranchCode || item.fromBranchName} size="small" sx={{ height: 18, fontSize: "0.65rem", bgcolor: "error.50", color: "error.dark", fontWeight: 600 }} />
+                                                            <ArrowRight size={12} color="#9ca3af" />
+                                                            <Chip label={item.toBranchCode || item.toBranchName} size="small" sx={{ height: 18, fontSize: "0.65rem", bgcolor: "success.50", color: "success.dark", fontWeight: 600 }} />
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.75rem", fontWeight: 700, color: "primary.main" }}>
+                                                        {item.quantity} units
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.75rem" }}>
+                                                        {item.userName || "Admin"}
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.75rem", color: "text.secondary", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                        {item.notes || "—"}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            )}
+                        </Box>
+                    )}
+
+                    {/* TAB 2: DIRECT STOCK ADJUSTMENT */}
+                    {stockModalTab === 2 && (
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                Directly set or calibrate exact stock quantities for each branch store:
+                            </Typography>
+                            {branches.map(b => (
+                                <Box key={b.id} sx={{ p: 1.5, borderRadius: 2, border: "1px solid", borderColor: "divider", bgcolor: "grey.50" }}>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                            <Store size={15} color="#4f46e5" />
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {b.name} Store
+                                            </Typography>
+                                        </Box>
+                                        {b.code && <Chip label={b.code} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />}
+                                    </Box>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        label="Stock Quantity"
+                                        value={quickStockValues[b.id] ?? 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setQuickStockValues(prev => ({
+                                                ...prev,
+                                                [b.id]: val === "" ? "" : parseFloat(val) || 0
+                                            }));
+                                        }}
+                                        inputProps={{ step: "any", min: 0 }}
+                                    />
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
                 </DialogContent>
+
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     <Button
-                        onClick={() => setQuickStockProduct(null)}
+                        onClick={() => setStockModalProduct(null)}
                         variant="outlined"
                         color="inherit"
-                        disabled={quickStockLoading}
+                        disabled={transferLoading || quickStockLoading}
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
                         Cancel
                     </Button>
+
+                    {stockModalTab === 0 && (
+                        <Button
+                            variant="contained"
+                            onClick={handleExecuteTransfer}
+                            disabled={
+                                transferLoading ||
+                                !transferFromBranchId ||
+                                !transferToBranchId ||
+                                transferFromBranchId === transferToBranchId ||
+                                !transferQuantity ||
+                                parseFloat(transferQuantity) <= 0 ||
+                                parseFloat(transferQuantity) > getProductBranchStock(stockModalProduct, transferFromBranchId)
+                            }
+                            startIcon={transferLoading ? <CircularProgress size={16} color="inherit" /> : <ArrowRightLeft size={16} />}
+                            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                        >
+                            {transferLoading ? "Transferring..." : "Transfer Stock"}
+                        </Button>
+                    )}
+
+                    {stockModalTab === 2 && (
+                        <Button
+                            variant="contained"
+                            onClick={handleSaveQuickStock}
+                            disabled={quickStockLoading}
+                            startIcon={quickStockLoading ? <CircularProgress size={16} color="inherit" /> : <Save size={16} />}
+                            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                        >
+                            {quickStockLoading ? "Saving..." : "Save Stock"}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Global Stock Transfer Records Dialog ────────── */}
+            <Dialog
+                open={globalTransfersOpen}
+                onClose={() => setGlobalTransfersOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                        overflow: "hidden"
+                    }
+                }}
+            >
+                <DialogTitle sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Box sx={{
+                            p: 1,
+                            borderRadius: 2,
+                            bgcolor: "primary.50",
+                            color: "primary.main",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}>
+                            <History size={22} />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ lineHeight: 1.2 }}>
+                                Stock Transfer Records
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Complete log of inventory transfers across all store branches ({filteredGlobalTransfers.length} records)
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <IconButton
+                            size="small"
+                            onClick={handleOpenGlobalTransferRecords}
+                            disabled={loadingGlobalTransfers}
+                        >
+                            <RefreshCw size={18} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => setGlobalTransfersOpen(false)}>
+                            <XIcon size={18} />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 2.5 }}>
+                    {/* Filters */}
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2, alignItems: "center" }}>
+                        <TextField
+                            size="small"
+                            placeholder="Filter by product, SKU, branch, or notes…"
+                            value={transferSearchQuery}
+                            onChange={(e) => setTransferSearchQuery(e.target.value)}
+                            sx={{ flex: 1, minWidth: 220 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start"><Search size={16} /></InputAdornment>
+                                )
+                            }}
+                        />
+                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                            <InputLabel id="filter-transfer-branch-label">Store Branch</InputLabel>
+                            <Select
+                                labelId="filter-transfer-branch-label"
+                                label="Store Branch"
+                                value={transferFilterBranchId}
+                                onChange={(e) => setTransferFilterBranchId(e.target.value)}
+                            >
+                                <MenuItem value="ALL">All Branches</MenuItem>
+                                {branches.map(b => (
+                                    <MenuItem key={b.id} value={String(b.id)}>{b.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Records Table */}
+                    {loadingGlobalTransfers ? (
+                        <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+                            <CircularProgress size={30} />
+                        </Box>
+                    ) : filteredGlobalTransfers.length === 0 ? (
+                        <Box sx={{ py: 8, textAlign: "center", color: "text.secondary" }}>
+                            <History size={40} color="#d1d5db" style={{ margin: "0 auto 12px" }} />
+                            <Typography variant="body1" fontWeight={600}>
+                                No stock transfer records found.
+                            </Typography>
+                            <Typography variant="caption" color="text.disabled">
+                                When stock is transferred between branch stores, audit records will be listed here.
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 440 }}>
+                            <Table size="small" stickyHeader>
+                                <TableHead>
+                                    <TableRow sx={{ bgcolor: "grey.50" }}>
+                                        <TableCell sx={{ fontWeight: 700 }}>Date & Time</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Transfer Route</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Quantity</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Transferred By</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Notes / Reason</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredGlobalTransfers.map((item) => (
+                                        <TableRow key={item.id} hover>
+                                            <TableCell sx={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}>
+                                                {new Date(item.createdAt).toLocaleDateString()}{" "}
+                                                <Typography component="span" variant="caption" sx={{ color: "text.disabled", display: "block" }}>
+                                                    {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {item.productName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    SKU: {item.productSku}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                    <Chip
+                                                        label={item.fromBranchName}
+                                                        size="small"
+                                                        sx={{ fontSize: "0.7rem", bgcolor: "error.50", color: "error.dark", fontWeight: 600 }}
+                                                    />
+                                                    <ArrowRight size={14} color="#9ca3af" />
+                                                    <Chip
+                                                        label={item.toBranchName}
+                                                        size="small"
+                                                        sx={{ fontSize: "0.7rem", bgcolor: "success.50", color: "success.dark", fontWeight: 600 }}
+                                                    />
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={700} color="primary.main">
+                                                    {item.quantity} units
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: "0.8rem" }}>
+                                                {item.userName || "System / Admin"}
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary", maxWidth: 180 }}>
+                                                {item.notes || "—"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider" }}>
                     <Button
-                        variant="contained"
-                        onClick={handleSaveQuickStock}
-                        disabled={quickStockLoading}
-                        startIcon={quickStockLoading ? <CircularProgress size={16} color="inherit" /> : <Save size={16} />}
-                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
+                        onClick={() => setGlobalTransfersOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
                     >
-                        Save Stock
+                        Close
                     </Button>
                 </DialogActions>
             </Dialog>

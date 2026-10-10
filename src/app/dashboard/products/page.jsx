@@ -43,10 +43,17 @@ async function getProducts() {
 
 async function getBranches() {
     try {
-        const branches = await prisma.branch.findMany({
-            where: { isActive: true },
-            orderBy: [{ createdAt: "asc" }]
-        });
+        let branches = [];
+        try {
+            branches = await prisma.branch.findMany({
+                where: { isActive: true },
+                orderBy: { id: "asc" }
+            });
+        } catch {
+            branches = await prisma.branch.findMany({
+                orderBy: { id: "asc" }
+            });
+        }
         return JSON.parse(JSON.stringify(branches));
     } catch (error) {
         console.error("Failed to fetch branches:", error);
