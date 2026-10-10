@@ -73,9 +73,9 @@ const BOOKING_STATUSES = [
 ];
 
 // ─── Shared print header ─────────────────────────────────────────────────────
-function PrintHeader({ branch }) {
+function PrintHeader({ branch, hideSlogan = false }) {
     const brandName = branch?.name || "Grace Cloth and Tailors";
-    const slogan = branch?.slogan || "Where Style Meets Perfection";
+    const slogan = hideSlogan ? "" : (branch?.slogan || "Where Style Meets Perfection");
     const logo = branch?.logo || "/logo.png";
     const phone = branch?.phone || "03006284318 | 03186284318";
     const address = branch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
@@ -728,7 +728,7 @@ function TailorTicket({ booking, measurements }) {
     const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
     const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
 
-    const cell = { border: '1px solid #000', padding: '6px 8px', fontSize: 13, verticalAlign: 'middle' };
+    const cell = { border: '1px solid #000', padding: '10px 10px', fontSize: 16, verticalAlign: 'middle' };
 
     const getStitchingBoxes = (item = {}) => {
         const boxes = [];
@@ -753,20 +753,20 @@ function TailorTicket({ booking, measurements }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            <PrintHeader branch={booking.branch} />
+            <PrintHeader branch={booking.branch} hideSlogan />
 
             {/* Title */}
-            <div style={{ textAlign: 'center', margin: '6px 0 10px', fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
+            <div style={{ textAlign: 'center', margin: '6px 0 10px', fontSize: 16, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
                 Stitching Details &nbsp;|&nbsp; بکنگ پرچی
             </div>
 
             {/* Top Info Table — 4 rows per sketch */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 13, border: '1px solid #000' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontSize: 16, border: '1px solid #000' }}>
                 <tbody>
                     <tr>
                         <td style={{ ...cell, width: '50%' }}>
                             <span style={{ fontWeight: 700, marginRight: 4 }}>Customer Name:</span>
-                            <span style={{ fontWeight: 700, fontSize: 14 }}>{booking.customer?.name || '—'}</span>
+                            <span style={{ fontWeight: 700, fontSize: 18 }}>{booking.customer?.name || '—'}</span>
                         </td>
                         <td style={{ ...cell, width: '50%' }}>
                             <span style={{ fontWeight: 700, marginRight: 4 }}>Address:</span>
@@ -857,9 +857,9 @@ function TailorTicket({ booking, measurements }) {
                             {/* ── Left Column: Notes & Order Note ── */}
                             <div style={{ flex: '0 0 28%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', minHeight: 200 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Notes:</div>
+                                    <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Notes:</div>
                                     <div style={{
-                                        fontSize: 14,
+                                        fontSize: 18,
                                         fontWeight: 600,
                                         lineHeight: 1.5,
                                         whiteSpace: 'pre-wrap',
@@ -869,10 +869,10 @@ function TailorTicket({ booking, measurements }) {
                                         {displayNotes || ''}
                                     </div>
                                 </div>
-                                <div style={{ borderTop: '1px solid #000', padding: 8, minHeight: 75 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Order note:</div>
+                                <div style={{ borderTop: '1px solid #000', padding: 8, minHeight: 90 }}>
+                                    <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Order note:</div>
                                     <div style={{
-                                        fontSize: 13,
+                                        fontSize: 16,
                                         fontWeight: 600,
                                         lineHeight: 1.4,
                                         whiteSpace: 'pre-wrap',
@@ -889,11 +889,11 @@ function TailorTicket({ booking, measurements }) {
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <tbody>
                                             {middleRows.map(([label, val], i) => (
-                                                <tr key={i} style={{ height: 42 }}>
-                                                    <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
+                                                <tr key={i} style={{ height: 62 }}>
+                                                    <td style={{ padding: '0 8px', fontSize: 20, fontWeight: 700, borderBottom: '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
                                                         {val || ''}
                                                     </td>
-                                                    <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
+                                                    <td style={{ padding: '0 8px', fontSize: 20, fontWeight: 700, borderBottom: '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                                         {label}
                                                     </td>
                                                 </tr>
@@ -907,8 +907,8 @@ function TailorTicket({ booking, measurements }) {
                                                     border: '1px solid #000',
                                                     margin: '3px 0',
                                                     padding: '4px 6px',
-                                                    fontSize: 12,
-                                                    minHeight: 26,
+                                                    fontSize: 15,
+                                                    minHeight: 40,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     fontWeight: 700,
@@ -922,8 +922,8 @@ function TailorTicket({ booking, measurements }) {
                                 </div>
                                 {!isWskot && (
                                     <div style={{ borderTop: '1px solid #000', padding: '4px 6px 6px', backgroundColor: '#fff' }}>
-                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, marginBottom: 4 }}>Pockets</div>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 12, border: '1px solid #000' }}>
+                                        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Pockets</div>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 15, border: '1px solid #000' }}>
                                             <thead>
                                                 <tr style={{ backgroundColor: '#f5f5f5' }}>
                                                     <th style={{ border: '1px solid #000', padding: '3px 2px', fontWeight: 700, width: '33.33%' }}>F</th>
@@ -933,9 +933,9 @@ function TailorTicket({ booking, measurements }) {
                                             </thead>
                                             <tbody>
                                                 <tr>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.front_pocket || ''}</td>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.side_pocket || ''}</td>
-                                                    <td style={{ border: '1px solid #000', padding: 4, height: 28, fontWeight: 700, fontSize: 13 }}>{src?.shalwar_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 40, fontWeight: 700, fontSize: 16 }}>{src?.front_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 40, fontWeight: 700, fontSize: 16 }}>{src?.side_pocket || ''}</td>
+                                                    <td style={{ border: '1px solid #000', padding: 4, height: 40, fontWeight: 700, fontSize: 16 }}>{src?.shalwar_pocket || ''}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -948,11 +948,11 @@ function TailorTicket({ booking, measurements }) {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {rightRows.map(([label, val], i) => (
-                                            <tr key={i} style={{ height: 42 }}>
-                                                <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
+                                            <tr key={i} style={{ height: 62 }}>
+                                                <td style={{ padding: '0 8px', fontSize: 20, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', textAlign: 'left', verticalAlign: 'middle', width: '50%' }}>
                                                     {val || ''}
                                                 </td>
-                                                <td style={{ padding: '0 8px', fontSize: 15, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
+                                                <td style={{ padding: '0 8px', fontSize: 20, fontWeight: 700, borderBottom: i === rightRows.length - 1 ? 'none' : '1px solid #000', borderLeft: '1px solid #000', width: '50%', whiteSpace: 'nowrap', textAlign: 'right', verticalAlign: 'middle', fontFamily: "'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif" }}>
                                                     {label}
                                                 </td>
                                             </tr>
@@ -1640,8 +1640,8 @@ ${periodHtml}
                             </div>
                             ${!isWskot ? `
                             <div class="pockets-section">
-                                <div style="text-align:center;font-weight:700;font-size:12px;margin-bottom:4px;">Pockets</div>
-                                <table style="width:100%;border-collapse:collapse;text-align:center;font-size:12px;border:1px solid #000;">
+                                <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:4px;">Pockets</div>
+                                <table style="width:100%;border-collapse:collapse;text-align:center;font-size:15px;border:1px solid #000;">
                                     <thead>
                                         <tr style="background:#f5f5f5;">
                                             <th style="border:1px solid #000;padding:3px 2px;font-weight:700;width:33.33%;">F</th>
@@ -1651,9 +1651,9 @@ ${periodHtml}
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.front_pocket || '&nbsp;'}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.side_pocket || '&nbsp;'}</td>
-                                            <td style="border:1px solid #000;padding:4px;height:28px;font-weight:700;font-size:13px;">${src?.shalwar_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:40px;font-weight:700;font-size:16px;">${src?.front_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:40px;font-weight:700;font-size:16px;">${src?.side_pocket || '&nbsp;'}</td>
+                                            <td style="border:1px solid #000;padding:4px;height:40px;font-weight:700;font-size:16px;">${src?.shalwar_pocket || '&nbsp;'}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1674,7 +1674,6 @@ ${periodHtml}
                     <img src="/logo.png" alt="Logo"/>
                     <div class="hdr-text">
                         <h1>Grace Cloth and Tailors</h1>
-                        <div class="tagline">Where Style Meets Perfection</div>
                         <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
                         <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
                     </div>
@@ -1683,7 +1682,7 @@ ${periodHtml}
                 <table class="info-table">
                     <tbody>
                         <tr>
-                            <td style="width:50%"><b>Customer Name:</b> <span style="font-weight:700;font-size:14px;">${cust?.name || booking.customer?.name || '—'}</span></td>
+                            <td style="width:50%"><b>Customer Name:</b> <span style="font-weight:700;font-size:18px;">${cust?.name || booking.customer?.name || '—'}</span></td>
                             <td style="width:50%"><b>Address:</b> ${cust?.address || booking.customer?.address || '—'}</td>
                         </tr>
                         <tr>
@@ -1694,9 +1693,9 @@ ${periodHtml}
                             <td colspan="2" style="padding:0;border:none;">
                                 <table style="width:100%;border-collapse:collapse;">
                                     <tr>
-                                        <td style="border:1px solid #000;padding:6px 8px;width:33.33%"><b>Booking Date:</b> ${fmt(booking.bookingDate)}</td>
-                                        <td style="border:1px solid #000;padding:6px 8px;width:33.33%"><b>Delivery Date:</b> ${fmt(booking.deliveryDate)}</td>
-                                        <td style="border:1px solid #000;padding:6px 8px;width:33.34%"><b>Suit Qty:</b> <b>${totalSuitsQty > 0 ? totalSuitsQty : (itemsToRender[0]?.quantity || 1)}</b></td>
+                                        <td style="border:1px solid #000;padding:10px 8px;width:33.33%"><b>Booking Date:</b> ${fmt(booking.bookingDate)}</td>
+                                        <td style="border:1px solid #000;padding:10px 8px;width:33.33%"><b>Delivery Date:</b> ${fmt(booking.deliveryDate)}</td>
+                                        <td style="border:1px solid #000;padding:10px 8px;width:33.34%"><b>Suit Qty:</b> <b>${totalSuitsQty > 0 ? totalSuitsQty : (itemsToRender[0]?.quantity || 1)}</b></td>
                                     </tr>
                                 </table>
                             </td>
@@ -1727,7 +1726,7 @@ ${periodHtml}
 <title>${title}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
+body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:16px}
 .hdr{border-bottom:3px solid #1a1a2e;padding-bottom:8px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
 .hdr img{width:64px;width:64px;object-fit:contain}
 .hdr-text{flex:1;text-align:center}
@@ -1735,9 +1734,9 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .hdr-text .tagline{font-size:11px;color:#555;font-style:italic;margin-top:2px}
 .hdr-text .phone{font-size:11px;color:#222;margin-top:3px}
 .hdr-text .address{font-size:10px;color:#444;margin-top:2px}
-.title{text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 10px}
-.info-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid #000;margin-bottom:8px}
-.info-table td{border:1px solid #000;padding:6px 8px}
+.title{text-align:center;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:6px 0 10px}
+.info-table{width:100%;border-collapse:collapse;font-size:16px;border:1px solid #000;margin-bottom:8px}
+.info-table td{border:1px solid #000;padding:10px 8px}
 .booking-page{
     page-break-after:always;
     break-after:page;
@@ -1753,19 +1752,19 @@ body{font-family:Arial,sans-serif;color:#000;padding:12px;font-size:13px}
 .suit-body{display:flex;align-items:stretch}
 .col-left{flex:0 0 28%;border-right:1px solid #000;display:flex;flex-direction:column}
 .notes-area{flex:1;padding:8px;min-height:200px;display:flex;flex-direction:column}
-.lbl{font-size:13px;font-weight:700;margin-bottom:4px}
+.lbl{font-size:16px;font-weight:700;margin-bottom:4px}
 .col-stitch{flex:0 0 34%;border-right:1px solid #000;display:flex;flex-direction:column;justify-content:space-between}
 .col-meas{flex:0 0 38%}
 .mt{width:100%;border-collapse:collapse}
-.ml{padding:0 8px;height:42px;font-size:15px;font-weight:700;border-bottom:1px solid #000;border-left:1px solid #000;width:50%;white-space:nowrap;text-align:right;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
-.mv{padding:0 8px;height:42px;font-size:15px;font-weight:700;border-bottom:1px solid #000;text-align:left;vertical-align:middle;width:50%}
+.ml{padding:0 8px;height:62px;font-size:20px;font-weight:700;border-bottom:1px solid #000;border-left:1px solid #000;width:50%;white-space:nowrap;text-align:right;vertical-align:middle;font-family:'Alvi Lahori Nastaleeq', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', Urdu, sans-serif}
+.mv{padding:0 8px;height:62px;font-size:20px;font-weight:700;border-bottom:1px solid #000;text-align:left;vertical-align:middle;width:50%}
 .col-meas tr:last-child .ml,.col-meas tr:last-child .mv{border-bottom:none}
 .ul{display:inline-block;min-width:50px;font-weight:700;text-decoration:none}
-.sbox{border:1px solid #000;margin:3px 0;padding:4px 6px;min-height:26px;font-size:12px;font-weight:700;background:#fafafa;display:flex;align-items:center}
+.sbox{border:1px solid #000;margin:3px 0;padding:4px 6px;min-height:40px;font-size:15px;font-weight:700;background:#fafafa;display:flex;align-items:center}
 .pockets-section{border-top:1px solid #000;padding:4px 6px 6px}
-.nbox{flex:1;font-size:14px;font-weight:600;line-height:1.5;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
-.nbox-sm{font-size:13px;font-weight:600;line-height:1.4;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
-.order-note{border-top:1px solid #000;padding:8px;min-height:75px}
+.nbox{flex:1;font-size:18px;font-weight:600;line-height:1.5;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
+.nbox-sm{font-size:16px;font-weight:600;line-height:1.4;white-space:pre-wrap;font-family:Arial, 'Noto Nastaliq Urdu', 'Alvi Lahori Nastaleeq', sans-serif}
+.order-note{border-top:1px solid #000;padding:8px;min-height:90px}
 @media print{
     body{padding:0}
     @page{size:A4 portrait;margin:10mm}
