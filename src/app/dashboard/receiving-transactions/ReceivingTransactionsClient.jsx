@@ -26,7 +26,7 @@ import {
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 
-export default function ReceivingTransactionsClient({ initialData }) {
+export default function ReceivingTransactionsClient({ initialData, branches = [] }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const { data: session, status: authStatus } = useSession();
@@ -58,6 +58,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
     const [source, setSource] = useState("ALL"); // ALL | PRODUCT | STITCHING | LEDGER
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
 
     // Date range filter states - defaults to current date (TODAY)
     const [datePreset, setDatePreset] = useState(initialData?.datePreset || "TODAY");
@@ -116,6 +117,9 @@ export default function ReceivingTransactionsClient({ initialData }) {
             if (dateTo) {
                 params.append("dateTo", dateTo);
             }
+            if (selectedBranchId && selectedBranchId !== "ALL") {
+                params.append("branchId", selectedBranchId);
+            }
 
             const res = await fetch(`/api/receiving-transactions?${params.toString()}`);
             if (res.ok) {
@@ -144,7 +148,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
     // Refetch when dependencies change
     useEffect(() => {
         fetchTransactions();
-    }, [page, source, debouncedSearch, dateFrom, dateTo, sortBy, sortOrder]);
+    }, [page, source, debouncedSearch, dateFrom, dateTo, sortBy, sortOrder, selectedBranchId]);
 
     const formatYMD = (date) => {
         const y = date.getFullYear();
@@ -433,7 +437,29 @@ export default function ReceivingTransactionsClient({ initialData }) {
                 </Box>
 
                 {/* 3. Search and Actions */}
-                <Box sx={{ ml: { xs: 0, lg: "auto" }, display: "flex", alignItems: "center", gap: 1, width: { xs: "100%", sm: "auto" } }}>
+                <Box sx={{ ml: { xs: 0, lg: "auto" }, display: "flex", alignItems: "center", gap: 1, width: { xs: "100%", sm: "auto" }, flexWrap: "wrap" }}>
+                    {branches.length > 0 && (
+                        <TextField
+                            select
+                            size="small"
+                            value={selectedBranchId}
+                            onChange={(e) => {
+                                setSelectedBranchId(e.target.value);
+                                setPage(1);
+                            }}
+                            sx={{
+                                minWidth: 155,
+                                "& .MuiInputBase-root": { height: 34, fontSize: "0.82rem", borderRadius: 1.5, bgcolor: isDark ? "rgba(255,255,255,0.05)" : "#fff" }
+                            }}
+                        >
+                            <MenuItem value="ALL" sx={{ fontSize: "0.82rem", fontWeight: 600 }}>All Branches</MenuItem>
+                            {branches.map(b => (
+                                <MenuItem key={b.id} value={String(b.id)} sx={{ fontSize: "0.82rem" }}>
+                                    {b.name} {b.code ? `(${b.code})` : ""}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
                     <TextField
                         size="small"
                         value={searchQuery}
@@ -445,7 +471,7 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                     <Search size={14} style={{ opacity: 0.55 }} />
                                 </InputAdornment>
                             ),
-                            sx: { height: 34, fontSize: "0.82rem", width: { xs: "100%", sm: 220 }, borderRadius: 1.5 }
+                            sx: { height: 34, fontSize: "0.82rem", width: { xs: "100%", sm: 200 }, borderRadius: 1.5 }
                         }}
                     />
                     <Tooltip title="Refresh">
@@ -533,6 +559,21 @@ export default function ReceivingTransactionsClient({ initialData }) {
                                             >
                                                 #{tx.receiptNo}
                                             </Box>
+                                            {tx.branch && (
+                                                <Box sx={{ mt: 0.5 }}>
+                                                    <Chip
+                                                        label={tx.branch.name}
+                                                        size="small"
+                                                        sx={{
+                                                            height: 18,
+                                                            fontSize: "0.64rem",
+                                                            fontWeight: 700,
+                                                            bgcolor: isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9",
+                                                            color: isDark ? "#93c5fd" : "#475569"
+                                                        }}
+                                                    />
+                                                </Box>
+                                            )}
                                         </Box>
 
                                         {/* Col 2: Date & Time */}

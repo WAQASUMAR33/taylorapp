@@ -13,7 +13,7 @@ import {
     BarChart3, TrendingUp, TrendingDown, DollarSign, Users,
     Scissors, Calendar, RefreshCw, Filter, ShoppingBag,
     ArrowUpRight, ArrowDownRight, Clock, CheckCircle, AlertCircle,
-    Package, Wallet, CreditCard, Receipt, Tag
+    Package, Wallet, CreditCard, Receipt, Tag, Building2
 } from "lucide-react";
 
 // ─── colour palette helpers ──────────────────────────────────────────────────
@@ -130,7 +130,7 @@ function StaffRow({ item, max, color }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function AnalyticsClient({ employees }) {
+export default function AnalyticsClient({ employees = [], branches = [] }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "analytics", "view");
@@ -146,6 +146,7 @@ export default function AnalyticsClient({ employees }) {
     const [to, setTo] = useState(today);
     const [filterTailor, setFilterTailor] = useState(null);
     const [filterCutter, setFilterCutter] = useState(null);
+    const [selectedBranch, setSelectedBranch] = useState(null);
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -169,6 +170,7 @@ export default function AnalyticsClient({ employees }) {
             if (to) params.set("to", to);
             if (filterTailor) params.set("tailorId", filterTailor.id);
             if (filterCutter) params.set("cutterId", filterCutter.id);
+            if (selectedBranch) params.set("branchId", selectedBranch.id);
 
             const res = await fetch(`/api/analytics?${params.toString()}`);
             if (!res.ok) throw new Error("Failed to fetch analytics");
@@ -179,7 +181,7 @@ export default function AnalyticsClient({ employees }) {
         } finally {
             setLoading(false);
         }
-    }, [from, to, filterTailor, filterCutter]);
+    }, [from, to, filterTailor, filterCutter, selectedBranch]);
 
     useEffect(() => { 
         if (canView) {
@@ -249,26 +251,49 @@ export default function AnalyticsClient({ employees }) {
                                 InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={15} color="#9ca3af" /></InputAdornment> }}
                                 sx={FIELD_SX} />
                         </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        {branches.length > 0 && (
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Autocomplete
+                                    options={branches}
+                                    getOptionLabel={b => `${b.name} ${b.code ? `(${b.code})` : ''}`}
+                                    value={selectedBranch}
+                                    onChange={(_, v) => setSelectedBranch(v)}
+                                    renderInput={params => (
+                                        <TextField {...params} label="Branch (All / Combined)" size="small" sx={FIELD_SX} />
+                                    )}
+                                />
+                            </Grid>
+                        )}
+                        <Grid size={{ xs: 12, sm: 6, md: branches.length > 0 ? 3 : 6 }}>
                             <Autocomplete options={allForDropdown} getOptionLabel={o => o.name || ""}
                                 value={filterTailor} onChange={(_, v) => setFilterTailor(v)}
-                                renderInput={params => <TextField {...params} label="Filter by Tailor" size="small" sx={{ minWidth: 300, ...FIELD_SX }} />} />
+                                renderInput={params => <TextField {...params} label="Filter by Tailor" size="small" sx={FIELD_SX} />} />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                             <Autocomplete options={allForDropdown} getOptionLabel={o => o.name || ""}
                                 value={filterCutter} onChange={(_, v) => setFilterCutter(v)}
-                                renderInput={params => <TextField {...params} label="Filter by Cutter" size="small" sx={{ minWidth: 300, ...FIELD_SX }} />} />
+                                renderInput={params => <TextField {...params} label="Filter by Cutter" size="small" sx={FIELD_SX} />} />
                         </Grid>
-                        <Grid size={{ xs: 12 }}>
+                        <Grid size={{ xs: 12 }} sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
                             <Button size="small" variant="outlined"
-                                onClick={() => { setFrom(firstOfMonth); setTo(today); setFilterTailor(null); setFilterCutter(null); }}
+                                onClick={() => { setFrom(firstOfMonth); setTo(today); setFilterTailor(null); setFilterCutter(null); setSelectedBranch(null); }}
                                 sx={{ borderRadius: 2, textTransform: "none", borderColor: "#d1d5db", color: "#6b7280" }}>
-                                Reset
+                                Reset Filters
                             </Button>
                             <Button size="small" variant="contained" onClick={fetchAnalytics} disabled={loading}
                                 sx={{ borderRadius: 2, textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}>
                                 Apply Filters
                             </Button>
+                            {selectedBranch && (
+                                <Chip
+                                    icon={<Building2 size={14} />}
+                                    label={`Active Branch: ${selectedBranch.name}`}
+                                    onDelete={() => setSelectedBranch(null)}
+                                    color="primary"
+                                    size="small"
+                                    sx={{ ml: "auto", fontWeight: 600 }}
+                                />
+                            )}
                         </Grid>
                     </Grid>
                 </Box>
@@ -369,6 +394,78 @@ export default function AnalyticsClient({ employees }) {
                             </Card>
                         </Grid>
                     </Grid>
+
+                    {/* ── Branch-wise P&L Comparison ── */}
+                    {data?.branchBreakdown && data.branchBreakdown.length > 0 && (
+                        <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                            <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, bgcolor: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
+                                <Box sx={{ p: 1, bgcolor: "#ede9fe", borderRadius: 1.5, display: "flex" }}>
+                                    <Building2 size={16} color="#7c3aed" />
+                                </Box>
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={800} color="#1f2937">
+                                        Branch-Wise Profit & Loss (PnL) Comparison
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Comparative financials and performance across branches for the selected period
+                                    </Typography>
+                                </Box>
+                                <Chip size="small" label={`${data.branchBreakdown.length} Branches`} sx={{ ml: "auto", bgcolor: "#ede9fe", color: "#7c3aed", fontWeight: 700 }} />
+                            </Box>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow sx={{ bgcolor: "#f9fafb" }}>
+                                            {["Branch", "Orders", "Suits", "Total Revenue", "Cloth Profit", "Stitching Profit", "Branch Expenses", "Net Profit", "Action"].map(h => (
+                                                <TableCell key={h} sx={{ fontWeight: 700, color: "#374151", fontSize: "0.78rem" }}>{h}</TableCell>
+                                            ))}
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {data.branchBreakdown.map((bb) => (
+                                            <TableRow key={bb.branchId} sx={{ "&:hover": { bgcolor: "#f8fafc" } }}>
+                                                <TableCell>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <Avatar sx={{ width: 28, height: 28, fontSize: "0.75rem", bgcolor: "#e0e7ff", color: "#4338ca", fontWeight: 700 }}>
+                                                            {bb.branchName?.[0]?.toUpperCase()}
+                                                        </Avatar>
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={700} color="#1e293b">{bb.branchName}</Typography>
+                                                            {bb.branchCode && <Typography variant="caption" color="text.secondary">{bb.branchCode}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem" }}>{fmt(bb.totalBookings)}</TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem" }}>{fmt(bb.totalSuits)}</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, fontSize: "0.78rem", color: "#7c3aed" }}>Rs. {fmt(bb.totalRevenue)}</TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#b45309" }}>Rs. {fmt(bb.clothProfit)}</TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#0891b2" }}>Rs. {fmt(bb.stitchingProfit)}</TableCell>
+                                                <TableCell sx={{ fontWeight: 600, fontSize: "0.78rem", color: "#dc2626" }}>Rs. {fmt(bb.totalExpenses)}</TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={800} sx={{ color: (bb.netProfit || 0) >= 0 ? "#059669" : "#dc2626" }}>
+                                                        Rs. {fmt(bb.netProfit)}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => {
+                                                            const bObj = branches.find(b => b.id === bb.branchId);
+                                                            if (bObj) setSelectedBranch(bObj);
+                                                        }}
+                                                        sx={{ textTransform: "none", fontSize: "0.72rem", py: 0.2, px: 1, borderRadius: 1.5 }}
+                                                    >
+                                                        Filter Branch
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </Card>
+                    )}
 
                     {/* ── Stitching & Cloth Profit Breakdown ── */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>

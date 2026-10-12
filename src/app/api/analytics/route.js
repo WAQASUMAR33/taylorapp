@@ -8,6 +8,14 @@ export async function GET(req) {
         const to = searchParams.get("to");
         const tailorId = searchParams.get("tailorId");
         const cutterId = searchParams.get("cutterId");
+        const branchId = searchParams.get("branchId");
+
+        // Fetch active branches for reference and breakdown
+        const branches = await prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
+            orderBy: { name: "asc" }
+        });
 
         const where = {};
 
@@ -27,6 +35,9 @@ export async function GET(req) {
         }
         if (tailorId) where.tailorId = parseInt(tailorId);
         if (cutterId) where.cutterId = parseInt(cutterId);
+        if (branchId && branchId !== "ALL") {
+            where.branchId = parseInt(branchId);
+        }
 
         // Ignore cancelled stitching bookings in analytics
         where.NOT = {
@@ -34,10 +45,11 @@ export async function GET(req) {
             status: "CANCELLED",
         };
 
-        // --- Bookings with full relations including stitching options ---
+        // --- Bookings with full relations including stitching options and branch ---
         const bookings = await prisma.booking.findMany({
             where,
             include: {
+                branch: { select: { id: true, name: true, code: true } },
                 customer: { select: { id: true, name: true, phone: true } },
                 tailor: { select: { id: true, name: true } },
                 cutter: { select: { id: true, name: true } },
@@ -62,14 +74,20 @@ export async function GET(req) {
             orderBy: { bookingDate: "desc" }
         });
 
-        // --- Expenses between dates ---
+        // --- Expenses between dates and by branch ---
         const expenseWhere = {};
         if (fromDate || toDate) {
             expenseWhere.date = {};
             if (fromDate) expenseWhere.date.gte = fromDate;
             if (toDate) expenseWhere.date.lte = toDate;
         }
-        const expenses = await prisma.expense.findMany({ where: expenseWhere });
+        if (branchId && branchId !== "ALL") {
+            expenseWhere.branchId = parseInt(branchId);
+        }
+        const expenses = await prisma.expense.findMany({
+            where: expenseWhere,
+            include: { branch: { select: { id: true, name: true, code: true } } }
+        });
         const totalExpenses = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
         // --- Sale Returns between dates ---
@@ -242,8 +260,76 @@ export async function GET(req) {
         // --- Receivables from customer balances ---
         const totalReceivables = customers.reduce((s, c) => s + parseFloat(c.balance), 0);
 
+        // --- Branch-Wise Breakdown for multi-branch comparison ---
+        const branchBreakdown = branches.map(br => {
+            const brBookings = processedBookings.filter(b => b.branchId === br.id || (!b.branchId && br.id === 1));
+            const brExpenses = expenses.filter(e => e.branchId === br.id || (!e.branchId && br.id === 1));
+
+            let brBookingAmount = 0;
+            let brReceived = 0;
+            let brPending = 0;
+            let brSuitCount = 0;
+            let brStitchingAmount = 0;
+            let brStitchingDiscount = 0;
+            let brActualStitchingCost = 0;
+            let brActualMaterialCost = 0;
+            let brClothUnitPrice = 0;
+            let brClothCostPrice = 0;
+            let brClothDiscount = 0;
+
+            for (const b of brBookings) {
+                brBookingAmount += parseFloat(b.totalAmount) || 0;
+                brReceived += parseFloat(b.advanceAmount) || 0;
+                brPending += parseFloat(b.remainingAmount) || 0;
+
+                for (const item of (b.items || [])) {
+                    const itemTotal = parseFloat(item.totalPrice) || 0;
+                    const qty = parseFloat(item.quantity) || 1;
+                    const itemDiscount = parseFloat(item.discount) || 0;
+
+                    if (!item.productId) {
+                        brSuitCount += qty;
+                        brStitchingAmount += itemTotal + itemDiscount;
+                        brStitchingDiscount += itemDiscount;
+                        for (const opt of (item.selectedOptions || [])) {
+                            if (opt.stitchingOption) {
+                                brActualStitchingCost += (parseFloat(opt.stitchingOption.stitching_cost) || 0) * qty;
+                                brActualMaterialCost += (parseFloat(opt.stitchingOption.material_cost) || 0) * qty;
+                            }
+                        }
+                    } else {
+                        brClothUnitPrice += (parseFloat(item.unitPrice) || 0) * qty;
+                        brClothCostPrice += (parseFloat(item.costPrice) || 0) * qty;
+                        brClothDiscount += itemDiscount;
+                    }
+                }
+            }
+
+            const brExpensesTotal = brExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+            const brStitchingProfit = brStitchingAmount - brStitchingDiscount - brActualMaterialCost - brActualStitchingCost;
+            const brClothProfit = brClothUnitPrice - brClothDiscount - (brClothCostPrice + brExpensesTotal);
+            const brNetProfit = brStitchingProfit + brClothProfit;
+
+            return {
+                branchId: br.id,
+                name: br.name,
+                code: br.code,
+                bookingCount: brBookings.length,
+                totalBookingAmount: brBookingAmount,
+                totalReceived: brReceived,
+                totalPending: brPending,
+                suitCount: brSuitCount,
+                stitchingProfit: brStitchingProfit,
+                clothProfit: brClothProfit,
+                expenses: brExpensesTotal,
+                netProfit: brNetProfit,
+            };
+        });
+
         return NextResponse.json({
             bookings: JSON.parse(JSON.stringify(processedBookings)),
+            branches,
+            branchBreakdown,
             summary: {
                 totalBookingAmount,
                 totalReceived,

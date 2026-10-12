@@ -596,7 +596,7 @@ export async function POST(req) {
                 const productId = parseInt(item.productId);
                 const quantity = parseFloat(item.quantity);
 
-                // Update product stock
+                // Update total product stock
                 await tx.product.update({
                     where: { id: productId },
                     data: {
@@ -604,15 +604,36 @@ export async function POST(req) {
                     }
                 });
 
-                // Create stock movement record
+                // Update branch-specific stock
+                if (resolvedBranchId) {
+                    await tx.branch_product_stock.upsert({
+                        where: {
+                            branchId_productId: {
+                                branchId: resolvedBranchId,
+                                productId: productId
+                            }
+                        },
+                        create: {
+                            branchId: resolvedBranchId,
+                            productId: productId,
+                            quantity: -quantity
+                        },
+                        update: {
+                            quantity: { decrement: quantity }
+                        }
+                    });
+                }
+
+                // Create stock movement record with branchId
                 await tx.stockmovement.create({
                     data: {
                         productId,
+                        branchId: resolvedBranchId || null,
                         type: 'OUT',
                         quantity: quantity,
-                        unitCost: null, // We might not have the cost price handy here, or could fetch it if needed
-                        notes: `Booking Order: ${bookingNumber}`
-                        // userId: userId // Omitting for now as we don't have session user easily accessible in this API route structure without changes
+                        unitCost: null,
+                        notes: `Booking Order: ${bookingNumber}`,
+                        userId: session?.user?.id ? parseInt(session.user.id) : null
                     }
                 });
             }

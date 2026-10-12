@@ -26,10 +26,12 @@ export default async function LedgerPage() {
             },
             include: {
                 customer: true,
+                branch: true,
                 purchase: true,
                 booking: {
                     include: {
                         customer: true,
+                        branch: true,
                         items: {
                             include: {
                                 product: true,
@@ -213,6 +215,12 @@ export default async function LedgerPage() {
         console.error("Database connection error on Ledger page:", error);
     }
 
+    const branches = await prisma.branch.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, code: true }
+    });
+
     return (
         <Box sx={{ width: '100%' }}>
             <Box sx={{
@@ -254,6 +262,7 @@ export default async function LedgerPage() {
                     initialCustomers={serializedCustomers}
                     initialTotalCount={totalCount}
                     initialTotals={initialTotals}
+                    branches={branches}
                 />
             </Suspense>
         </Box>

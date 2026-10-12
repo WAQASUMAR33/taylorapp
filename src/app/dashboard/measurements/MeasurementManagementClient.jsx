@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import {
     Edit, Trash2, Search, Plus, User, Calendar, Ruler, Printer,
-    Shirt, Square, MapPin, Phone,
+    Shirt, Square, MapPin, Phone, MessageCircle, Copy, Share2,
 } from "lucide-react";
 
 // ── Urdu labels for all measurement fields ──────────────────────────────────
@@ -461,6 +461,83 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         printWindow.document.close();
     };
 
+    const formatMeasurementText = (m) => {
+        const custName = m.customer?.name || "Customer";
+        const unit = m.unit || "in";
+        
+        let text = `*GRACE TAILORS - Measurement Details*\n`;
+        text += `👤 *Customer:* ${custName}\n`;
+        if (m.customer?.fatherName) text += `👨‍👦 *S/O:* ${m.customer.fatherName}\n`;
+        if (m.customer?.phone) text += `📞 *Phone:* ${m.customer.phone}\n`;
+        if (m.customer?.measurementNo) text += `🗺️ *M#:* ${m.customer.measurementNo}\n`;
+        if (m.customer?.address) text += `📍 *Address:* ${m.customer.address}\n`;
+        text += `📅 *Date:* ${formatDate(m.takenAt)}\n\n`;
+
+        if (m.qameez_lambai || m.bazoo || m.gehra_gird) {
+            text += `✂️ *Shalwar Qameez (${unit}):*\n`;
+            if (m.qameez_lambai) text += `• قمیض: ${m.qameez_lambai}\n`;
+            if (m.teera) text += `• تیرہ: ${m.teera}\n`;
+            if (m.bazoo) text += `• بازو: ${m.bazoo}\n`;
+            if (m.galaa) text += `• گلا: ${m.galaa}\n`;
+            if (m.kandha) text += `• کندھا: ${m.kandha}\n`;
+            if (m.chaati) text += `• چھاتی: ${m.chaati}\n`;
+            if (m.chaati_around) text += `• چھاتی گرد: ${m.chaati_around}\n`;
+            if (m.kamar_around) text += `• کمر: ${m.kamar_around}\n`;
+            if (m.gheera) text += `• گھیرا: ${m.gheera}\n`;
+            if (m.gehra_gird) text += `• گھیرا گرد: ${m.gehra_gird}\n`;
+            if (m.kaf) text += `• کف: ${m.kaf}\n`;
+            if (m.shalwar_lambai) text += `• شلوار لمبائی: ${m.shalwar_lambai}\n`;
+            if (m.puhncha) text += `• پہنچہ: ${m.puhncha}\n`;
+            if (m.shalwar_gheera) text += `• شلوار گھیرا: ${m.shalwar_gheera}\n`;
+            if (m.front_pocket) text += `• جیب F: ${m.front_pocket}\n`;
+            if (m.side_pocket) text += `• جیب Side: ${m.side_pocket}\n`;
+            if (m.shalwar_pocket) text += `• جیب Shalwar: ${m.shalwar_pocket}\n`;
+            text += `\n`;
+        }
+
+        if (m.wskot_lambai) {
+            text += `🧥 *Waistcoat (${unit}):*\n`;
+            if (m.wskot_lambai) text += `• واسکٹ لمبائی: ${m.wskot_lambai}\n`;
+            if (m.wskot_teera) text += `• تیرہ: ${m.wskot_teera}\n`;
+            if (m.wskot_gala) text += `• گلا: ${m.wskot_gala}\n`;
+            if (m.wskot_chaati) text += `• چھاتی: ${m.wskot_chaati}\n`;
+            if (m.wskot_kamar) text += `• کمر: ${m.wskot_kamar}\n`;
+            if (m.wskot_hip) text += `• ہپ: ${m.wskot_hip}\n`;
+            text += `\n`;
+        }
+
+        if (m.notes) text += `📝 *Notes:* ${m.notes}\n`;
+        return text;
+    };
+
+    const handleShareWhatsApp = (m) => {
+        const text = formatMeasurementText(m);
+        const rawPhone = m.customer?.phone?.replace(/[^0-9]/g, "") || "";
+        let waPhone = "";
+        if (rawPhone) {
+            waPhone = rawPhone.startsWith("92") ? rawPhone : "92" + rawPhone.replace(/^0/, "");
+        }
+        const encoded = encodeURIComponent(text);
+        const url = waPhone ? `https://wa.me/${waPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+        window.open(url, "_blank");
+    };
+
+    const handleCopyMeasurements = async (m) => {
+        const text = formatMeasurementText(m);
+        try {
+            await navigator.clipboard.writeText(text);
+            setSuccessMessage("Measurement details copied to clipboard!");
+        } catch {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textarea);
+            setSuccessMessage("Measurement details copied to clipboard!");
+        }
+    };
+
     const filteredMeasurements = measurements || [];
 
     if (!canView && session) {
@@ -573,6 +650,16 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                         {/* Actions */}
                                         <TableCell align="center">
                                             <Stack direction="row" spacing={0.5} justifyContent="center">
+                                                <Tooltip title="Share on WhatsApp">
+                                                    <IconButton size="small" sx={{ color: '#16a34a', '&:hover': { bgcolor: '#dcfce7' } }} onClick={() => handleShareWhatsApp(m)}>
+                                                        <MessageCircle size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Copy Measurement Text">
+                                                    <IconButton size="small" sx={{ color: '#4f46e5', '&:hover': { bgcolor: '#e0e7ff' } }} onClick={() => handleCopyMeasurements(m)}>
+                                                        <Copy size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="Print">
                                                     <IconButton size="small" color="primary" onClick={() => handlePrint(m)}>
                                                         <Printer size={17} />
@@ -1037,6 +1124,28 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    {selectedCustomer && (
+                        <Box sx={{ mr: 'auto', display: 'flex', gap: 1 }}>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<MessageCircle size={16} />}
+                                sx={{ color: '#16a34a', borderColor: '#86efac', textTransform: 'none', borderRadius: 2 }}
+                                onClick={() => handleShareWhatsApp({ ...formData, customer: selectedCustomer })}
+                            >
+                                Share WhatsApp
+                            </Button>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<Copy size={16} />}
+                                sx={{ color: '#4f46e5', borderColor: '#c7d2fe', textTransform: 'none', borderRadius: 2 }}
+                                onClick={() => handleCopyMeasurements({ ...formData, customer: selectedCustomer })}
+                            >
+                                Copy Text
+                            </Button>
+                        </Box>
+                    )}
                     <Button
                         onClick={handleClose}
                         variant="outlined"

@@ -17,46 +17,49 @@ export async function GET(req) {
         const limitParam = searchParams.get("limit") || "100";
         const limit = Math.min(Math.max(parseInt(limitParam) || 50, 1), 500);
 
-        let whereClauses = [];
-
+        const where = {};
         if (productId) {
-            whereClauses.push(`st.productId = ${parseInt(productId)}`);
+            where.productId = parseInt(productId);
         }
         if (branchId && branchId !== "ALL") {
             const bId = parseInt(branchId);
-            whereClauses.push(`(st.fromBranchId = ${bId} OR st.toBranchId = ${bId})`);
+            where.OR = [
+                { fromBranchId: bId },
+                { toBranchId: bId }
+            ];
         }
 
-        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+        const transfers = await prisma.stock_transfer.findMany({
+            where,
+            include: {
+                product: { select: { id: true, name: true, sku: true } },
+                fromBranch: { select: { id: true, name: true, code: true } },
+                toBranch: { select: { id: true, name: true, code: true } },
+                user: { select: { id: true, fullName: true } }
+            },
+            orderBy: { createdAt: "desc" },
+            take: limit
+        });
 
-        const transfers = await prisma.$queryRawUnsafe(`
-            SELECT 
-                st.id,
-                st.productId,
-                st.fromBranchId,
-                st.toBranchId,
-                CAST(st.quantity AS CHAR) AS quantity,
-                st.notes,
-                st.userId,
-                st.createdAt,
-                p.name AS productName,
-                p.sku AS productSku,
-                fb.name AS fromBranchName,
-                fb.code AS fromBranchCode,
-                tb.name AS toBranchName,
-                tb.code AS toBranchCode,
-                u.fullName AS userName
-            FROM stock_transfer st
-            JOIN product p ON st.productId = p.id
-            JOIN branch fb ON st.fromBranchId = fb.id
-            JOIN branch tb ON st.toBranchId = tb.id
-            LEFT JOIN user u ON st.userId = u.id
-            ${whereSql}
-            ORDER BY st.createdAt DESC
-            LIMIT ${limit}
-        `);
+        const formatted = transfers.map(st => ({
+            id: st.id,
+            productId: st.productId,
+            fromBranchId: st.fromBranchId,
+            toBranchId: st.toBranchId,
+            quantity: st.quantity.toString(),
+            notes: st.notes,
+            userId: st.userId,
+            createdAt: st.createdAt.toISOString(),
+            productName: st.product?.name,
+            productSku: st.product?.sku,
+            fromBranchName: st.fromBranch?.name,
+            fromBranchCode: st.fromBranch?.code,
+            toBranchName: st.toBranch?.name,
+            toBranchCode: st.toBranch?.code,
+            userName: st.user?.fullName
+        }));
 
-        return NextResponse.json(transfers);
+        return NextResponse.json(formatted);
     } catch (error) {
         console.error("Failed to fetch stock transfers:", error);
         return NextResponse.json(
@@ -246,10 +249,16 @@ export async function POST(req) {
             });
 
             // 9. Record in dedicated stock_transfer table
-            await tx.$executeRaw`
-                INSERT INTO stock_transfer (productId, fromBranchId, toBranchId, quantity, notes, userId, createdAt)
-                VALUES (${pId}, ${fromId}, ${toId}, ${transferQty}, ${notes ? notes.trim() : null}, ${userId}, NOW())
-            `;
+            await tx.stock_transfer.create({
+                data: {
+                    productId: pId,
+                    fromBranchId: fromId,
+                    toBranchId: toId,
+                    quantity: transferQty,
+                    notes: notes ? notes.trim() : null,
+                    userId
+                }
+            });
 
             return updatedProduct;
         });

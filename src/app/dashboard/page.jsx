@@ -127,8 +127,15 @@ async function getRecentOrders() {
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
-    const statsData = await getStats();
-    const recentOrders = await getRecentOrders();
+    const [statsData, recentOrders, branches] = await Promise.all([
+        getStats(),
+        getRecentOrders(),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, code: true }
+        })
+    ]);
 
     return (
         <DashboardClient
@@ -139,6 +146,7 @@ export default async function DashboardPage() {
             }}
             recentOrders={recentOrders}
             session={session}
+            branches={branches}
         />
     );
 }

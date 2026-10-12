@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 import {
@@ -36,7 +36,8 @@ import {
     Select,
     Checkbox,
     GlobalStyles,
-    LinearProgress
+    LinearProgress,
+    TablePagination
 } from "@mui/material";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -60,6 +61,7 @@ import {
     ScanLine,
     Lock,
     Store,
+    PackageCheck,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -1170,6 +1172,14 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         }, 350);
         return () => clearTimeout(timer);
     }, [filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId, selectedBranchId]);
+
+    // Pagination State
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery, filterDateFrom, filterDateTo, filterDeliveryFrom, filterDeliveryTo, filterCustomerId, filterItemStatus, filterMeasurementNo, selectedBranchId, sortBy]);
 
     // Payment Modal State
     const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -2676,6 +2686,11 @@ ${allBookingsHtml}
 
     const filteredSuitCount = filteredBookings.reduce((sum, b) =>
         sum + (b.items || []).filter(i => !i.productId).reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0), 0);
+
+    const pendingSuitCount = filteredBookings.reduce((sum, b) =>
+        sum + (b.items || []).filter(i => !i.productId && i.itemStatus !== "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0), 0);
+
+    const paginatedBookings = filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     const getStatusColor = (status) => {
         const statusObj = BOOKING_STATUSES.find(s => s.value === status);
@@ -4629,14 +4644,26 @@ ${allBookingsHtml}
                         <Typography variant="body2" color="text.secondary">Manage all sales orders and bookings</Typography>
                     </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Chip
                         label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
                         sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
                     />
                     <Chip
-                        label={`${filteredSuitCount} suit${filteredSuitCount !== 1 ? 's' : ''}`}
+                        label={`${filteredSuitCount} total suit${filteredSuitCount !== 1 ? 's' : ''}`}
                         sx={{ bgcolor: '#cffafe', color: '#0e7490', fontWeight: 600, borderRadius: 2 }}
+                    />
+                    <Chip
+                        label={`${pendingSuitCount} pending suit${pendingSuitCount !== 1 ? 's' : ''}`}
+                        sx={{
+                            bgcolor: pendingSuitCount > 0 ? '#fef3c7' : '#dcfce7',
+                            color: pendingSuitCount > 0 ? '#b45309' : '#15803d',
+                            fontWeight: 700,
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: pendingSuitCount > 0 ? '#fde68a' : '#bbf7d0',
+                            boxShadow: pendingSuitCount > 0 ? '0 1px 3px rgba(245,158,11,0.2)' : 'none'
+                        }}
                     />
                 </Box>
             </Box>
@@ -4891,7 +4918,7 @@ ${allBookingsHtml}
                     </TableHead>
                     <TableBody>
                         {filteredBookings.length > 0 ? (
-                            filteredBookings.map((booking) => (
+                            paginatedBookings.map((booking) => (
                                 <TableRow key={booking.id} sx={{ '&:hover': { bgcolor: '#f9fafb' }, transition: 'background-color 0.15s', bgcolor: selectedIds.has(booking.id) ? '#f5f3ff' : 'inherit' }}>
                                     {/* Checkbox */}
                                     <TableCell padding="checkbox">
@@ -5183,14 +5210,38 @@ ${allBookingsHtml}
                                                 const total = parseFloat(booking.totalAmount || 0);
                                                 const isPaymentClear = rem <= 0 || (adv >= total && total > 0) || booking.billStatus === "Clear" || booking.billStatus === "Clear Bill" || booking.status === "PAID";
 
+                                                const stitchingItems = (booking.items || []).filter(i => !i.productId);
+                                                const totalSuits = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+                                                const deliveredSuits = stitchingItems.filter(i => i.itemStatus === "DELIVERED").reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+                                                const hasPendingSuits = totalSuits > deliveredSuits;
+
+                                                if (isPaymentClear && hasPendingSuits) {
+                                                    return (
+                                                        <Tooltip title="Deliver Completed Suits (Full Payment Cleared)">
+                                                            <IconButton 
+                                                                size="small" 
+                                                                sx={{ 
+                                                                    color: '#059669',
+                                                                    bgcolor: '#ecfdf5',
+                                                                    border: '1px solid #a7f3d0',
+                                                                    '&:hover': { bgcolor: '#d1fae5' }
+                                                                }} 
+                                                                onClick={() => handleOpenPayDialog(booking)}
+                                                            >
+                                                                <PackageCheck size={17} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    );
+                                                }
+
                                                 return (
-                                                    <Tooltip title={isPaymentClear ? "Payment Cleared" : "Pay / Clear Bill"}>
+                                                    <Tooltip title={isPaymentClear ? "Payment & Delivery Complete" : "Pay / Clear Bill"}>
                                                         <span>
                                                             <IconButton 
                                                                 size="small" 
-                                                                disabled={isPaymentClear}
+                                                                disabled={isPaymentClear && !hasPendingSuits}
                                                                 sx={{ 
-                                                                    color: isPaymentClear ? '#cbd5e1' : '#10b981',
+                                                                    color: (isPaymentClear && !hasPendingSuits) ? '#cbd5e1' : '#10b981',
                                                                     '&.Mui-disabled': {
                                                                         color: '#cbd5e1'
                                                                     }
@@ -5228,6 +5279,19 @@ ${allBookingsHtml}
                         )}
                     </TableBody>
                 </Table>
+                <TablePagination
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    component="div"
+                    count={filteredBookings.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={(_, newPage) => setPage(newPage)}
+                    onRowsPerPageChange={(e) => {
+                        setRowsPerPage(parseInt(e.target.value, 10));
+                        setPage(0);
+                    }}
+                    sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+                />
             </TableContainer>
 
             {/* ── Inline Staff Edit Dialog ── */}

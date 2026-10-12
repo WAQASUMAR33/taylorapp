@@ -6,7 +6,7 @@ export async function PUT(req, { params }) {
         const resolvedParams = await params;
         const id = parseInt(resolvedParams.id);
         const body = await req.json();
-        const { title, date, amount, description } = body;
+        const { title, date, amount, description, branchId } = body;
 
         if (!title || !date || !amount) {
             return NextResponse.json(
@@ -15,16 +15,23 @@ export async function PUT(req, { params }) {
             );
         }
 
+        const updateData = {
+            title,
+            date: new Date(date),
+            amount: parseFloat(amount),
+            description: description || null,
+        };
+
+        if (branchId !== undefined) {
+            updateData.branchId = branchId && branchId !== "ALL" ? parseInt(branchId) : null;
+        }
+
         const expense = await prisma.expense.update({
             where: { id },
-            data: {
-                title,
-                date: new Date(date),
-                amount: parseFloat(amount),
-                description: description || null,
-            },
+            data: updateData,
             include: {
                 addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } },
             },
         });
 

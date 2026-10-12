@@ -80,7 +80,8 @@ export default function LedgerManagementClient({
     initialEntries, 
     initialCustomers, 
     initialTotalCount, 
-    initialTotals 
+    initialTotals,
+    branches = []
 }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
@@ -94,6 +95,7 @@ export default function LedgerManagementClient({
     const [entries, setEntries] = useState(initialEntries);
     const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
     const [totals, setTotals] = useState(initialTotals || { debit: 0, credit: 0 });
+    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
     const [initialBalance, setInitialBalance] = useState(0);
 
     const [page, setPage] = useState(1);
@@ -353,6 +355,7 @@ export default function LedgerManagementClient({
                 if (filterCustomer) params.append("customerId", filterCustomer.id.toString());
                 if (dateFrom) params.append("dateFrom", dateFrom);
                 if (dateTo) params.append("dateTo", dateTo);
+                if (selectedBranchId && selectedBranchId !== "ALL") params.append("branchId", selectedBranchId);
 
                 const res = await fetch(`/api/ledger?${params.toString()}`);
                 if (!res.ok) throw new Error("Failed to fetch ledger entries");
@@ -371,12 +374,12 @@ export default function LedgerManagementClient({
         };
 
         fetchEntries();
-    }, [page, limit, debouncedSearch, debouncedName, debouncedFatherName, debouncedPhone, filterCustomer?.id, dateFrom, dateTo, refetchTrigger]);
+    }, [page, limit, debouncedSearch, debouncedName, debouncedFatherName, debouncedPhone, filterCustomer?.id, dateFrom, dateTo, selectedBranchId, refetchTrigger]);
 
     // Reset page to 1 on filter changes
     useEffect(() => {
         setPage(1);
-    }, [filterCustomer, dateFrom, dateTo]);
+    }, [filterCustomer, dateFrom, dateTo, selectedBranchId]);
 
     /* ── helpers ──────────────────────────────────────── */
 
@@ -425,7 +428,7 @@ export default function LedgerManagementClient({
 
 
 
-    const hasActiveFilters = searchQuery || searchName || searchFatherName || searchPhone || filterCustomer || dateFrom || dateTo;
+    const hasActiveFilters = searchQuery || searchName || searchFatherName || searchPhone || filterCustomer || dateFrom || dateTo || (selectedBranchId && selectedBranchId !== "ALL");
 
     const clearFilters = () => {
         setSearchQuery("");
@@ -439,6 +442,7 @@ export default function LedgerManagementClient({
         setFilterCustomer(null);
         setDateFrom("");
         setDateTo("");
+        setSelectedBranchId("ALL");
         setPage(1);
     };
 
@@ -527,6 +531,23 @@ export default function LedgerManagementClient({
                 {/* Single row: From Date | To Date | Search | Account Filter | Balance chip | Clear | New Entry */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
                     <Box sx={{ display: "flex", gap: 2, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                        {branches && branches.length > 0 && (
+                            <TextField
+                                select
+                                size="small"
+                                label="Branch"
+                                value={selectedBranchId}
+                                onChange={(e) => setSelectedBranchId(e.target.value)}
+                                sx={{ minWidth: 160 }}
+                            >
+                                <MenuItem value="ALL">All Branches</MenuItem>
+                                {branches.map((b) => (
+                                    <MenuItem key={b.id} value={b.id.toString()}>
+                                        {b.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
                         {/* ── Date range first ── */}
                         <TextField
                             size="small"
@@ -721,6 +742,7 @@ export default function LedgerManagementClient({
                             <TableRow sx={{ bgcolor: "action.hover" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Ref #</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Account</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Prev Balance</TableCell>
@@ -788,6 +810,25 @@ export default function LedgerManagementClient({
                                                                 </Box>
                                                             </Box>
                                                         </Box>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {entry.branch?.name ? (
+                                                            <Chip 
+                                                                label={entry.branch.name} 
+                                                                size="small" 
+                                                                variant="outlined" 
+                                                                sx={{ fontWeight: 600, fontSize: "0.72rem" }} 
+                                                            />
+                                                        ) : entry.booking?.branch?.name ? (
+                                                            <Chip 
+                                                                label={entry.booking.branch.name} 
+                                                                size="small" 
+                                                                variant="outlined" 
+                                                                sx={{ fontWeight: 600, fontSize: "0.72rem" }} 
+                                                            />
+                                                        ) : (
+                                                            <Typography variant="caption" color="text.secondary">—</Typography>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Typography variant="body2">
@@ -890,7 +931,7 @@ export default function LedgerManagementClient({
                                 })()
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                                         {loading ? (
                                             <CircularProgress size={30} />
                                         ) : (

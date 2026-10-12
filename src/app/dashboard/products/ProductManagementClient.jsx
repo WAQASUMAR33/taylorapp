@@ -241,6 +241,17 @@ export default function ProductManagementClient({ initialProducts = [], initialB
     const [transferSearchQuery, setTransferSearchQuery] = useState("");
     const [transferFilterBranchId, setTransferFilterBranchId] = useState("ALL");
 
+    // Sold-out records state
+    const [soldOutOpen, setSoldOutOpen] = useState(false);
+    const [soldOutRecords, setSoldOutRecords] = useState([]);
+    const [loadingSoldOut, setLoadingSoldOut] = useState(false);
+    const [soldOutSearchQuery, setSoldOutSearchQuery] = useState("");
+    const [soldOutFilterBranchId, setSoldOutFilterBranchId] = useState("ALL");
+
+    // Quick transfer modal for any product
+    const [quickTransferOpen, setQuickTransferOpen] = useState(false);
+    const [quickTransferProductId, setQuickTransferProductId] = useState("");
+
     // Direct stock adjustment values
     const [quickStockValues, setQuickStockValues] = useState({});
     const [quickStockLoading, setQuickStockLoading] = useState(false);
@@ -551,6 +562,37 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         } finally {
             setLoadingGlobalTransfers(false);
         }
+    };
+
+    const fetchSoldOutRecords = async (branchId = "ALL") => {
+        setLoadingSoldOut(true);
+        try {
+            const bParam = branchId && branchId !== "ALL" ? `?branchId=${branchId}` : "";
+            const res = await fetch(`/api/products/sold-out${bParam}`);
+            const data = await res.json();
+            setSoldOutRecords(Array.isArray(data.records) ? data.records : []);
+        } catch (err) {
+            console.error("Failed to fetch sold-out history:", err);
+        } finally {
+            setLoadingSoldOut(false);
+        }
+    };
+
+    const handleOpenSoldOutDialog = () => {
+        const initialBranch = selectedBranchId && selectedBranchId !== "ALL" ? selectedBranchId : "ALL";
+        setSoldOutFilterBranchId(initialBranch);
+        setSoldOutOpen(true);
+        fetchSoldOutRecords(initialBranch);
+    };
+
+    const handleOpenQuickTransfer = () => {
+        setQuickTransferProductId(products[0]?.id ? String(products[0].id) : "");
+        setQuickTransferOpen(true);
+    };
+
+    const handleStartTransferForProduct = (prod) => {
+        setSoldOutOpen(false);
+        handleOpenStockModal(prod);
     };
 
     const handleOpenStockModal = (prod) => {
@@ -932,13 +974,33 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                     }}
                 />
 
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<Tag size={18} />}
+                        onClick={handleOpenSoldOutDialog}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, px: 2 }}
+                    >
+                        Sold-Out History
+                    </Button>
+                    {canEdit && (
+                        <Button
+                            variant="outlined"
+                            color="success"
+                            startIcon={<ArrowRightLeft size={18} />}
+                            onClick={handleOpenQuickTransfer}
+                            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 2 }}
+                        >
+                            Transfer Stock
+                        </Button>
+                    )}
                     <Button
                         variant="outlined"
                         color="primary"
                         startIcon={<History size={18} />}
                         onClick={handleOpenGlobalTransferRecords}
-                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 2.5 }}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 2 }}
                     >
                         Transfer Records
                     </Button>
@@ -1052,13 +1114,18 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                                                     </Box>
                                                 ) : (
                                                     <Box>
-                                                        <Typography
-                                                            variant="body2"
-                                                            fontWeight={700}
-                                                            sx={{ color: currentStock <= 5 ? "error.main" : "success.main" }}
-                                                        >
-                                                            {currentStock} units
-                                                        </Typography>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                            <Typography
+                                                                variant="body2"
+                                                                fontWeight={700}
+                                                                sx={{ color: currentStock <= 0 ? "error.main" : currentStock <= 5 ? "warning.main" : "success.main" }}
+                                                            >
+                                                                {currentStock} units
+                                                            </Typography>
+                                                            {currentStock <= 0 && (
+                                                                <Chip label="SOLD OUT" size="small" color="error" sx={{ height: 18, fontSize: "0.62rem", fontWeight: 800 }} />
+                                                            )}
+                                                        </Box>
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                                             {currentBranch?.name?.split("-")[0]?.trim() || "Branch"} Store
                                                         </Typography>
@@ -1841,6 +1908,323 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                         sx={{ borderRadius: 2, textTransform: "none" }}
                     >
                         Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Sold-Out History Dialog ────────────────────────── */}
+            <Dialog
+                open={soldOutOpen}
+                onClose={() => setSoldOutOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                        overflow: "hidden"
+                    }
+                }}
+            >
+                <DialogTitle sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Box sx={{
+                            p: 1,
+                            borderRadius: 2,
+                            bgcolor: "error.50",
+                            color: "error.main",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}>
+                            <Tag size={22} />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ lineHeight: 1.2 }}>
+                                Sold-Out & Out-of-Stock History
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                History of products that have reached zero stock across branches and their depleting sales
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => fetchSoldOutRecords(soldOutFilterBranchId)}
+                            disabled={loadingSoldOut}
+                        >
+                            <RefreshCw size={18} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => setSoldOutOpen(false)}>
+                            <XIcon size={18} />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 2.5 }}>
+                    {/* Filter Bar */}
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5, alignItems: "center" }}>
+                        <TextField
+                            size="small"
+                            placeholder="Filter sold-out products by name, SKU, or customer…"
+                            value={soldOutSearchQuery}
+                            onChange={(e) => setSoldOutSearchQuery(e.target.value)}
+                            sx={{ flex: 1, minWidth: 240 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start"><Search size={16} /></InputAdornment>
+                                )
+                            }}
+                        />
+                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                            <InputLabel id="soldout-branch-label">Branch Store</InputLabel>
+                            <Select
+                                labelId="soldout-branch-label"
+                                label="Branch Store"
+                                value={soldOutFilterBranchId}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSoldOutFilterBranchId(val);
+                                    fetchSoldOutRecords(val);
+                                }}
+                            >
+                                <MenuItem value="ALL">All Branches</MenuItem>
+                                {branches.map(b => (
+                                    <MenuItem key={b.id} value={String(b.id)}>{b.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {loadingSoldOut ? (
+                        <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+                            <CircularProgress size={30} />
+                        </Box>
+                    ) : (
+                        (() => {
+                            const filtered = soldOutRecords.filter(r => {
+                                if (soldOutFilterBranchId !== "ALL" && String(r.branchId) !== String(soldOutFilterBranchId)) {
+                                    return false;
+                                }
+                                if (!soldOutSearchQuery.trim()) return true;
+                                const q = soldOutSearchQuery.toLowerCase();
+                                return (
+                                    (r.name && r.name.toLowerCase().includes(q)) ||
+                                    (r.sku && r.sku.toLowerCase().includes(q)) ||
+                                    (r.category && r.category.toLowerCase().includes(q)) ||
+                                    (r.lastCustomer && r.lastCustomer.toLowerCase().includes(q)) ||
+                                    (r.branchName && r.branchName.toLowerCase().includes(q))
+                                );
+                            });
+
+                            if (filtered.length === 0) {
+                                return (
+                                    <Box sx={{ py: 8, textAlign: "center", color: "text.secondary" }}>
+                                        <Package size={40} color="#10b981" style={{ margin: "0 auto 12px" }} />
+                                        <Typography variant="body1" fontWeight={600} color="text.primary">
+                                            No Sold-Out Products!
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            All products in this branch have positive inventory.
+                                        </Typography>
+                                    </Box>
+                                );
+                            }
+
+                            return (
+                                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 460 }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
+                                            <TableRow sx={{ bgcolor: "grey.50" }}>
+                                                <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Total Sold</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Last Sold / Order</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 700 }}>Action</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {filtered.map((item, idx) => {
+                                                const originalProd = products.find(p => p.id === item.productId);
+                                                return (
+                                                    <TableRow key={`${item.productId}-${item.branchId}-${idx}`} hover>
+                                                        <TableCell>
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                {item.name}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                SKU: {item.sku} | {item.category}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={item.branchName}
+                                                                size="small"
+                                                                sx={{ fontWeight: 600, bgcolor: "#eff6ff", color: "#1d4ed8" }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label="0 UNITS (SOLD OUT)"
+                                                                size="small"
+                                                                color="error"
+                                                                sx={{ fontWeight: 800, fontSize: "0.68rem" }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" fontWeight={700} color="text.primary">
+                                                                {item.totalSoldUnits} units
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {item.lastSoldDate ? (
+                                                                <Box>
+                                                                    <Typography variant="caption" fontWeight={600} display="block">
+                                                                        {new Date(item.lastSoldDate).toLocaleDateString()}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {item.lastCustomer} {item.lastBookingNumber ? `(#${item.lastBookingNumber})` : ""}
+                                                                    </Typography>
+                                                                </Box>
+                                                            ) : (
+                                                                <Typography variant="caption" color="text.disabled">—</Typography>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                Rs. {item.unitPrice.toLocaleString()}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell align="right">
+                                                            {originalProd && canEdit && (
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="contained"
+                                                                    color="success"
+                                                                    startIcon={<ArrowRightLeft size={14} />}
+                                                                    onClick={() => handleStartTransferForProduct(originalProd)}
+                                                                    sx={{ borderRadius: 1.5, textTransform: "none", fontSize: "0.75rem", fontWeight: 700 }}
+                                                                >
+                                                                    Transfer to Restock
+                                                                </Button>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            );
+                        })()
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider" }}>
+                    <Button
+                        onClick={() => setSoldOutOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Quick Stock Transfer Modal ──────────────────────── */}
+            <Dialog
+                open={quickTransferOpen}
+                onClose={() => setQuickTransferOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <ArrowRightLeft size={22} color="#10b981" />
+                        <Typography variant="h6" fontWeight={700}>
+                            Transfer Product Between Branches
+                        </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={() => setQuickTransferOpen(false)}>
+                        <XIcon size={18} />
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Select any product to transfer inventory between branches:
+                    </Typography>
+
+                    <FormControl fullWidth size="small" sx={{ mb: 2.5 }}>
+                        <InputLabel id="quick-prod-select-label">Select Product</InputLabel>
+                        <Select
+                            labelId="quick-prod-select-label"
+                            label="Select Product"
+                            value={quickTransferProductId}
+                            onChange={(e) => setQuickTransferProductId(e.target.value)}
+                        >
+                            {products.map(p => (
+                                <MenuItem key={p.id} value={String(p.id)}>
+                                    {p.name} ({p.sku}) — Total: {p.quantity} units
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    {quickTransferProductId && (
+                        <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#f8fafc", border: "1px solid #e2e8f0", mb: 2 }}>
+                            <Typography variant="caption" fontWeight={700} color="#475569" display="block" sx={{ mb: 1 }}>
+                                Current Stock Per Branch:
+                            </Typography>
+                            {(() => {
+                                const selected = products.find(p => String(p.id) === String(quickTransferProductId));
+                                if (!selected) return null;
+                                return (
+                                    <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+                                        {branches.map(b => (
+                                            <Chip
+                                                key={b.id}
+                                                label={`${b.name}: ${getProductBranchStock(selected, b.id)} units`}
+                                                size="small"
+                                                sx={{ fontWeight: 600, bgcolor: "#e0e7ff", color: "#3730a3" }}
+                                            />
+                                        ))}
+                                    </Box>
+                                );
+                            })()}
+                        </Box>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={() => setQuickTransferOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        disabled={!quickTransferProductId}
+                        onClick={() => {
+                            const p = products.find(item => String(item.id) === String(quickTransferProductId));
+                            if (p) {
+                                setQuickTransferOpen(false);
+                                handleOpenStockModal(p);
+                            }
+                        }}
+                        startIcon={<ArrowRightLeft size={16} />}
+                        sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, px: 3 }}
+                    >
+                        Configure & Transfer
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -10,9 +10,14 @@ export async function GET(req) {
         const dateFrom = searchParams.get("dateFrom");
         const dateTo = searchParams.get("dateTo");
 
+        const branchId = searchParams.get("branchId");
+
         const where = {};
         if (title) {
             where.title = { contains: title };
+        }
+        if (branchId && branchId !== "ALL") {
+            where.branchId = parseInt(branchId);
         }
         if (dateFrom || dateTo) {
             where.date = {};
@@ -28,6 +33,7 @@ export async function GET(req) {
             where,
             include: {
                 addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } }
             },
             orderBy: { date: "desc" },
         });
@@ -51,7 +57,7 @@ export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         const body = await req.json();
-        const { title, date, amount, description } = body;
+        const { title, date, amount, description, branchId } = body;
 
         if (!title || !date || !amount) {
             return NextResponse.json(
@@ -60,16 +66,22 @@ export async function POST(req) {
             );
         }
 
+        const resolvedBranchId = branchId && branchId !== "ALL"
+            ? parseInt(branchId)
+            : (session?.user?.branchId ? parseInt(session.user.branchId) : null);
+
         const expense = await prisma.expense.create({
             data: {
                 title,
                 date: new Date(date),
                 amount: parseFloat(amount),
                 description: description || null,
+                branchId: resolvedBranchId,
                 addedBy: session?.user?.id ? parseInt(session.user.id) : null,
             },
             include: {
                 addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } }
             },
         });
 

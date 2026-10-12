@@ -55,6 +55,14 @@ export async function GET(req) {
             where.customerId = parseInt(customerId);
         }
 
+        const branchId = searchParams.get("branchId");
+        if (branchId && branchId !== "ALL") {
+            const bId = parseInt(branchId);
+            if (!isNaN(bId)) {
+                where.branchId = bId;
+            }
+        }
+
         if (dateFrom || dateTo) {
             where.entryDate = {};
             if (dateFrom) {
@@ -231,6 +239,10 @@ export async function GET(req) {
 
             if (customerId) {
                 priorWhere.customerId = parseInt(customerId);
+            }
+
+            if (where.branchId) {
+                priorWhere.branchId = where.branchId;
             }
 
             if (search) {

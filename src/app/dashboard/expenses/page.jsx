@@ -11,12 +11,20 @@ export const metadata = {
 };
 
 export default async function ExpensesPage() {
-    const expenses = await prisma.expense.findMany({
-        include: {
-            addedByUser: { select: { id: true, fullName: true } },
-        },
-        orderBy: { date: "desc" },
-    });
+    const [expenses, branches] = await Promise.all([
+        prisma.expense.findMany({
+            include: {
+                addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } },
+            },
+            orderBy: { date: "desc" },
+        }),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
+            orderBy: { name: "asc" }
+        })
+    ]);
 
     const serialized = expenses.map((e) => ({
         ...e,
@@ -67,7 +75,7 @@ export default async function ExpensesPage() {
             </Box>
 
             <Suspense fallback={<div>Loading...</div>}>
-                <ExpenseManagementClient initialExpenses={serialized} />
+                <ExpenseManagementClient initialExpenses={serialized} branches={branches} />
             </Suspense>
         </Box>
     );

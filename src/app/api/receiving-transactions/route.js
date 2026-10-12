@@ -13,6 +13,7 @@ export async function GET(req) {
         const dateTo = searchParams.get("dateTo") || "";
         const sortBy = searchParams.get("sortBy") || "date";
         const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+        const branchIdParam = searchParams.get("branchId");
 
         const skip = Math.max(0, (page - 1) * limit);
 
@@ -22,6 +23,13 @@ export async function GET(req) {
                 name: { not: "Cash Account" }
             }
         };
+
+        if (branchIdParam && branchIdParam !== "ALL") {
+            const bId = parseInt(branchIdParam, 10);
+            if (!isNaN(bId)) {
+                baseWhere.branchId = bId;
+            }
+        }
 
         // Date range filter
         if (dateFrom || dateTo) {

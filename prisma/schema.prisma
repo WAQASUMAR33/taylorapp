@@ -24,6 +24,7 @@ model user {
   branch       branch?   @relation(fields: [branchId], references: [id])
   expenses              expense[]
   stitchingExpenses     stitchingExpense[]
+  stockTransfers        stock_transfer[]
 
   @@index([branchId], map: "user_branchId_fkey")
   @@map("user")
@@ -35,11 +36,14 @@ model expense {
   date        DateTime
   amount      Decimal  @db.Decimal(10, 2)
   description String?  @db.Text
+  branchId    Int?
   addedBy     Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   addedByUser user?    @relation(fields: [addedBy], references: [id])
+  branch      branch?  @relation(fields: [branchId], references: [id])
 
+  @@index([branchId], map: "expense_branchId_fkey")
   @@index([addedBy], map: "expense_addedBy_fkey")
 }
 
@@ -183,7 +187,8 @@ model product {
   category      category?       @relation(fields: [categoryId], references: [id])
   purchaseItems purchase_item[]
   saleReturnItems sale_return_item[]
-  branchStocks  branch_product_stock[]
+  branchStocks    branch_product_stock[]
+  stockTransfers  stock_transfer[]
 
   @@index([categoryId], map: "Product_categoryId_fkey")
 }
@@ -518,14 +523,17 @@ model stitchingExpense {
   date        DateTime
   amount      Decimal                @db.Decimal(10, 2)
   description String?                @db.Text
+  branchId    Int?
   addedBy     Int?
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
   title       stitchingExpenseTitle   @relation(fields: [titleId], references: [id])
   addedByUser user?                  @relation(fields: [addedBy], references: [id])
+  branch      branch?                @relation(fields: [branchId], references: [id])
 
   @@index([titleId], map: "stitchingexpense_titleId_fkey")
   @@index([addedBy], map: "stitchingexpense_addedBy_fkey")
+  @@index([branchId], map: "stitchingexpense_branchId_fkey")
   @@map("stitchingexpense")
 }
 
@@ -667,9 +675,13 @@ model branch {
   customers     customer[]
   bookings      booking[]
   ledgerEntries ledgerentry[]
-  receivings    receiving[]
-  productStocks branch_product_stock[]
-  stockMovements stockmovement[]
+  receivings        receiving[]
+  productStocks     branch_product_stock[]
+  stockMovements    stockmovement[]
+  expenses          expense[]
+  stitchingExpenses stitchingExpense[]
+  transfersFrom     stock_transfer[]       @relation("TransfersFrom")
+  transfersTo       stock_transfer[]       @relation("TransfersTo")
 
   @@map("branch")
 }
@@ -689,5 +701,27 @@ model branch_product_stock {
   @@index([branchId], map: "branch_product_stock_branchId_fkey")
   @@index([productId], map: "branch_product_stock_productId_fkey")
   @@map("branch_product_stock")
+}
+
+model stock_transfer {
+  id           Int      @id @default(autoincrement())
+  productId    Int
+  fromBranchId Int
+  toBranchId   Int
+  quantity     Decimal  @db.Decimal(10, 2)
+  notes        String?  @db.Text
+  userId       Int?
+  createdAt    DateTime @default(now())
+
+  product    product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fromBranch branch  @relation("TransfersFrom", fields: [fromBranchId], references: [id], onDelete: Cascade)
+  toBranch   branch  @relation("TransfersTo", fields: [toBranchId], references: [id], onDelete: Cascade)
+  user       user?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId], map: "stock_transfer_productId_fkey")
+  @@index([fromBranchId], map: "stock_transfer_fromBranchId_fkey")
+  @@index([toBranchId], map: "stock_transfer_toBranchId_fkey")
+  @@index([userId], map: "stock_transfer_userId_fkey")
+  @@map("stock_transfer")
 }
 

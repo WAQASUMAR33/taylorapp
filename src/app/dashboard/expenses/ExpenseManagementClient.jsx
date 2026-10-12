@@ -27,18 +27,22 @@ import {
     TableRow,
     Paper,
     Grid,
-    Chip,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
 } from "@mui/material";
-import { Pencil, Trash2, Search, Plus, X, Save, Receipt } from "lucide-react";
+import { Store } from "lucide-react";
 
 const emptyForm = {
     title: "",
     date: "",
     amount: "",
     description: "",
+    branchId: "",
 };
 
-export default function ExpenseManagementClient({ initialExpenses }) {
+export default function ExpenseManagementClient({ initialExpenses, branches = [] }) {
     const { data: session } = useSession();
     const canView = checkPermission(session, "expenses", "view") || checkPermission(session, "stitching", "view");
     const canCreate = checkPermission(session, "expenses", "create") || checkPermission(session, "stitching", "create");
@@ -51,6 +55,12 @@ export default function ExpenseManagementClient({ initialExpenses }) {
     const [filterTitle, setFilterTitle] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+    const [filterBranchId, setFilterBranchId] = useState(() => {
+        if (session?.user?.branchId && session?.user?.role !== "ADMIN") {
+            return String(session.user.branchId);
+        }
+        return "ALL";
+    });
 
     // Dialog
     const [showForm, setShowForm] = useState(false);
@@ -87,9 +97,13 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                 toMatch = expDate <= to;
             }
 
-            return titleMatch && fromMatch && toMatch;
+            const branchMatch =
+                filterBranchId === "ALL" ||
+                String(e.branchId || "") === String(filterBranchId);
+
+            return titleMatch && fromMatch && toMatch && branchMatch;
         });
-    }, [expenses, filterTitle, filterDateFrom, filterDateTo]);
+    }, [expenses, filterTitle, filterDateFrom, filterDateTo, filterBranchId]);
 
     const totalFiltered = useMemo(
         () => filtered.reduce((sum, e) => sum + parseFloat(e.amount), 0),
@@ -98,7 +112,10 @@ export default function ExpenseManagementClient({ initialExpenses }) {
 
     function openCreate() {
         setEditingId(null);
-        setFormData(emptyForm);
+        setFormData({
+            ...emptyForm,
+            branchId: session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : ""),
+        });
         setError("");
         setShowForm(true);
     }
@@ -110,6 +127,7 @@ export default function ExpenseManagementClient({ initialExpenses }) {
             date: expense.date.slice(0, 10),
             amount: expense.amount,
             description: expense.description || "",
+            branchId: expense.branchId ? String(expense.branchId) : "",
         });
         setError("");
         setShowForm(true);
@@ -245,9 +263,26 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                     InputLabelProps={{ shrink: true }}
                     sx={{ width: 160 }}
                 />
-                {hasFilters && (
-                    <Tooltip title="Clear filters">
-                        <IconButton size="small" onClick={clearFilters}>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <InputLabel id="expense-branch-filter-label">Branch Store</InputLabel>
+                    <Select
+                        labelId="expense-branch-filter-label"
+                        label="Branch Store"
+                        value={filterBranchId}
+                        onChange={(e) => setFilterBranchId(e.target.value)}
+                    >
+                        <MenuItem value="ALL">All Branches</MenuItem>
+                        {branches.map((b) => (
+                            <MenuItem key={b.id} value={String(b.id)}>
+                                {b.name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                {(filterTitle || filterDateFrom || filterDateTo || filterBranchId !== "ALL") && (
+                    <Tooltip title="Clear all filters">
+                        <IconButton size="small" onClick={() => { clearFilters(); setFilterBranchId("ALL"); }}>
                             <X size={16} />
                         </IconButton>
                     </Tooltip>
@@ -302,6 +337,7 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                         <TableHead>
                             <TableRow sx={{ bgcolor: "grey.50" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">
@@ -317,7 +353,7 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                         <TableBody>
                             {filtered.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                                         <Box
                                             sx={{
                                                 display: "flex",
@@ -341,6 +377,19 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                                     >
                                         <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
                                             {idx + 1}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={expense.branch?.name || (branches.find(b => b.id === expense.branchId)?.name) || "Main Branch"}
+                                                size="small"
+                                                sx={{
+                                                    height: 22,
+                                                    fontSize: "0.72rem",
+                                                    fontWeight: 600,
+                                                    bgcolor: "#e0e7ff",
+                                                    color: "#3730a3",
+                                                }}
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Typography fontWeight={600} variant="body2">
@@ -426,7 +475,26 @@ export default function ExpenseManagementClient({ initialExpenses }) {
                         </Alert>
                     )}
                     <Grid container spacing={2} sx={{ mt: 0 }}>
-                        <Grid item xs={12}>
+                        <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                                <InputLabel id="form-expense-branch-label">Branch Store</InputLabel>
+                                <Select
+                                    labelId="form-expense-branch-label"
+                                    label="Branch Store"
+                                    value={formData.branchId || ""}
+                                    onChange={(e) =>
+                                        setFormData((p) => ({ ...p, branchId: e.target.value }))
+                                    }
+                                >
+                                    {branches.map((b) => (
+                                        <MenuItem key={b.id} value={String(b.id)}>
+                                            {b.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 label="Title"
                                 fullWidth

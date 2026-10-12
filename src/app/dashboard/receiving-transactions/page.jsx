@@ -185,6 +185,12 @@ export default async function ReceivingTransactionsPage() {
         console.error("Database error on Receiving Transactions page:", error);
     }
 
+    const branches = await prisma.branch.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, code: true }
+    });
+
     return (
         <Box sx={{ width: "100%", minHeight: "100%" }}>
             <Suspense
@@ -194,7 +200,7 @@ export default async function ReceivingTransactionsPage() {
                     </Box>
                 }
             >
-                <ReceivingTransactionsClient initialData={initialData} />
+                <ReceivingTransactionsClient initialData={initialData} branches={branches} />
             </Suspense>
         </Box>
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useCallback } from "react";
 import {
     Users,
     Scissors,
@@ -13,6 +14,8 @@ import {
     CheckCircle2,
     ChevronRight,
     ShoppingBag,
+    Building2,
+    RefreshCw,
 } from "lucide-react";
 import {
     Box,
@@ -30,6 +33,10 @@ import {
     ListItemAvatar,
     ListItemText,
     ListItemButton,
+    FormControl,
+    Select,
+    MenuItem,
+    CircularProgress,
 } from "@mui/material";
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -184,12 +191,35 @@ function OverviewRow({ icon: Icon, iconBgColor, iconColor, label, value }) {
 }
 
 /* ─── Main component ──────────────────────────────────────── */
-export default function DashboardClient({ statsData, recentOrders, session }) {
+export default function DashboardClient({ statsData, recentOrders, session, branches = [] }) {
+    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
+    const [currentStats, setCurrentStats] = useState(statsData);
+    const [currentRecentOrders, setCurrentRecentOrders] = useState(recentOrders);
+    const [loadingStats, setLoadingStats] = useState(false);
+
+    const handleBranchChange = useCallback(async (newBranchId) => {
+        setSelectedBranchId(newBranchId);
+        setLoadingStats(true);
+        try {
+            const res = await fetch(`/api/dashboard/stats?branchId=${newBranchId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentStats(data.statsData);
+                setCurrentRecentOrders(data.recentOrders);
+            }
+        } catch (err) {
+            console.error("Failed to fetch branch stats:", err);
+        } finally {
+            setLoadingStats(false);
+        }
+    }, []);
+
+    const selectedBranchObj = branches.find(b => b.id.toString() === selectedBranchId.toString());
 
     const stats = [
         {
             title: "Total Customers",
-            value: statsData.totalCustomers.toLocaleString(),
+            value: (currentStats.totalCustomers || 0).toLocaleString(),
             icon: Users,
             iconBgColor: (t) => t.palette.primary.light,
             iconColor: (t) => t.palette.primary.main,
@@ -198,25 +228,25 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
         },
         {
             title: "Active Orders",
-            value: statsData.activeOrders.toLocaleString(),
+            value: (currentStats.activeOrders || 0).toLocaleString(),
             icon: Scissors,
             iconBgColor: (t) => t.palette.secondary.light,
             iconColor: (t) => t.palette.secondary.main,
             href: "/dashboard/bookings",
-            subtitle: "In progress",
+            subtitle: selectedBranchObj ? `${selectedBranchObj.name} in progress` : "All branches in progress",
         },
         {
             title: "Revenue (MTD)",
-            value: `Rs. ${Number(statsData.revenue).toLocaleString()}`,
+            value: `Rs. ${Number(currentStats.revenue || 0).toLocaleString()}`,
             icon: TrendingUp,
             iconBgColor: (t) => t.palette.success.light,
             iconColor: (t) => t.palette.success.main,
-            href: "/dashboard/bookings",
+            href: "/dashboard/analytics",
             subtitle: "Month to date",
         },
         {
             title: "Ready for Delivery",
-            value: statsData.pendingDelivery.toLocaleString(),
+            value: (currentStats.pendingDelivery || 0).toLocaleString(),
             icon: Clock,
             iconBgColor: (t) => t.palette.warning.light,
             iconColor: (t) => t.palette.warning.main,
@@ -278,21 +308,57 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                         Here&apos;s what&apos;s happening at your shop today.
                     </Typography>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    component={Link}
-                    href="/dashboard/bookings"
-                    sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                        alignSelf: { xs: "flex-start", sm: "auto" },
-                    }}
-                >
-                    New Order
-                </Button>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+                    {branches.length > 0 && (
+                        <FormControl size="small" sx={{ minWidth: 210 }}>
+                            <Select
+                                value={selectedBranchId}
+                                onChange={(e) => handleBranchChange(e.target.value)}
+                                displayEmpty
+                                disabled={loadingStats}
+                                startAdornment={
+                                    loadingStats ? (
+                                        <CircularProgress size={16} sx={{ mr: 1, color: "text.secondary" }} />
+                                    ) : (
+                                        <Building2 size={16} style={{ marginRight: 8, color: "#6b7280" }} />
+                                    )
+                                }
+                                sx={{
+                                    borderRadius: 2,
+                                    bgcolor: "white",
+                                    fontWeight: 600,
+                                    fontSize: "0.85rem",
+                                    "& fieldset": { borderColor: "#e5e7eb" },
+                                    "&:hover fieldset": { borderColor: "#6366f1" }
+                                }}
+                            >
+                                <MenuItem value="ALL" sx={{ fontWeight: 600 }}>
+                                    All Branches (Combined)
+                                </MenuItem>
+                                {branches.map((b) => (
+                                    <MenuItem key={b.id} value={b.id.toString()}>
+                                        {b.name} {b.code ? `(${b.code})` : ""}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    )}
+                    <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        component={Link}
+                        href="/dashboard/bookings"
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            alignSelf: { xs: "flex-start", sm: "auto" },
+                        }}
+                    >
+                        New Order
+                    </Button>
+                </Box>
             </Box>
 
             {/* ── Stat cards ──────────────────────────────────── */}
@@ -357,16 +423,16 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                         </Box>
 
                         {/* List */}
-                        {recentOrders.length === 0 ? (
+                        {currentRecentOrders.length === 0 ? (
                             <Box sx={{ p: 6, textAlign: "center" }}>
                                 <Scissors size={36} color="#d1d5db" />
                                 <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-                                    No recent orders yet.
+                                    No recent orders for this selection.
                                 </Typography>
                             </Box>
                         ) : (
                             <List disablePadding>
-                                {recentOrders.map((order, idx) => (
+                                {currentRecentOrders.map((order, idx) => (
                                     <Box key={order.id}>
                                         <ListItemButton
                                             component={Link}
@@ -387,9 +453,18 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                                             </ListItemAvatar>
                                             <ListItemText
                                                 primary={
-                                                    <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-                                                        {order.customer}
-                                                    </Typography>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <Typography variant="subtitle2" fontWeight={600} color="text.primary">
+                                                            {order.customer}
+                                                        </Typography>
+                                                        {order.branchName && (
+                                                            <Chip
+                                                                size="small"
+                                                                label={order.branchName}
+                                                                sx={{ height: 18, fontSize: "0.65rem", bgcolor: "#f3f4f6", color: "#4b5563" }}
+                                                            />
+                                                        )}
+                                                    </Box>
                                                 }
                                                 secondary={
                                                     <Typography variant="caption" color="text.secondary">
@@ -407,7 +482,7 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                                                 sx={{ fontWeight: 600, fontSize: "0.7rem", borderRadius: 1, ml: 1 }}
                                             />
                                         </ListItemButton>
-                                        {idx < recentOrders.length - 1 && <Divider component="li" />}
+                                        {idx < currentRecentOrders.length - 1 && <Divider component="li" />}
                                     </Box>
                                 ))}
                             </List>
@@ -452,21 +527,21 @@ export default function DashboardClient({ statsData, recentOrders, session }) {
                                     iconBgColor={(t) => t.palette.success.light}
                                     iconColor={(t) => t.palette.success.main}
                                     label="Completed Orders"
-                                    value={statsData.completedToday}
+                                    value={currentStats.completedToday}
                                 />
                                 <OverviewRow
                                     icon={Calendar}
                                     iconBgColor={(t) => t.palette.info.light}
                                     iconColor={(t) => t.palette.info.main}
                                     label="Scheduled Trials"
-                                    value={statsData.trialsToday}
+                                    value={currentStats.trialsToday}
                                 />
                                 <OverviewRow
                                     icon={DollarSign}
                                     iconBgColor={(t) => t.palette.warning.light}
                                     iconColor={(t) => t.palette.warning.main}
                                     label="Revenue Today"
-                                    value={`Rs. ${Number(statsData.revenueToday).toLocaleString()}`}
+                                    value={`Rs. ${Number(currentStats.revenueToday).toLocaleString()}`}
                                 />
                             </Stack>
                         </CardContent>

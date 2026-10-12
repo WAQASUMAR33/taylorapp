@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Typography,
@@ -42,7 +42,11 @@ import {
     Download, 
     FileSpreadsheet, 
     CheckCircle,
-    Trash2
+    Trash2,
+    Printer,
+    Store,
+    Save,
+    FileText
 } from "lucide-react";
 
 const DB_TABLE_GROUPS = [
@@ -111,6 +115,96 @@ export default function SettingsClient() {
     const [importLoading, setImportLoading] = useState(false);
     const [importError, setImportError] = useState("");
     const [importResult, setImportResult] = useState(null);
+
+    // ── Tab 2: Receipt & Print Customization State ─────────────────────
+    const [branches, setBranches] = useState([]);
+    const [selectedBranchId, setSelectedBranchId] = useState("");
+    const [printConfig, setPrintConfig] = useState({
+        name: "Grace Cloth and Tailors",
+        slogan: "Where Style Meets Perfection",
+        phone: "03006284318 | 03186284318",
+        address: "Basement of Faazal Plaza, Dhulyan Chowk Dinga",
+        logo: "/logo.png",
+        notes: "1. Suits must be collected within 30 days.\n2. Original receipt required for collection.\n3. Alterations accepted within 7 days.",
+        paperWidth: "80mm",
+    });
+    const [savingPrintConfig, setSavingPrintConfig] = useState(false);
+    const [printConfigSuccess, setPrintConfigSuccess] = useState("");
+    const [printConfigError, setPrintConfigError] = useState("");
+
+    useEffect(() => {
+        fetch("/api/branches")
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setBranches(data);
+                    setSelectedBranchId(String(data[0].id));
+                    setPrintConfig(prev => ({
+                        ...prev,
+                        name: data[0].name || prev.name,
+                        slogan: data[0].slogan || prev.slogan,
+                        phone: data[0].phone || prev.phone,
+                        address: data[0].address || prev.address,
+                        logo: data[0].logo || prev.logo,
+                        notes: data[0].notes || prev.notes,
+                    }));
+                }
+            })
+            .catch(err => console.error("Failed to fetch branches for print config:", err));
+    }, []);
+
+    const handleSelectBranchForPrint = (branchId) => {
+        setSelectedBranchId(branchId);
+        const b = branches.find(item => String(item.id) === String(branchId));
+        if (b) {
+            setPrintConfig({
+                name: b.name || "",
+                slogan: b.slogan || "",
+                phone: b.phone || "",
+                address: b.address || "",
+                logo: b.logo || "/logo.png",
+                notes: b.notes || "",
+                paperWidth: printConfig.paperWidth || "80mm",
+            });
+        }
+    };
+
+    const handleSavePrintConfig = async () => {
+        if (!selectedBranchId) return;
+        setSavingPrintConfig(true);
+        setPrintConfigSuccess("");
+        setPrintConfigError("");
+        try {
+            const res = await fetch(`/api/branches/${selectedBranchId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: printConfig.name,
+                    slogan: printConfig.slogan,
+                    phone: printConfig.phone,
+                    address: printConfig.address,
+                    logo: printConfig.logo,
+                    notes: printConfig.notes,
+                }),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "Failed to update branch print settings");
+            }
+
+            const updated = await res.json();
+            setBranches(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
+            if (typeof window !== "undefined") {
+                localStorage.setItem("print_customization_" + selectedBranchId, JSON.stringify(printConfig));
+            }
+            setPrintConfigSuccess("Receipt & Stitching print configuration saved successfully!");
+        } catch (err) {
+            setPrintConfigError(err.message || "Failed to save settings");
+        } finally {
+            setSavingPrintConfig(false);
+        }
+    };
 
     // ── Tab 0 Handlers ────────────────────────────────────────────────
     const handleToggleEntity = (id) => {
@@ -444,6 +538,7 @@ export default function SettingsClient() {
                 >
                     <Tab label="Database Reset" sx={{ textTransform: "none", fontWeight: 600 }} />
                     <Tab label="Import Customers from Excel" sx={{ textTransform: "none", fontWeight: 600 }} />
+                    <Tab label="Receipt & Print Customization" sx={{ textTransform: "none", fontWeight: 600 }} />
                 </Tabs>
             </Box>
 
@@ -866,6 +961,293 @@ export default function SettingsClient() {
                                     </Box>
                                 </Box>
                             )}
+                        </Grid>
+                    </Grid>
+                </Box>
+            )}
+
+            {/* Tab 2: Receipt & Print Customization */}
+            {tabIndex === 2 && (
+                <Box sx={{ maxWidth: 1100 }}>
+                    {printConfigSuccess && (
+                        <Alert severity="success" onClose={() => setPrintConfigSuccess("")} sx={{ mb: 3, borderRadius: 2 }}>
+                            {printConfigSuccess}
+                        </Alert>
+                    )}
+                    {printConfigError && (
+                        <Alert severity="error" onClose={() => setPrintConfigError("")} sx={{ mb: 3, borderRadius: 2 }}>
+                            {printConfigError}
+                        </Alert>
+                    )}
+
+                    <Grid container spacing={3}>
+                        {/* Left: Configuration Form */}
+                        <Grid item xs={12} md={7}>
+                            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3 }}>
+                                <CardContent sx={{ p: 3 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                                        <Printer size={22} color="#4f46e5" />
+                                        <Box>
+                                            <Typography variant="h6" fontWeight={700}>
+                                                Receipt & Stitching Slip Customization
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Customize header text, contact info, branding, and notes printed on customer bills and tailor slips.
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <Divider sx={{ mb: 3 }} />
+
+                                    <Grid container spacing={2}>
+                                        {/* Branch Selector */}
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                label="Select Branch to Customize"
+                                                value={selectedBranchId}
+                                                onChange={(e) => handleSelectBranchForPrint(e.target.value)}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            >
+                                                {branches.map(b => (
+                                                    <MenuItem key={b.id} value={String(b.id)}>
+                                                        {b.name} {b.code ? `(${b.code})` : ""} {b.isActive ? "— Active" : "— Inactive"}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                        </Grid>
+
+                                        {/* Shop Name */}
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Shop / Brand Name"
+                                                value={printConfig.name}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, name: e.target.value }))}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+
+                                        {/* Slogan */}
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Tagline / Slogan"
+                                                value={printConfig.slogan}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, slogan: e.target.value }))}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+
+                                        {/* Phone */}
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Contact Phone Number(s)"
+                                                value={printConfig.phone}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, phone: e.target.value }))}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+
+                                        {/* Paper Width */}
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                label="Thermal Paper Size"
+                                                value={printConfig.paperWidth}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, paperWidth: e.target.value }))}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            >
+                                                <MenuItem value="80mm">80mm Standard POS Thermal Receipt</MenuItem>
+                                                <MenuItem value="58mm">58mm Compact POS Receipt</MenuItem>
+                                                <MenuItem value="A4">A4 / Full Sheet Invoice</MenuItem>
+                                            </TextField>
+                                        </Grid>
+
+                                        {/* Address */}
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Shop Address"
+                                                value={printConfig.address}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, address: e.target.value }))}
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+
+                                        {/* Logo URL */}
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Header Logo Path / URL"
+                                                value={printConfig.logo}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, logo: e.target.value }))}
+                                                helperText="Relative path e.g. /logo.png or full web URL"
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+
+                                        {/* Receipt Footer Notes */}
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                fullWidth
+                                                multiline
+                                                rows={3}
+                                                size="small"
+                                                label="Receipt Footer Notes & Terms"
+                                                value={printConfig.notes}
+                                                onChange={(e) => setPrintConfig(prev => ({ ...prev, notes: e.target.value }))}
+                                                helperText="Shown at the bottom of the customer thermal bill"
+                                                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            />
+                                        </Grid>
+                                    </Grid>
+
+                                    <Box sx={{ mt: 3, pt: 2, borderTop: "1px solid", borderColor: "divider", display: "flex", justifyContent: "flex-end" }}>
+                                        <Button
+                                            variant="contained"
+                                            startIcon={savingPrintConfig ? null : <Save size={16} />}
+                                            onClick={handleSavePrintConfig}
+                                            disabled={savingPrintConfig || !selectedBranchId}
+                                            sx={{ borderRadius: 2, textTransform: "none", px: 4, py: 1 }}
+                                        >
+                                            {savingPrintConfig ? <CircularProgress size={20} color="inherit" /> : "Save Print Layout"}
+                                        </Button>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+
+                        {/* Right: Live Visual Preview */}
+                        <Grid item xs={12} md={5}>
+                            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3 }}>
+                                <CardContent sx={{ p: 2.5 }}>
+                                    <Typography variant="subtitle2" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                        <FileText size={18} color="#059669" />
+                                        Live POS Thermal Preview ({printConfig.paperWidth})
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                                        Real-time preview of how bills and slips will print out.
+                                    </Typography>
+
+                                    {/* Paper container */}
+                                    <Box sx={{
+                                        maxWidth: printConfig.paperWidth === "58mm" ? 280 : 340,
+                                        mx: "auto",
+                                        bgcolor: "#ffffff",
+                                        p: 2.5,
+                                        borderRadius: 2,
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                                        border: "1px solid #e2e8f0",
+                                        fontFamily: "Arial, sans-serif",
+                                        color: "#000000",
+                                        fontSize: "11px",
+                                        lineHeight: 1.4,
+                                    }}>
+                                        {/* Logo & Header */}
+                                        <Box sx={{ textAlign: "center", pb: 1.5, borderBottom: "2px dashed #000" }}>
+                                            {printConfig.logo && (
+                                                <Box
+                                                    component="img"
+                                                    src={printConfig.logo}
+                                                    alt="Logo"
+                                                    onError={(e) => { e.target.src = "/logo.png"; }}
+                                                    sx={{ width: 44, height: 44, objectFit: "contain", mx: "auto", mb: 0.5 }}
+                                                />
+                                            )}
+                                            <Typography sx={{ fontWeight: 900, fontSize: "14px", textTransform: "uppercase", letterSpacing: 0.5, color: "#000" }}>
+                                                {printConfig.name || "Grace Cloth and Tailors"}
+                                            </Typography>
+                                            {printConfig.slogan && (
+                                                <Typography sx={{ fontSize: "9px", fontStyle: "italic", color: "#444", mt: 0.2 }}>
+                                                    {printConfig.slogan}
+                                                </Typography>
+                                            )}
+                                            {printConfig.phone && (
+                                                <Typography sx={{ fontSize: "10px", fontWeight: 700, mt: 0.3 }}>
+                                                    📞 {printConfig.phone}
+                                                </Typography>
+                                            )}
+                                            {printConfig.address && (
+                                                <Typography sx={{ fontSize: "9px", color: "#333", mt: 0.2 }}>
+                                                    {printConfig.address}
+                                                </Typography>
+                                            )}
+                                        </Box>
+
+                                        {/* Sample Bill Header */}
+                                        <Box sx={{ py: 1, borderBottom: "1px dotted #888" }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span style={{ fontWeight: 600 }}>Bill #: </span>
+                                                <span style={{ fontFamily: "monospace" }}>#B-1082</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span style={{ fontWeight: 600 }}>Date: </span>
+                                                <span>{new Date().toLocaleDateString('en-GB')}</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
+                                                <span style={{ fontWeight: 700 }}>Customer: </span>
+                                                <span style={{ fontWeight: 700 }}>Muhammad Bilal</span>
+                                            </Box>
+                                        </Box>
+
+                                        {/* Sample Items Table */}
+                                        <Box sx={{ py: 1 }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderBottom: "1px solid #000", pb: 0.5, mb: 0.5 }}>
+                                                <span>Item</span>
+                                                <span>Qty</span>
+                                                <span>Price</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.3 }}>
+                                                <span>Suit Stitching (Ban, Double Cuff)</span>
+                                                <span>2</span>
+                                                <span>Rs. 5,000</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.3 }}>
+                                                <span>Cotton Fabric (Wash & Wear)</span>
+                                                <span>1</span>
+                                                <span>Rs. 4,500</span>
+                                            </Box>
+                                        </Box>
+
+                                        {/* Sample Totals */}
+                                        <Box sx={{ pt: 1, borderTop: "2px dashed #000" }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span>Total Amount:</span>
+                                                <span style={{ fontWeight: 700 }}>Rs. 9,500</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", color: "#16a34a" }}>
+                                                <span>Advance Paid:</span>
+                                                <span style={{ fontWeight: 700 }}>Rs. 5,000</span>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: "12px", borderTop: "1px solid #000", pt: 0.5, mt: 0.5 }}>
+                                                <span>Remaining:</span>
+                                                <span style={{ color: "#dc2626" }}>Rs. 4,500</span>
+                                            </Box>
+                                        </Box>
+
+                                        {/* Custom Notes */}
+                                        {printConfig.notes && (
+                                            <Box sx={{ mt: 1.5, pt: 1, borderTop: "1px dotted #888", textAlign: "center", fontSize: "9px", color: "#333", whiteSpace: "pre-line" }}>
+                                                {printConfig.notes}
+                                            </Box>
+                                        )}
+
+                                        <Box sx={{ mt: 1.5, textAlign: "center", fontSize: "8px", color: "#666" }}>
+                                            Thank you for choosing {printConfig.name || "GRACE TAILORS"}!
+                                        </Box>
+                                    </Box>
+                                </CardContent>
+                            </Card>
                         </Grid>
                     </Grid>
                 </Box>
