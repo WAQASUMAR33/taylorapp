@@ -31,8 +31,9 @@ import {
     Select,
     FormControl,
     InputLabel,
+    Chip,
 } from "@mui/material";
-import { Store } from "lucide-react";
+import { Search, X, Plus, Receipt, Pencil, Trash2, Save } from "lucide-react";
 
 const emptyForm = {
     title: "",
