@@ -100,7 +100,8 @@ async function getRecentOrders() {
             },
             include: {
                 customer: true,
-                items: true
+                items: true,
+                branch: true
             }
         });
 
@@ -108,13 +109,12 @@ async function getRecentOrders() {
             id: order.id,
             bookingNumber: order.bookingNumber,
             customer: order.customer ? order.customer.name : "Unknown Customer",
-            // Initials for avatar
             avatar: order.customer && order.customer.name
                 ? order.customer.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
                 : "??",
             items: order.items.length,
             status: order.status,
-            // Calculate days remaining/overdue based on deliveryDate
+            branchName: order.branch?.name || null,
             daysRemaining: order.deliveryDate
                 ? Math.ceil((new Date(order.deliveryDate) - new Date()) / (1000 * 60 * 60 * 24))
                 : 0
@@ -125,16 +125,82 @@ async function getRecentOrders() {
     }
 }
 
+async function getChartData() {
+    try {
+        const now = new Date();
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+            const dNext = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
+            days.push({
+                shortLabel: d.toLocaleDateString("en-US", { weekday: "short" }),
+                fullDate: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                start: d,
+                end: dNext,
+            });
+        }
+
+        const [dailyTrends, statusCounts] = await Promise.all([
+            Promise.all(days.map(async (day) => {
+                const [revAgg, orderCount, deliveredCount] = await Promise.all([
+                    prisma.booking.aggregate({
+                        _sum: { totalAmount: true },
+                        where: {
+                            createdAt: { gte: day.start, lt: day.end },
+                            status: { not: "CANCELLED" }
+                        }
+                    }),
+                    prisma.booking.count({
+                        where: {
+                            createdAt: { gte: day.start, lt: day.end }
+                        }
+                    }),
+                    prisma.booking.count({
+                        where: {
+                            status: "DELIVERED",
+                            updatedAt: { gte: day.start, lt: day.end }
+                        }
+                    })
+                ]);
+                return {
+                    day: day.shortLabel,
+                    fullDay: `${day.shortLabel} (${day.fullDate})`,
+                    revenue: Number(revAgg._sum.totalAmount || 0),
+                    orders: orderCount,
+                    delivered: deliveredCount,
+                };
+            })),
+            prisma.booking.groupBy({
+                by: ["status"],
+                _count: { id: true },
+            })
+        ]);
+
+        const statusDistribution = statusCounts.map((sc, index) => ({
+            id: index,
+            value: sc._count.id,
+            label: sc.status.replace(/_/g, " "),
+            status: sc.status,
+        }));
+
+        return { dailyTrends, statusDistribution };
+    } catch (err) {
+        console.error("Chart data query error:", err);
+        return { dailyTrends: [], statusDistribution: [] };
+    }
+}
+
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
-    const [statsData, recentOrders, branches] = await Promise.all([
+    const [statsData, recentOrders, branches, chartData] = await Promise.all([
         getStats(),
         getRecentOrders(),
         prisma.branch.findMany({
             where: { isActive: true },
             orderBy: { name: "asc" },
             select: { id: true, name: true, code: true }
-        })
+        }),
+        getChartData()
     ]);
 
     return (
@@ -147,6 +213,7 @@ export default async function DashboardPage() {
             recentOrders={recentOrders}
             session={session}
             branches={branches}
+            initialChartData={chartData}
         />
     );
 }

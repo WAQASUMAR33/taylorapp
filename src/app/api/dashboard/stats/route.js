@@ -116,6 +116,66 @@ export async function GET(request) {
                 : 0
         }));
 
+        // 9. Chart Data: 7-Day Revenue & Volume Trends + Status Distribution
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+            const dNext = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
+            days.push({
+                shortLabel: d.toLocaleDateString("en-US", { weekday: "short" }),
+                fullDate: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                start: d,
+                end: dNext,
+            });
+        }
+
+        const [dailyTrends, statusCounts] = await Promise.all([
+            Promise.all(days.map(async (day) => {
+                const [revAgg, orderCount, deliveredCount] = await Promise.all([
+                    prisma.booking.aggregate({
+                        _sum: { totalAmount: true },
+                        where: {
+                            ...bookingWhere,
+                            createdAt: { gte: day.start, lt: day.end },
+                            status: { not: "CANCELLED" }
+                        }
+                    }),
+                    prisma.booking.count({
+                        where: {
+                            ...bookingWhere,
+                            createdAt: { gte: day.start, lt: day.end }
+                        }
+                    }),
+                    prisma.booking.count({
+                        where: {
+                            ...bookingWhere,
+                            status: "DELIVERED",
+                            updatedAt: { gte: day.start, lt: day.end }
+                        }
+                    })
+                ]);
+                return {
+                    day: day.shortLabel,
+                    fullDay: `${day.shortLabel} (${day.fullDate})`,
+                    revenue: Number(revAgg._sum.totalAmount || 0),
+                    orders: orderCount,
+                    delivered: deliveredCount,
+                };
+            })),
+            prisma.booking.groupBy({
+                by: ["status"],
+                where: bookingWhere,
+                _count: { id: true },
+            })
+        ]);
+
+        const statusDistribution = statusCounts.map((sc, index) => ({
+            id: index,
+            value: sc._count.id,
+            label: sc.status.replace(/_/g, " "),
+            status: sc.status,
+        }));
+
         return NextResponse.json({
             statsData: {
                 totalCustomers,
@@ -126,7 +186,11 @@ export async function GET(request) {
                 trialsToday,
                 revenueToday
             },
-            recentOrders
+            recentOrders,
+            chartData: {
+                dailyTrends,
+                statusDistribution,
+            }
         });
     } catch (error) {
         console.error("Dashboard stats API error:", error);
