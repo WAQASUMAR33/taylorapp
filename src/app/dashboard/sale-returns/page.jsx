@@ -11,34 +11,39 @@ export const metadata = {
 };
 
 export default async function SaleReturnsPage() {
-    const returns = await prisma.sale_return.findMany({
-        include: {
-            customer: { select: { id: true, name: true, phone: true, address: true } },
-            bank: { select: { id: true, name: true } },
-            items: {
-                include: {
-                    product: { select: { id: true, name: true, sku: true } }
+    const [returns, customers, products, banks, branches] = await Promise.all([
+        prisma.sale_return.findMany({
+            include: {
+                customer: { select: { id: true, name: true, phone: true, address: true } },
+                bank: { select: { id: true, name: true } },
+                branch: { select: { id: true, name: true, code: true, slogan: true, phone: true, address: true, logo: true } },
+                items: {
+                    include: {
+                        product: { select: { id: true, name: true, sku: true } }
+                    }
                 }
-            }
-        },
-        orderBy: { returnDate: "desc" }
-    });
-
-    const customers = await prisma.customer.findMany({
-        select: { id: true, name: true, phone: true, address: true },
-        orderBy: { name: "asc" }
-    });
-
-    const products = await prisma.product.findMany({
-        select: { id: true, name: true, sku: true, unitPrice: true },
-        orderBy: { name: "asc" }
-    });
-
-    const banks = await prisma.bank.findMany({
-        where: { isActive: true },
-        select: { id: true, name: true },
-        orderBy: { name: "asc" }
-    });
+            },
+            orderBy: { returnDate: "desc" }
+        }),
+        prisma.customer.findMany({
+            select: { id: true, name: true, phone: true, address: true },
+            orderBy: { name: "asc" }
+        }),
+        prisma.product.findMany({
+            select: { id: true, name: true, sku: true, unitPrice: true },
+            orderBy: { name: "asc" }
+        }),
+        prisma.bank.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" }
+        }),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
+            orderBy: { name: "asc" }
+        })
+    ]);
 
     // Serialize Decimals to string/number
     const serializedReturns = returns.map(r => ({
@@ -84,6 +89,7 @@ export default async function SaleReturnsPage() {
                 customers={customers} 
                 products={serializedProducts} 
                 banks={banks} 
+                branches={branches}
             />
         </Box>
     );

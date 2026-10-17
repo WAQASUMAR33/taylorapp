@@ -7,7 +7,7 @@ import {
     Box, Card, CardContent, Typography, TextField, InputAdornment,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, IconButton, Collapse, Grid, Divider, Button, Stack,
-    Tooltip, Alert,
+    Tooltip, Alert, MenuItem,
 } from "@mui/material";
 import {
     Search, ChevronDown, ChevronUp, ReceiptText, TrendingUp,
@@ -52,7 +52,16 @@ function ExpandableRow({ bill }) {
                         <IconButton size="small" sx={{ p: 0.3 }}>
                             {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </IconButton>
-                        <Typography variant="body2" fontWeight={700} fontFamily="monospace">{bill.billNumber}</Typography>
+                        <Box>
+                            <Typography variant="body2" fontWeight={700} fontFamily="monospace">{bill.billNumber}</Typography>
+                            {bill.branch?.name && (
+                                <Chip
+                                    label={bill.branch.name}
+                                    size="small"
+                                    sx={{ height: 18, fontSize: "0.62rem", fontWeight: 700, bgcolor: "#eff6ff", color: "#1d4ed8", mt: 0.3 }}
+                                />
+                            )}
+                        </Box>
                     </Box>
                 </TableCell>
                 <TableCell>
@@ -142,13 +151,16 @@ function ExpandableRow({ bill }) {
     );
 }
 
-export default function SaleListClient({ initialBills }) {
+export default function SaleListClient({ initialBills, branches = [] }) {
     const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const userBranchId = session?.user?.branchId;
     const canView = checkPermission(session, "sale-list", "view") || checkPermission(session, "bookings", "view");
 
     const [search, setSearch] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+    const [filterBranchId, setFilterBranchId] = useState(isAdmin ? "ALL" : (userBranchId ? String(userBranchId) : "ALL"));
     const [activeQuick, setActiveQuick] = useState(null);
 
     if (!canView && session) {
@@ -173,6 +185,7 @@ export default function SaleListClient({ initialBills }) {
         setDateTo("");
         setSearch("");
         setActiveQuick(null);
+        if (isAdmin) setFilterBranchId("ALL");
     };
 
     const filtered = useMemo(() => {
@@ -190,9 +203,11 @@ export default function SaleListClient({ initialBills }) {
             const to = dateTo ? new Date(dateTo + "T23:59:59") : null;
             const matchDate = (!from || billDate >= from) && (!to || billDate <= to);
 
-            return matchSearch && matchDate;
+            const matchBranch = filterBranchId === "ALL" || String(bill.branchId || "") === String(filterBranchId);
+
+            return matchSearch && matchDate && matchBranch;
         });
-    }, [initialBills, search, dateFrom, dateTo]);
+    }, [initialBills, search, dateFrom, dateTo, filterBranchId]);
 
     // Stats over filtered bills
     const stats = useMemo(() => {
@@ -205,7 +220,7 @@ export default function SaleListClient({ initialBills }) {
         return { totalRevenue, totalDiscount, totalSubtotal, totalItems, uniqueCustomers, avgBill, count: filtered.length };
     }, [filtered]);
 
-    const hasFilters = search || dateFrom || dateTo;
+    const hasFilters = search || dateFrom || dateTo || (isAdmin && filterBranchId !== "ALL");
 
     return (
         <Box sx={{ px: 3, pb: 4 }}>
@@ -243,6 +258,24 @@ export default function SaleListClient({ initialBills }) {
             {/* ── Filters ──────────────────────────────────────── */}
             <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, p: 2, mb: 3 }}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }} flexWrap="wrap">
+                    {/* Branch Filter for Admin */}
+                    {isAdmin && branches && branches.length > 0 && (
+                        <TextField
+                            select
+                            label="Branch Store"
+                            size="small"
+                            value={filterBranchId}
+                            onChange={(e) => setFilterBranchId(e.target.value)}
+                            sx={{ minWidth: 190, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                        >
+                            <MenuItem value="ALL">All Branches</MenuItem>
+                            {branches.map((b) => (
+                                <MenuItem key={b.id} value={String(b.id)}>
+                                    {b.name} {b.code ? `(${b.code})` : ""}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
                     <TextField
                         placeholder="Search booking no., customer or product…"
                         size="small"

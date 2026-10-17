@@ -7,12 +7,16 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const titleId = searchParams.get("titleId");
+        const branchId = searchParams.get("branchId");
         const dateFrom = searchParams.get("dateFrom");
         const dateTo = searchParams.get("dateTo");
 
         const where = {};
         if (titleId) {
             where.titleId = parseInt(titleId);
+        }
+        if (branchId && branchId !== "ALL") {
+            where.branchId = parseInt(branchId);
         }
         if (dateFrom || dateTo) {
             where.date = {};
@@ -28,6 +32,7 @@ export async function GET(req) {
             where,
             include: {
                 title: { select: { id: true, name: true } },
+                branch: { select: { id: true, name: true, code: true } },
                 addedByUser: { select: { id: true, fullName: true } },
             },
             orderBy: { date: "desc" },
@@ -52,7 +57,7 @@ export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         const body = await req.json();
-        const { titleId, date, amount, description } = body;
+        const { titleId, date, amount, description, branchId } = body;
 
         if (!titleId || !date || !amount) {
             return NextResponse.json(
@@ -68,16 +73,20 @@ export async function POST(req) {
             );
         }
 
+        const resolvedBranchId = branchId ? parseInt(branchId) : (session?.user?.branchId || 1);
+
         const expense = await prisma.stitchingExpense.create({
             data: {
                 titleId: parseInt(titleId),
                 date: new Date(date),
                 amount: parseFloat(amount),
                 description: description || null,
+                branchId: resolvedBranchId,
                 addedBy: session?.user?.id ? parseInt(session.user.id) : null,
             },
             include: {
                 title: { select: { id: true, name: true } },
+                branch: { select: { id: true, name: true, code: true } },
                 addedByUser: { select: { id: true, fullName: true } },
             },
         });

@@ -6,10 +6,20 @@ import prisma from "@/lib/prisma";
 // GET - Retrieve all sale returns
 export async function GET(req) {
     try {
+        const { searchParams } = new URL(req.url);
+        const branchId = searchParams.get("branchId");
+
+        const where = {};
+        if (branchId && branchId !== "ALL") {
+            where.branchId = parseInt(branchId);
+        }
+
         const returns = await prisma.sale_return.findMany({
+            where,
             include: {
                 customer: { select: { id: true, name: true, phone: true, address: true } },
                 bank: { select: { id: true, name: true } },
+                branch: { select: { id: true, name: true, code: true, slogan: true, phone: true, address: true, logo: true } },
                 items: {
                     include: {
                         product: { select: { id: true, name: true, sku: true } }
@@ -34,11 +44,13 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { customerId, returnDate, totalAmount, paymentMode, bankId, notes, items } = body;
+        const { customerId, returnDate, totalAmount, paymentMode, bankId, branchId, notes, items } = body;
 
         if (!customerId || !totalAmount || !items || items.length === 0) {
             return NextResponse.json({ error: "Customer, total amount, and items are required" }, { status: 400 });
         }
+
+        const resolvedBranchId = branchId ? parseInt(branchId) : (session?.user?.branchId || 1);
 
         const result = await prisma.$transaction(async (tx) => {
             // Generate sequential return number RET-YYYYMM-NNNN
@@ -68,6 +80,7 @@ export async function POST(req) {
                 data: {
                     returnNumber,
                     customerId: parseInt(customerId),
+                    branchId: resolvedBranchId,
                     returnDate: returnDate ? new Date(returnDate) : new Date(),
                     totalAmount: parseFloat(totalAmount),
                     paymentMode,
@@ -84,7 +97,8 @@ export async function POST(req) {
                 },
                 include: {
                     customer: true,
-                    bank: true
+                    bank: true,
+                    branch: true
                 }
             });
 
@@ -98,9 +112,18 @@ export async function POST(req) {
                     data: { quantity: { increment: qty } }
                 });
 
+                if (resolvedBranchId) {
+                    await tx.branch_product_stock.upsert({
+                        where: { branchId_productId: { branchId: resolvedBranchId, productId: pid } },
+                        create: { branchId: resolvedBranchId, productId: pid, quantity: qty },
+                        update: { quantity: { increment: qty } }
+                    });
+                }
+
                 await tx.stockmovement.create({
                     data: {
                         productId: pid,
+                        branchId: resolvedBranchId || null,
                         type: "IN",
                         quantity: qty,
                         notes: `Sale Return: ${returnNumber}`
@@ -115,6 +138,7 @@ export async function POST(req) {
             await tx.ledgerentry.create({
                 data: {
                     customerId: parseInt(customerId),
+                    branchId: resolvedBranchId || null,
                     type: "CREDIT",
                     amount: returnAmt,
                     description: `Product Sale Return: ${returnNumber}`,
@@ -131,6 +155,7 @@ export async function POST(req) {
                 await tx.ledgerentry.create({
                     data: {
                         customerId: parseInt(customerId),
+                        branchId: resolvedBranchId || null,
                         type: "DEBIT",
                         amount: returnAmt,
                         description: `Refund cash paid for Return: ${returnNumber}`,
@@ -148,6 +173,7 @@ export async function POST(req) {
                     await tx.ledgerentry.create({
                         data: {
                             customerId: cashAccount.id,
+                            branchId: resolvedBranchId || null,
                             type: 'CREDIT',
                             amount: returnAmt,
                             description: `Refund cash paid to ${saleReturn.customer.name} (Return #${returnNumber})`,
@@ -164,6 +190,7 @@ export async function POST(req) {
                 await tx.ledgerentry.create({
                     data: {
                         customerId: parseInt(customerId),
+                        branchId: resolvedBranchId || null,
                         type: "DEBIT",
                         amount: returnAmt,
                         description: `Refund bank payout for Return: ${returnNumber}`,
@@ -189,6 +216,7 @@ export async function POST(req) {
                     await tx.ledgerentry.create({
                         data: {
                             customerId: bankAcc.id,
+                            branchId: resolvedBranchId || null,
                             type: 'CREDIT',
                             amount: returnAmt,
                             description: `Refund bank paid to ${saleReturn.customer.name} (Return #${returnNumber})`,

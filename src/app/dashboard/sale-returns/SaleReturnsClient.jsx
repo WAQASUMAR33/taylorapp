@@ -32,8 +32,10 @@ import {
 } from "@mui/material";
 import { Plus, Search, Eye, Trash2, RotateCcw, Printer } from "lucide-react";
 
-export default function SaleReturnsClient({ initialReturns, customers, products, banks }) {
+export default function SaleReturnsClient({ initialReturns, customers, products, banks, branches = [] }) {
     const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const userBranchId = session?.user?.branchId;
     const canView = checkPermission(session, "sale-returns", "view") || checkPermission(session, "bookings", "view");
     const canCreate = checkPermission(session, "sale-returns", "create") || checkPermission(session, "bookings", "create");
     const canEdit = checkPermission(session, "sale-returns", "edit") || checkPermission(session, "bookings", "edit");
@@ -48,6 +50,8 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     const [searchQuery, setSearchQuery] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+    const [filterBranchId, setFilterBranchId] = useState(isAdmin ? "ALL" : (userBranchId ? String(userBranchId) : "ALL"));
+    const [selectedBranchId, setSelectedBranchId] = useState(userBranchId ? String(userBranchId) : (branches[0]?.id ? String(branches[0].id) : "1"));
 
     if (!canView && session) {
         return (
@@ -181,6 +185,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
             totalAmount: grandTotal,
             paymentMode,
             bankId: paymentMode === "BANK" ? selectedBankId : null,
+            branchId: parseInt(selectedBranchId) || (session?.user?.branchId || 1),
             notes,
             items: validItems.map(i => ({
                 productId: i.productId,
@@ -242,18 +247,27 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                 matchesTo = rDate <= end;
             }
 
-            return matchesQuery && matchesFrom && matchesTo;
+            const matchesBranch = filterBranchId === "ALL" || String(r.branchId || "") === String(filterBranchId);
+
+            return matchesQuery && matchesFrom && matchesTo && matchesBranch;
         });
-    }, [returns, searchQuery, dateFrom, dateTo]);
+    }, [returns, searchQuery, dateFrom, dateTo, filterBranchId]);
 
     const paginatedReturns = useMemo(() => {
         const start = page * rowsPerPage;
         return filteredReturns.slice(start, start + rowsPerPage);
     }, [filteredReturns, page, rowsPerPage]);
 
-    // Print Receipt
+    // Print Receipt with Dynamic Branding
     const handlePrintReceipt = (ret) => {
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+        const activeBranch = ret.branch || branches?.find(b => b.id === ret.branchId) || branches?.[0];
+        const brandName = activeBranch?.name || "Grace Cloth and Tailors";
+        const brandSlogan = activeBranch?.slogan || "Where Style Meets Perfection";
+        const brandPhone = activeBranch?.phone || "03006284318 | 03186284318";
+        const brandAddress = activeBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+        const brandLogo = activeBranch?.logo || "/logo.png";
+
         const itemsHtml = ret.items.map(item => `
             <tr style="border-bottom: 1px dotted #ddd">
                 <td style="padding: 6px 0; font-size: 10px; vertical-align: top; line-height: 1.3">
@@ -284,10 +298,11 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
         </head>
         <body onload="window.print()">
             <div style="text-align: center; margin-bottom: 8px">
-                <div style="font-size: 15px; fontWeight: 900; text-transform: uppercase">Grace Cloth and Tailors</div>
-                <div style="font-size: 9px; color: #555; font-style: italic">Where Style Meets Perfection</div>
-                <div style="font-size: 10px; font-weight: 600; margin-top: 2px">📞 03006284318 | 03186284318</div>
-                <div style="font-size: 9px; color: #333">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+                ${brandLogo ? `<img src="${brandLogo}" alt="Logo" style="max-height: 44px; object-fit: contain; margin-bottom: 4px;" />` : ''}
+                <div style="font-size: 15px; font-weight: 900; text-transform: uppercase">${brandName}</div>
+                ${brandSlogan ? `<div style="font-size: 9px; color: #555; font-style: italic">${brandSlogan}</div>` : ''}
+                ${brandPhone ? `<div style="font-size: 10px; font-weight: 600; margin-top: 2px">📞 ${brandPhone}</div>` : ''}
+                ${brandAddress ? `<div style="font-size: 9px; color: #333">${brandAddress}</div>` : ''}
                 <div style="border-bottom: 1px dashed #000; margin: 8px 0 6px 0"></div>
                 <div style="font-size: 12px; font-weight: bold; text-transform: uppercase">Sale Return Invoice</div>
                 <div style="border-bottom: 1px dashed #000; margin: 6px 0 8px 0"></div>
@@ -339,7 +354,26 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
             {/* Filter controls */}
             <Paper sx={{ p: 2, mb: 3 }}>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={4}>
+                    {isAdmin && branches && branches.length > 0 && (
+                        <Grid item xs={12} sm={3}>
+                            <TextField
+                                select
+                                fullWidth
+                                size="small"
+                                label="Branch Store"
+                                value={filterBranchId}
+                                onChange={(e) => setFilterBranchId(e.target.value)}
+                            >
+                                <MenuItem value="ALL">All Branches</MenuItem>
+                                {branches.map(b => (
+                                    <MenuItem key={b.id} value={String(b.id)}>
+                                        {b.name} {b.code ? `(${b.code})` : ""}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        </Grid>
+                    )}
+                    <Grid item xs={12} sm={isAdmin && branches.length > 0 ? 3 : 4}>
                         <TextField
                             fullWidth
                             variant="outlined"
@@ -352,7 +386,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                             }}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid item xs={6} sm={isAdmin && branches.length > 0 ? 2 : 3}>
                         <TextField
                             fullWidth
                             type="date"
@@ -363,7 +397,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                             onChange={(e) => setDateFrom(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid item xs={6} sm={isAdmin && branches.length > 0 ? 2 : 3}>
                         <TextField
                             fullWidth
                             type="date"
@@ -563,6 +597,26 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
                                     </>
                                 )}
                             </Box>
+
+                            {/* Branch selector for Admin */}
+                            {isAdmin && branches && branches.length > 0 && (
+                                <Box sx={{ flex: 1, minWidth: '160px' }}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Branch Store</InputLabel>
+                                        <Select
+                                            label="Branch Store"
+                                            value={selectedBranchId}
+                                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                                        >
+                                            {branches.map(b => (
+                                                <MenuItem key={b.id} value={String(b.id)}>
+                                                    {b.name} {b.code ? `(${b.code})` : ""}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Box>
+                            )}
 
                             {/* Return Date */}
                             <Box sx={{ flex: 1, minWidth: '150px' }}>

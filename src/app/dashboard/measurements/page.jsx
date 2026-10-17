@@ -12,7 +12,7 @@ export const metadata = {
 
 async function getMeasurements() {
     try {
-        const [measurements, totalCount] = await Promise.all([
+        const [measurements, totalCount, branches] = await Promise.all([
             prisma.measurement.findMany({
                 include: {
                     customer: {
@@ -34,20 +34,26 @@ async function getMeasurements() {
                 orderBy: { takenAt: "desc" },
                 take: 50,
             }),
-            prisma.measurement.count()
+            prisma.measurement.count(),
+            prisma.branch.findMany({
+                where: { isActive: true },
+                select: { id: true, name: true, code: true, logo: true, phone: true, address: true, slogan: true },
+                orderBy: { name: "asc" }
+            })
         ]);
         return {
             measurements: JSON.parse(JSON.stringify(measurements)),
-            totalCount
+            totalCount,
+            branches: JSON.parse(JSON.stringify(branches))
         };
     } catch (error) {
         console.error("Database error fetching measurements:", error);
-        return { measurements: [], totalCount: 0 };
+        return { measurements: [], totalCount: 0, branches: [] };
     }
 }
 
 export default async function MeasurementPage() {
-    const { measurements, totalCount } = await getMeasurements();
+    const { measurements, totalCount, branches } = await getMeasurements();
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -85,7 +91,7 @@ export default async function MeasurementPage() {
             </Box>
 
             <Box sx={{ px: 3 }}>
-                <MeasurementManagementClient initialMeasurements={measurements} initialTotalCount={totalCount} />
+                <MeasurementManagementClient initialMeasurements={measurements} initialTotalCount={totalCount} branches={branches} />
             </Box>
         </Box>
     );

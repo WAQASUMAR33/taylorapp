@@ -28,7 +28,11 @@ async function getBookings(branchId = null) {
         };
 
         if (branchId) {
-            where.branchId = branchId;
+            if (parseInt(branchId) === 1) {
+                where.OR = [{ branchId: 1 }, { branchId: null }];
+            } else {
+                where.branchId = parseInt(branchId);
+            }
         }
 
         const bookings = await prisma.booking.findMany({

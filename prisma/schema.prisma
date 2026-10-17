@@ -25,6 +25,7 @@ model user {
   expenses              expense[]
   stitchingExpenses     stitchingExpense[]
   stockTransfers        stock_transfer[]
+  materialTransfers     material_transfer[]
 
   @@index([branchId], map: "user_branchId_fkey")
   @@map("user")
@@ -491,6 +492,8 @@ model material {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   materialmovement materialmovement[]
+  branchStocks     branch_material_stock[]
+  transfers        material_transfer[]
 }
 
 model materialmovement {
@@ -602,16 +605,19 @@ model sale_return {
   totalAmount   Decimal            @db.Decimal(10, 2)
   paymentMode   String             @default("CASH") // "CASH", "BANK", "LEDGER"
   bankId        Int?
+  branchId      Int?
   notes         String?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   customer      customer           @relation(fields: [customerId], references: [id])
   bank          bank?              @relation(fields: [bankId], references: [id])
+  branch        branch?            @relation(fields: [branchId], references: [id])
   items         sale_return_item[]
   ledgerEntries ledgerentry[]
 
   @@index([customerId], map: "salereturn_customerId_fkey")
   @@index([bankId], map: "salereturn_bankId_fkey")
+  @@index([branchId], map: "salereturn_branchId_fkey")
   @@map("salereturn")
 }
 
@@ -682,6 +688,10 @@ model branch {
   stitchingExpenses stitchingExpense[]
   transfersFrom     stock_transfer[]       @relation("TransfersFrom")
   transfersTo       stock_transfer[]       @relation("TransfersTo")
+  saleReturns       sale_return[]
+  materialStocks    branch_material_stock[]
+  materialTransfersFrom material_transfer[] @relation("MaterialTransfersFrom")
+  materialTransfersTo   material_transfer[] @relation("MaterialTransfersTo")
 
   @@map("branch")
 }
@@ -723,5 +733,44 @@ model stock_transfer {
   @@index([toBranchId], map: "stock_transfer_toBranchId_fkey")
   @@index([userId], map: "stock_transfer_userId_fkey")
   @@map("stock_transfer")
+}
+
+model branch_material_stock {
+  id         Int      @id @default(autoincrement())
+  branchId   Int
+  materialId Int
+  quantity   Decimal  @default(0.00) @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch   branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  material material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, materialId], map: "branch_material_stock_branchId_materialId_key")
+  @@index([branchId], map: "branch_material_stock_branchId_fkey")
+  @@index([materialId], map: "branch_material_stock_materialId_fkey")
+  @@map("branch_material_stock")
+}
+
+model material_transfer {
+  id           Int      @id @default(autoincrement())
+  materialId   Int
+  fromBranchId Int
+  toBranchId   Int
+  quantity     Decimal  @db.Decimal(10, 2)
+  notes        String?  @db.Text
+  userId       Int?
+  createdAt    DateTime @default(now())
+
+  material   material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  fromBranch branch   @relation("MaterialTransfersFrom", fields: [fromBranchId], references: [id], onDelete: Cascade)
+  toBranch   branch   @relation("MaterialTransfersTo", fields: [toBranchId], references: [id], onDelete: Cascade)
+  user       user?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([materialId], map: "material_transfer_materialId_fkey")
+  @@index([fromBranchId], map: "material_transfer_fromBranchId_fkey")
+  @@index([toBranchId], map: "material_transfer_toBranchId_fkey")
+  @@index([userId], map: "material_transfer_userId_fkey")
+  @@map("material_transfer")
 }
 

@@ -12,16 +12,22 @@ export const metadata = {
 };
 
 export default async function StitchingExpensesPage() {
-    const [expenses, titles] = await Promise.all([
+    const [expenses, titles, branches] = await Promise.all([
         prisma.stitchingExpense.findMany({
             include: {
                 title: { select: { id: true, name: true } },
                 addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } },
             },
             orderBy: { date: "desc" },
         }),
         prisma.stitchingExpenseTitle.findMany({
             where: { isActive: true },
+            orderBy: { name: "asc" },
+        }),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
             orderBy: { name: "asc" },
         }),
     ]);
@@ -35,6 +41,7 @@ export default async function StitchingExpensesPage() {
     }));
 
     const serializedTitles = JSON.parse(JSON.stringify(titles));
+    const serializedBranches = JSON.parse(JSON.stringify(branches));
 
     return (
         <Box sx={{ width: "100%" }}>
@@ -80,6 +87,7 @@ export default async function StitchingExpensesPage() {
                 <StitchingExpenseClient
                     initialExpenses={serializedExpenses}
                     expenseTitles={serializedTitles}
+                    branches={serializedBranches}
                 />
             </Suspense>
         </Box>

@@ -11,22 +11,29 @@ export const metadata = {
 };
 
 export default async function SaleListPage() {
-    // Fetch bookings that contain at least one product item
-    const bookings = await prisma.booking.findMany({
-        where: {
-            items: { some: { productId: { not: null } } }
-        },
-        include: {
-            customer: { select: { id: true, name: true, phone: true, address: true } },
-            items: {
-                where: { productId: { not: null } },
-                include: {
-                    product: { select: { id: true, name: true, sku: true } }
+    const [bookings, branches] = await Promise.all([
+        prisma.booking.findMany({
+            where: {
+                items: { some: { productId: { not: null } } }
+            },
+            include: {
+                customer: { select: { id: true, name: true, phone: true, address: true } },
+                branch: { select: { id: true, name: true, code: true } },
+                items: {
+                    where: { productId: { not: null } },
+                    include: {
+                        product: { select: { id: true, name: true, sku: true } }
+                    }
                 }
-            }
-        },
-        orderBy: { bookingDate: "desc" },
-    });
+            },
+            orderBy: { bookingDate: "desc" },
+        }),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
+            orderBy: { name: "asc" }
+        })
+    ]);
 
     // Transform bookings into the bill-shaped records the client expects
     const bills = bookings.map((b) => {
@@ -49,6 +56,8 @@ export default async function SaleListPage() {
             createdAt: b.bookingDate,
             customerId: b.customerId,
             customer: b.customer,
+            branchId: b.branchId,
+            branch: b.branch,
             items,
             subtotal,
             discount,
@@ -79,7 +88,7 @@ export default async function SaleListPage() {
                 </Box>
             </Box>
 
-            <SaleListClient initialBills={bills} />
+            <SaleListClient initialBills={bills} branches={branches} />
         </Box>
     );
 }

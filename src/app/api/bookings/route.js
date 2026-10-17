@@ -409,7 +409,9 @@ export async function POST(req) {
             hasFrontPockets
         } = body;
 
-        const resolvedBranchId = reqBranchId ? parseInt(reqBranchId) : (session?.user?.branchId || 1);
+        const resolvedBranchId = (reqBranchId && !isNaN(parseInt(reqBranchId)) && parseInt(reqBranchId) > 0)
+            ? parseInt(reqBranchId)
+            : (session?.user?.branchId ? parseInt(session.user.branchId) : 1);
         const resolvedPaymentMethod = paymentMethod || 'CASH';
         const resolvedBankId = bankId ? parseInt(bankId) : null;
         const resolvedCashAmt = parseFloat(cashAmount || 0);
@@ -784,7 +786,9 @@ export async function PUT(req) {
         if (returnDate !== undefined) updateData.returnDate = returnDate ? new Date(returnDate) : null;
         if (notes !== undefined) updateData.notes = notes;
         if (billingCustomerId !== undefined) updateData.billingCustomerId = billingCustomerId ? parseInt(billingCustomerId) : null;
-        if (body.branchId !== undefined) updateData.branchId = body.branchId ? parseInt(body.branchId) : null;
+        if (body.branchId !== undefined && body.branchId !== null && body.branchId !== "") {
+            updateData.branchId = parseInt(body.branchId) || 1;
+        }
 
         const booking = await prisma.$transaction(async (tx) => {
             const currentBooking = await tx.booking.findUnique({

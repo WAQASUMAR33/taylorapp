@@ -37,10 +37,12 @@ const emptyForm = {
     date: "",
     amount: "",
     description: "",
+    branchId: "",
 };
 
-export default function StitchingExpenseClient({ initialExpenses, expenseTitles }) {
+export default function StitchingExpenseClient({ initialExpenses, expenseTitles, branches = [] }) {
     const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN";
     const canView = checkPermission(session, "stitching-expenses", "view") || checkPermission(session, "stitching", "view");
     const canCreate = checkPermission(session, "stitching-expenses", "create") || checkPermission(session, "stitching", "create");
     const canEdit = checkPermission(session, "stitching-expenses", "edit") || checkPermission(session, "stitching", "edit");
@@ -52,6 +54,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
     const [filterTitle, setFilterTitle] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+    const [filterBranchId, setFilterBranchId] = useState("");
 
     // Analytics state
     const [analytics, setAnalytics] = useState({
@@ -71,6 +74,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                 const params = new URLSearchParams();
                 if (filterDateFrom) params.append("dateFrom", filterDateFrom);
                 if (filterDateTo) params.append("dateTo", filterDateTo);
+                if (filterBranchId) params.append("branchId", filterBranchId);
 
                 const res = await fetch(`/api/stitching-expenses/analytics?${params.toString()}`);
                 if (!res.ok) throw new Error("Failed to fetch analytics");
@@ -90,7 +94,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
         return () => {
             isMounted = false;
         };
-    }, [filterDateFrom, filterDateTo, expenses]);
+    }, [filterDateFrom, filterDateTo, filterBranchId, expenses]);
 
     // Dialog
     const [showForm, setShowForm] = useState(false);
@@ -127,16 +131,21 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                 toMatch = expDate <= to;
             }
 
-            return titleMatch && fromMatch && toMatch;
+            const branchMatch =
+                !filterBranchId ||
+                e.branchId === parseInt(filterBranchId) ||
+                e.branch?.id === parseInt(filterBranchId);
+
+            return titleMatch && fromMatch && toMatch && branchMatch;
         });
-    }, [expenses, filterTitle, filterDateFrom, filterDateTo]);
+    }, [expenses, filterTitle, filterDateFrom, filterDateTo, filterBranchId]);
 
     const totalFiltered = useMemo(
         () => filtered.reduce((sum, e) => sum + parseFloat(e.amount), 0),
         [filtered]
     );
 
-    const hasFilters = filterTitle || filterDateFrom || filterDateTo;
+    const hasFilters = filterTitle || filterDateFrom || filterDateTo || filterBranchId;
 
     function openCreate() {
         setEditingId(null);
@@ -152,6 +161,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
             date: expense.date.slice(0, 10),
             amount: expense.amount,
             description: expense.description || "",
+            branchId: expense.branchId || expense.branch?.id || "",
         });
         setError("");
         setShowForm(true);
@@ -229,6 +239,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
         setFilterTitle("");
         setFilterDateFrom("");
         setFilterDateTo("");
+        setFilterBranchId("");
     }
 
     if (!canView && session) {
@@ -258,7 +269,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                     placeholder="Search by title…"
                     value={filterTitle}
                     onChange={(e) => setFilterTitle(e.target.value)}
-                    sx={{ width: 240 }}
+                    sx={{ width: 220 }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
@@ -267,6 +278,23 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                         ),
                     }}
                 />
+                {isAdmin && branches?.length > 0 && (
+                    <TextField
+                        select
+                        size="small"
+                        label="Branch Store"
+                        value={filterBranchId}
+                        onChange={(e) => setFilterBranchId(e.target.value)}
+                        sx={{ minWidth: 180 }}
+                    >
+                        <MenuItem value="">All Branches</MenuItem>
+                        {branches.map((b) => (
+                            <MenuItem key={b.id} value={b.id}>
+                                {b.name} ({b.code})
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                )}
                 <TextField
                     size="small"
                     label="Date From"
@@ -274,7 +302,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                     value={filterDateFrom}
                     onChange={(e) => setFilterDateFrom(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{ width: 160 }}
+                    sx={{ width: 150 }}
                 />
                 <TextField
                     size="small"
@@ -283,7 +311,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                     value={filterDateTo}
                     onChange={(e) => setFilterDateTo(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{ width: 160 }}
+                    sx={{ width: 150 }}
                 />
                 {hasFilters && (
                     <Tooltip title="Clear filters">
@@ -469,6 +497,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                             <TableRow sx={{ bgcolor: "grey.50" }}>
                                 <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">
                                     Amount (PKR)
@@ -483,7 +512,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                         <TableBody>
                             {filtered.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                                         <Box
                                             sx={{
                                                 display: "flex",
@@ -512,6 +541,15 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                                             <Typography fontWeight={600} variant="body2">
                                                 {expense.title?.name || "—"}
                                             </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={expense.branch?.name || "General"}
+                                                size="small"
+                                                variant="outlined"
+                                                color={expense.branch ? "primary" : "default"}
+                                                sx={{ fontSize: "0.75rem", fontWeight: 500 }}
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Chip
@@ -592,6 +630,27 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles 
                         </Alert>
                     )}
                     <Grid container spacing={2} sx={{ mt: 0 }}>
+                        {isAdmin && branches?.length > 0 && (
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Branch Store"
+                                    select
+                                    fullWidth
+                                    value={formData.branchId || ""}
+                                    onChange={(e) =>
+                                        setFormData((p) => ({ ...p, branchId: e.target.value }))
+                                    }
+                                    helperText="Assign expense to a specific branch (leave empty for General)"
+                                >
+                                    <MenuItem value="">General / Head Office</MenuItem>
+                                    {branches.map((b) => (
+                                        <MenuItem key={b.id} value={b.id}>
+                                            {b.name} ({b.code})
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            </Grid>
+                        )}
                         <Grid item xs={12}>
                             <TextField
                                 label="Expense Title"

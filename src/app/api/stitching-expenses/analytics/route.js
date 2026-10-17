@@ -6,6 +6,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const dateFrom = searchParams.get("dateFrom");
         const dateTo = searchParams.get("dateTo");
+        const branchId = searchParams.get("branchId");
 
         // Build search conditions
         let fromDate = null;
@@ -19,6 +20,12 @@ export async function GET(req) {
         };
 
         const expenseWhere = {};
+
+        if (branchId) {
+            const bId = parseInt(branchId);
+            bookingWhere.branchId = bId;
+            expenseWhere.branchId = bId;
+        }
 
         if (dateFrom || dateTo) {
             bookingWhere.bookingDate = {};

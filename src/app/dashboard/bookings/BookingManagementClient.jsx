@@ -1387,6 +1387,15 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             ? `<div style="text-align:center;font-size:11px;color:#555;margin-bottom:6px">Period: ${dateFrom ? fmt(dateFrom) : '—'} to ${dateTo ? fmt(dateTo) : '—'}</div>`
             : '';
 
+        const activeBranch = (selectedBranchId && selectedBranchId !== "ALL")
+            ? branches.find(b => String(b.id) === String(selectedBranchId))
+            : (branches[0] || bookings[0]?.branch);
+        const reportBrandName = activeBranch?.name || "Grace Cloth and Tailors";
+        const reportLogo = activeBranch?.logo || "/logo.png";
+        const reportPhone = activeBranch?.phone || "03006284318 / 03186284318";
+        const reportAddress = activeBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+        const reportSlogan = activeBranch?.slogan || "Where Style Meets Perfection";
+
         const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -1412,12 +1421,12 @@ tfoot td{border:1px solid #555;padding:5px 6px;text-align:right}
 </head>
 <body>
 <div class="hdr">
-    <img src="/logo.png" alt="Logo"/>
+    <img src="${reportLogo}" alt="Logo"/>
     <div class="hdr-text">
-        <h1>Grace Cloth and Tailors</h1>
-        <div class="tagline">Where Style Meets Perfection</div>
-        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
-        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+        <h1>${reportBrandName}</h1>
+        <div class="tagline">${reportSlogan}</div>
+        <div class="phone">📞 ${reportPhone}</div>
+        <div class="address">${reportAddress}</div>
     </div>
 </div>
 <div style="text-align:center;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:8px 0">Booking List Report</div>
@@ -1678,14 +1687,20 @@ ${periodHtml}
             }).join('');
 
 
+            const bookingBranch = booking.branch || (branches || []).find(b => b.id === booking.branchId) || branches?.[0];
+            const brandName = bookingBranch?.name || "Grace Cloth and Tailors";
+            const brandLogo = bookingBranch?.logo || "/logo.png";
+            const brandPhone = bookingBranch?.phone || "03006284318 / 03186284318";
+            const brandAddress = bookingBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+
             return `
             <div class="booking-page">
                 <div class="hdr">
-                    <img src="/logo.png" alt="Logo"/>
+                    <img src="${brandLogo}" alt="Logo"/>
                     <div class="hdr-text">
-                        <h1>Grace Cloth and Tailors</h1>
-                        <div class="phone">📞 03006284318 &nbsp;|&nbsp; 03186284318</div>
-                        <div class="address">Basement of Faazal Plaza, Dhulyan Chowk Dinga</div>
+                        <h1>${brandName}</h1>
+                        <div class="phone">📞 ${brandPhone}</div>
+                        <div class="address">${brandAddress}</div>
                     </div>
                 </div>
                 <div class="title">Stitching Details &nbsp;|&nbsp; بکنگ پرچی</div>
@@ -1848,7 +1863,7 @@ ${allBookingsHtml}
         advanceAmount: "",
         notes: "",
         discount: "",
-        branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : ""))
+        branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : "1"))
     });
 
     // Set today's date client-side only to avoid SSR hydration mismatch
@@ -2235,7 +2250,7 @@ ${allBookingsHtml}
                 advanceAmount: finalAdvance,
                 remainingAmount: finalBalance,
                 notes: formData.notes,
-                branchId: formData.branchId ? parseInt(formData.branchId) : (session?.user?.branchId || null),
+                branchId: formData.branchId ? parseInt(formData.branchId) : (session?.user?.branchId || (branches[0]?.id ? parseInt(branches[0].id) : 1)),
                 items: [
                     ...finalStitchingItems.map(item => ({
                         productId: item.productId || null,
@@ -2462,7 +2477,7 @@ ${allBookingsHtml}
             shalwarType: "",
             hasShalwarPocket: false,
             hasFrontPockets: false,
-            branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : ""))
+            branchId: selectedBranchId !== "ALL" ? selectedBranchId : (session?.user?.branchId ? String(session.user.branchId) : (branches[0]?.id ? String(branches[0].id) : "1"))
         });
         setCartItems([
             {
@@ -4889,9 +4904,17 @@ ${allBookingsHtml}
                 </Box>
             </Box>
 
-            <TableContainer component={Card} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+            <TableContainer component={Card} elevation={0} sx={{ 
+                borderRadius: 3, 
+                border: '1px solid', 
+                borderColor: 'divider', 
+                overflowX: 'auto',
+                '&::-webkit-scrollbar': { height: 8 },
+                '&::-webkit-scrollbar-track': { bgcolor: '#f1f5f9' },
+                '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: 4, '&:hover': { bgcolor: '#94a3b8' } }
+            }}>
                 {loadingBookings && <LinearProgress sx={{ height: 3, bgcolor: '#e0e7ff', '& .MuiLinearProgress-bar': { bgcolor: '#7c3aed' } }} />}
-                <Table sx={{ minWidth: 650 }}>
+                <Table sx={{ minWidth: 1250 }}>
                     <TableHead>
                         <TableRow sx={{ bgcolor: '#f8fafc' }}>
                             <TableCell padding="checkbox">
@@ -4903,7 +4926,6 @@ ${allBookingsHtml}
                                 />
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>#</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Branch</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Book Date</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Address</TableCell>
@@ -4938,26 +4960,6 @@ ${allBookingsHtml}
                                                 color: booking.bookingType === 'SUIT' ? '#1e40af' : '#92400e'
                                             }}
                                         />
-                                    </TableCell>
-                                    {/* Branch */}
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                                            <Box sx={{ p: 0.5, bgcolor: '#f0fdf4', borderRadius: 1, display: 'flex', color: '#16a34a' }}>
-                                                <Store size={14} />
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
-                                                    {booking.branch?.name || (branches.find(b => b.id === booking.branchId)?.name) || (branches[0]?.name) || 'Main Branch - Dinga'}
-                                                </Typography>
-                                                {((booking.branch?.code) || (branches.find(b => b.id === booking.branchId)?.code)) && (
-                                                    <Chip
-                                                        label={(booking.branch?.code) || (branches.find(b => b.id === booking.branchId)?.code)}
-                                                        size="small"
-                                                        sx={{ height: 16, fontSize: '0.62rem', fontWeight: 800, bgcolor: '#e2e8f0', color: '#475569' }}
-                                                    />
-                                                )}
-                                            </Box>
-                                        </Box>
                                     </TableCell>
                                     {/* Book Date */}
                                     <TableCell>
@@ -5009,27 +5011,53 @@ ${allBookingsHtml}
                                     </TableCell>
                                     {/* Tailor */}
                                     <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <Box sx={{ flex: 1 }}>
                                                 {(booking.staff || []).filter(s => s.role === "TAILOR").length > 0 ? (
                                                     (booking.staff || []).filter(s => s.role === "TAILOR").map(s => (
                                                         <Chip key={s.id} label={s.customer?.name} size="small" sx={{ mb: 0.3, mr: 0.3, bgcolor: '#f5f3ff', color: '#7c3aed', height: 20, fontSize: '0.7rem' }} />
                                                     ))
                                                 ) : (
-                                                    <Typography variant="caption" color="text.disabled">—</Typography>
+                                                    <Chip 
+                                                        label="+ Tailor" 
+                                                        size="small" 
+                                                        onClick={() => handleOpenStaffEdit(booking)} 
+                                                        clickable 
+                                                        sx={{ height: 20, fontSize: '0.68rem', bgcolor: '#f3f4f6', color: '#6b7280', '&:hover': { bgcolor: '#ede9fe', color: '#7c3aed' } }} 
+                                                    />
                                                 )}
                                             </Box>
+                                            <Tooltip title="Assign / Edit Tailor & Cutter">
+                                                <IconButton size="small" sx={{ color: '#9ca3af', p: 0.25, '&:hover': { color: '#7c3aed' } }} onClick={() => handleOpenStaffEdit(booking)}>
+                                                    <Pencil size={13} />
+                                                </IconButton>
+                                            </Tooltip>
                                         </Box>
                                     </TableCell>
                                     {/* Cutter */}
                                     <TableCell>
-                                        {(booking.staff || []).filter(s => s.role === "CUTTER").length > 0 ? (
-                                            (booking.staff || []).filter(s => s.role === "CUTTER").map(s => (
-                                                <Chip key={s.id} label={s.customer?.name} size="small" sx={{ mb: 0.3, mr: 0.3, bgcolor: '#fef3c7', color: '#92400e', height: 20, fontSize: '0.7rem' }} />
-                                            ))
-                                        ) : (
-                                            <Typography variant="caption" color="text.disabled">—</Typography>
-                                        )}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Box sx={{ flex: 1 }}>
+                                                {(booking.staff || []).filter(s => s.role === "CUTTER").length > 0 ? (
+                                                    (booking.staff || []).filter(s => s.role === "CUTTER").map(s => (
+                                                        <Chip key={s.id} label={s.customer?.name} size="small" sx={{ mb: 0.3, mr: 0.3, bgcolor: '#fef3c7', color: '#92400e', height: 20, fontSize: '0.7rem' }} />
+                                                    ))
+                                                ) : (
+                                                    <Chip 
+                                                        label="+ Cutter" 
+                                                        size="small" 
+                                                        onClick={() => handleOpenStaffEdit(booking)} 
+                                                        clickable 
+                                                        sx={{ height: 20, fontSize: '0.68rem', bgcolor: '#f3f4f6', color: '#6b7280', '&:hover': { bgcolor: '#fef3c7', color: '#92400e' } }} 
+                                                    />
+                                                )}
+                                            </Box>
+                                            <Tooltip title="Assign / Edit Tailor & Cutter">
+                                                <IconButton size="small" sx={{ color: '#9ca3af', p: 0.25, '&:hover': { color: '#d97706' } }} onClick={() => handleOpenStaffEdit(booking)}>
+                                                    <Pencil size={13} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </TableCell>
                                     {/* Items */}
                                     <TableCell>

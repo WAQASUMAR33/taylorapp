@@ -31,6 +31,9 @@ import {
     TableRow,
     Paper,
     Divider,
+    Tabs,
+    Tab,
+    MenuItem,
 } from "@mui/material";
 import {
     Edit,
@@ -43,9 +46,12 @@ import {
     History,
     Eye,
     TrendingDown,
+    ArrowLeftRight,
+    Store,
+    Clock,
 } from "lucide-react";
 
-export default function MaterialManagementClient({ initialMaterials }) {
+export default function MaterialManagementClient({ initialMaterials, branches = [] }) {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === "ADMIN";
     const canView = checkPermission(session, "materials", "view");
@@ -76,6 +82,19 @@ export default function MaterialManagementClient({ initialMaterials }) {
     const [outStockFormData, setOutStockFormData] = useState({ materialId: "", outQuantity: "", description: "" });
     const [outStockLoading, setOutStockLoading] = useState(false);
     const [outStockError, setOutStockError] = useState("");
+
+    // Transfer Stock dialog states
+    const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+    const [transferTab, setTransferTab] = useState(0); // 0: Transfer, 1: History
+    const [transferMaterialId, setTransferMaterialId] = useState("");
+    const [transferFromBranchId, setTransferFromBranchId] = useState("");
+    const [transferToBranchId, setTransferToBranchId] = useState("");
+    const [transferQuantity, setTransferQuantity] = useState("");
+    const [transferNotes, setTransferNotes] = useState("");
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferError, setTransferError] = useState("");
+    const [materialTransfers, setMaterialTransfers] = useState([]);
+    const [loadingTransfers, setLoadingTransfers] = useState(false);
 
     /* ── helpers ──────────────────────────────────────── */
 
@@ -267,6 +286,123 @@ export default function MaterialManagementClient({ initialMaterials }) {
         }
     };
 
+    const getMaterialBranchStock = (mat, bId) => {
+        if (!mat) return 0;
+        const bStock = (mat.branchStocks || []).find((bs) => bs.branchId === bId);
+        if (bStock !== undefined) return parseFloat(bStock.quantity) || 0;
+        if (branches.length > 0 && bId === branches[0].id) {
+            return parseFloat(mat.quantity) || 0;
+        }
+        return 0;
+    };
+
+    const fetchMaterialTransfers = async (matId = null) => {
+        setLoadingTransfers(true);
+        try {
+            const url = matId
+                ? `/api/materials/transfer?materialId=${matId}&limit=100`
+                : `/api/materials/transfer?limit=100`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                setMaterialTransfers(Array.isArray(data) ? data : []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch material transfers:", err);
+        } finally {
+            setLoadingTransfers(false);
+        }
+    };
+
+    const handleOpenTransfer = (mat = null) => {
+        const selectedId = mat?.id ? String(mat.id) : (materials[0]?.id ? String(materials[0].id) : "");
+        setTransferMaterialId(selectedId);
+        const fromId = branches[0]?.id ? String(branches[0].id) : "";
+        const toId = branches[1]?.id ? String(branches[1].id) : (branches[0]?.id ? String(branches[0].id) : "");
+        setTransferFromBranchId(fromId);
+        setTransferToBranchId(toId);
+        setTransferQuantity("");
+        setTransferNotes("");
+        setTransferError("");
+        setTransferTab(0);
+        setTransferDialogOpen(true);
+        if (selectedId) {
+            fetchMaterialTransfers(parseInt(selectedId));
+        } else {
+            fetchMaterialTransfers();
+        }
+    };
+
+    const handleExecuteTransfer = async () => {
+        const matId = parseInt(transferMaterialId);
+        const fromId = parseInt(transferFromBranchId);
+        const toId = parseInt(transferToBranchId);
+        const qty = parseFloat(transferQuantity);
+
+        if (!matId) {
+            setTransferError("Please select a material.");
+            return;
+        }
+        if (!fromId || !toId) {
+            setTransferError("Please select both source and destination branch stores.");
+            return;
+        }
+        if (fromId === toId) {
+            setTransferError("Source and destination branch stores cannot be the same.");
+            return;
+        }
+        if (isNaN(qty) || qty <= 0) {
+            setTransferError("Please enter a valid transfer quantity greater than 0.");
+            return;
+        }
+
+        const targetMat = materials.find((m) => m.id === matId);
+        const available = getMaterialBranchStock(targetMat, fromId);
+        if (qty > available) {
+            setTransferError(`Cannot transfer ${qty} units. Only ${available} units available in selected source store.`);
+            return;
+        }
+
+        setTransferLoading(true);
+        setTransferError("");
+        try {
+            const res = await fetch("/api/materials/transfer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    materialId: matId,
+                    fromBranchId: fromId,
+                    toBranchId: toId,
+                    quantity: qty,
+                    notes: transferNotes.trim() || undefined,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to transfer material stock");
+            }
+
+            if (data.material) {
+                const norm = normalizeMaterial(data.material);
+                norm.branchStocks = (data.material.branchStocks || []).map((bs) => ({
+                    ...bs,
+                    quantity: parseFloat(bs.quantity.toString()),
+                }));
+                setMaterials((prev) => prev.map((m) => (m.id === norm.id ? norm : m)));
+            }
+
+            setSuccessMessage(`Successfully transferred ${qty} units to destination branch store.`);
+            setTransferQuantity("");
+            setTransferNotes("");
+            fetchMaterialTransfers(matId);
+        } catch (err) {
+            setTransferError(err.message);
+        } finally {
+            setTransferLoading(false);
+        }
+    };
+
     const handleView = async (id) => {
         try {
             const res = await fetch(`/api/materials/${id}`);
@@ -338,6 +474,24 @@ export default function MaterialManagementClient({ initialMaterials }) {
                         sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}
                     >
                         Out Stock
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<ArrowLeftRight size={18} />}
+                        onClick={() => handleOpenTransfer()}
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontWeight: 600,
+                            px: 3,
+                            background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)",
+                            boxShadow: "0 4px 12px rgba(14, 165, 233, 0.25)",
+                            "&:hover": {
+                                background: "linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)",
+                            },
+                        }}
+                    >
+                        Transfer Stock
                     </Button>
                 </Box>
             </Box>
@@ -416,6 +570,11 @@ export default function MaterialManagementClient({ initialMaterials }) {
                                         </TableCell>
                                         <TableCell align="right">
                                             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                                                <Tooltip title="Transfer Stock Between Branches">
+                                                    <IconButton size="small" sx={{ color: "#0284c7" }} onClick={() => handleOpenTransfer(material)}>
+                                                        <ArrowLeftRight size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="View Details">
                                                     <IconButton size="small" color="info" onClick={() => handleView(material.id)}>
                                                         <Eye size={17} />
@@ -916,6 +1075,279 @@ export default function MaterialManagementClient({ initialMaterials }) {
                     >
                         Close
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Material Stock Transfer Dialog ───────────── */}
+            <Dialog
+                open={transferDialogOpen}
+                onClose={() => setTransferDialogOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 1.5 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Box sx={{ p: 1, bgcolor: "info.light", color: "info.dark", borderRadius: 2, display: "flex" }}>
+                                <ArrowLeftRight size={22} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700}>
+                                    Material Stock Transfer
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Transfer materials between branch stores and view transfer logs
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <IconButton size="small" onClick={() => setTransferDialogOpen(false)}>
+                            <XIcon size={18} />
+                        </IconButton>
+                    </Box>
+                    <Tabs
+                        value={transferTab}
+                        onChange={(_, val) => setTransferTab(val)}
+                        sx={{ mt: 1.5, minHeight: 40 }}
+                    >
+                        <Tab label="Transfer Stock" sx={{ textTransform: "none", fontWeight: 600, minHeight: 40 }} />
+                        <Tab
+                            label={`Transfer History (${materialTransfers.length})`}
+                            sx={{ textTransform: "none", fontWeight: 600, minHeight: 40 }}
+                        />
+                    </Tabs>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: "20px !important", pb: 3 }}>
+                    {transferTab === 0 ? (
+                        <>
+                            {transferError && (
+                                <Alert severity="error" variant="filled" onClose={() => setTransferError("")} sx={{ mb: 2.5, borderRadius: 2 }}>
+                                    {transferError}
+                                </Alert>
+                            )}
+
+                            <Grid container spacing={2.5}>
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        label="Select Material"
+                                        value={transferMaterialId}
+                                        onChange={(e) => {
+                                            setTransferMaterialId(e.target.value);
+                                            if (e.target.value) {
+                                                fetchMaterialTransfers(parseInt(e.target.value));
+                                            }
+                                        }}
+                                        required
+                                    >
+                                        {materials.map((m) => (
+                                            <MenuItem key={m.id} value={String(m.id)}>
+                                                {m.title} (Total: {m.quantity} units)
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+
+                                {(() => {
+                                    const currMat = materials.find((m) => m.id === parseInt(transferMaterialId));
+                                    const fromStock = getMaterialBranchStock(currMat, parseInt(transferFromBranchId));
+                                    const toStock = getMaterialBranchStock(currMat, parseInt(transferToBranchId));
+
+                                    return (
+                                        <>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                    select
+                                                    fullWidth
+                                                    size="small"
+                                                    label="From Branch Store"
+                                                    value={transferFromBranchId}
+                                                    onChange={(e) => setTransferFromBranchId(e.target.value)}
+                                                    required
+                                                >
+                                                    {branches.map((b) => (
+                                                        <MenuItem key={b.id} value={String(b.id)}>
+                                                            {b.name} ({b.code})
+                                                        </MenuItem>
+                                                    ))}
+                                                </TextField>
+                                                {transferMaterialId && transferFromBranchId && (
+                                                    <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={`Available: ${fromStock} units`}
+                                                            color={fromStock > 0 ? "success" : "error"}
+                                                            variant="outlined"
+                                                            sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                                                        />
+                                                    </Box>
+                                                )}
+                                            </Grid>
+
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                    select
+                                                    fullWidth
+                                                    size="small"
+                                                    label="To Branch Store"
+                                                    value={transferToBranchId}
+                                                    onChange={(e) => setTransferToBranchId(e.target.value)}
+                                                    required
+                                                >
+                                                    {branches.map((b) => (
+                                                        <MenuItem key={b.id} value={String(b.id)}>
+                                                            {b.name} ({b.code})
+                                                        </MenuItem>
+                                                    ))}
+                                                </TextField>
+                                                {transferMaterialId && transferToBranchId && (
+                                                    <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <Chip
+                                                            size="small"
+                                                            label={`Current Stock: ${toStock} units`}
+                                                            color="default"
+                                                            variant="outlined"
+                                                            sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                                                        />
+                                                    </Box>
+                                                )}
+                                            </Grid>
+
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    type="number"
+                                                    label="Transfer Quantity"
+                                                    placeholder="Enter quantity"
+                                                    value={transferQuantity}
+                                                    onChange={(e) => setTransferQuantity(e.target.value)}
+                                                    inputProps={{ min: 0.1, step: "any" }}
+                                                    required
+                                                    helperText={
+                                                        parseFloat(transferQuantity) > fromStock
+                                                            ? `Warning: Exceeds available stock (${fromStock})`
+                                                            : `Max transferable: ${fromStock}`
+                                                    }
+                                                    error={parseFloat(transferQuantity) > fromStock}
+                                                />
+                                            </Grid>
+
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Notes / Reason (Optional)"
+                                                    placeholder="e.g. Stock balancing, rush order"
+                                                    value={transferNotes}
+                                                    onChange={(e) => setTransferNotes(e.target.value)}
+                                                />
+                                            </Grid>
+                                        </>
+                                    );
+                                })()}
+                            </Grid>
+                        </>
+                    ) : (
+                        <Box>
+                            {loadingTransfers ? (
+                                <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+                                    <CircularProgress size={32} />
+                                </Box>
+                            ) : materialTransfers.length === 0 ? (
+                                <Box sx={{ textAlign: "center", py: 5, color: "text.secondary" }}>
+                                    <Clock size={36} style={{ opacity: 0.4, marginBottom: 8 }} />
+                                    <Typography variant="body2">No transfer history recorded yet.</Typography>
+                                </Box>
+                            ) : (
+                                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 380 }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
+                                            <TableRow sx={{ bgcolor: "grey.50" }}>
+                                                <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>From Store</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>To Store</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }} align="right">Qty</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>By</TableCell>
+                                                <TableCell sx={{ fontWeight: 700 }}>Notes</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {materialTransfers.map((t) => (
+                                                <TableRow key={t.id} hover>
+                                                    <TableCell sx={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                                                        {new Date(t.createdAt).toLocaleDateString()}{" "}
+                                                        {new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: "0.82rem" }}>
+                                                        {t.material?.title || `#${t.materialId}`}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t.fromBranch?.name || `#${t.fromBranchId}`}
+                                                            sx={{ height: 20, fontSize: "0.7rem", bgcolor: "#fee2e2", color: "#991b1b" }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            size="small"
+                                                            label={t.toBranch?.name || `#${t.toBranchId}`}
+                                                            sx={{ height: 20, fontSize: "0.7rem", bgcolor: "#dcfce7", color: "#166534" }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ fontWeight: 700, color: "primary.main" }}>
+                                                        {t.quantity}
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.8rem" }}>
+                                                        {t.user?.fullName || "—"}
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.78rem", color: "text.secondary", maxWidth: 150 }}>
+                                                        {t.notes || "—"}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
+                    <Button
+                        onClick={() => setTransferDialogOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                        Close
+                    </Button>
+                    {transferTab === 0 && (
+                        <Button
+                            variant="contained"
+                            onClick={handleExecuteTransfer}
+                            disabled={transferLoading || !transferMaterialId || !transferFromBranchId || !transferToBranchId || !transferQuantity}
+                            startIcon={transferLoading ? null : <ArrowLeftRight size={17} />}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: "none",
+                                fontWeight: 600,
+                                px: 3,
+                                background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)",
+                                "&:hover": {
+                                    background: "linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)",
+                                },
+                            }}
+                        >
+                            {transferLoading ? <CircularProgress size={20} color="inherit" /> : "Transfer Stock"}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
 

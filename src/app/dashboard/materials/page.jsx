@@ -10,15 +10,31 @@ export const metadata = {
 };
 
 export default async function MaterialStockPage() {
-    const materials = await prisma.material.findMany({
-        orderBy: { createdAt: "desc" },
-    });
+    const [materials, branches] = await Promise.all([
+        prisma.material.findMany({
+            include: {
+                branchStocks: {
+                    include: { branch: { select: { id: true, name: true, code: true } } }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+        }),
+        prisma.branch.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, code: true },
+            orderBy: { name: "asc" }
+        })
+    ]);
 
     // Serialize Decimal objects for Client Component
     const serializedMaterials = materials.map(material => ({
         ...material,
         quantity: parseFloat(material.quantity.toString()),
         price: parseFloat(material.price.toString()),
+        branchStocks: (material.branchStocks || []).map(bs => ({
+            ...bs,
+            quantity: parseFloat(bs.quantity.toString())
+        }))
     }));
 
     return (
@@ -57,7 +73,7 @@ export default async function MaterialStockPage() {
             </Box>
 
             <Box sx={{ px: 3 }}>
-                <MaterialManagementClient initialMaterials={serializedMaterials} />
+                <MaterialManagementClient initialMaterials={serializedMaterials} branches={branches} />
             </Box>
         </Box>
     );

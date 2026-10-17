@@ -305,9 +305,14 @@ export default function ProductManagementClient({ initialProducts = [], initialB
             .replace(/>/g, "&gt;");
         const price = `Rs. ${parseFloat(printProduct.unitPrice || 0).toLocaleString()}`;
 
+        const activeBranch = (selectedBranchId && selectedBranchId !== "ALL")
+            ? branches.find(b => String(b.id) === String(selectedBranchId))
+            : (branches.find(b => b.id === session?.user?.branchId) || branches[0]);
+        const brandName = activeBranch?.name || "Grace Cloth & Tailors";
+
         const sticker = `
 <div class="sticker">
-  <div class="brand">Grace Cloth &amp; Tailors</div>
+  <div class="brand">${brandName}</div>
   <div class="pname">${safeName}</div>
   <div class="barcode-wrap">${barcodeSvg}</div>
   <div class="price">${price}</div>

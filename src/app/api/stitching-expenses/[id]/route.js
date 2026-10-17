@@ -6,7 +6,7 @@ export async function PUT(req, { params }) {
         const resolvedParams = await params;
         const id = parseInt(resolvedParams.id);
         const body = await req.json();
-        const { titleId, date, amount, description } = body;
+        const { titleId, date, amount, description, branchId } = body;
 
         if (!titleId || !date || !amount) {
             return NextResponse.json(
@@ -22,17 +22,24 @@ export async function PUT(req, { params }) {
             );
         }
 
+        const updateData = {
+            titleId: parseInt(titleId),
+            date: new Date(date),
+            amount: parseFloat(amount),
+            description: description || null,
+        };
+
+        if (branchId !== undefined) {
+            updateData.branchId = branchId ? parseInt(branchId) : null;
+        }
+
         const expense = await prisma.stitchingExpense.update({
             where: { id },
-            data: {
-                titleId: parseInt(titleId),
-                date: new Date(date),
-                amount: parseFloat(amount),
-                description: description || null,
-            },
+            data: updateData,
             include: {
                 title: { select: { id: true, name: true } },
                 addedByUser: { select: { id: true, fullName: true } },
+                branch: { select: { id: true, name: true, code: true } },
             },
         });
 
