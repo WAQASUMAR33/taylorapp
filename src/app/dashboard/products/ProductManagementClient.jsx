@@ -276,6 +276,27 @@ export default function ProductManagementClient({ initialProducts = [], initialB
     const [printProduct, setPrintProduct] = useState(null);
     const [printQty, setPrintQty] = useState(1);
     const [barcodeSvg, setBarcodeSvg] = useState("");
+    const [printBranchId, setPrintBranchId] = useState("");
+    const [printBrandTitle, setPrintBrandTitle] = useState("");
+
+    const getBranchBrandingTitle = (branchId) => {
+        const b = branches.find(item => String(item.id) === String(branchId));
+        let title = b?.name || "";
+        if (typeof window !== "undefined" && branchId) {
+            try {
+                const stored = localStorage.getItem("print_customization_" + branchId);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed?.name?.trim()) {
+                        title = parsed.name.trim();
+                    }
+                }
+            } catch (e) {
+                // ignore error
+            }
+        }
+        return title || b?.name || "Grace Cloth & Tailors";
+    };
 
     useEffect(() => {
         if (!printProduct) { setBarcodeSvg(""); return; }
@@ -286,7 +307,33 @@ export default function ProductManagementClient({ initialProducts = [], initialB
     const handlePrintLabel = (prod) => {
         setPrintProduct(prod);
         setPrintQty(1);
+
+        let branchIdToUse = "";
+        if (selectedBranchId && selectedBranchId !== "ALL") {
+            branchIdToUse = String(selectedBranchId);
+        } else if (session?.user?.branchId) {
+            branchIdToUse = String(session.user.branchId);
+        } else if (prod?.branchStocks) {
+            const stockBranchId = Object.keys(prod.branchStocks).find(bid => (prod.branchStocks[bid] || 0) > 0);
+            if (stockBranchId) {
+                branchIdToUse = String(stockBranchId);
+            }
+        }
+        if (!branchIdToUse && branches.length > 0) {
+            branchIdToUse = String(branches[0].id);
+        }
+
+        setPrintBranchId(branchIdToUse);
+        setPrintBrandTitle(getBranchBrandingTitle(branchIdToUse));
     };
+
+    useEffect(() => {
+        if (printProduct && !printBrandTitle && branches.length > 0) {
+            const branchIdToUse = printBranchId || (selectedBranchId !== "ALL" ? String(selectedBranchId) : "") || String(branches[0]?.id || "");
+            setPrintBranchId(branchIdToUse);
+            setPrintBrandTitle(getBranchBrandingTitle(branchIdToUse));
+        }
+    }, [branches, printProduct]);
 
     const closePrintDialog = () => {
         setPrintProduct(null);
@@ -305,10 +352,10 @@ export default function ProductManagementClient({ initialProducts = [], initialB
             .replace(/>/g, "&gt;");
         const price = `Rs. ${parseFloat(printProduct.unitPrice || 0).toLocaleString()}`;
 
-        const activeBranch = (selectedBranchId && selectedBranchId !== "ALL")
-            ? branches.find(b => String(b.id) === String(selectedBranchId))
-            : (branches.find(b => b.id === session?.user?.branchId) || branches[0]);
-        const brandName = activeBranch?.name || "Grace Cloth & Tailors";
+        const brandName = (printBrandTitle?.trim() || getBranchBrandingTitle(printBranchId) || "Grace Cloth & Tailors")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
 
         const sticker = `
 <div class="sticker">
@@ -891,23 +938,24 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                             <Card sx={{
                                 p: 2.5,
                                 background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                                color: "white",
+                                color: "#ffffff",
                                 borderRadius: 2.5,
-                                boxShadow: "0 6px 20px rgba(59, 130, 246, 0.2)",
+                                boxShadow: "0 6px 20px rgba(59, 130, 246, 0.25)",
+                                "& .MuiTypography-root": { color: "#ffffff" },
                             }}>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <Box>
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.9) !important", fontWeight: 600 }}>
                                             {selectedBranchId === "ALL" ? "Total Network Stock Quantity" : "Store Stock Quantity"}
                                         </Typography>
-                                        <Typography variant="h4" fontWeight="bold" sx={{ mt: 0.5 }}>
+                                        <Typography variant="h4" fontWeight="bold" sx={{ color: "#ffffff !important", mt: 0.5 }}>
                                             {totalStockQty.toLocaleString()} units
                                         </Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.8, display: "block", mt: 0.5 }}>
+                                        <Typography variant="caption" sx={{ color: "rgba(255, 255, 255, 0.8) !important", display: "block", mt: 0.5 }}>
                                             {filteredProducts.length} unique products
                                         </Typography>
                                     </Box>
-                                    <Package size={34} style={{ opacity: 0.8 }} />
+                                    <Package size={34} style={{ color: "#ffffff", opacity: 0.9 }} />
                                 </Box>
                             </Card>
                         </Grid>
@@ -915,23 +963,24 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                             <Card sx={{
                                 p: 2.5,
                                 background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
-                                color: "white",
+                                color: "#ffffff",
                                 borderRadius: 2.5,
-                                boxShadow: "0 6px 20px rgba(139, 92, 246, 0.2)",
+                                boxShadow: "0 6px 20px rgba(139, 92, 246, 0.25)",
+                                "& .MuiTypography-root": { color: "#ffffff" },
                             }}>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <Box>
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.9) !important", fontWeight: 600 }}>
                                             Total Stock Cost Value
                                         </Typography>
-                                        <Typography variant="h4" fontWeight="bold" sx={{ mt: 0.5 }}>
+                                        <Typography variant="h4" fontWeight="bold" sx={{ color: "#ffffff !important", mt: 0.5 }}>
                                             Rs. {totalStockCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.8, display: "block", mt: 0.5 }}>
+                                        <Typography variant="caption" sx={{ color: "rgba(255, 255, 255, 0.8) !important", display: "block", mt: 0.5 }}>
                                             Inventory purchase value
                                         </Typography>
                                     </Box>
-                                    <RefreshCw size={34} style={{ opacity: 0.8 }} />
+                                    <RefreshCw size={34} style={{ color: "#ffffff", opacity: 0.9 }} />
                                 </Box>
                             </Card>
                         </Grid>
@@ -939,23 +988,24 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                             <Card sx={{
                                 p: 2.5,
                                 background: "linear-gradient(135deg, #10b981 0%, #047857 100%)",
-                                color: "white",
+                                color: "#ffffff",
                                 borderRadius: 2.5,
-                                boxShadow: "0 6px 20px rgba(16, 185, 129, 0.2)",
+                                boxShadow: "0 6px 20px rgba(16, 185, 129, 0.25)",
+                                "& .MuiTypography-root": { color: "#ffffff" },
                             }}>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <Box>
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                        <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.9) !important", fontWeight: 600 }}>
                                             Total Stock Retail Value
                                         </Typography>
-                                        <Typography variant="h4" fontWeight="bold" sx={{ mt: 0.5 }}>
+                                        <Typography variant="h4" fontWeight="bold" sx={{ color: "#ffffff !important", mt: 0.5 }}>
                                             Rs. {totalStockSale.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.8, display: "block", mt: 0.5 }}>
+                                        <Typography variant="caption" sx={{ color: "rgba(255, 255, 255, 0.8) !important", display: "block", mt: 0.5 }}>
                                             Expected retail sales value
                                         </Typography>
                                     </Box>
-                                    <Tag size={34} style={{ opacity: 0.8 }} />
+                                    <Tag size={34} style={{ color: "#ffffff", opacity: 0.9 }} />
                                 </Box>
                             </Card>
                         </Grid>
@@ -2270,10 +2320,10 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
                         gap: 0.3,
                         overflow: "hidden",
                     }}>
-                        <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: "Arial, sans-serif", letterSpacing: 0.4, color: "#000" }}>
-                            Grace Cloth &amp; Tailors
+                        <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: "Arial, sans-serif", letterSpacing: 0.4, color: "#000", textAlign: "center", textTransform: "uppercase", px: 1 }}>
+                            {printBrandTitle || "Store Branding"}
                         </Typography>
-                        <Typography sx={{ fontSize: 12, fontWeight: 600, fontFamily: "Arial, sans-serif", color: "#000" }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600, fontFamily: "Arial, sans-serif", color: "#000", textAlign: "center", px: 1, lineHeight: 1.2 }}>
                             {printProduct?.name}
                         </Typography>
 
@@ -2296,16 +2346,49 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
 
                     <Divider sx={{ mb: 2 }} />
 
-                    <TextField
-                        label="Number of copies"
-                        type="number"
-                        size="small"
-                        value={printQty}
-                        onChange={(e) => setPrintQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        inputProps={{ min: 1, max: 200 }}
-                        sx={{ width: 170 }}
-                        variant="outlined"
-                    />
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {branches.length > 1 && (
+                            <FormControl fullWidth size="small">
+                                <InputLabel id="print-branch-select-label">Branch Branding</InputLabel>
+                                <Select
+                                    labelId="print-branch-select-label"
+                                    label="Branch Branding"
+                                    value={printBranchId}
+                                    onChange={(e) => {
+                                        const newBranchId = e.target.value;
+                                        setPrintBranchId(newBranchId);
+                                        setPrintBrandTitle(getBranchBrandingTitle(newBranchId));
+                                    }}
+                                >
+                                    {branches.map(b => (
+                                        <MenuItem key={b.id} value={String(b.id)}>
+                                            {b.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        )}
+
+                        <TextField
+                            label="Store / Brand Title on Label"
+                            size="small"
+                            fullWidth
+                            value={printBrandTitle}
+                            onChange={(e) => setPrintBrandTitle(e.target.value)}
+                            helperText="Loaded from branch branding; you can also customize it before printing."
+                        />
+
+                        <TextField
+                            label="Number of copies"
+                            type="number"
+                            size="small"
+                            value={printQty}
+                            onChange={(e) => setPrintQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            inputProps={{ min: 1, max: 200 }}
+                            sx={{ width: 170 }}
+                            variant="outlined"
+                        />
+                    </Box>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
