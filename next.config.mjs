@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
-  transpilePackages: ['@mui/x-charts'],
 };
 
 export default nextConfig;

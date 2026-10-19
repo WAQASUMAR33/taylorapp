@@ -42,7 +42,6 @@ import {
     Tabs,
     Tab,
 } from "@mui/material";
-import { BarChart, LineChart, PieChart } from "@mui/x-charts";
 
 /* ─── helpers ─────────────────────────────────────────────── */
 
@@ -271,6 +270,219 @@ function OverviewRow({ icon: Icon, gradient, label, value }) {
             <Typography variant="subtitle1" fontWeight={800} color="#0F172A">
                 {value}
             </Typography>
+        </Box>
+    );
+}
+
+/* ─── Native SVG Charts (Zero External Dependencies) ──────── */
+function TrendBarChart({ days = [], series = [], isCurrency = false, height = 310 }) {
+    if (!days.length || !series.length) return null;
+
+    const allValues = series.flatMap(s => s.data || []);
+    const rawMax = Math.max(...allValues, 10);
+    const stepCount = 4;
+    const roughStep = rawMax / stepCount;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep || 1)));
+    const step = Math.ceil(roughStep / magnitude) * magnitude;
+    const maxVal = step * stepCount;
+
+    const formatY = (val) => {
+        if (!isCurrency) return val.toLocaleString();
+        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
+        return val.toString();
+    };
+
+    const padLeft = isCurrency ? 65 : 45;
+    const padRight = 20;
+    const padTop = 20;
+    const padBottom = 35;
+    const chartWidth = 600;
+    const chartHeight = 280;
+    const plotWidth = chartWidth - padLeft - padRight;
+    const plotHeight = chartHeight - padTop - padBottom;
+
+    const groupWidth = plotWidth / days.length;
+    const numSeries = series.length;
+    const barWidth = Math.min(28, (groupWidth * 0.65) / numSeries);
+
+    return (
+        <Box sx={{ width: "100%", height, position: "relative" }}>
+            {series.length > 1 && (
+                <Box sx={{ display: "flex", gap: 3, mb: 1, pl: `${padLeft}px` }}>
+                    {series.map(s => (
+                        <Box key={s.label} sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                            <Box sx={{ width: 10, height: 10, bgcolor: s.color, borderRadius: 0 }} />
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: "#475569" }}>
+                                {s.label}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Box>
+            )}
+
+            <svg
+                width="100%"
+                height="100%"
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                preserveAspectRatio="none"
+                style={{ overflow: "visible" }}
+            >
+                {Array.from({ length: stepCount + 1 }).map((_, i) => {
+                    const val = step * (stepCount - i);
+                    const y = padTop + (plotHeight / stepCount) * i;
+                    return (
+                        <g key={i}>
+                            <line
+                                x1={padLeft}
+                                y1={y}
+                                x2={chartWidth - padRight}
+                                y2={y}
+                                stroke="rgba(226, 232, 240, 0.85)"
+                                strokeDasharray={i === stepCount ? "none" : "3 3"}
+                            />
+                            <text
+                                x={padLeft - 8}
+                                y={y + 4}
+                                textAnchor="end"
+                                fontSize="11"
+                                fill="#94A3B8"
+                                fontWeight="600"
+                            >
+                                {formatY(val)}
+                            </text>
+                        </g>
+                    );
+                })}
+
+                {days.map((day, dIdx) => {
+                    const groupCenterX = padLeft + (dIdx + 0.5) * groupWidth;
+                    const totalBarsWidth = numSeries * barWidth + (numSeries - 1) * 4;
+                    const startX = groupCenterX - totalBarsWidth / 2;
+
+                    return (
+                        <g key={day}>
+                            {series.map((s, sIdx) => {
+                                const val = s.data[dIdx] || 0;
+                                const barH = Math.max(0, (val / maxVal) * plotHeight);
+                                const barX = startX + sIdx * (barWidth + 4);
+                                const barY = padTop + plotHeight - barH;
+
+                                return (
+                                    <rect
+                                        key={s.label}
+                                        x={barX}
+                                        y={barY}
+                                        width={barWidth}
+                                        height={barH}
+                                        fill={s.color}
+                                        rx={0}
+                                        style={{ transition: "all 0.3s ease" }}
+                                    >
+                                        <title>{`${day} - ${s.label}: ${isCurrency ? `Rs. ${val.toLocaleString()}` : val}`}</title>
+                                    </rect>
+                                );
+                            })}
+
+                            <text
+                                x={groupCenterX}
+                                y={chartHeight - 12}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fill="#64748B"
+                                fontWeight="700"
+                            >
+                                {day}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
+        </Box>
+    );
+}
+
+function StatusDonutChart({ data = [], height = 210 }) {
+    const total = data.reduce((acc, curr) => acc + (curr.value || 0), 0);
+    const size = 200;
+    const center = size / 2;
+    const outerRadius = 80;
+    const innerRadius = 50;
+
+    if (total === 0) {
+        return (
+            <Box sx={{ p: 4, textAlign: "center" }}>
+                <Typography variant="body2" color="text.secondary">No data recorded</Typography>
+            </Box>
+        );
+    }
+
+    let accumulatedAngle = 0;
+    const slices = data.filter(d => (d.value || 0) > 0).map((d) => {
+        const angle = (d.value / total) * 360;
+        const startAngle = accumulatedAngle;
+        const endAngle = accumulatedAngle + angle;
+        accumulatedAngle += angle;
+
+        const startRad = ((startAngle - 90) * Math.PI) / 180;
+        const endRad = ((endAngle - 90) * Math.PI) / 180;
+
+        const x1 = center + outerRadius * Math.cos(startRad);
+        const y1 = center + outerRadius * Math.sin(startRad);
+        const x2 = center + outerRadius * Math.cos(endRad);
+        const y2 = center + outerRadius * Math.sin(endRad);
+
+        const x3 = center + innerRadius * Math.cos(endRad);
+        const y3 = center + innerRadius * Math.sin(endRad);
+        const x4 = center + innerRadius * Math.cos(startRad);
+        const y4 = center + innerRadius * Math.sin(startRad);
+
+        const largeArc = angle > 180 ? 1 : 0;
+
+        const pathData = angle >= 359.99
+            ? `M ${center - outerRadius} ${center} A ${outerRadius} ${outerRadius} 0 1 0 ${center + outerRadius} ${center} A ${outerRadius} ${outerRadius} 0 1 0 ${center - outerRadius} ${center} M ${center - innerRadius} ${center} A ${innerRadius} ${innerRadius} 0 1 1 ${center + innerRadius} ${center} A ${innerRadius} ${innerRadius} 0 1 1 ${center - innerRadius} ${center}`
+            : `M ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+
+        return {
+            ...d,
+            pathData,
+            percentage: ((d.value / total) * 100).toFixed(0),
+        };
+    });
+
+    return (
+        <Box sx={{ width: "100%", height, display: "flex", justifyContent: "center", alignItems: "center", position: "relative" }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
+                {slices.map((slice, idx) => (
+                    <path
+                        key={slice.id || slice.label || idx}
+                        d={slice.pathData}
+                        fill={slice.color}
+                        stroke="#ffffff"
+                        strokeWidth="1.5"
+                        style={{
+                            transition: "all 0.2s ease",
+                            cursor: "pointer",
+                        }}
+                    >
+                        <title>{`${slice.label}: ${slice.value} (${slice.percentage}%)`}</title>
+                    </path>
+                ))}
+            </svg>
+            <Box
+                sx={{
+                    position: "absolute",
+                    textAlign: "center",
+                    pointerEvents: "none",
+                }}
+            >
+                <Typography variant="h5" sx={{ fontWeight: 800, color: "#0F172A", lineHeight: 1 }}>
+                    {total}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 700, fontSize: "0.65rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    Total
+                </Typography>
+            </Box>
         </Box>
     );
 }
@@ -600,25 +812,23 @@ export default function DashboardClient({ statsData, recentOrders, session, bran
                                 </Box>
                             ) : activeChartTab === 0 ? (
                                 <Box sx={{ width: "100%", height: 320 }}>
-                                    <BarChart
-                                        xAxis={[{ scaleType: "band", data: chartDays }]}
+                                    <TrendBarChart
+                                        days={chartDays}
                                         series={[
                                             {
                                                 data: chartRevenues,
                                                 label: "Revenue (PKR)",
                                                 color: "#2563EB",
-                                                valueFormatter: (v) => `Rs. ${(v || 0).toLocaleString()}`,
                                             },
                                         ]}
+                                        isCurrency={true}
                                         height={310}
-                                        margin={{ left: 65, right: 20, top: 20, bottom: 30 }}
-                                        borderRadius={0}
                                     />
                                 </Box>
                             ) : (
                                 <Box sx={{ width: "100%", height: 320 }}>
-                                    <BarChart
-                                        xAxis={[{ scaleType: "band", data: chartDays }]}
+                                    <TrendBarChart
+                                        days={chartDays}
                                         series={[
                                             {
                                                 data: chartOrders,
@@ -631,9 +841,8 @@ export default function DashboardClient({ statsData, recentOrders, session, bran
                                                 color: "#10B981",
                                             },
                                         ]}
+                                        isCurrency={false}
                                         height={310}
-                                        margin={{ left: 45, right: 20, top: 20, bottom: 30 }}
-                                        borderRadius={0}
                                     />
                                 </Box>
                             )}
@@ -659,23 +868,9 @@ export default function DashboardClient({ statsData, recentOrders, session, bran
                             ) : (
                                 <Box sx={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
                                     <Box sx={{ width: "100%", height: 220 }}>
-                                        <PieChart
-                                            series={[
-                                                {
-                                                    data: statusDistribution,
-                                                    innerRadius: 48,
-                                                    outerRadius: 85,
-                                                    paddingAngle: 2,
-                                                    cornerRadius: 0,
-                                                    highlightScope: { fade: "global", highlight: "item" },
-                                                    faded: { innerRadius: 30, additionalRadius: -30, color: "gray" },
-                                                },
-                                            ]}
+                                        <StatusDonutChart
+                                            data={statusDistribution}
                                             height={210}
-                                            margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            slotProps={{
-                                                legend: { hidden: true },
-                                            }}
                                         />
                                     </Box>
 
