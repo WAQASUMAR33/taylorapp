@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import ReceivingTransactionsClient from "./ReceivingTransactionsClient";
 import { Box, CircularProgress } from "@mui/material";
 import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
@@ -12,6 +15,8 @@ export const metadata = {
 };
 
 export default async function ReceivingTransactionsPage() {
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -39,6 +44,7 @@ export default async function ReceivingTransactionsPage() {
     try {
         const limit = 12;
         const baseWhere = {
+            ...(bid !== null ? { branchId: bid } : {}),
             customer: {
                 name: { not: "Cash Account" }
             },
@@ -200,7 +206,7 @@ export default async function ReceivingTransactionsPage() {
                     </Box>
                 }
             >
-                <ReceivingTransactionsClient initialData={initialData} branches={branches} />
+                <ReceivingTransactionsClient initialData={initialData} branches={filterBranches(session, branches)} />
             </Suspense>
         </Box>
     );

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam } from "@/lib/branchScope";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(request) {
         }
 
         const { searchParams } = new URL(request.url);
-        const branchIdParam = searchParams.get("branchId");
+        const branchIdParam = scopeBranchParam(session, searchParams.get("branchId"));
         const branchId = branchIdParam && branchIdParam !== "ALL" ? parseInt(branchIdParam) : null;
 
         const now = new Date();

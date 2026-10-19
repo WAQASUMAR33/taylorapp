@@ -1,4 +1,7 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId } from "@/lib/branchScope";
 import CustomerManagementClient from "./CustomerManagementClient";
 import { Box, Typography } from "@mui/material";
 import { Users } from "lucide-react";
@@ -38,6 +41,11 @@ export default async function CustomersPage() {
             }
         ]
     };
+
+    const scopedBranchId = getScopedBranchId(await getServerSession(authOptions));
+    if (scopedBranchId !== null) {
+        where.AND.push({ branchId: scopedBranchId });
+    }
 
     const customers = await prisma.customer.findMany({
         where,

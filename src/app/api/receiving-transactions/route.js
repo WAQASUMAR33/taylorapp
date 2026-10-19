@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { scopeBranchParam } from "@/lib/branchScope";
 import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
 
 export async function GET(req) {
@@ -13,7 +16,7 @@ export async function GET(req) {
         const dateTo = searchParams.get("dateTo") || "";
         const sortBy = searchParams.get("sortBy") || "date";
         const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
-        const branchIdParam = searchParams.get("branchId");
+        const branchIdParam = scopeBranchParam(await getServerSession(authOptions), searchParams.get("branchId"));
 
         const skip = Math.max(0, (page - 1) * limit);
 

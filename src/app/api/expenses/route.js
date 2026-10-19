@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam } from "@/lib/branchScope";
 
 export async function GET(req) {
     try {
@@ -10,7 +11,7 @@ export async function GET(req) {
         const dateFrom = searchParams.get("dateFrom");
         const dateTo = searchParams.get("dateTo");
 
-        const branchId = searchParams.get("branchId");
+        const branchId = scopeBranchParam(await getServerSession(authOptions), searchParams.get("branchId"));
 
         const where = {};
         if (title) {
@@ -66,7 +67,9 @@ export async function POST(req) {
             );
         }
 
-        const resolvedBranchId = branchId && branchId !== "ALL"
+        const resolvedBranchId = (session?.user?.role !== "ADMIN" && session?.user?.branchId)
+            ? parseInt(session.user.branchId)
+            : branchId && branchId !== "ALL"
             ? parseInt(branchId)
             : (session?.user?.branchId ? parseInt(session.user.branchId) : null);
 

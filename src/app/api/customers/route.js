@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getScopedBranchId, writeBranchId } from "@/lib/branchScope";
 
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         const body = await req.json();
         const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
-        const branchId = body.branchId ? parseInt(body.branchId) : (session?.user?.branchId || 1);
+        const branchId = writeBranchId(session, body.branchId) || 1;
 
         if (!name) {
             return NextResponse.json(
@@ -163,6 +164,13 @@ export async function GET(req) {
                     { code: { contains: search } }
                 ]
             });
+        }
+
+        const scopedBranchId = getScopedBranchId(await getServerSession(authOptions));
+        if (scopedBranchId !== null) {
+            where.AND.push({ branchId: scopedBranchId });
+        } else if (searchParams.get("branchId") && searchParams.get("branchId") !== "ALL") {
+            where.AND.push({ branchId: parseInt(searchParams.get("branchId")) });
         }
 
         if (nameFilter) {

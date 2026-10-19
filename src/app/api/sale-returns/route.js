@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam, writeBranchId } from "@/lib/branchScope";
 
 // GET - Retrieve all sale returns
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const branchId = searchParams.get("branchId");
+        const branchId = scopeBranchParam(await getServerSession(authOptions), searchParams.get("branchId"));
 
         const where = {};
         if (branchId && branchId !== "ALL") {
@@ -50,7 +51,7 @@ export async function POST(req) {
             return NextResponse.json({ error: "Customer, total amount, and items are required" }, { status: 400 });
         }
 
-        const resolvedBranchId = branchId ? parseInt(branchId) : (session?.user?.branchId || 1);
+        const resolvedBranchId = writeBranchId(session, branchId) || 1;
 
         const result = await prisma.$transaction(async (tx) => {
             // Generate sequential return number RET-YYYYMM-NNNN

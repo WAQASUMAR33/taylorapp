@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import LedgerManagementClient from "./LedgerManagementClient";
 import { Container, Box, Typography } from "@mui/material";
 import { BookText } from "lucide-react";
@@ -11,6 +14,8 @@ export const metadata = {
 };
 
 export default async function LedgerPage() {
+    const session = await getServerSession(authOptions);
+    const scoped = getScopedBranchId(session) !== null;
     let serializedEntries = [];
     let serializedCustomers = [];
     let totalCount = 0;
@@ -258,11 +263,11 @@ export default async function LedgerPage() {
 
             <Suspense fallback={<div>Loading...</div>}>
                 <LedgerManagementClient 
-                    initialEntries={serializedEntries} 
-                    initialCustomers={serializedCustomers}
-                    initialTotalCount={totalCount}
-                    initialTotals={initialTotals}
-                    branches={branches}
+                    initialEntries={scoped ? [] : serializedEntries} 
+                    initialCustomers={scoped ? [] : serializedCustomers}
+                    initialTotalCount={scoped ? 0 : totalCount}
+                    initialTotals={scoped ? { debit: 0, credit: 0 } : initialTotals}
+                    branches={filterBranches(session, branches)}
                 />
             </Suspense>
         </Box>

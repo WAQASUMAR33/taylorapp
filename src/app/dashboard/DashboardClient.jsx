@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
     Users,
     Scissors,
@@ -279,7 +279,9 @@ function OverviewRow({ icon: Icon, gradient, label, value }) {
 
 /* ─── Main Dashboard Client Component ─────────────────────── */
 export default function DashboardClient({ statsData, recentOrders, session, branches = [], initialChartData = {} }) {
-    const [selectedBranchId, setSelectedBranchId] = useState("ALL");
+    const isAdminUser = session?.user?.role === "ADMIN";
+    const ownBranchId = session?.user?.branchId ? String(session.user.branchId) : null;
+    const [selectedBranchId, setSelectedBranchId] = useState(isAdminUser ? "ALL" : (ownBranchId || "ALL"));
     const [currentStats, setCurrentStats] = useState(statsData);
     const [currentRecentOrders, setCurrentRecentOrders] = useState(recentOrders);
     const [chartData, setChartData] = useState(initialChartData);
@@ -305,6 +307,14 @@ export default function DashboardClient({ statsData, recentOrders, session, bran
             setLoadingStats(false);
         }
     }, []);
+
+    // Non-admin users: load stats for their own branch only (server enforces this too)
+    useEffect(() => {
+        if (!isAdminUser) {
+            handleBranchChange(ownBranchId || "ALL");
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAdminUser, ownBranchId]);
 
     const selectedBranchObj = branches.find((b) => b.id.toString() === selectedBranchId.toString());
 
@@ -426,7 +436,7 @@ export default function DashboardClient({ statsData, recentOrders, session, bran
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
                     {/* Branch Switcher Select */}
-                    {branches.length > 0 && (
+                    {isAdminUser && branches.length > 0 && (
                         <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
                                 value={selectedBranchId}

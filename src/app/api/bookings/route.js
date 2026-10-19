@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam } from "@/lib/branchScope";
 
 // ── Account helpers ───────────────────────────────────────────────────────────
 async function getOrCreateCashAccount(tx) {
@@ -225,7 +226,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         const customerId = searchParams.get("customerId");
-        const branchId = searchParams.get("branchId");
+        const branchId = scopeBranchParam(session, searchParams.get("branchId"));
         const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
         const dateTo = searchParams.get("dateTo") || searchParams.get("to");
         const deliveryFrom = searchParams.get("deliveryFrom");
@@ -409,7 +410,9 @@ export async function POST(req) {
             hasFrontPockets
         } = body;
 
-        const resolvedBranchId = (reqBranchId && !isNaN(parseInt(reqBranchId)) && parseInt(reqBranchId) > 0)
+        const resolvedBranchId = (session?.user?.role !== "ADMIN" && session?.user?.branchId)
+            ? parseInt(session.user.branchId)
+            : (reqBranchId && !isNaN(parseInt(reqBranchId)) && parseInt(reqBranchId) > 0)
             ? parseInt(reqBranchId)
             : (session?.user?.branchId ? parseInt(session.user.branchId) : 1);
         const resolvedPaymentMethod = paymentMethod || 'CASH';

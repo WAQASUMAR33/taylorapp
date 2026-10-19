@@ -1,4 +1,7 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import SaleReturnsClient from "./SaleReturnsClient";
 import { Box, Typography } from "@mui/material";
 import { RotateCcw } from "lucide-react";
@@ -11,8 +14,11 @@ export const metadata = {
 };
 
 export default async function SaleReturnsPage() {
-    const [returns, customers, products, banks, branches] = await Promise.all([
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
+    const [returns, customers, products, banks, allBranches] = await Promise.all([
         prisma.sale_return.findMany({
+            where: bid !== null ? { branchId: bid } : undefined,
             include: {
                 customer: { select: { id: true, name: true, phone: true, address: true } },
                 bank: { select: { id: true, name: true } },
@@ -26,6 +32,7 @@ export default async function SaleReturnsPage() {
             orderBy: { returnDate: "desc" }
         }),
         prisma.customer.findMany({
+            where: bid !== null ? { branchId: bid } : undefined,
             select: { id: true, name: true, phone: true, address: true },
             orderBy: { name: "asc" }
         }),
@@ -89,7 +96,7 @@ export default async function SaleReturnsPage() {
                 customers={customers} 
                 products={serializedProducts} 
                 banks={banks} 
-                branches={branches}
+                branches={filterBranches(session, allBranches)}
             />
         </Box>
     );

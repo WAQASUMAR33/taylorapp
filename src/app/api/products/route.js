@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
+import { getScopedBranchId } from "@/lib/branchScope";
 
 export async function GET(req) {
     try {
@@ -35,6 +36,14 @@ export async function GET(req) {
                 include: { category: true },
                 orderBy: { name: "asc" },
             });
+        }
+
+        const scopedBranchId = getScopedBranchId(session);
+        if (scopedBranchId !== null) {
+            products = products.map((p) => ({
+                ...p,
+                branchStocks: (p.branchStocks || []).filter((bs) => bs.branchId === scopedBranchId),
+            }));
         }
 
         return NextResponse.json(products);

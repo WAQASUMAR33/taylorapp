@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam, writeBranchId } from "@/lib/branchScope";
 
 async function getOrCreateCashAccount(tx) {
     let acc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
@@ -55,7 +56,7 @@ export async function GET(req) {
             where.customerId = parseInt(customerId);
         }
 
-        const branchId = searchParams.get("branchId");
+        const branchId = scopeBranchParam(await getServerSession(authOptions), searchParams.get("branchId"));
         if (branchId && branchId !== "ALL") {
             const bId = parseInt(branchId);
             if (!isNaN(bId)) {
@@ -363,7 +364,7 @@ export async function POST(req) {
         const session = await getServerSession(authOptions);
         const body = await req.json();
         const { customerId, type, amount, description, purchaseId, bookingId, paymentMethod, bankId, entryDate, branchId: reqBranchId } = body;
-        const branchId = reqBranchId ? parseInt(reqBranchId) : (session?.user?.branchId || 1);
+        const branchId = writeBranchId(session, reqBranchId) || 1;
 
         if (!customerId || !type || !amount) {
             return NextResponse.json(

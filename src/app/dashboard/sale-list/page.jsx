@@ -1,4 +1,7 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import SaleListClient from "./SaleListClient";
 import { Box, Typography } from "@mui/material";
 import { ClipboardList } from "lucide-react";
@@ -11,10 +14,13 @@ export const metadata = {
 };
 
 export default async function SaleListPage() {
-    const [bookings, branches] = await Promise.all([
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
+    const [bookings, allBranches] = await Promise.all([
         prisma.booking.findMany({
             where: {
-                items: { some: { productId: { not: null } } }
+                items: { some: { productId: { not: null } } },
+                ...(bid !== null ? { branchId: bid } : {})
             },
             include: {
                 customer: { select: { id: true, name: true, phone: true, address: true } },
@@ -88,7 +94,7 @@ export default async function SaleListPage() {
                 </Box>
             </Box>
 
-            <SaleListClient initialBills={bills} branches={branches} />
+            <SaleListClient initialBills={bills} branches={filterBranches(session, allBranches)} />
         </Box>
     );
 }

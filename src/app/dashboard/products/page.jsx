@@ -5,6 +5,7 @@ import { PackageSearch } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { getScopedBranchId } from "@/lib/branchScope";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -67,10 +68,19 @@ export default async function ProductManagementPage() {
         redirect("/login");
     }
 
-    const [products, branches] = await Promise.all([
+    let [products, branches] = await Promise.all([
         getProducts(),
         getBranches(),
     ]);
+
+    const bid = getScopedBranchId(session);
+    if (bid !== null) {
+        branches = branches.filter((b) => b.id === bid);
+        products = products.map((p) => ({
+            ...p,
+            branchStocks: (p.branchStocks || []).filter((bs) => bs.branchId === bid),
+        }));
+    }
 
     return (
         <Box sx={{ width: '100%' }}>

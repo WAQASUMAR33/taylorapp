@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import StitchingExpenseClient from "./StitchingExpenseClient";
 import { Box, Typography } from "@mui/material";
 import { Receipt } from "lucide-react";
@@ -12,8 +15,11 @@ export const metadata = {
 };
 
 export default async function StitchingExpensesPage() {
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
     const [expenses, titles, branches] = await Promise.all([
         prisma.stitchingExpense.findMany({
+            where: bid !== null ? { branchId: bid } : undefined,
             include: {
                 title: { select: { id: true, name: true } },
                 addedByUser: { select: { id: true, fullName: true } },
@@ -41,7 +47,7 @@ export default async function StitchingExpensesPage() {
     }));
 
     const serializedTitles = JSON.parse(JSON.stringify(titles));
-    const serializedBranches = JSON.parse(JSON.stringify(branches));
+    const serializedBranches = JSON.parse(JSON.stringify(filterBranches(session, branches)));
 
     return (
         <Box sx={{ width: "100%" }}>

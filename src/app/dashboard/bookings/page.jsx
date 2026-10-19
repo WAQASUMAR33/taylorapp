@@ -98,9 +98,10 @@ async function getBookings(branchId = null) {
     }
 }
 
-async function getCustomers() {
+async function getCustomers(branchId = null) {
     try {
         const customers = await prisma.customer.findMany({
+            where: branchId ? { branchId: parseInt(branchId) } : undefined,
             orderBy: { name: "asc" },
             take: 100,
             select: {
@@ -199,12 +200,13 @@ export default async function BookingsPage() {
     const session = await getServerSession(authOptions);
     const isAdmin = session?.user?.role === "ADMIN";
     const userBranchId = session?.user?.branchId;
-    const branches = await getBranches();
+    const allBranches = await getBranches();
+    const branches = isAdmin ? allBranches : allBranches.filter((b) => b.id === parseInt(userBranchId));
     const initialBranchFilter = userBranchId || (branches[0]?.id || null);
 
     const [bookings, customers, products, employees, stitchingOptions, banks] = await Promise.all([
         getBookings(initialBranchFilter),
-        getCustomers(),
+        getCustomers(isAdmin ? null : (userBranchId || -1)),
         getProducts(),
         getStaffCustomers(),
         getStitchingOptions(),

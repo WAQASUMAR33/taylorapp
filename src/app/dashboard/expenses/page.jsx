@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import ExpenseManagementClient from "./ExpenseManagementClient";
 import { Box, Typography } from "@mui/material";
 import { Receipt } from "lucide-react";
@@ -11,8 +14,11 @@ export const metadata = {
 };
 
 export default async function ExpensesPage() {
-    const [expenses, branches] = await Promise.all([
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
+    const [expenses, allBranches] = await Promise.all([
         prisma.expense.findMany({
+            where: bid !== null ? { branchId: bid } : undefined,
             include: {
                 addedByUser: { select: { id: true, fullName: true } },
                 branch: { select: { id: true, name: true, code: true } },
@@ -75,7 +81,7 @@ export default async function ExpensesPage() {
             </Box>
 
             <Suspense fallback={<div>Loading...</div>}>
-                <ExpenseManagementClient initialExpenses={serialized} branches={branches} />
+                <ExpenseManagementClient initialExpenses={serialized} branches={filterBranches(session, allBranches)} />
             </Suspense>
         </Box>
     );

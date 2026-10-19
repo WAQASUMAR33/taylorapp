@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { scopeBranchParam, writeBranchId } from "@/lib/branchScope";
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const titleId = searchParams.get("titleId");
-        const branchId = searchParams.get("branchId");
+        const branchId = scopeBranchParam(await getServerSession(authOptions), searchParams.get("branchId"));
         const dateFrom = searchParams.get("dateFrom");
         const dateTo = searchParams.get("dateTo");
 
@@ -73,7 +74,7 @@ export async function POST(req) {
             );
         }
 
-        const resolvedBranchId = branchId ? parseInt(branchId) : (session?.user?.branchId || 1);
+        const resolvedBranchId = writeBranchId(session, branchId) || 1;
 
         const expense = await prisma.stitchingExpense.create({
             data: {

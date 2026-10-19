@@ -1,4 +1,7 @@
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import MaterialManagementClient from "./MaterialManagementClient";
 import { Box, Typography } from "@mui/material";
 import { Boxes } from "lucide-react";
@@ -10,6 +13,8 @@ export const metadata = {
 };
 
 export default async function MaterialStockPage() {
+    const session = await getServerSession(authOptions);
+    const bid = getScopedBranchId(session);
     const [materials, branches] = await Promise.all([
         prisma.material.findMany({
             include: {
@@ -29,9 +34,11 @@ export default async function MaterialStockPage() {
     // Serialize Decimal objects for Client Component
     const serializedMaterials = materials.map(material => ({
         ...material,
-        quantity: parseFloat(material.quantity.toString()),
+        quantity: bid === null
+            ? parseFloat(material.quantity.toString())
+            : parseFloat(((material.branchStocks || []).find((bs) => bs.branchId === bid)?.quantity ?? 0).toString()),
         price: parseFloat(material.price.toString()),
-        branchStocks: (material.branchStocks || []).map(bs => ({
+        branchStocks: (material.branchStocks || []).filter((bs) => bid === null || bs.branchId === bid).map(bs => ({
             ...bs,
             quantity: parseFloat(bs.quantity.toString())
         }))
@@ -73,7 +80,7 @@ export default async function MaterialStockPage() {
             </Box>
 
             <Box sx={{ px: 3 }}>
-                <MaterialManagementClient initialMaterials={serializedMaterials} branches={branches} />
+                <MaterialManagementClient initialMaterials={serializedMaterials} branches={filterBranches(session, branches)} />
             </Box>
         </Box>
     );
