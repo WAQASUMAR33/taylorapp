@@ -85,7 +85,7 @@ export default function BranchManagementClient({ initialBranches }) {
     const refreshBranches = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/branches");
+            const res = await fetch("/api/branches", { cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
                 setBranches(data);
@@ -187,6 +187,9 @@ export default function BranchManagementClient({ initialBranches }) {
                 throw new Error(data.error || "Failed to save branch");
             }
 
+            if (editingBranch) {
+                setBranches((prev) => prev.map((b) => (b.id === data.id ? { ...b, ...data } : b)));
+            }
             setSuccessMessage(editingBranch ? "Branch updated successfully!" : "Branch created successfully!");
             setDialogOpen(false);
             await refreshBranches();
@@ -253,50 +256,110 @@ export default function BranchManagementClient({ initialBranches }) {
                     {
                         label: "Total Branches",
                         value: totalBranches,
-                        gradient: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                        shadow: "rgba(99, 102, 241, 0.3)",
-                        icon: <Building2 size={30} style={{ opacity: 0.85 }} />,
+                        color: "#2563eb",
+                        bg: "#eff6ff",
+                        borderColor: "#bfdbfe",
+                        icon: <Building2 size={24} />,
                     },
                     {
                         label: "Active Branches",
                         value: activeBranches,
-                        gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                        shadow: "rgba(16, 185, 129, 0.3)",
-                        icon: <CheckCircle2 size={30} style={{ opacity: 0.85 }} />,
+                        color: "#059669",
+                        bg: "#ecfdf5",
+                        borderColor: "#a7f3d0",
+                        icon: <CheckCircle2 size={24} />,
                     },
                     {
                         label: "Staff Across Branches",
                         value: totalUsers,
-                        gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                        shadow: "rgba(59, 130, 246, 0.3)",
-                        icon: <Users size={30} style={{ opacity: 0.85 }} />,
+                        color: "#7c3aed",
+                        bg: "#f5f3ff",
+                        borderColor: "#ddd6fe",
+                        icon: <Users size={24} />,
                     },
                     {
                         label: "Central Bookings Recorded",
                         value: totalBookings,
-                        gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-                        shadow: "rgba(139, 92, 246, 0.3)",
-                        icon: <Calendar size={30} style={{ opacity: 0.85 }} />,
+                        color: "#d97706",
+                        bg: "#fffbeb",
+                        borderColor: "#fde68a",
+                        icon: <Calendar size={24} />,
                     },
-                ].map(({ label, value, gradient, shadow, icon }) => (
+                ].map(({ label, value, color, bg, borderColor, icon }) => (
                     <Grid key={label} size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{
-                            p: 2.5,
-                            background: gradient,
-                            color: "white",
-                            borderRadius: 3,
-                            boxShadow: `0 8px 24px ${shadow}`,
-                        }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Card
+                            elevation={0}
+                            sx={{
+                                p: 2.5,
+                                bgcolor: "#ffffff",
+                                borderRadius: 2.5,
+                                border: "1px solid",
+                                borderColor: "rgba(226, 232, 240, 0.9)",
+                                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.04)",
+                                position: "relative",
+                                overflow: "hidden",
+                                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                "&:hover": {
+                                    transform: "translateY(-2px)",
+                                    boxShadow: "0 8px 20px -4px rgba(0, 0, 0, 0.08)",
+                                    borderColor: color,
+                                },
+                                "&::before": {
+                                    content: '""',
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 3,
+                                    bgcolor: color,
+                                }
+                            }}
+                        >
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <Box>
-                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600, fontSize: "0.85rem" }}>
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: "#64748b",
+                                            fontWeight: 700,
+                                            fontSize: "0.75rem",
+                                            letterSpacing: "0.04em",
+                                            textTransform: "uppercase",
+                                            display: "block",
+                                            mb: 0.5,
+                                        }}
+                                    >
                                         {label}
                                     </Typography>
-                                    <Typography variant="h4" fontWeight="bold" sx={{ mt: 0.5 }}>
+                                    <Typography
+                                        variant="h4"
+                                        sx={{
+                                            fontWeight: 800,
+                                            color: "#0f172a",
+                                            letterSpacing: "-0.02em",
+                                            lineHeight: 1.2,
+                                        }}
+                                    >
                                         {value}
                                     </Typography>
                                 </Box>
-                                {icon}
+                                <Box
+                                    sx={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 2,
+                                        bgcolor: bg,
+                                        color: color,
+                                        border: `1px solid ${borderColor}`,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                                    }}
+                                >
+                                    {icon}
+                                </Box>
                             </Box>
                         </Card>
                     </Grid>

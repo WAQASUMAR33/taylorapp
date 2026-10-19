@@ -463,68 +463,105 @@ export default function LedgerManagementClient({
     return (
         <Box sx={{ width: "100%", p: 3 }}>
 
-            {/* ── Summary Cards ──────────────────────────── */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-                {[
-                    {
-                        label: "Total Debit",
-                        value: totals.debit,
-                        gradient: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
-                        shadow: "rgba(59,130,246,0.3)",
-                        icon: <TrendingUp size={32} style={{ opacity: 0.8 }} />,
-                    },
-                    {
-                        label: "Total Credit",
-                        value: totals.credit,
-                        gradient: "linear-gradient(135deg, #f87171 0%, #ef4444 100%)",
-                        shadow: "rgba(239,68,68,0.3)",
-                        icon: <TrendingDown size={32} style={{ opacity: 0.8 }} />,
-                    },
-                    {
-                        label: "Today Received",
-                        value: totals.todayReceived || 0,
-                        gradient: "linear-gradient(135deg, #34d399 0%, #059669 100%)",
-                        shadow: "rgba(16,185,129,0.3)",
-                        icon: <ArrowDownLeft size={32} style={{ opacity: 0.8 }} />,
-                    },
-                    {
-                        label: "Today Payments",
-                        value: totals.todayPayments || 0,
-                        gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 100%)",
-                        shadow: "rgba(234,88,12,0.3)",
-                        icon: <ArrowUpRight size={32} style={{ opacity: 0.8 }} />,
-                    },
-                    {
-                        label: filterCustomer ? `${filterCustomer.name} — Balance` : "Current Balance",
-                        value: balance,
-                        gradient: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)",
-                        shadow: "rgba(124,58,237,0.3)",
-                        icon: <BookText size={32} style={{ opacity: 0.8 }} />,
-                    },
-                ].map(({ label, value, gradient, shadow, icon }) => (
-                    <Grid key={label} size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <Card sx={{
-                            p: 2.5,
-                            background: gradient,
-                            color: "white",
-                            borderRadius: 3,
-                            boxShadow: `0 8px 30px ${shadow}`,
-                        }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Box>
-                                    <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600, fontSize: "0.82rem" }}>
-                                        {label}
-                                    </Typography>
-                                    <Typography variant="h5" fontWeight="bold" sx={{ mt: 0.5 }}>
-                                        Rs. {(value || 0).toLocaleString()}
-                                    </Typography>
+            {/* ── Summary Cards (Admin Only) ──────────────────────────── */}
+            {isAdmin && (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                    {[
+                        {
+                            label: "Total Debit",
+                            value: totals.debit,
+                            gradient: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                            shadow: "rgba(59,130,246,0.35)",
+                            icon: <TrendingUp size={30} />,
+                        },
+                        {
+                            label: "Total Credit",
+                            value: totals.credit,
+                            gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                            shadow: "rgba(239,68,68,0.35)",
+                            icon: <TrendingDown size={30} />,
+                        },
+                        {
+                            label: "Today Received",
+                            value: totals.todayReceived || 0,
+                            gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                            shadow: "rgba(16,185,129,0.35)",
+                            icon: <ArrowDownLeft size={30} />,
+                        },
+                        {
+                            label: "Today Payments",
+                            value: totals.todayPayments || 0,
+                            gradient: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            shadow: "rgba(234,88,12,0.35)",
+                            icon: <ArrowUpRight size={30} />,
+                        },
+                        {
+                            label: filterCustomer ? `${filterCustomer.name} — Balance` : "Current Balance",
+                            value: balance,
+                            gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                            shadow: "rgba(124,58,237,0.35)",
+                            icon: <BookText size={30} />,
+                        },
+                    ].map(({ label, value, gradient, shadow, icon }) => (
+                        <Grid key={label} size={{ xs: 12, sm: 6, md: 2.4 }}>
+                            <Card sx={{
+                                p: 2.5,
+                                background: gradient,
+                                color: "#ffffff",
+                                borderRadius: 3,
+                                boxShadow: `0 8px 24px ${shadow}`,
+                                position: "relative",
+                                overflow: "hidden",
+                                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                "&:hover": {
+                                    transform: "translateY(-2px)",
+                                    boxShadow: `0 12px 28px ${shadow}`,
+                                }
+                            }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Box>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: "rgba(255, 255, 255, 0.92)",
+                                                fontWeight: 600,
+                                                fontSize: "0.82rem",
+                                                letterSpacing: "0.02em",
+                                                textTransform: "capitalize",
+                                            }}
+                                        >
+                                            {label}
+                                        </Typography>
+                                        <Typography
+                                            variant="h5"
+                                            sx={{
+                                                color: "#ffffff",
+                                                fontWeight: 800,
+                                                mt: 0.5,
+                                                letterSpacing: "-0.01em",
+                                                lineHeight: 1.2,
+                                            }}
+                                        >
+                                            Rs. {(value || 0).toLocaleString()}
+                                        </Typography>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            color: "#ffffff",
+                                            opacity: 0.9,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        {icon}
+                                    </Box>
                                 </Box>
-                                {icon}
-                            </Box>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
 
             {/* ── Action Bar ─────────────────────────────── */}
             <Box sx={{ mb: 3 }}>
