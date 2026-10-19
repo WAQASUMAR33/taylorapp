@@ -42,9 +42,7 @@ import {
     Tabs,
     Tab,
 } from "@mui/material";
-import { BarChart } from "@mui/x-charts/BarChart";
-import { LineChart } from "@mui/x-charts/LineChart";
-import { PieChart } from "@mui/x-charts/PieChart";
+import { BarChart, LineChart, PieChart } from "@mui/x-charts";
 
 /* ─── helpers ─────────────────────────────────────────────── */
 
