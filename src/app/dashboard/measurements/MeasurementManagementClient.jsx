@@ -408,12 +408,12 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
         const date = formatDate(measurement.takenAt);
         const unit = measurement.unit || "in";
 
-        const activeBranch = branches.find((b) => b.id === session?.user?.branchId) || branches[0];
+        const activeBranch = branches.find((b) => String(b.id) === String(session?.user?.branchId)) || branches[0];
         const brandName = activeBranch?.name || "GRACE TAILORS";
         const brandLogo = activeBranch?.logo || "/logo.png";
-        const brandPhone = activeBranch?.phone || "03006284318 / 03186284318";
-        const brandAddress = activeBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
-        const brandSlogan = activeBranch?.slogan || "Where Style Meets Perfection";
+        const brandPhone = activeBranch?.phone || "";
+        const brandAddress = activeBranch?.address || "";
+        const brandSlogan = activeBranch?.slogan || "";
 
         const row = (label, value) => value
             ? `<div class="measurement-item"><div class="measurement-label">${label}</div><div class="measurement-value">${value} ${unit}</div></div>`
@@ -439,8 +439,8 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                 <img src="${brandLogo}" style="width:60px;height:60px;object-fit:contain;" alt="Logo" onerror="this.src='/logo.png'"/>
                 <div>
                     <h1>${brandName}</h1>
-                    <p style="margin:2px 0;font-size:12px;color:#555;font-style:italic;">${brandSlogan}</p>
-                    <p style="margin:2px 0;font-size:12px;color:#333;">📞 ${brandPhone} | 📍 ${brandAddress}</p>
+                    ${brandSlogan ? `<p style="margin:2px 0;font-size:12px;color:#555;font-style:italic;">${brandSlogan}</p>` : ''}
+                    ${brandPhone || brandAddress ? `<p style="margin:2px 0;font-size:12px;color:#333;">${brandPhone ? `📞 ${brandPhone}` : ''}${brandPhone && brandAddress ? ' | ' : ''}${brandAddress ? `📍 ${brandAddress}` : ''}</p>` : ''}
                     <p style="margin:4px 0 0;font-weight:700;font-size:14px;color:#8b5cf6;">Customer Measurement Record</p>
                 </div>
             </div>

@@ -261,11 +261,11 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     // Print Receipt with Dynamic Branding
     const handlePrintReceipt = (ret) => {
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
-        const activeBranch = ret.branch || branches?.find(b => b.id === ret.branchId) || branches?.[0];
+        const activeBranch = ret.branch || branches?.find(b => String(b.id) === String(ret.branchId)) || branches?.[0];
         const brandName = activeBranch?.name || "Grace Cloth and Tailors";
-        const brandSlogan = activeBranch?.slogan || "Where Style Meets Perfection";
-        const brandPhone = activeBranch?.phone || "03006284318 | 03186284318";
-        const brandAddress = activeBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+        const brandSlogan = activeBranch?.slogan || "";
+        const brandPhone = activeBranch?.phone || "";
+        const brandAddress = activeBranch?.address || "";
         const brandLogo = activeBranch?.logo || "/logo.png";
 
         const itemsHtml = ret.items.map(item => `
@@ -298,7 +298,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
         </head>
         <body onload="window.print()">
             <div style="text-align: center; margin-bottom: 8px">
-                ${brandLogo ? `<img src="${brandLogo}" alt="Logo" style="max-height: 44px; object-fit: contain; margin-bottom: 4px;" />` : ''}
+                ${brandLogo ? `<img src="${brandLogo}" alt="Logo" onerror="this.src='/logo.png'" style="max-height: 44px; object-fit: contain; margin-bottom: 4px;" />` : ''}
                 <div style="font-size: 15px; font-weight: 900; text-transform: uppercase">${brandName}</div>
                 ${brandSlogan ? `<div style="font-size: 9px; color: #555; font-style: italic">${brandSlogan}</div>` : ''}
                 ${brandPhone ? `<div style="font-size: 10px; font-weight: 600; margin-top: 2px">📞 ${brandPhone}</div>` : ''}

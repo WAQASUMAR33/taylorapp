@@ -47,7 +47,7 @@ export default async function SaleReturnsPage() {
         }),
         prisma.branch.findMany({
             where: { isActive: true },
-            select: { id: true, name: true, code: true },
+            select: { id: true, name: true, code: true, phone: true, address: true, slogan: true, logo: true },
             orderBy: { name: "asc" }
         })
     ]);

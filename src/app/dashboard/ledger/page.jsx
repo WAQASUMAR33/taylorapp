@@ -223,7 +223,7 @@ export default async function LedgerPage() {
     const branches = await prisma.branch.findMany({
         where: { isActive: true },
         orderBy: { name: "asc" },
-        select: { id: true, name: true, code: true }
+        select: { id: true, name: true, code: true, phone: true, address: true, slogan: true, logo: true }
     });
 
     return (

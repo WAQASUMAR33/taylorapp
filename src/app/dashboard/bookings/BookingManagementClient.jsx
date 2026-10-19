@@ -77,10 +77,10 @@ const BOOKING_STATUSES = [
 // ─── Shared print header ─────────────────────────────────────────────────────
 function PrintHeader({ branch, hideSlogan = false }) {
     const brandName = branch?.name || "Grace Cloth and Tailors";
-    const slogan = hideSlogan ? "" : (branch?.slogan || "Where Style Meets Perfection");
+    const slogan = hideSlogan ? "" : (branch?.slogan || "");
     const logo = branch?.logo || "/logo.png";
-    const phone = branch?.phone || "03006284318 | 03186284318";
-    const address = branch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+    const phone = branch?.phone || "";
+    const address = branch?.address || "";
 
     return (
         <div style={{ borderBottom: '3px solid #1a1a2e', paddingBottom: 10, marginBottom: 12 }}>
@@ -113,10 +113,10 @@ function PrintHeader({ branch, hideSlogan = false }) {
 
 function POSBranchHeader({ branch, title = "Customer Bill / Invoice" }) {
     const brandName = branch?.name || "Grace Cloth and Tailors";
-    const slogan = branch?.slogan || "Where Style Meets Perfection";
+    const slogan = branch?.slogan || "";
     const logo = branch?.logo || "/logo.png";
-    const phone = branch?.phone || "03006284318 | 03186284318";
-    const address = branch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+    const phone = branch?.phone || "";
+    const address = branch?.address || "";
 
     return (
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
@@ -222,8 +222,9 @@ function BookingListPrint({ bookings, dateFrom, dateTo }) {
 }
 
 // ─── Customer Bill ────────────────────────────────────────────────────────────
-function CustomerBill({ booking }) {
+function CustomerBill({ booking, branch }) {
     if (!booking) return null;
+    const activeBranch = branch || booking.branch;
     const billingCust = booking.billingCustomer || booking.customer;
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
@@ -246,7 +247,7 @@ function CustomerBill({ booking }) {
             {/* Dynamic printing styles handled by GlobalStyles below */}
 
             {/* Custom POS Header with Branch Branding */}
-            <POSBranchHeader branch={booking.branch} title="Customer Bill / Invoice" />
+            <POSBranchHeader branch={activeBranch} title="Customer Bill / Invoice" />
 
             {/* Booking & Customer details */}
             <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
@@ -447,16 +448,16 @@ function CustomerBill({ booking }) {
             )}
 
             {/* Branch Note */}
-            {booking.branch?.notes && (
+            {activeBranch?.notes && (
                 <div style={{ border: '1px dashed #bbb', borderRadius: '4px', padding: '4px 6px', margin: '6px 0', fontSize: '9px', color: '#444', textAlign: 'center' }}>
-                    {booking.branch.notes}
+                    {activeBranch.notes}
                 </div>
             )}
 
             {/* Footer */}
             <div style={{ textAlign: 'center', marginTop: '12px', marginBottom: '6px', fontSize: '9px', color: '#555' }}>
                 <div style={{ borderBottom: '1px dashed #000', marginBottom: '6px' }} />
-                <div>Thank you for choosing {booking.branch?.name || "Grace Cloth and Tailors"}!</div>
+                <div>Thank you for choosing {activeBranch?.name || "Grace Cloth and Tailors"}!</div>
             </div>
 
         </div>
@@ -464,7 +465,7 @@ function CustomerBill({ booking }) {
 }
 
 // ─── Merged Customer Bill ──────────────────────────────────────────────────────
-function MergedCustomerBill({ bookings }) {
+function MergedCustomerBill({ bookings, branch }) {
     if (!bookings || bookings.length === 0) return null;
     
     // Sort bookings by bookingNumber or id for consistent layout
@@ -474,6 +475,7 @@ function MergedCustomerBill({ bookings }) {
         return numA - numB;
     });
 
+    const activeBranch = branch || sortedBookings[0]?.branch;
     const firstBooking = sortedBookings[0];
     const allSameCustomer = sortedBookings.every(b => b.customerId === firstBooking.customerId);
     const customer = allSameCustomer ? firstBooking.customer : null;
@@ -514,7 +516,7 @@ function MergedCustomerBill({ bookings }) {
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
             {/* Custom POS Header with Branch Branding */}
-            <POSBranchHeader branch={sortedBookings?.[0]?.branch} title="Merged Customer Bill" />
+            <POSBranchHeader branch={activeBranch} title="Merged Customer Bill" />
 
             {/* Booking & Customer details */}
             <div style={{ fontSize: '10px', lineHeight: '1.4', marginBottom: '8px' }}>
@@ -716,7 +718,7 @@ function MergedCustomerBill({ bookings }) {
             {/* Footer */}
             <div style={{ textAlign: 'center', marginTop: '12px', marginBottom: '6px', fontSize: '9px', color: '#555' }}>
                 <div style={{ borderBottom: '1px dashed #000', marginBottom: '6px' }} />
-                <div>Thank you for choosing {sortedBookings?.[0]?.branch?.name || "Grace Cloth and Tailors"}!</div>
+                <div>Thank you for choosing {activeBranch?.name || "Grace Cloth and Tailors"}!</div>
             </div>
 
         </div>
@@ -724,8 +726,9 @@ function MergedCustomerBill({ bookings }) {
 }
 
 // ─── Tailor Ticket ────────────────────────────────────────────────────────────
-function TailorTicket({ booking, measurements }) {
+function TailorTicket({ booking, measurements, branch }) {
     if (!booking) return null;
+    const activeBranch = branch || booking.branch;
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
     const tailors = (booking.staff || []).filter(s => s.role === 'TAILOR').map(s => s.customer?.name).join(', ');
     const cutters = (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customer?.name).join(', ');
@@ -755,7 +758,7 @@ function TailorTicket({ booking, measurements }) {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
-            <PrintHeader branch={booking.branch} hideSlogan />
+            <PrintHeader branch={activeBranch} />
 
             {/* Title */}
             <div style={{ textAlign: 'center', margin: '6px 0 10px', fontSize: 16, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#1a1a2e' }}>
@@ -1387,14 +1390,18 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             ? `<div style="text-align:center;font-size:11px;color:#555;margin-bottom:6px">Period: ${dateFrom ? fmt(dateFrom) : '—'} to ${dateTo ? fmt(dateTo) : '—'}</div>`
             : '';
 
+        const bookingBranchId = bookings[0]?.branchId || bookings[0]?.branch?.id;
         const activeBranch = (selectedBranchId && selectedBranchId !== "ALL")
             ? branches.find(b => String(b.id) === String(selectedBranchId))
-            : (branches[0] || bookings[0]?.branch);
+            : (bookingBranchId ? branches.find(b => String(b.id) === String(bookingBranchId)) : null)
+              || bookings[0]?.branch
+              || (session?.user?.branchId ? branches.find(b => String(b.id) === String(session.user.branchId)) : null)
+              || branches[0];
         const reportBrandName = activeBranch?.name || "Grace Cloth and Tailors";
         const reportLogo = activeBranch?.logo || "/logo.png";
-        const reportPhone = activeBranch?.phone || "03006284318 / 03186284318";
-        const reportAddress = activeBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
-        const reportSlogan = activeBranch?.slogan || "Where Style Meets Perfection";
+        const reportPhone = activeBranch?.phone || "";
+        const reportAddress = activeBranch?.address || "";
+        const reportSlogan = activeBranch?.slogan || "";
 
         const html = `<!DOCTYPE html>
 <html>
@@ -1421,12 +1428,12 @@ tfoot td{border:1px solid #555;padding:5px 6px;text-align:right}
 </head>
 <body>
 <div class="hdr">
-    <img src="${reportLogo}" alt="Logo"/>
+    <img src="${reportLogo}" alt="Logo" onerror="this.src='/logo.png'"/>
     <div class="hdr-text">
         <h1>${reportBrandName}</h1>
-        <div class="tagline">${reportSlogan}</div>
-        <div class="phone">📞 ${reportPhone}</div>
-        <div class="address">${reportAddress}</div>
+        ${reportSlogan ? `<div class="tagline">${reportSlogan}</div>` : ''}
+        ${reportPhone ? `<div class="phone">📞 ${reportPhone}</div>` : ''}
+        ${reportAddress ? `<div class="address">${reportAddress}</div>` : ''}
     </div>
 </div>
 <div style="text-align:center;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1a1a2e;margin:8px 0">Booking List Report</div>
@@ -1687,20 +1694,22 @@ ${periodHtml}
             }).join('');
 
 
-            const bookingBranch = booking.branch || (branches || []).find(b => b.id === booking.branchId) || branches?.[0];
+            const bookingBranch = (branches || []).find(b => String(b.id) === String(booking.branchId || booking.branch?.id)) || booking.branch || branches?.[0];
             const brandName = bookingBranch?.name || "Grace Cloth and Tailors";
             const brandLogo = bookingBranch?.logo || "/logo.png";
-            const brandPhone = bookingBranch?.phone || "03006284318 / 03186284318";
-            const brandAddress = bookingBranch?.address || "Basement of Faazal Plaza, Dhulyan Chowk Dinga";
+            const brandSlogan = bookingBranch?.slogan || "";
+            const brandPhone = bookingBranch?.phone || "";
+            const brandAddress = bookingBranch?.address || "";
 
             return `
             <div class="booking-page">
                 <div class="hdr">
-                    <img src="${brandLogo}" alt="Logo"/>
+                    <img src="${brandLogo}" alt="Logo" onerror="this.src='/logo.png'"/>
                     <div class="hdr-text">
                         <h1>${brandName}</h1>
-                        <div class="phone">📞 ${brandPhone}</div>
-                        <div class="address">${brandAddress}</div>
+                        ${brandSlogan ? `<div class="tagline">${brandSlogan}</div>` : ''}
+                        ${brandPhone ? `<div class="phone">📞 ${brandPhone}</div>` : ''}
+                        ${brandAddress ? `<div class="address">${brandAddress}</div>` : ''}
                     </div>
                 </div>
                 <div class="title">Stitching Details &nbsp;|&nbsp; بکنگ پرچی</div>
@@ -5629,9 +5638,10 @@ ${allBookingsHtml}
                     {printBooking && (
                         <div className="print-page">
                             {printType === 'BILL'
-                                ? <CustomerBill booking={printBooking} />
+                                ? <CustomerBill booking={printBooking} branch={(branches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch} />
                                 : <TailorTicket 
                                     booking={printBooking} 
+                                    branch={(branches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch}
                                     measurements={
                                         (customerMeasurements && customerMeasurements.customerId === printBooking.customerId)
                                             ? customerMeasurements
@@ -5645,15 +5655,19 @@ ${allBookingsHtml}
                     {bulkPrintBookings.length > 0 && (
                         printType === 'MERGED_BILL' ? (
                             <div className="print-page">
-                                <MergedCustomerBill bookings={bulkPrintBookings} />
+                                <MergedCustomerBill 
+                                    bookings={bulkPrintBookings} 
+                                    branch={(branches || []).find(b => String(b.id) === String(bulkPrintBookings[0]?.branchId || bulkPrintBookings[0]?.branch?.id)) || bulkPrintBookings[0]?.branch}
+                                />
                             </div>
                         ) : (
                             bulkPrintBookings.map((bk) => (
                                 <div key={bk.id} className="print-page">
                                     {printType === 'BILL'
-                                        ? <CustomerBill booking={bk} />
+                                        ? <CustomerBill booking={bk} branch={(branches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch} />
                                         : <TailorTicket 
                                             booking={bk} 
+                                            branch={(branches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch}
                                             measurements={bk.customer?.measurements?.[0] || null} 
                                           />
                                     }
