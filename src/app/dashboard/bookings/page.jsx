@@ -214,7 +214,7 @@ export default async function BookingsPage() {
 
     const [bookings, customers, products, employees, stitchingOptions, banks] = await Promise.all([
         getBookings(initialBranchFilter),
-        getCustomers(isAdmin ? null : (userBranchId || -1)),
+        getCustomers(), // Customers are shared across all branches for all user roles
         getProducts(),
         getStaffCustomers(),
         getStitchingOptions(),

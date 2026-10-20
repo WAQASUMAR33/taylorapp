@@ -32,7 +32,6 @@ export default async function SaleReturnsPage() {
             orderBy: { returnDate: "desc" }
         }),
         prisma.customer.findMany({
-            where: bid !== null ? { branchId: bid } : undefined,
             select: { id: true, name: true, phone: true, address: true },
             orderBy: { name: "asc" }
         }),

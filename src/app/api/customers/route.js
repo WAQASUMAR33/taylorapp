@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getScopedBranchId, writeBranchId } from "@/lib/branchScope";
+import { writeBranchId } from "@/lib/branchScope";
 
 export async function POST(req) {
     try {
@@ -166,11 +166,11 @@ export async function GET(req) {
             });
         }
 
-        const scopedBranchId = getScopedBranchId(await getServerSession(authOptions));
-        if (scopedBranchId !== null) {
-            where.AND.push({ branchId: scopedBranchId });
-        } else if (searchParams.get("branchId") && searchParams.get("branchId") !== "ALL") {
-            where.AND.push({ branchId: parseInt(searchParams.get("branchId")) });
+        // Customers are shared across all branches for all user roles.
+        // If an explicit branchId filter is passed, filter by that branch.
+        const branchParam = searchParams.get("branchId");
+        if (branchParam && branchParam !== "ALL") {
+            where.AND.push({ branchId: parseInt(branchParam) });
         }
 
         if (nameFilter) {
