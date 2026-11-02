@@ -96,7 +96,6 @@ export async function DELETE(req, { params }) {
                 await tx.booking.deleteMany({ where: { customerId: customerIdInt } });
 
                 // Delete bills (this will also delete bill items if schema has Cascade)
-                // Wait, bill_item has Cascade onDelete in relation to bill
                 await tx.bill.deleteMany({ where: { customerId: customerIdInt } });
 
                 // Delete orders
@@ -169,7 +168,7 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
-        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
+        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image, measurementMode } = body;
 
         if (!name) {
             return NextResponse.json(
@@ -178,17 +177,37 @@ export async function PUT(req, { params }) {
             );
         }
 
-        const trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
-        if (trimmedMeasurementNo) {
+        let trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
+
+        if (measurementMode === "auto") {
+            const maxResult = await prisma.$queryRawUnsafe(`
+                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
+                FROM customer 
+                WHERE measurementNo IS NOT NULL 
+                  AND measurementNo REGEXP '^[0-9]+$' 
+                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
+            `);
+            let nextNum = (maxResult[0]?.maxNo != null ? Number(maxResult[0].maxNo) : 0) + 1;
+            while (await prisma.customer.findFirst({
+                where: {
+                    measurementNo: String(nextNum),
+                    id: { not: parseInt(id) },
+                },
+                select: { id: true },
+            })) {
+                nextNum++;
+            }
+            trimmedMeasurementNo = String(nextNum);
+        } else if (trimmedMeasurementNo) {
             const existingMeasurementNo = await prisma.customer.findFirst({
                 where: {
                     measurementNo: trimmedMeasurementNo,
-                    id: { not: parseInt(id) }
+                    id: { not: parseInt(id) },
                 }
             });
             if (existingMeasurementNo) {
                 return NextResponse.json(
-                    { error: `Measurement Number '${trimmedMeasurementNo}' is already assigned to customer '${existingMeasurementNo.name}'` },
+                    { error: `The number already exists, use another` },
                     { status: 400 }
                 );
             }

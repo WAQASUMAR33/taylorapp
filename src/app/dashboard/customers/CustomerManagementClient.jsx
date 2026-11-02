@@ -43,6 +43,8 @@ import {
     TableSortLabel,
     Tabs,
     Tab,
+    ToggleButton,
+    ToggleButtonGroup,
 } from "@mui/material";
 import {
     Edit,
@@ -61,6 +63,9 @@ import {
     Shirt,
     Square,
     Calendar,
+    RotateCw,
+    CheckCircle2,
+    AlertTriangle,
 } from "lucide-react";
 
 // ── Urdu labels for all measurement fields ──────────────────────────────────
@@ -555,6 +560,73 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
 
+    // Measurement No auto / custom state
+    const [measurementMode, setMeasurementMode] = useState("auto"); // "auto" | "custom"
+    const [autoNumberLoading, setAutoNumberLoading] = useState(false);
+    const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+    const [duplicateMeasurementError, setDuplicateMeasurementError] = useState("");
+    const checkTimerRef = useRef(null);
+
+    const fetchNextMeasurementNo = async () => {
+        setAutoNumberLoading(true);
+        try {
+            const res = await fetch("/api/customers/next-measurement-no");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.nextMeasurementNo) {
+                    setFormData((prev) => ({ ...prev, measurementNo: data.nextMeasurementNo }));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch next measurement number:", err);
+        } finally {
+            setAutoNumberLoading(false);
+        }
+    };
+
+    const handleMeasurementModeChange = (e, newMode) => {
+        if (!newMode) return;
+        setMeasurementMode(newMode);
+        setDuplicateMeasurementError("");
+        if (newMode === "auto") {
+            fetchNextMeasurementNo();
+        }
+    };
+
+    const checkMeasurementNoAvailability = async (measNo, currentCustomerId) => {
+        const trimmed = measNo ? measNo.toString().trim() : "";
+        if (!trimmed) {
+            setDuplicateMeasurementError("");
+            return;
+        }
+        setCheckingDuplicate(true);
+        try {
+            const url = `/api/customers/check-measurement-no?no=${encodeURIComponent(trimmed)}${currentCustomerId ? `&excludeId=${currentCustomerId}` : ""}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.exists) {
+                    setDuplicateMeasurementError("The number already exists, use another");
+                } else {
+                    setDuplicateMeasurementError("");
+                }
+            }
+        } catch (err) {
+            console.error("Duplicate check failed:", err);
+        } finally {
+            setCheckingDuplicate(false);
+        }
+    };
+
+    const handleCustomMeasurementNoChange = (e) => {
+        const val = e.target.value;
+        setFormData((prev) => ({ ...prev, measurementNo: val }));
+        if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+        checkTimerRef.current = setTimeout(() => {
+            checkMeasurementNoAvailability(val, formData.id);
+        }, 300);
+    };
+
     // First category in the list as default
     const getDefaultCategoryId = (cats) => {
         return (cats || []).length > 0 ? cats[0].id : null;
@@ -583,6 +655,10 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             notes: "",
             balance: 0,
         });
+        setMeasurementMode("auto");
+        setDuplicateMeasurementError("");
+        setCheckingDuplicate(false);
+        if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
         setImageFile(null);
         setImagePreview(null);
         setError("");
@@ -592,6 +668,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const handleOpen = () => {
         resetForm();
         setShowForm(true);
+        fetchNextMeasurementNo();
     };
 
     const handleClose = () => {
@@ -631,6 +708,31 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setLoading(true);
         setError("");
 
+        if (measurementMode === "custom") {
+            if (duplicateMeasurementError) {
+                setError("The number already exists, use another");
+                setLoading(false);
+                return;
+            }
+            if (formData.measurementNo?.trim()) {
+                try {
+                    const checkUrl = `/api/customers/check-measurement-no?no=${encodeURIComponent(formData.measurementNo.trim())}${formData.id ? `&excludeId=${formData.id}` : ""}`;
+                    const checkRes = await fetch(checkUrl);
+                    if (checkRes.ok) {
+                        const checkData = await checkRes.json();
+                        if (checkData.exists) {
+                            setDuplicateMeasurementError("The number already exists, use another");
+                            setError("The number already exists, use another");
+                            setLoading(false);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Check failed:", e);
+                }
+            }
+        }
+
         try {
             let imageUrl = formData.image || null;
 
@@ -656,7 +758,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, image: imageUrl }),
+                body: JSON.stringify({ ...formData, measurementMode, image: imageUrl }),
             });
 
             if (!response.ok) {
@@ -744,6 +846,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     };
 
     const handleEdit = (customer) => {
+        const hasMeasNo = Boolean(customer.measurementNo && customer.measurementNo.trim());
         setFormData({
             id: customer.id,
             name: customer.name,
@@ -757,9 +860,16 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             balance: customer.balance || 0,
             image: customer.image || null,
         });
+        setMeasurementMode(hasMeasNo ? "custom" : "auto");
+        setDuplicateMeasurementError("");
+        setCheckingDuplicate(false);
+        if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
         setImageFile(null);
         setImagePreview(customer.image || null);
         setShowForm(true);
+        if (!hasMeasNo) {
+            fetchNextMeasurementNo();
+        }
     };
 
     // Secure delete dialog state
@@ -2027,18 +2137,96 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             />
                         </Grid>
 
-                        {/* Measurement No */}
+                        {/* Measurement No (Auto / Custom) */}
                         <Grid size={{ xs: 12, md: 4 }}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Measurement No"
-                                name="measurementNo"
-                                placeholder="e.g. M-001"
-                                value={formData.measurementNo || ""}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                            />
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                        Measurement No
+                                    </Typography>
+                                    <ToggleButtonGroup
+                                        size="small"
+                                        value={measurementMode}
+                                        exclusive
+                                        onChange={handleMeasurementModeChange}
+                                        sx={{
+                                            height: 26,
+                                            "& .MuiToggleButton-root": {
+                                                px: 1.25,
+                                                py: 0,
+                                                fontSize: "0.72rem",
+                                                fontWeight: 700,
+                                                textTransform: "none",
+                                                borderRadius: 1,
+                                            }
+                                        }}
+                                    >
+                                        <ToggleButton value="auto" color="primary">
+                                            Auto
+                                        </ToggleButton>
+                                        <ToggleButton value="custom" color="secondary">
+                                            Custom
+                                        </ToggleButton>
+                                    </ToggleButtonGroup>
+                                </Box>
+
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label={measurementMode === "auto" ? "Measurement No (Auto)" : "Measurement No (Custom)"}
+                                    name="measurementNo"
+                                    placeholder={measurementMode === "auto" ? "Generating number..." : "e.g. M-001 or 1234"}
+                                    value={formData.measurementNo || ""}
+                                    onChange={handleCustomMeasurementNoChange}
+                                    disabled={measurementMode === "auto"}
+                                    error={measurementMode === "custom" && Boolean(duplicateMeasurementError)}
+                                    helperText={
+                                        measurementMode === "auto"
+                                            ? (autoNumberLoading ? "Calculating highest number..." : "Auto-assigned (Highest + 1)")
+                                            : (duplicateMeasurementError || (checkingDuplicate ? "Checking availability..." : "Enter custom measurement number"))
+                                    }
+                                    FormHelperTextProps={{
+                                        sx: {
+                                            color: duplicateMeasurementError ? "error.main" : undefined,
+                                            fontWeight: duplicateMeasurementError ? 700 : undefined
+                                        }
+                                    }}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                {measurementMode === "auto" ? (
+                                                    autoNumberLoading ? (
+                                                        <CircularProgress size={16} />
+                                                    ) : (
+                                                        <Tooltip title="Recalculate highest number">
+                                                            <IconButton size="small" onClick={fetchNextMeasurementNo} edge="end">
+                                                                <RotateCw size={14} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )
+                                                ) : checkingDuplicate ? (
+                                                    <CircularProgress size={16} />
+                                                ) : duplicateMeasurementError ? (
+                                                    <Tooltip title={duplicateMeasurementError}>
+                                                        <AlertTriangle size={16} color="#ef4444" />
+                                                    </Tooltip>
+                                                ) : formData.measurementNo?.trim() ? (
+                                                    <Tooltip title="Measurement number is available">
+                                                        <CheckCircle2 size={16} color="#10b981" />
+                                                    </Tooltip>
+                                                ) : null}
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    variant="outlined"
+                                />
+
+                                {measurementMode === "custom" && duplicateMeasurementError && (
+                                    <Alert severity="error" sx={{ py: 0.25, px: 1, fontSize: "0.75rem", borderRadius: 1.5 }}>
+                                        {duplicateMeasurementError}
+                                    </Alert>
+                                )}
+                            </Box>
                         </Grid>
 
                         {/* Phone */}

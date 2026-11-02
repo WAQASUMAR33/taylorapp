@@ -8,7 +8,7 @@ export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         const body = await req.json();
-        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image } = body;
+        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image, measurementMode } = body;
         const branchId = writeBranchId(session, body.branchId) || 1;
 
         if (!name) {
@@ -18,8 +18,22 @@ export async function POST(req) {
             );
         }
 
-        const trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
-        if (trimmedMeasurementNo) {
+        let trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
+
+        if (measurementMode === "auto") {
+            const maxResult = await prisma.$queryRawUnsafe(`
+                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
+                FROM customer 
+                WHERE measurementNo IS NOT NULL 
+                  AND measurementNo REGEXP '^[0-9]+$' 
+                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
+            `);
+            let nextNum = (maxResult[0]?.maxNo != null ? Number(maxResult[0].maxNo) : 0) + 1;
+            while (await prisma.customer.findFirst({ where: { measurementNo: String(nextNum) }, select: { id: true } })) {
+                nextNum++;
+            }
+            trimmedMeasurementNo = String(nextNum);
+        } else if (trimmedMeasurementNo) {
             const existingMeasurementNo = await prisma.customer.findFirst({
                 where: {
                     measurementNo: trimmedMeasurementNo,
@@ -27,7 +41,7 @@ export async function POST(req) {
             });
             if (existingMeasurementNo) {
                 return NextResponse.json(
-                    { error: `Measurement Number '${trimmedMeasurementNo}' is already assigned to customer '${existingMeasurementNo.name}'` },
+                    { error: `The number already exists, use another` },
                     { status: 400 }
                 );
             }
@@ -232,20 +246,6 @@ export async function GET(req) {
 
 export async function DELETE(req) {
     try {
-        const { searchParams } = new URL(req.url); // Use URL API to extract ID
-        // Note: In Next.js App Router, dynamic routes like [customerId]/route.js might be better,
-        // but here we seem to be using query params or a different pattern?
-        // Wait, the client calls `/api/customers/${customerId}`.
-        // This means we should probably use a dynamic route file: src/app/api/customers/[id]/route.js
-        // BUT the existing GET/POST are in src/app/api/customers/route.js
-        // Let's check if there is a separate file for [id].
-        // If not, we can't handle DELETE /api/customers/123 here easily unless we parse the URL path manually or change the client.
-        // However, looking at CustomerManagementClient: `fetch(/api/customers/${customerId}, ...)`
-        // This implies likely a separate route structure for ID-based operations or this file handles it if it's a catch-all?
-        // Let's check if `src/app/api/customers/[id]/route.js` exists.
-        // If it doesn't, this `route.js` probably only handles collection-level ops.
-        // I will assume for now I need to create/edit the dynamic route file.
-        // Let me abort this specific change and check the directory structure first.
         return NextResponse.json({ error: "Method not allowed here" }, { status: 405 });
     } catch (error) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
