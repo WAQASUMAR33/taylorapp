@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getNextCustomerId } from "@/lib/customerHelper";
 
 // Helper to get or create Cash Account
 async function getCashAccount() {
@@ -8,8 +9,10 @@ async function getCashAccount() {
     });
 
     if (!cashAccount) {
+        const nextId = await getNextCustomerId(prisma);
         cashAccount = await prisma.customer.create({
             data: {
+                id: nextId,
                 name: 'Cash Account',
                 code: 'CASH-001',
                 notes: 'System account for tracking cash transactions'

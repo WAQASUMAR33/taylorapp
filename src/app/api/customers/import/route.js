@@ -85,7 +85,14 @@ export async function POST(req) {
 
         // 3. Batch insert using transaction for database integrity
         const totalImported = await prisma.$transaction(async (tx) => {
-            // A. Create customers in bulk
+            // A. Assign explicit sequential IDs starting from current MAX(id) + 1
+            const maxResult = await tx.$queryRawUnsafe("SELECT MAX(id) AS maxId FROM customer");
+            let nextId = (maxResult[0]?.maxId != null ? Number(maxResult[0].maxId) : 0) + 1;
+            customersToInsert.forEach(c => {
+                c.id = nextId++;
+            });
+
+            // Create customers in bulk
             await tx.customer.createMany({
                 data: customersToInsert
             });

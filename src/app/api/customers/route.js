@@ -3,12 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { writeBranchId } from "@/lib/branchScope";
+import { getNextCustomerId } from "@/lib/customerHelper";
 
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         const body = await req.json();
-        const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image, measurementMode } = body;
+        const {
+            name, fatherName, measurementNo, phone, email, address, notes, code,
+            accountCategoryId, balance, image, measurementMode,
+            customId, id: bodyId, idMode
+        } = body;
         const branchId = writeBranchId(session, body.branchId) || 1;
 
         if (!name) {
@@ -48,8 +53,28 @@ export async function POST(req) {
         }
 
         const customer = await prisma.$transaction(async (tx) => {
+            let finalId;
+            const chosenId = customId || bodyId;
+            if (idMode === "custom" && chosenId) {
+                const parsedId = parseInt(chosenId);
+                if (isNaN(parsedId) || parsedId <= 0) {
+                    throw new Error("Invalid Customer Key. Must be a positive number.");
+                }
+                const existingWithId = await tx.customer.findUnique({
+                    where: { id: parsedId },
+                    select: { id: true, name: true }
+                });
+                if (existingWithId) {
+                    throw new Error(`Key #${parsedId} is already assigned to customer '${existingWithId.name}', please use another key.`);
+                }
+                finalId = parsedId;
+            } else {
+                finalId = await getNextCustomerId(tx);
+            }
+
             const newCustomer = await tx.customer.create({
                 data: {
+                    id: finalId,
                     name,
                     fatherName,
                     measurementNo: trimmedMeasurementNo,
@@ -104,8 +129,8 @@ export async function POST(req) {
     } catch (error) {
         console.error("Failed to create customer:", error);
         return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
+            { error: error.message || "Internal Server Error" },
+            { status: 400 }
         );
     }
 }

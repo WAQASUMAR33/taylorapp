@@ -66,6 +66,8 @@ import {
     RotateCw,
     CheckCircle2,
     AlertTriangle,
+    Shuffle,
+    KeyRound,
 } from "lucide-react";
 
 // ── Urdu labels for all measurement fields ──────────────────────────────────
@@ -567,6 +569,74 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [duplicateMeasurementError, setDuplicateMeasurementError] = useState("");
     const checkTimerRef = useRef(null);
 
+    // Customer Key (Primary Key ID) auto / custom state
+    const [customerKeyMode, setCustomerKeyMode] = useState("auto"); // "auto" | "custom"
+    const [customerKey, setCustomerKey] = useState("");
+    const [autoKeyLoading, setAutoKeyLoading] = useState(false);
+    const [checkingKeyDuplicate, setCheckingKeyDuplicate] = useState(false);
+    const [duplicateKeyError, setDuplicateKeyError] = useState("");
+    const keyCheckTimerRef = useRef(null);
+
+    const fetchNextCustomerKey = async (random = false) => {
+        setAutoKeyLoading(true);
+        try {
+            const res = await fetch(`/api/customers/next-id${random ? "?random=true" : ""}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.nextId != null) {
+                    setCustomerKey(String(data.nextId));
+                    setDuplicateKeyError("");
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch next customer key:", err);
+        } finally {
+            setAutoKeyLoading(false);
+        }
+    };
+
+    const handleCustomerKeyModeChange = (e, newMode) => {
+        if (!newMode) return;
+        setCustomerKeyMode(newMode);
+        setDuplicateKeyError("");
+        if (newMode === "auto") {
+            fetchNextCustomerKey(false);
+        }
+    };
+
+    const checkCustomerKeyAvailability = async (keyVal, excludeId) => {
+        const trimmed = keyVal ? keyVal.toString().trim() : "";
+        if (!trimmed || isNaN(parseInt(trimmed))) {
+            setDuplicateKeyError("");
+            return;
+        }
+        setCheckingKeyDuplicate(true);
+        try {
+            const res = await fetch(`/api/customers/check-id?id=${encodeURIComponent(trimmed)}${excludeId ? `&excludeId=${excludeId}` : ""}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.exists) {
+                    setDuplicateKeyError(data.message || `Key #${trimmed} already exists, use another`);
+                } else {
+                    setDuplicateKeyError("");
+                }
+            }
+        } catch (err) {
+            console.error("Key duplicate check failed:", err);
+        } finally {
+            setCheckingKeyDuplicate(false);
+        }
+    };
+
+    const handleCustomKeyChange = (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, "");
+        setCustomerKey(val);
+        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
+        keyCheckTimerRef.current = setTimeout(() => {
+            checkCustomerKeyAvailability(val, formData.id);
+        }, 300);
+    };
+
     const fetchNextMeasurementNo = async () => {
         setAutoNumberLoading(true);
         try {
@@ -659,6 +729,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setDuplicateMeasurementError("");
         setCheckingDuplicate(false);
         if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+        setCustomerKeyMode("auto");
+        setCustomerKey("");
+        setDuplicateKeyError("");
+        setCheckingKeyDuplicate(false);
+        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
         setImageFile(null);
         setImagePreview(null);
         setError("");
@@ -669,6 +744,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         resetForm();
         setShowForm(true);
         fetchNextMeasurementNo();
+        fetchNextCustomerKey(false);
     };
 
     const handleClose = () => {
@@ -707,6 +783,33 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         e.preventDefault();
         setLoading(true);
         setError("");
+
+        if (!formData.id && customerKeyMode === "custom") {
+            if (duplicateKeyError) {
+                setError(duplicateKeyError);
+                setLoading(false);
+                return;
+            }
+            if (!customerKey || !customerKey.trim()) {
+                setError("Please enter a valid Customer Key or select Auto mode.");
+                setLoading(false);
+                return;
+            }
+            try {
+                const keyRes = await fetch(`/api/customers/check-id?id=${encodeURIComponent(customerKey.trim())}`);
+                if (keyRes.ok) {
+                    const keyData = await keyRes.json();
+                    if (keyData.exists) {
+                        setDuplicateKeyError(keyData.message || `Key #${customerKey} already exists, use another`);
+                        setError(keyData.message || `Key #${customerKey} already exists, use another`);
+                        setLoading(false);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error("Key check error:", e);
+            }
+        }
 
         if (measurementMode === "custom") {
             if (duplicateMeasurementError) {
@@ -758,7 +861,13 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, measurementMode, image: imageUrl }),
+                body: JSON.stringify({
+                    ...formData,
+                    customId: !formData.id && customerKeyMode === "custom" ? customerKey : null,
+                    idMode: customerKeyMode,
+                    measurementMode,
+                    image: imageUrl
+                }),
             });
 
             if (!response.ok) {
@@ -860,6 +969,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             balance: customer.balance || 0,
             image: customer.image || null,
         });
+        setCustomerKey(String(customer.id));
+        setCustomerKeyMode("custom");
+        setDuplicateKeyError("");
+        setCheckingKeyDuplicate(false);
+        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
         setMeasurementMode(hasMeasNo ? "custom" : "auto");
         setDuplicateMeasurementError("");
         setCheckingDuplicate(false);
@@ -1883,9 +1997,18 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                 {!customer.image && customer.name.charAt(0).toUpperCase()}
                                             </Avatar>
                                             <Box>
-                                                <Typography variant="subtitle2" fontWeight={600}>
-                                                    {customer.name}
-                                                </Typography>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                                    <Typography variant="subtitle2" fontWeight={600}>
+                                                        {customer.name}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={`#${customer.id}`}
+                                                        size="small"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                        sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700, borderRadius: 1 }}
+                                                    />
+                                                </Box>
                                                 <Chip
                                                     label={customer.accountCategory?.name || "N/A"}
                                                     size="small"
@@ -2108,6 +2231,114 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     </Box>
 
                     <Grid container spacing={2}>
+                        {/* Customer Primary Key / ID (Auto / Custom / Random) */}
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                        <KeyRound size={14} color="#6366f1" />
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                            Customer Key (ID)
+                                        </Typography>
+                                    </Box>
+                                    {!formData.id && (
+                                        <ToggleButtonGroup
+                                            size="small"
+                                            value={customerKeyMode}
+                                            exclusive
+                                            onChange={handleCustomerKeyModeChange}
+                                            sx={{
+                                                height: 26,
+                                                "& .MuiToggleButton-root": {
+                                                    px: 1.25,
+                                                    py: 0,
+                                                    fontSize: "0.72rem",
+                                                    fontWeight: 700,
+                                                    textTransform: "none",
+                                                    borderRadius: 1,
+                                                }
+                                            }}
+                                        >
+                                            <ToggleButton value="auto" color="primary">
+                                                Auto
+                                            </ToggleButton>
+                                            <ToggleButton value="custom" color="secondary">
+                                                Custom
+                                            </ToggleButton>
+                                        </ToggleButtonGroup>
+                                    )}
+                                </Box>
+
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label={formData.id ? "Customer ID" : (customerKeyMode === "auto" ? "Customer Key (Auto)" : "Customer Key (Custom)")}
+                                    name="customerKey"
+                                    placeholder={customerKeyMode === "auto" ? "Calculating Key..." : "Enter ID (e.g. 500)"}
+                                    value={customerKey || ""}
+                                    onChange={handleCustomKeyChange}
+                                    disabled={Boolean(formData.id) || customerKeyMode === "auto"}
+                                    error={customerKeyMode === "custom" && Boolean(duplicateKeyError)}
+                                    helperText={
+                                        formData.id
+                                            ? "Primary Key (cannot be changed)"
+                                            : customerKeyMode === "auto"
+                                                ? (autoKeyLoading ? "Fetching next available key..." : "Auto-assigned (Highest ID + 1)")
+                                                : (duplicateKeyError || (checkingKeyDuplicate ? "Checking availability..." : "Type custom ID or click random"))
+                                    }
+                                    FormHelperTextProps={{
+                                        sx: {
+                                            color: duplicateKeyError ? "error.main" : undefined,
+                                            fontWeight: duplicateKeyError ? 700 : undefined
+                                        }
+                                    }}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                {!formData.id && customerKeyMode === "auto" ? (
+                                                    autoKeyLoading ? (
+                                                        <CircularProgress size={16} />
+                                                    ) : (
+                                                        <Tooltip title="Recalculate highest key">
+                                                            <IconButton size="small" onClick={() => fetchNextCustomerKey(false)} edge="end">
+                                                                <RotateCw size={14} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )
+                                                ) : !formData.id && customerKeyMode === "custom" ? (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                        <Tooltip title="Pick a Random Available Key">
+                                                            <IconButton size="small" onClick={() => fetchNextCustomerKey(true)} edge="end">
+                                                                <Shuffle size={14} color="#6366f1" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        {checkingKeyDuplicate ? (
+                                                            <CircularProgress size={14} />
+                                                        ) : duplicateKeyError ? (
+                                                            <Tooltip title={duplicateKeyError}>
+                                                                <AlertTriangle size={15} color="#ef4444" />
+                                                            </Tooltip>
+                                                        ) : customerKey?.trim() ? (
+                                                            <Tooltip title="Key is available">
+                                                                <CheckCircle2 size={15} color="#10b981" />
+                                                            </Tooltip>
+                                                        ) : null}
+                                                    </Box>
+                                                ) : null}
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    variant="outlined"
+                                />
+
+                                {!formData.id && customerKeyMode === "custom" && duplicateKeyError && (
+                                    <Alert severity="error" sx={{ py: 0.25, px: 1, fontSize: "0.75rem", borderRadius: 1.5 }}>
+                                        {duplicateKeyError}
+                                    </Alert>
+                                )}
+                            </Box>
+                        </Grid>
+
                         {/* Full Name */}
                         <Grid size={{ xs: 12, md: 4 }}>
                             <TextField

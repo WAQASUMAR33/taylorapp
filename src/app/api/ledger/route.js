@@ -3,12 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { scopeBranchParam, writeBranchId } from "@/lib/branchScope";
+import { getNextCustomerId } from "@/lib/customerHelper";
 
 async function getOrCreateCashAccount(tx) {
     let acc = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
     if (!acc) {
+        const nextId = await getNextCustomerId(tx);
         acc = await tx.customer.create({
-            data: { name: 'Cash Account', code: 'CASH-SYS-001', notes: 'System cash ledger account' }
+            data: { id: nextId, name: 'Cash Account', code: 'CASH-SYS-001', notes: 'System cash ledger account' }
         });
     }
     return acc;
@@ -20,8 +22,9 @@ async function getOrCreateBankAccount(tx, bankId) {
     const accountName = `Bank Account - ${bank.name}`;
     let acc = await tx.customer.findFirst({ where: { name: accountName } });
     if (!acc) {
+        const nextId = await getNextCustomerId(tx);
         acc = await tx.customer.create({
-            data: { name: accountName, code: `BANK-${bankId}`, notes: `System receiving account for ${bank.name}` }
+            data: { id: nextId, name: accountName, code: `BANK-${bankId}`, notes: `System receiving account for ${bank.name}` }
         });
     }
     return { acc, bank };

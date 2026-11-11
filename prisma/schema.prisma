@@ -61,7 +61,7 @@ model accountCategory {
 }
 
 model customer {
-  id                Int              @id @default(autoincrement())
+  id                Int              @id
   code              String?
   name              String
   phone             String?

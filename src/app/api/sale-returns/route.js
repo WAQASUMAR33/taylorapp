@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { scopeBranchParam, writeBranchId } from "@/lib/branchScope";
+import { getNextCustomerId } from "@/lib/customerHelper";
 
 // GET - Retrieve all sale returns
 export async function GET(req) {
@@ -209,8 +210,9 @@ export async function POST(req) {
                     const accountName = `Bank Account - ${bank.name}`;
                     let bankAcc = await tx.customer.findFirst({ where: { name: accountName } });
                     if (!bankAcc) {
+                        const nextId = await getNextCustomerId(tx);
                         bankAcc = await tx.customer.create({
-                            data: { name: accountName, code: `BANK-${bank.id}`, notes: `System receiving account for ${bank.name}` }
+                            data: { id: nextId, name: accountName, code: `BANK-${bank.id}`, notes: `System receiving account for ${bank.name}` }
                         });
                     }
 
