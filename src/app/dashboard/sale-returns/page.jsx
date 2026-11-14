@@ -22,7 +22,7 @@ export default async function SaleReturnsPage() {
             include: {
                 customer: { select: { id: true, name: true, phone: true, address: true } },
                 bank: { select: { id: true, name: true } },
-                branch: { select: { id: true, name: true, code: true, slogan: true, phone: true, address: true, logo: true } },
+                branch: { select: { id: true, name: true, code: true, slogan: true, phone: true, address: true, logo: true, notes: true } },
                 items: {
                     include: {
                         product: { select: { id: true, name: true, sku: true } }
@@ -46,7 +46,7 @@ export default async function SaleReturnsPage() {
         }),
         prisma.branch.findMany({
             where: { isActive: true },
-            select: { id: true, name: true, code: true, phone: true, address: true, slogan: true, logo: true },
+            select: { id: true, name: true, code: true, phone: true, address: true, slogan: true, logo: true, notes: true },
             orderBy: { name: "asc" }
         })
     ]);

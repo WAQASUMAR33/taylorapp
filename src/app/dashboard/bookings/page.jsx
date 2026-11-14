@@ -194,7 +194,9 @@ async function getBranches() {
                 phone: true, 
                 address: true, 
                 slogan: true, 
-                logo: true 
+                logo: true,
+                notes: true,
+                isActive: true
             }
         });
         return JSON.parse(JSON.stringify(branches));

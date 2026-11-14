@@ -243,7 +243,7 @@ function CustomerBill({ booking, branch }) {
     };
 
     return (
-        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', maxWidth: '72mm', margin: '0 auto', boxSizing: 'border-box' }}>
             {/* Dynamic printing styles handled by GlobalStyles below */}
 
             {/* Custom POS Header with Branch Branding */}
@@ -447,9 +447,9 @@ function CustomerBill({ booking, branch }) {
                 </div>
             )}
 
-            {/* Branch Note */}
+            {/* Branch Note / Footer Terms */}
             {activeBranch?.notes && (
-                <div style={{ border: '1px dashed #bbb', borderRadius: '4px', padding: '4px 6px', margin: '6px 0', fontSize: '9px', color: '#444', textAlign: 'center' }}>
+                <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '6px 4px', margin: '8px 0', fontSize: '8.5px', color: '#000', textAlign: 'center', whiteSpace: 'pre-line', lineHeight: '1.4' }}>
                     {activeBranch.notes}
                 </div>
             )}
@@ -514,7 +514,7 @@ function MergedCustomerBill({ bookings, branch }) {
     };
 
     return (
-        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', maxWidth: '72mm', margin: '0 auto', boxSizing: 'border-box' }}>
             {/* Custom POS Header with Branch Branding */}
             <POSBranchHeader branch={activeBranch} title="Merged Customer Bill" />
 
@@ -708,10 +708,10 @@ function MergedCustomerBill({ bookings, branch }) {
                 </div>
             )}
 
-            {/* Branch Note */}
-            {sortedBookings?.[0]?.branch?.notes && (
-                <div style={{ border: '1px dashed #bbb', borderRadius: '4px', padding: '4px 6px', margin: '6px 0', fontSize: '9px', color: '#444', textAlign: 'center' }}>
-                    {sortedBookings[0].branch.notes}
+            {/* Branch Note / Footer Terms */}
+            {(activeBranch?.notes || sortedBookings?.[0]?.branch?.notes) && (
+                <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '6px 4px', margin: '8px 0', fontSize: '8.5px', color: '#000', textAlign: 'center', whiteSpace: 'pre-line', lineHeight: '1.4' }}>
+                    {activeBranch?.notes || sortedBookings[0]?.branch?.notes}
                 </div>
             )}
 
@@ -981,6 +981,21 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const canEdit = checkPermission(session, "bookings", "edit");
     const canDelete = checkPermission(session, "bookings", "delete");
     const stitchingOptions = initialStitchingOptions || [];
+
+    const [branchList, setBranchList] = useState(branches || []);
+
+    React.useEffect(() => {
+        fetch('/api/branches')
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setBranchList(data);
+                }
+            })
+            .catch(err => console.error("Failed to load branches:", err));
+    }, []);
+
+    const allBranches = branchList && branchList.length > 0 ? branchList : branches;
 
     const [selectedBranchId, setSelectedBranchId] = useState(() => {
         if (userBranchId) {
@@ -1816,6 +1831,526 @@ ${allBookingsHtml}
         win.document.close();
     };
 
+    const openCustomerBillWindow = (bookingOrBookings, isMerged = false) => {
+        const rawList = Array.isArray(bookingOrBookings) ? bookingOrBookings : [bookingOrBookings];
+        const bookingList = rawList.filter(Boolean);
+        if (bookingList.length === 0) return;
+
+        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+        const currentBranches = (branchList && branchList.length > 0) ? branchList : (branches || []);
+        const bookingBranchId = bookingList[0]?.branchId || bookingList[0]?.branch?.id;
+        const matchedBranch = currentBranches.find(b => String(b.id) === String(bookingBranchId));
+        const fallbackBranch = bookingList[0]?.branch || (currentBranches.length > 0 ? currentBranches[0] : null);
+
+        const activeBranch = {
+            ...(fallbackBranch || {}),
+            ...(matchedBranch || {}),
+            notes: matchedBranch?.notes || bookingList[0]?.branch?.notes || fallbackBranch?.notes || ""
+        };
+
+        const brandName = activeBranch?.name || "GC CLOTH AND TAILORS";
+        const slogan = activeBranch?.slogan || "Proudly Part of Grace Tailor's and Cloth House, Dinga";
+        const logo = activeBranch?.logo || "/logo.png";
+        const phone = activeBranch?.phone || "0318-6284318";
+        const address = activeBranch?.address || "Mohri Chowk, Kharian, Gujrat";
+        const branchNotes = activeBranch?.notes || "";
+        let currentBranchNotes = branchNotes;
+
+        const suitDetailValue = (item) => {
+            const rows = [];
+            if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
+            if (item.pohnchaType) rows.push(['Bottom', item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net (Jaali)' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net + Embroidery']);
+            if (item.gheraType) rows.push(['Daman', item.gheraType === 'seedha' ? 'Straight' : 'Round']);
+            if (item.galaType) rows.push(['Collar', `${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`]);
+            if (item.pocketType) rows.push(['Pocket', item.pocketType === 'single' ? 'Single' : 'Double']);
+            if (item.hasFrontPockets) rows.push(['Front Pockets', 'Yes']);
+            if (item.hasShalwarPocket) rows.push(['Shalwar Pocket', 'Yes']);
+            if (item.shalwarType) rows.push(['Shalwar', item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar']);
+            if (item.itemNote) rows.push(['Note', item.itemNote]);
+            return rows;
+        };
+
+        const renderHeader = (titleText) => `
+            <div style="text-align: center; margin-bottom: 6px;">
+                ${logo ? `<img src="${logo}" alt="Logo" onerror="this.src='/logo.png';" style="width: 44px; height: 44px; object-fit: contain; margin-bottom: 2px;" />` : ''}
+                <div style="font-size: 14px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: #000; line-height: 1.2;">${brandName}</div>
+                ${slogan ? `<div style="font-size: 8.5px; color: #444; font-style: italic; margin-top: 1px;">${slogan}</div>` : ''}
+                ${phone ? `<div style="font-size: 9.5px; font-weight: 600; margin-top: 2px;">📞 ${phone}</div>` : ''}
+                ${address ? `<div style="font-size: 9px; color: #333; margin-top: 1px;">${address}</div>` : ''}
+                <div style="border-bottom: 1px dashed #000; margin: 5px 0 4px 0;"></div>
+                <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">${titleText}</div>
+                <div style="border-bottom: 1px dashed #000; margin: 4px 0 6px 0;"></div>
+            </div>
+        `;
+
+        const renderSingleBill = (booking) => {
+            const bBranchId = booking.branchId || booking.branch?.id || bookingBranchId;
+            const bMatched = currentBranches.find(b => String(b.id) === String(bBranchId));
+            const currentBranchNotes = bMatched?.notes || booking.branch?.notes || branchNotes || "";
+            const billingCust = booking.billingCustomer || booking.customer;
+            const stitchItems = (booking.items || []).filter(item => (item.selectedOptions || []).length > 0);
+            const prodItems = (booking.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+            const allItems = [...stitchItems, ...prodItems];
+
+            const itemsHtml = allItems.map((item) => {
+                const isStitch = (item.selectedOptions || []).length > 0;
+                const unitPr = isStitch
+                    ? (item.quantity > 1 ? parseFloat(item.totalPrice || 0) / item.quantity : parseFloat(item.totalPrice || 0))
+                    : parseFloat(item.unitPrice || 0);
+                const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                const itemType = isWskot ? "Waistcoat" : "Suit";
+                const optNames = (item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ');
+                const desc = isStitch
+                    ? `<strong style="display:block;">${itemType} ${item.product?.name ? `(${item.product.name})` : ''}</strong>${optNames ? `<span style="font-size:8.5px;color:#333;">${optNames}</span>` : ''}`
+                    : `<strong>${item.product?.name || 'Product'}</strong>`;
+
+                return `
+                    <tr style="border-bottom: 1px dotted #ccc;">
+                        <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; line-height: 1.3;">
+                            ${desc}
+                            ${item.quantity > 1 ? `<div style="font-size: 8.5px; color: #555;">${item.quantity} x Rs. ${unitPr.toLocaleString()}</div>` : ''}
+                        </td>
+                        <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; text-align: center;">
+                            ${item.quantity || 1}
+                        </td>
+                        <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; text-align: right; font-weight: bold;">
+                            Rs. ${parseFloat(item.totalPrice || 0).toLocaleString()}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            const itemsWithDetails = (booking.items || []).filter(item => suitDetailValue(item).length > 0);
+            const suitDetailsHtml = itemsWithDetails.length > 0 ? `
+                <div style="margin-top: 6px; margin-bottom: 6px;">
+                    <div style="font-size: 9.5px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Order Details:</div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody>
+                            ${itemsWithDetails.map((item, idx) => {
+                                const details = suitDetailValue(item);
+                                const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                                const itemType = isWskot ? "Waistcoat" : "Suit";
+                                return `
+                                    <tr style="border-bottom: 1px dotted #ccc;">
+                                        <td style="padding: 3px 0; font-size: 8.5px; line-height: 1.35;">
+                                            <strong>${itemType} #${idx + 1}:</strong> ${details.map(([l, v]) => `${l}: ${v}`).join('  |  ')}
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            ` : '';
+
+            const totalDiscount = (booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0);
+            const netTotal = parseFloat(booking.totalAmount || 0);
+            const rawTotal = netTotal + totalDiscount;
+            const advanceAmount = parseFloat(booking.advanceAmount || 0);
+            const remainingAmount = parseFloat(booking.remainingAmount || 0);
+
+            return `
+                <div class="receipt-page">
+                    <div class="receipt">
+                        ${renderHeader("CUSTOMER BILL / INVOICE")}
+                        <div style="font-size: 9.5px; line-height: 1.4; margin-bottom: 6px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 1px 0; vertical-align: top; width: 45%; font-weight: 600;">Bill No:</td>
+                                        <td style="padding: 1px 0; vertical-align: top; text-align: right; font-weight: bold;">#${booking.bookingNumber || booking.id}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Booking Date:</td>
+                                        <td style="padding: 1px 0; vertical-align: top; text-align: right;">${fmt(booking.bookingDate)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Delivery Date:</td>
+                                        <td style="padding: 1px 0; vertical-align: top; text-align: right;">${fmt(booking.deliveryDate)}</td>
+                                    </tr>
+                                    ${booking.trialDate ? `
+                                        <tr>
+                                            <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Trial Date:</td>
+                                            <td style="padding: 1px 0; vertical-align: top; text-align: right;">${fmt(booking.trialDate)}</td>
+                                        </tr>
+                                    ` : ''}
+                                    <tr style="border-top: 1px dotted #ccc;">
+                                        <td style="padding: 3px 0 1px 0; vertical-align: top; font-weight: bold; font-size: 11px;">Customer:</td>
+                                        <td style="padding: 3px 0 1px 0; vertical-align: top; text-align: right; font-weight: bold; font-size: 12px;">${booking.customer?.name || '—'}</td>
+                                    </tr>
+                                    ${booking.customer?.phone ? `
+                                        <tr>
+                                            <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Phone:</td>
+                                            <td style="padding: 1px 0; vertical-align: top; text-align: right;">${booking.customer.phone}</td>
+                                        </tr>
+                                    ` : ''}
+                                    <tr>
+                                        <td style="padding: 1px 0; vertical-align: top; font-weight: bold; font-size: 10px;">Address:</td>
+                                        <td style="padding: 1px 0; vertical-align: top; text-align: right; font-weight: bold; font-size: 11px;">${booking.customer?.address || '—'}</td>
+                                    </tr>
+                                    ${booking.customer?.measurementNo ? `
+                                        <tr>
+                                            <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Measurement No:</td>
+                                            <td style="padding: 1px 0; vertical-align: top; text-align: right; font-weight: bold;">${booking.customer.measurementNo}</td>
+                                        </tr>
+                                    ` : ''}
+                                    ${billingCust?.id !== booking.customer?.id && billingCust?.name ? `
+                                        <tr>
+                                            <td style="padding: 1px 0; vertical-align: top; font-weight: 600;">Billing Party:</td>
+                                            <td style="padding: 1px 0; vertical-align: top; text-align: right;">${billingCust.name}</td>
+                                        </tr>
+                                    ` : ''}
+                                </tbody>
+                            </table>
+                            <div style="border-bottom: 1px dashed #000; margin: 5px 0;"></div>
+                        </div>
+
+                        ${allItems.length > 0 ? `
+                            <div style="margin-bottom: 6px;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px dashed #000;">
+                                            <th style="text-align: left; padding: 3px 0; font-size: 9.5px; font-weight: bold;">Description</th>
+                                            <th style="text-align: center; padding: 3px 0; font-size: 9.5px; font-weight: bold; width: 30px;">Qty</th>
+                                            <th style="text-align: right; padding: 3px 0; font-size: 9.5px; font-weight: bold; width: 70px;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        ${suitDetailsHtml}
+
+                        <div style="margin-top: 6px; margin-bottom: 6px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody>
+                                    <tr style="border-top: 1px dashed #000;">
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Total Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold;">Rs. ${rawTotal.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Discount Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold; color: #dc2626;">Rs. ${totalDiscount.toLocaleString()}</td>
+                                    </tr>
+                                    <tr style="border-top: 1px dotted #ccc;">
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Net Total:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold;">Rs. ${netTotal.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Advance Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold; color: #059669;">Rs. ${advanceAmount.toLocaleString()}</td>
+                                    </tr>
+                                    <tr style="border-top: 1px dashed #000; border-bottom: 1px solid #000; font-weight: bold;">
+                                        <td style="padding: 5px 0; font-size: 10.5px;">Remaining Balance:</td>
+                                        <td style="padding: 5px 0; font-size: 10.5px; text-align: right; color: #dc2626;">Rs. ${remainingAmount.toLocaleString()}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        ${booking.notes ? `
+                            <div style="border: 1px dotted #aaa; border-radius: 4px; padding: 4px 5px; margin: 6px 0; font-size: 8.5px; line-height: 1.3;">
+                                <strong>Note:</strong> ${booking.notes}
+                            </div>
+                        ` : ''}
+
+                        ${(currentBranchNotes || branchNotes) ? `
+                            <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 4px; margin: 6px 0; font-size: 8.5px; color: #000; text-align: center; white-space: pre-line; line-height: 1.4;">
+                                ${currentBranchNotes || branchNotes}
+                            </div>
+                        ` : ''}
+
+                        <div style="text-align: center; margin-top: 8px; margin-bottom: 4px; font-size: 8.5px; color: #555;">
+                            <div style="border-bottom: 1px dashed #000; margin-bottom: 5px;"></div>
+                            <div>Thank you for choosing ${brandName}!</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderMergedBill = (bookings) => {
+            const sortedBookings = [...bookings].sort((a, b) => {
+                const numA = parseInt(a.bookingNumber?.replace(/-/g, '')) || a.id;
+                const numB = parseInt(b.bookingNumber?.replace(/-/g, '')) || b.id;
+                return numA - numB;
+            });
+
+            const totalAmount = sortedBookings.reduce((sum, b) => sum + parseFloat(b.totalAmount || 0), 0);
+            const advanceAmount = sortedBookings.reduce((sum, b) => sum + parseFloat(b.advanceAmount || 0), 0);
+            const remainingAmount = sortedBookings.reduce((sum, b) => sum + parseFloat(b.remainingAmount || 0), 0);
+            const totalDiscount = sortedBookings.reduce((sum, b) => {
+                return sum + (b.items || []).reduce((s, item) => s + parseFloat(item.discount || 0), 0);
+            }, 0);
+            const rawTotal = totalAmount + totalDiscount;
+            const notesList = sortedBookings.filter(b => b.notes).map(b => `[#${b.bookingNumber || b.id}]: ${b.notes}`);
+
+            const itemsRowsHtml = sortedBookings.map((b) => {
+                const stitchItems = (b.items || []).filter(item => (item.selectedOptions || []).length > 0);
+                const prodItems = (b.items || []).filter(item => (item.selectedOptions || []).length === 0 && item.productId);
+                const allItems = [...stitchItems, ...prodItems];
+
+                return allItems.map((item) => {
+                    const isStitch = (item.selectedOptions || []).length > 0;
+                    const unitPr = isStitch
+                        ? (item.quantity > 1 ? parseFloat(item.totalPrice || 0) / item.quantity : parseFloat(item.totalPrice || 0))
+                        : parseFloat(item.unitPrice || 0);
+                    const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                    const itemType = isWskot ? "Waistcoat" : "Suit";
+                    const optNames = (item.selectedOptions || []).map(so => so.stitchingOption?.name).filter(Boolean).join(', ');
+                    const desc = isStitch
+                        ? `<strong style="display:block;">${itemType} ${item.product?.name ? `(${item.product.name})` : ''}</strong>${optNames ? `<span style="font-size:8.5px;color:#333;">${optNames}</span>` : ''}`
+                        : `<strong>${item.product?.name || 'Product'}</strong>`;
+
+                    return `
+                        <tr style="border-bottom: 1px dotted #ddd;">
+                            <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; line-height: 1.3;">
+                                ${desc}
+                                <div style="font-size: 8.5px; color: #7c3aed; font-weight: 600;">Bill: #${b.bookingNumber || b.id}</div>
+                                ${item.quantity > 1 ? `<div style="font-size: 8.5px; color: #555;">${item.quantity} x Rs. ${unitPr.toLocaleString()}</div>` : ''}
+                            </td>
+                            <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; text-align: center;">${item.quantity || 1}</td>
+                            <td style="padding: 4px 0; font-size: 9.5px; vertical-align: top; text-align: right; font-weight: bold;">
+                                Rs. ${parseFloat(item.totalPrice || 0).toLocaleString()}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }).join('');
+
+            const itemsWithDetails = sortedBookings.flatMap((booking) =>
+                (booking.items || [])
+                    .filter(item => suitDetailValue(item).length > 0)
+                    .map(item => ({ booking, item }))
+            );
+
+            return `
+                <div class="receipt-page">
+                    <div class="receipt">
+                        ${renderHeader("MERGED CUSTOMER BILL")}
+                        <div style="font-size: 9.5px; line-height: 1.4; margin-bottom: 6px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody>
+                                    ${sortedBookings.map((b, idx) => {
+                                        const bc = b.customer || {};
+                                        return `
+                                            <tr style="border-bottom: ${idx < sortedBookings.length - 1 ? '1px dotted #ccc' : 'none'};">
+                                                <td style="padding: 3px 0; vertical-align: top;">
+                                                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 10px;">
+                                                        <span>Bill: #${b.bookingNumber || b.id}</span>
+                                                        <span style="font-size: 9px; font-weight: normal; color: #555;">Bk: ${fmt(b.bookingDate)} | Del: ${fmt(b.deliveryDate)}</span>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 1px;">
+                                                        <strong>Customer:</strong>
+                                                        <span style="font-weight: bold; font-size: 11px;">${bc.name || '—'} ${bc.phone ? `(${bc.phone})` : ''}</span>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #333;">
+                                                        <strong>Address:</strong>
+                                                        <span style="font-weight: bold; font-size: 11px;">${bc.address || '—'} ${bc.measurementNo ? `| M#: ${bc.measurementNo}` : ''}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                            <div style="border-bottom: 1px dashed #000; margin: 5px 0;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 6px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px dashed #000;">
+                                        <th style="text-align: left; padding: 3px 0; font-size: 9.5px; font-weight: bold;">Description</th>
+                                        <th style="text-align: center; padding: 3px 0; font-size: 9.5px; font-weight: bold; width: 30px;">Qty</th>
+                                        <th style="text-align: right; padding: 3px 0; font-size: 9.5px; font-weight: bold; width: 70px;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        ${itemsWithDetails.length > 0 ? `
+                            <div style="margin-top: 6px; margin-bottom: 6px;">
+                                <div style="font-size: 9.5px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Order Details:</div>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tbody>
+                                        ${itemsWithDetails.map(({ booking, item }, idx) => {
+                                            const details = suitDetailValue(item);
+                                            const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
+                                            const itemType = isWskot ? "Waistcoat" : "Suit";
+                                            return `
+                                                <tr style="border-bottom: 1px dotted #ccc;">
+                                                    <td style="padding: 3px 0; font-size: 8.5px; line-height: 1.35;">
+                                                        <strong>${itemType} #${idx + 1} (Bill #${booking.bookingNumber || booking.id}):</strong> ${details.map(([l, v]) => `${l}: ${v}`).join('  |  ')}
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+
+                        <div style="margin-top: 6px; margin-bottom: 6px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody>
+                                    <tr style="border-top: 1px dashed #000;">
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Total Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold;">Rs. ${rawTotal.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Discount Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold; color: #dc2626;">Rs. ${totalDiscount.toLocaleString()}</td>
+                                    </tr>
+                                    <tr style="border-top: 1px dotted #ccc;">
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Net Total:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold;">Rs. ${totalAmount.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-size: 9.5px; font-weight: 600;">Advance Amount:</td>
+                                        <td style="padding: 3px 0; font-size: 9.5px; text-align: right; font-weight: bold; color: #059669;">Rs. ${advanceAmount.toLocaleString()}</td>
+                                    </tr>
+                                    <tr style="border-top: 1px dashed #000; border-bottom: 1px solid #000; font-weight: bold;">
+                                        <td style="padding: 5px 0; font-size: 10.5px;">Remaining Balance:</td>
+                                        <td style="padding: 5px 0; font-size: 10.5px; text-align: right; color: #dc2626;">Rs. ${remainingAmount.toLocaleString()}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        ${notesList.length > 0 ? `
+                            <div style="border: 1px dotted #aaa; border-radius: 4px; padding: 4px 5px; margin: 6px 0; font-size: 8.5px; line-height: 1.3;">
+                                <strong>Notes:</strong>
+                                ${notesList.map((n, i) => `<div style="margin-top: ${i > 0 ? '3px' : '0'};">${n}</div>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${(currentBranchNotes || branchNotes) ? `
+                            <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 4px; margin: 6px 0; font-size: 8.5px; color: #000; text-align: center; white-space: pre-line; line-height: 1.4;">
+                                ${currentBranchNotes || branchNotes}
+                            </div>
+                        ` : ''}
+
+                        <div style="text-align: center; margin-top: 8px; margin-bottom: 4px; font-size: 8.5px; color: #555;">
+                            <div style="border-bottom: 1px dashed #000; margin-bottom: 5px;"></div>
+                            <div>Thank you for choosing ${brandName}!</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const contentHtml = isMerged
+            ? renderMergedBill(bookingList)
+            : bookingList.map(renderSingleBill).join('');
+
+        const pageTitle = isMerged
+            ? `Merged Bill — ${bookingList.length} Bookings`
+            : (bookingList.length === 1 ? `Bill #${bookingList[0].bookingNumber || bookingList[0].id}` : `Bills — ${bookingList.length}`);
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>${pageTitle}</title>
+<style>
+@page {
+    size: 80mm auto;
+    margin: 0mm;
+}
+@media print {
+    html, body {
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .receipt-page {
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+    }
+    .receipt-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+}
+* {
+    box-sizing: border-box;
+}
+html, body {
+    margin: 0 auto;
+    padding: 0;
+    width: 80mm;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+.receipt-page {
+    width: 80mm;
+    margin: 0 auto;
+    padding: 0;
+}
+.receipt {
+    width: 72mm;
+    margin: 0 auto;
+    padding: 2mm 1mm;
+    box-sizing: border-box;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #000;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+</style>
+</head>
+<body>
+${contentHtml}
+<script>
+window.onload = function() {
+    window.print();
+};
+<\/script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank');
+        if (win) {
+            win.document.write(html);
+            win.document.close();
+        } else {
+            let iframe = document.getElementById('thermal-print-iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'thermal-print-iframe';
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+            }
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            }, 300);
+        }
+    };
+
     const handlePrintConfirm = async (type) => {
         setPrintDialogOpen(false);
 
@@ -1830,11 +2365,14 @@ ${allBookingsHtml}
                 await openStitchingTicketWindow(selected, null);
                 return;
             }
-            setPrintType(type);
-            setTimeout(() => {
-                setBulkPrintBookings(selected);
-                setTimeout(() => triggerPrint(), 300);
-            }, 50);
+            if (type === 'MERGED_BILL') {
+                openCustomerBillWindow(selected, true);
+                return;
+            }
+            if (type === 'BILL') {
+                openCustomerBillWindow(selected, false);
+                return;
+            }
             return;
         }
 
@@ -1846,10 +2384,10 @@ ${allBookingsHtml}
             return;
         }
 
-        setPrintType(type);
-        setTimeout(() => {
-            setPrintBooking(tempPrintBooking);
-        }, 50);
+        if (type === 'BILL') {
+            openCustomerBillWindow(tempPrintBooking, false);
+            return;
+        }
     };
 
 
@@ -2171,9 +2709,29 @@ ${allBookingsHtml}
     const productSubtotal = productItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
     const totalSubtotal = stitchingSubtotal + productSubtotal;
 
-    // Apply global discount on totalSubtotal
+    const hasStitchingInCart = stitchingSubtotal > 0;
+    const hasProductsInCart = productSubtotal > 0;
+
+    // Discount targeting logic:
+    // 1. If booking contains stitching & products both -> apply discount to products only (capped at productSubtotal)
+    // 2. If booking contains products only -> apply discount to products (capped at productSubtotal)
+    // 3. If booking contains stitching only -> apply discount to stitching (capped at stitchingSubtotal)
+    let eligibleDiscountSubtotal = totalSubtotal;
+    let discountTargetLabel = "";
+
+    if (hasStitchingInCart && hasProductsInCart) {
+        eligibleDiscountSubtotal = productSubtotal;
+        discountTargetLabel = "Applied to Products only";
+    } else if (hasProductsInCart) {
+        eligibleDiscountSubtotal = productSubtotal;
+        discountTargetLabel = "Applied to Products";
+    } else if (hasStitchingInCart) {
+        eligibleDiscountSubtotal = stitchingSubtotal;
+        discountTargetLabel = "Applied to Stitching";
+    }
+
     const globalDiscountInput = parseFloat(formData.discount) || 0;
-    const appliedDiscount = Math.min(globalDiscountInput, totalSubtotal);
+    const appliedDiscount = Math.min(globalDiscountInput, eligibleDiscountSubtotal);
 
     const totalAmount = Math.max(0, totalSubtotal - appliedDiscount);
     const advanceAmount = parseFloat(formData.advanceAmount) || 0;
@@ -2206,40 +2764,100 @@ ${allBookingsHtml}
             const subProduct = validProductItems.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1)), 0);
             const totalSub = subStitching + subProduct;
 
+            const hasStitchingItems = validItems.length > 0 && subStitching > 0;
+            const hasProductItems = validProductItems.length > 0 && subProduct > 0;
+
+            // Target discount according to requirements:
+            // 1. If stitching and products both -> apply discount to products only
+            // 2. If products only -> apply discount to products
+            // 3. If stitching only -> apply discount to stitching
+            let discountTarget = "STITCHING";
+            let eligibleSub = totalSub;
+
+            if (hasStitchingItems && hasProductItems) {
+                discountTarget = "PRODUCTS";
+                eligibleSub = subProduct;
+            } else if (hasProductItems) {
+                discountTarget = "PRODUCTS";
+                eligibleSub = subProduct;
+            } else if (hasStitchingItems) {
+                discountTarget = "STITCHING";
+                eligibleSub = subStitching;
+            }
+
             const discountInput = parseFloat(formData.discount) || 0;
-            const submitDiscount = Math.min(discountInput, totalSub);
+            const submitDiscount = Math.min(discountInput, eligibleSub);
 
-            let remainingDiscount = submitDiscount;
-            let remainingSubtotal = totalSub;
+            let finalStitchingItems = [];
+            let finalProductItems = [];
 
-            const allTargets = [
-                ...validItems.map(item => ({ ...item, _isStitch: true })),
-                ...validProductItems.map(item => ({ ...item, _isStitch: false }))
-            ];
+            if (discountTarget === "PRODUCTS") {
+                // Stitching items get NO discount
+                finalStitchingItems = validItems.map(item => {
+                    const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                    return {
+                        ...item,
+                        discount: 0,
+                        totalPrice: itemSub
+                    };
+                });
 
-            const processedTargets = allTargets.map((item, idx, arr) => {
-                const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
-                let itemDisc = 0;
-                
-                if (submitDiscount > 0 && remainingSubtotal > 0) {
-                    if (idx === arr.length - 1) {
-                        itemDisc = remainingDiscount;
-                    } else {
-                        itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
-                        remainingDiscount -= itemDisc;
-                        remainingSubtotal -= itemSub;
+                // Product items absorb the entire discount
+                let remainingDiscount = submitDiscount;
+                let remainingSubtotal = subProduct;
+
+                finalProductItems = validProductItems.map((item, idx, arr) => {
+                    const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                    let itemDisc = 0;
+                    if (submitDiscount > 0 && remainingSubtotal > 0) {
+                        if (idx === arr.length - 1) {
+                            itemDisc = remainingDiscount;
+                        } else {
+                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
+                            remainingDiscount -= itemDisc;
+                            remainingSubtotal -= itemSub;
+                        }
                     }
-                }
+                    return {
+                        ...item,
+                        discount: itemDisc,
+                        totalPrice: Math.max(0, itemSub - itemDisc)
+                    };
+                });
+            } else {
+                // Stitching only: stitching items absorb the discount
+                let remainingDiscount = submitDiscount;
+                let remainingSubtotal = subStitching;
 
-                return {
-                    ...item,
-                    discount: itemDisc,
-                    totalPrice: Math.max(0, itemSub - itemDisc)
-                };
-            });
+                finalStitchingItems = validItems.map((item, idx, arr) => {
+                    const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                    let itemDisc = 0;
+                    if (submitDiscount > 0 && remainingSubtotal > 0) {
+                        if (idx === arr.length - 1) {
+                            itemDisc = remainingDiscount;
+                        } else {
+                            itemDisc = Math.round((remainingDiscount * itemSub / remainingSubtotal) * 100) / 100;
+                            remainingDiscount -= itemDisc;
+                            remainingSubtotal -= itemSub;
+                        }
+                    }
+                    return {
+                        ...item,
+                        discount: itemDisc,
+                        totalPrice: Math.max(0, itemSub - itemDisc)
+                    };
+                });
 
-            const finalStitchingItems = processedTargets.filter(item => item._isStitch);
-            const finalProductItems = processedTargets.filter(item => !item._isStitch);
+                // Products get NO discount
+                finalProductItems = validProductItems.map(item => {
+                    const itemSub = parseFloat(item.unitPrice || 0) * (parseFloat(item.quantity) || 1);
+                    return {
+                        ...item,
+                        discount: 0,
+                        totalPrice: itemSub
+                    };
+                });
+            }
 
             const finalTotal = Math.max(0, totalSub - submitDiscount);
             const finalAdvance = parseFloat(formData.advanceAmount) || 0;
@@ -2356,6 +2974,9 @@ ${allBookingsHtml}
             cutterIds: (booking.staff || []).filter(s => s.role === 'CUTTER').map(s => s.customerId),
             advanceAmount: booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "",
             notes: booking.notes || "",
+            discount: ((booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0) > 0)
+                ? String((booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0))
+                : "",
             branchId: booking.branchId ? String(booking.branchId) : "",
         });
         const stitchingBookingItems = (booking.items || []).filter(item => !item.productId);
@@ -2475,6 +3096,7 @@ ${allBookingsHtml}
             tailorIds: [],
             cutterIds: [],
             advanceAmount: "",
+            discount: "",
             notes: "",
             // Stitching Details
             cuffType: "",
@@ -3451,6 +4073,8 @@ ${allBookingsHtml}
                                             value={formData.discount}
                                             onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                            helperText={discountTargetLabel ? `${discountTargetLabel}${hasStitchingInCart && hasProductsInCart ? ` (Max Rs. ${eligibleDiscountSubtotal.toFixed(0)})` : ''}` : undefined}
+                                            FormHelperTextProps={{ sx: { fontSize: '0.68rem', fontWeight: 600, color: hasStitchingInCart && hasProductsInCart ? '#d97706' : 'text.secondary' } }}
                                             sx={FIELD_SX} />
                                     </Grid>
                                     <Grid size={{ xs: 4 }}>
@@ -5638,10 +6262,10 @@ ${allBookingsHtml}
                     {printBooking && (
                         <div className="print-page">
                             {printType === 'BILL'
-                                ? <CustomerBill booking={printBooking} branch={(branches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch} />
+                                ? <CustomerBill booking={printBooking} branch={(allBranches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch || allBranches[0]} />
                                 : <TailorTicket 
                                     booking={printBooking} 
-                                    branch={(branches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch}
+                                    branch={(allBranches || []).find(b => String(b.id) === String(printBooking.branchId || printBooking.branch?.id)) || printBooking.branch || allBranches[0]}
                                     measurements={
                                         (customerMeasurements && customerMeasurements.customerId === printBooking.customerId)
                                             ? customerMeasurements
@@ -5657,17 +6281,17 @@ ${allBookingsHtml}
                             <div className="print-page">
                                 <MergedCustomerBill 
                                     bookings={bulkPrintBookings} 
-                                    branch={(branches || []).find(b => String(b.id) === String(bulkPrintBookings[0]?.branchId || bulkPrintBookings[0]?.branch?.id)) || bulkPrintBookings[0]?.branch}
+                                    branch={(allBranches || []).find(b => String(b.id) === String(bulkPrintBookings[0]?.branchId || bulkPrintBookings[0]?.branch?.id)) || bulkPrintBookings[0]?.branch || allBranches[0]}
                                 />
                             </div>
                         ) : (
                             bulkPrintBookings.map((bk) => (
                                 <div key={bk.id} className="print-page">
                                     {printType === 'BILL'
-                                        ? <CustomerBill booking={bk} branch={(branches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch} />
+                                        ? <CustomerBill booking={bk} branch={(allBranches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch || allBranches[0]} />
                                         : <TailorTicket 
                                             booking={bk} 
-                                            branch={(branches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch}
+                                            branch={(allBranches || []).find(b => String(b.id) === String(bk.branchId || bk.branch?.id)) || bk.branch || allBranches[0]}
                                             measurements={bk.customer?.measurements?.[0] || null} 
                                           />
                                     }
@@ -5679,13 +6303,11 @@ ${allBookingsHtml}
             )}
 
             <GlobalStyles styles={{
+                '@page': {
+                    size: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm auto' : 'A4 portrait',
+                    margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0mm' : '10mm',
+                },
                 '@media print': {
-                    '@page': {
-                        size: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm auto' : 'A4 portrait',
-                        margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0' : '10mm',
-                        marginTop: '0mm',
-                        marginBottom: '0mm'
-                    },
                     'html, body': {
                         width: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm !important' : 'auto !important',
                         margin: '0 !important',
@@ -5702,8 +6324,8 @@ ${allBookingsHtml}
                         left: 0,
                         top: 0,
                         width: (printType === 'BILL' || printType === 'MERGED_BILL') ? '80mm !important' : '100%',
-                        margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0 !important' : '0',
-                        padding: (printType === 'BILL' || printType === 'MERGED_BILL') ? '4mm 3mm !important' : '0',
+                        margin: (printType === 'BILL' || printType === 'MERGED_BILL') ? '0 auto !important' : '0',
+                        padding: (printType === 'BILL' || printType === 'MERGED_BILL') ? '2mm 3mm !important' : '0',
                         boxSizing: 'border-box !important',
                         backgroundColor: 'white',
                     },
