@@ -84,11 +84,11 @@ export default function LedgerManagementClient({
     branches = []
 }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "ledger", "view");
-    const canCreate = checkPermission(session, "ledger", "create");
-    const canEdit = checkPermission(session, "ledger", "edit");
-    const canDelete = checkPermission(session, "ledger", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "ledger", "view");
+    const canCreate = isAdmin || checkPermission(session, "ledger", "create");
+    const canEdit = isAdmin || checkPermission(session, "ledger", "edit");
+    const canDelete = isAdmin || checkPermission(session, "ledger", "delete");
     const searchParams = useSearchParams();
     const customerIdParam = searchParams.get("customerId");
 
@@ -450,7 +450,7 @@ export default function LedgerManagementClient({
 
 
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

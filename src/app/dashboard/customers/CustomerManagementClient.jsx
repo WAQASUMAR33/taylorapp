@@ -45,6 +45,7 @@ import {
     Tab,
     ToggleButton,
     ToggleButtonGroup,
+    useTheme,
 } from "@mui/material";
 import {
     Edit,
@@ -132,17 +133,20 @@ const formatMeasurementDate = (dateInput) => {
     }
 };
 
-export default function CustomerManagementClient({ initialCustomers, initialTotalCount, accountCategories }) {
+export default function CustomerManagementClient({ initialCustomers, initialTotalCount, initialMaxMeasurementNo = 0, accountCategories }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "customers", "view");
-    const canCreate = checkPermission(session, "customers", "create");
-    const canEdit = checkPermission(session, "customers", "edit");
-    const canDelete = checkPermission(session, "customers", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "customers", "view");
+    const canCreate = isAdmin || checkPermission(session, "customers", "create");
+    const canEdit = isAdmin || checkPermission(session, "customers", "edit");
+    const canDelete = isAdmin || checkPermission(session, "customers", "delete");
 
     const [customers, setCustomers] = useState(initialCustomers);
     const [categories, setCategories] = useState(accountCategories);
     const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
+    const [maxMeasurementNo, setMaxMeasurementNo] = useState(initialMaxMeasurementNo || 0);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(50);
     const [listLoading, setListLoading] = useState(false);
@@ -174,11 +178,16 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
 
     const FIELD_SX = {
         '& .MuiOutlinedInput-root': {
-            bgcolor: 'white',
+            bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "background.paper",
+            color: "text.primary",
             borderRadius: 2,
-            '& fieldset': { borderColor: '#e5e7eb' },
+            '& fieldset': { borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "#e5e7eb" },
             '&:hover fieldset': { borderColor: '#7c3aed' },
             '&.Mui-focused fieldset': { borderColor: '#7c3aed', borderWidth: 2 },
+        },
+        '& .MuiInputLabel-root': {
+            color: "text.secondary",
+            '&.Mui-focused': { color: '#7c3aed' }
         }
     };
 
@@ -254,6 +263,9 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     const data = await res.json();
                     setCustomers(data.customers || []);
                     setTotalCount(data.totalCount || 0);
+                    if (data.maxMeasurementNo !== undefined) {
+                        setMaxMeasurementNo(data.maxMeasurementNo);
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching customers:", err);
@@ -569,82 +581,18 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const [duplicateMeasurementError, setDuplicateMeasurementError] = useState("");
     const checkTimerRef = useRef(null);
 
-    // Customer Key (Primary Key ID) auto / custom state
-    const [customerKeyMode, setCustomerKeyMode] = useState("auto"); // "auto" | "custom"
-    const [customerKey, setCustomerKey] = useState("");
-    const [autoKeyLoading, setAutoKeyLoading] = useState(false);
-    const [checkingKeyDuplicate, setCheckingKeyDuplicate] = useState(false);
-    const [duplicateKeyError, setDuplicateKeyError] = useState("");
-    const keyCheckTimerRef = useRef(null);
-
-    const fetchNextCustomerKey = async (random = false) => {
-        setAutoKeyLoading(true);
-        try {
-            const res = await fetch(`/api/customers/next-id${random ? "?random=true" : ""}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.nextId != null) {
-                    setCustomerKey(String(data.nextId));
-                    setDuplicateKeyError("");
-                }
-            }
-        } catch (err) {
-            console.error("Failed to fetch next customer key:", err);
-        } finally {
-            setAutoKeyLoading(false);
-        }
-    };
-
-    const handleCustomerKeyModeChange = (e, newMode) => {
-        if (!newMode) return;
-        setCustomerKeyMode(newMode);
-        setDuplicateKeyError("");
-        if (newMode === "auto") {
-            fetchNextCustomerKey(false);
-        }
-    };
-
-    const checkCustomerKeyAvailability = async (keyVal, excludeId) => {
-        const trimmed = keyVal ? keyVal.toString().trim() : "";
-        if (!trimmed || isNaN(parseInt(trimmed))) {
-            setDuplicateKeyError("");
-            return;
-        }
-        setCheckingKeyDuplicate(true);
-        try {
-            const res = await fetch(`/api/customers/check-id?id=${encodeURIComponent(trimmed)}${excludeId ? `&excludeId=${excludeId}` : ""}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.exists) {
-                    setDuplicateKeyError(data.message || `Key #${trimmed} already exists, use another`);
-                } else {
-                    setDuplicateKeyError("");
-                }
-            }
-        } catch (err) {
-            console.error("Key duplicate check failed:", err);
-        } finally {
-            setCheckingKeyDuplicate(false);
-        }
-    };
-
-    const handleCustomKeyChange = (e) => {
-        const val = e.target.value.replace(/[^0-9]/g, "");
-        setCustomerKey(val);
-        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
-        keyCheckTimerRef.current = setTimeout(() => {
-            checkCustomerKeyAvailability(val, formData.id);
-        }, 300);
-    };
-
-    const fetchNextMeasurementNo = async () => {
+    const fetchNextMeasurementNo = async (random = false) => {
         setAutoNumberLoading(true);
         try {
-            const res = await fetch("/api/customers/next-measurement-no");
+            const res = await fetch(`/api/customers/next-measurement-no${random ? "?random=true" : ""}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.nextMeasurementNo) {
                     setFormData((prev) => ({ ...prev, measurementNo: data.nextMeasurementNo }));
+                    setDuplicateMeasurementError("");
+                }
+                if (data.highestNo != null) {
+                    setMaxMeasurementNo(data.highestNo);
                 }
             }
         } catch (err) {
@@ -659,7 +607,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setMeasurementMode(newMode);
         setDuplicateMeasurementError("");
         if (newMode === "auto") {
-            fetchNextMeasurementNo();
+            fetchNextMeasurementNo(false);
         }
     };
 
@@ -676,7 +624,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             if (res.ok) {
                 const data = await res.json();
                 if (data.exists) {
-                    setDuplicateMeasurementError("The number already exists, use another");
+                    setDuplicateMeasurementError(data.message || `M# ${trimmed} is already assigned, use another`);
                 } else {
                     setDuplicateMeasurementError("");
                 }
@@ -689,7 +637,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     };
 
     const handleCustomMeasurementNoChange = (e) => {
-        const val = e.target.value;
+        const val = e.target.value.replace(/[^0-9]/g, "");
         setFormData((prev) => ({ ...prev, measurementNo: val }));
         if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
         checkTimerRef.current = setTimeout(() => {
@@ -729,11 +677,6 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setDuplicateMeasurementError("");
         setCheckingDuplicate(false);
         if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
-        setCustomerKeyMode("auto");
-        setCustomerKey("");
-        setDuplicateKeyError("");
-        setCheckingKeyDuplicate(false);
-        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
         setImageFile(null);
         setImagePreview(null);
         setError("");
@@ -743,8 +686,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
     const handleOpen = () => {
         resetForm();
         setShowForm(true);
-        fetchNextMeasurementNo();
-        fetchNextCustomerKey(false);
+        fetchNextMeasurementNo(false);
     };
 
     const handleClose = () => {
@@ -784,36 +726,9 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setLoading(true);
         setError("");
 
-        if (!formData.id && customerKeyMode === "custom") {
-            if (duplicateKeyError) {
-                setError(duplicateKeyError);
-                setLoading(false);
-                return;
-            }
-            if (!customerKey || !customerKey.trim()) {
-                setError("Please enter a valid Customer Key or select Auto mode.");
-                setLoading(false);
-                return;
-            }
-            try {
-                const keyRes = await fetch(`/api/customers/check-id?id=${encodeURIComponent(customerKey.trim())}`);
-                if (keyRes.ok) {
-                    const keyData = await keyRes.json();
-                    if (keyData.exists) {
-                        setDuplicateKeyError(keyData.message || `Key #${customerKey} already exists, use another`);
-                        setError(keyData.message || `Key #${customerKey} already exists, use another`);
-                        setLoading(false);
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error("Key check error:", e);
-            }
-        }
-
         if (measurementMode === "custom") {
             if (duplicateMeasurementError) {
-                setError("The number already exists, use another");
+                setError(duplicateMeasurementError);
                 setLoading(false);
                 return;
             }
@@ -824,8 +739,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     if (checkRes.ok) {
                         const checkData = await checkRes.json();
                         if (checkData.exists) {
-                            setDuplicateMeasurementError("The number already exists, use another");
-                            setError("The number already exists, use another");
+                            setDuplicateMeasurementError(checkData.message || "The number already exists, use another");
+                            setError(checkData.message || "The number already exists, use another");
                             setLoading(false);
                             return;
                         }
@@ -863,8 +778,6 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
-                    customId: !formData.id && customerKeyMode === "custom" ? customerKey : null,
-                    idMode: customerKeyMode,
                     measurementMode,
                     image: imageUrl
                 }),
@@ -969,11 +882,6 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             balance: customer.balance || 0,
             image: customer.image || null,
         });
-        setCustomerKey(String(customer.id));
-        setCustomerKeyMode("custom");
-        setDuplicateKeyError("");
-        setCheckingKeyDuplicate(false);
-        if (keyCheckTimerRef.current) clearTimeout(keyCheckTimerRef.current);
         setMeasurementMode(hasMeasNo ? "custom" : "auto");
         setDuplicateMeasurementError("");
         setCheckingDuplicate(false);
@@ -982,7 +890,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         setImagePreview(customer.image || null);
         setShowForm(true);
         if (!hasMeasNo) {
-            fetchNextMeasurementNo();
+            fetchNextMeasurementNo(false);
         }
     };
 
@@ -1551,7 +1459,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
         return matchesFrom && matchesTo;
     }).sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id - b.id);
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>
@@ -1594,6 +1502,39 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     </Card>
                 </Box>
 
+                {/* Maximum Measurement No */}
+                <Box sx={{ flex: "1 1 0%", minWidth: 0 }}>
+                    <Card
+                        elevation={0}
+                        sx={{
+                            borderRadius: 3,
+                            border: "1px solid",
+                            borderColor: isDark ? "rgba(124, 58, 237, 0.3)" : "rgba(124, 58, 237, 0.2)",
+                            background: isDark
+                                ? "linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(79, 70, 229, 0.1) 100%)"
+                                : "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
+                            height: "100%",
+                            boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 4px 20px rgba(124,58,237,0.12)",
+                            transition: "transform 0.2s, box-shadow 0.2s",
+                            "&:hover": { transform: "translateY(-2px)", boxShadow: "0 6px 20px rgba(124,58,237,0.2)" },
+                        }}
+                    >
+                        <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: isDark ? "#c4b5fd" : "#6d28d9", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                Max Measurement No
+                            </Typography>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                                <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? "#ede9fe" : "#5b21b6" }}>
+                                    {maxMeasurementNo ? `M# ${maxMeasurementNo}` : "—"}
+                                </Typography>
+                                <Box sx={{ bgcolor: isDark ? "rgba(124, 58, 237, 0.3)" : "#ddd6fe", color: isDark ? "#e0e7ff" : "#6d28d9", p: 1, borderRadius: 2 }}>
+                                    <Ruler size={22} />
+                                </Box>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Box>
+
                 {/* Category Stats */}
                 {categoryStats.map((stat, idx) => {
                     const c = statColors[idx % statColors.length];
@@ -1630,11 +1571,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
             </Box>
 
             {/* ── Customer Information Search Panel ── */}
-            <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '1px solid #e5e7eb', overflow: 'visible', bgcolor: 'background.paper', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
-                <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #7c3aed' }}>
+            <Card variant="outlined" sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#e5e7eb", overflow: 'visible', bgcolor: 'background.paper', boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.03)' }}>
+                <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #7c3aed', bgcolor: isDark ? "rgba(124, 58, 237, 0.04)" : "transparent" }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <User size={18} color="#7c3aed" />
-                        <Typography variant="subtitle1" fontWeight={700} color="#1f2937">Customer Information Search</Typography>
+                        <Typography variant="subtitle1" fontWeight={700} color="text.primary">Customer Information Search</Typography>
                     </Box>
                     {hasActiveSearch && (
                         <Button
@@ -1724,16 +1665,16 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
 
                             {/* Clickable Customer Search Results Grid */}
                             {showCustomerGrid && hasActiveSearch && customers.length > 0 && (
-                                <Card variant="outlined" sx={{ mt: 2, border: '1px solid #d1d5db', borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                                <Card variant="outlined" sx={{ mt: 2, border: '1px solid', borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#d1d5db", borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                                     <TableContainer sx={{ maxHeight: 250 }}>
                                         <Table size="small" stickyHeader>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Name</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Father Name</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Phone Number</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Address</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151' }}>Measurement No</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: isDark ? "#1e293b" : "#f3f4f6", color: 'text.primary', borderColor: "divider" }}>Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: isDark ? "#1e293b" : "#f3f4f6", color: 'text.primary', borderColor: "divider" }}>Father Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: isDark ? "#1e293b" : "#f3f4f6", color: 'text.primary', borderColor: "divider" }}>Phone Number</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: isDark ? "#1e293b" : "#f3f4f6", color: 'text.primary', borderColor: "divider" }}>Address</TableCell>
+                                                    <TableCell sx={{ fontWeight: 700, backgroundColor: isDark ? "#1e293b" : "#f3f4f6", color: 'text.primary', borderColor: "divider" }}>Measurement No</TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -1754,15 +1695,15 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                         sx={{
                                                             cursor: 'pointer',
                                                             '&:hover': {
-                                                                backgroundColor: '#f3e8ff !important'
+                                                                backgroundColor: isDark ? "rgba(124, 58, 237, 0.15) !important" : "#f3e8ff !important"
                                                             }
                                                         }}
                                                     >
-                                                        <TableCell sx={{ fontWeight: 600, color: '#1f2937' }}>{cust.name}</TableCell>
-                                                        <TableCell color="text.secondary">{cust.fatherName || "—"}</TableCell>
-                                                        <TableCell color="text.secondary">{cust.phone || "—"}</TableCell>
-                                                        <TableCell color="text.secondary">{cust.address || "—"}</TableCell>
-                                                        <TableCell sx={{ color: '#7c3aed', fontWeight: 700 }}>M# {cust.measurementNo || "—"}</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600, color: 'text.primary', borderColor: "divider" }}>{cust.name}</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', borderColor: "divider" }}>{cust.fatherName || "—"}</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', borderColor: "divider" }}>{cust.phone || "—"}</TableCell>
+                                                        <TableCell sx={{ color: 'text.secondary', borderColor: "divider" }}>{cust.address || "—"}</TableCell>
+                                                        <TableCell sx={{ color: isDark ? "#c4b5fd" : '#7c3aed', fontWeight: 700, borderColor: "divider" }}>M# {cust.measurementNo || "—"}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -1914,9 +1855,9 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     </Box>
                 )}
                 <Table>
-                    <TableHead sx={{ bgcolor: "action.hover" }}>
+                    <TableHead sx={{ bgcolor: isDark ? "rgba(255, 255, 255, 0.04)" : "#f8fafc" }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "name"}
                                     direction={sortBy === "name" ? sortOrder : "asc"}
@@ -1925,7 +1866,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     Customer
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "fatherName"}
                                     direction={sortBy === "fatherName" ? sortOrder : "asc"}
@@ -1934,7 +1875,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     Father's Name
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "measurementNo"}
                                     direction={sortBy === "measurementNo" ? sortOrder : "asc"}
@@ -1943,7 +1884,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     M#
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "balance"}
                                     direction={sortBy === "balance" ? sortOrder : "asc"}
@@ -1952,7 +1893,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     Balance
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "phone"}
                                     direction={sortBy === "phone" ? sortOrder : "asc"}
@@ -1961,7 +1902,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     Phone
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }}>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }}>
                                 <TableSortLabel
                                     active={sortBy === "address"}
                                     direction={sortBy === "address" ? sortOrder : "asc"}
@@ -1970,7 +1911,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     Address
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, py: 1.5 }} align="center">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 1.5, color: "text.primary" }} align="center">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1998,21 +1939,34 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                             </Avatar>
                                             <Box>
                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                                                    <Typography variant="subtitle2" fontWeight={600}>
+                                                    <Typography variant="subtitle2" fontWeight={600} color="text.primary">
                                                         {customer.name}
                                                     </Typography>
                                                     <Chip
                                                         label={`#${customer.id}`}
                                                         size="small"
-                                                        color="primary"
-                                                        variant="outlined"
-                                                        sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700, borderRadius: 1 }}
+                                                        sx={{
+                                                            height: 18,
+                                                            fontSize: "0.68rem",
+                                                            fontWeight: 700,
+                                                            borderRadius: 1,
+                                                            bgcolor: isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff",
+                                                            color: isDark ? "#93c5fd" : "#2563eb",
+                                                            border: "1px solid",
+                                                            borderColor: isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe"
+                                                        }}
                                                     />
                                                 </Box>
                                                 <Chip
                                                     label={customer.accountCategory?.name || "N/A"}
                                                     size="small"
-                                                    sx={{ height: 18, fontSize: "0.65rem", mt: 0.3 }}
+                                                    sx={{
+                                                        height: 18,
+                                                        fontSize: "0.65rem",
+                                                        mt: 0.3,
+                                                        bgcolor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9",
+                                                        color: "text.secondary"
+                                                    }}
                                                 />
                                             </Box>
                                         </Box>
@@ -2020,7 +1974,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
 
                                     {/* Father's Name */}
                                     <TableCell>
-                                        <Typography variant="body2">{customer.fatherName || "—"}</Typography>
+                                        <Typography variant="body2" color="text.secondary">{customer.fatherName || "—"}</Typography>
                                     </TableCell>
 
                                     {/* Measurement No */}
@@ -2030,7 +1984,17 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                 label={customer.measurementNo}
                                                 size="small"
                                                 icon={<Ruler size={12} />}
-                                                sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, fontSize: '0.75rem' }}
+                                                sx={{
+                                                    bgcolor: isDark ? "rgba(124, 58, 237, 0.16)" : "#f5f3ff",
+                                                    color: isDark ? "#c4b5fd" : "#7c3aed",
+                                                    fontWeight: 700,
+                                                    fontSize: '0.75rem',
+                                                    border: "1px solid",
+                                                    borderColor: isDark ? "rgba(124, 58, 237, 0.3)" : "#ddd6fe",
+                                                    "& .MuiChip-icon": {
+                                                        color: isDark ? "#c4b5fd" : "#7c3aed"
+                                                    }
+                                                }}
                                             />
                                         ) : (
                                             <Typography variant="body2" color="text.disabled">—</Typography>
@@ -2049,11 +2013,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                     fontWeight={700}
                                                     sx={{
                                                         color:
-                                                            customer.balance > 0
-                                                                ? "success.main"
-                                                                : customer.balance < 0
-                                                                    ? "error.main"
-                                                                    : "text.primary",
+                                                            parseFloat(customer.balance || 0) > 0
+                                                                ? (isDark ? "#4ade80" : "#16a34a")
+                                                                : parseFloat(customer.balance || 0) < 0
+                                                                    ? (isDark ? "#f87171" : "#dc2626")
+                                                                    : "text.secondary",
                                                     }}
                                                 >
                                                     Rs. {Math.abs(parseFloat(customer.balance || 0)).toFixed(2)}
@@ -2168,8 +2132,28 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}
             >
-                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
-                    {formData.id ? "Edit Customer" : "Add New Customer"}
+                <DialogTitle sx={{ fontWeight: 700, borderBottom: "1px solid", borderColor: "divider", pb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="h6" fontWeight={700} color="text.primary">
+                            {formData.id ? "Edit Customer" : "Add New Customer"}
+                        </Typography>
+                        {formData.id && (
+                            <Chip
+                                label={`Customer ID: #${formData.id}`}
+                                size="small"
+                                sx={{
+                                    fontWeight: 700,
+                                    bgcolor: isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff",
+                                    color: isDark ? "#93c5fd" : "#2563eb",
+                                    border: "1px solid",
+                                    borderColor: isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe"
+                                }}
+                            />
+                        )}
+                    </Box>
+                    <IconButton onClick={handleClose} size="small" sx={{ color: "text.secondary" }}>
+                        <X size={18} />
+                    </IconButton>
                 </DialogTitle>
 
                 <DialogContent sx={{ pt: 2.5 }}>
@@ -2231,116 +2215,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     </Box>
 
                     <Grid container spacing={2}>
-                        {/* Customer Primary Key / ID (Auto / Custom / Random) */}
-                        <Grid size={{ xs: 12, md: 4 }}>
-                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                        <KeyRound size={14} color="#6366f1" />
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                                            Customer Key (ID)
-                                        </Typography>
-                                    </Box>
-                                    {!formData.id && (
-                                        <ToggleButtonGroup
-                                            size="small"
-                                            value={customerKeyMode}
-                                            exclusive
-                                            onChange={handleCustomerKeyModeChange}
-                                            sx={{
-                                                height: 26,
-                                                "& .MuiToggleButton-root": {
-                                                    px: 1.25,
-                                                    py: 0,
-                                                    fontSize: "0.72rem",
-                                                    fontWeight: 700,
-                                                    textTransform: "none",
-                                                    borderRadius: 1,
-                                                }
-                                            }}
-                                        >
-                                            <ToggleButton value="auto" color="primary">
-                                                Auto
-                                            </ToggleButton>
-                                            <ToggleButton value="custom" color="secondary">
-                                                Custom
-                                            </ToggleButton>
-                                        </ToggleButtonGroup>
-                                    )}
-                                </Box>
-
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label={formData.id ? "Customer ID" : (customerKeyMode === "auto" ? "Customer Key (Auto)" : "Customer Key (Custom)")}
-                                    name="customerKey"
-                                    placeholder={customerKeyMode === "auto" ? "Calculating Key..." : "Enter ID (e.g. 500)"}
-                                    value={customerKey || ""}
-                                    onChange={handleCustomKeyChange}
-                                    disabled={Boolean(formData.id) || customerKeyMode === "auto"}
-                                    error={customerKeyMode === "custom" && Boolean(duplicateKeyError)}
-                                    helperText={
-                                        formData.id
-                                            ? "Primary Key (cannot be changed)"
-                                            : customerKeyMode === "auto"
-                                                ? (autoKeyLoading ? "Fetching next available key..." : "Auto-assigned (Highest ID + 1)")
-                                                : (duplicateKeyError || (checkingKeyDuplicate ? "Checking availability..." : "Type custom ID or click random"))
-                                    }
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            color: duplicateKeyError ? "error.main" : undefined,
-                                            fontWeight: duplicateKeyError ? 700 : undefined
-                                        }
-                                    }}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                {!formData.id && customerKeyMode === "auto" ? (
-                                                    autoKeyLoading ? (
-                                                        <CircularProgress size={16} />
-                                                    ) : (
-                                                        <Tooltip title="Recalculate highest key">
-                                                            <IconButton size="small" onClick={() => fetchNextCustomerKey(false)} edge="end">
-                                                                <RotateCw size={14} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    )
-                                                ) : !formData.id && customerKeyMode === "custom" ? (
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                        <Tooltip title="Pick a Random Available Key">
-                                                            <IconButton size="small" onClick={() => fetchNextCustomerKey(true)} edge="end">
-                                                                <Shuffle size={14} color="#6366f1" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        {checkingKeyDuplicate ? (
-                                                            <CircularProgress size={14} />
-                                                        ) : duplicateKeyError ? (
-                                                            <Tooltip title={duplicateKeyError}>
-                                                                <AlertTriangle size={15} color="#ef4444" />
-                                                            </Tooltip>
-                                                        ) : customerKey?.trim() ? (
-                                                            <Tooltip title="Key is available">
-                                                                <CheckCircle2 size={15} color="#10b981" />
-                                                            </Tooltip>
-                                                        ) : null}
-                                                    </Box>
-                                                ) : null}
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    variant="outlined"
-                                />
-
-                                {!formData.id && customerKeyMode === "custom" && duplicateKeyError && (
-                                    <Alert severity="error" sx={{ py: 0.25, px: 1, fontSize: "0.75rem", borderRadius: 1.5 }}>
-                                        {duplicateKeyError}
-                                    </Alert>
-                                )}
-                            </Box>
-                        </Grid>
-
                         {/* Full Name */}
-                        <Grid size={{ xs: 12, md: 4 }}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -2355,7 +2231,7 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                         </Grid>
 
                         {/* Father Name */}
-                        <Grid size={{ xs: 12, md: 4 }}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -2368,13 +2244,30 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             />
                         </Grid>
 
-                        {/* Measurement No (Auto / Custom) */}
+                        {/* Measurement No (Auto / Custom / Random) */}
                         <Grid size={{ xs: 12, md: 4 }}>
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                                        Measurement No
-                                    </Typography>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                                        <Ruler size={14} color="#7c3aed" />
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                            Measurement No (M#)
+                                        </Typography>
+                                        {maxMeasurementNo > 0 && (
+                                            <Chip
+                                                size="small"
+                                                label={`Max: ${maxMeasurementNo}`}
+                                                sx={{
+                                                    height: 18,
+                                                    fontSize: "0.68rem",
+                                                    fontWeight: 700,
+                                                    bgcolor: isDark ? "rgba(124, 58, 237, 0.2)" : "#f3e8ff",
+                                                    color: isDark ? "#c4b5fd" : "#7c3aed",
+                                                    borderRadius: 1,
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
                                     <ToggleButtonGroup
                                         size="small"
                                         value={measurementMode}
@@ -2406,15 +2299,17 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                     size="small"
                                     label={measurementMode === "auto" ? "Measurement No (Auto)" : "Measurement No (Custom)"}
                                     name="measurementNo"
-                                    placeholder={measurementMode === "auto" ? "Generating number..." : "e.g. M-001 or 1234"}
+                                    placeholder={measurementMode === "auto" ? "Calculating M#..." : `Enter M# (e.g. ${maxMeasurementNo ? Number(maxMeasurementNo) + 1 : "151228"})`}
                                     value={formData.measurementNo || ""}
                                     onChange={handleCustomMeasurementNoChange}
                                     disabled={measurementMode === "auto"}
                                     error={measurementMode === "custom" && Boolean(duplicateMeasurementError)}
                                     helperText={
                                         measurementMode === "auto"
-                                            ? (autoNumberLoading ? "Calculating highest number..." : "Auto-assigned (Highest + 1)")
-                                            : (duplicateMeasurementError || (checkingDuplicate ? "Checking availability..." : "Enter custom measurement number"))
+                                            ? (autoNumberLoading
+                                                ? "Calculating highest measurement number..."
+                                                : `Auto-assigned (Max M#: ${maxMeasurementNo || "—"} → Next: ${formData.measurementNo || "—"})`)
+                                            : (duplicateMeasurementError || (checkingDuplicate ? "Checking availability..." : "Type custom M# or click random"))
                                     }
                                     FormHelperTextProps={{
                                         sx: {
@@ -2429,23 +2324,32 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                                     autoNumberLoading ? (
                                                         <CircularProgress size={16} />
                                                     ) : (
-                                                        <Tooltip title="Recalculate highest number">
-                                                            <IconButton size="small" onClick={fetchNextMeasurementNo} edge="end">
+                                                        <Tooltip title="Recalculate highest measurement number">
+                                                            <IconButton size="small" onClick={() => fetchNextMeasurementNo(false)} edge="end">
                                                                 <RotateCw size={14} />
                                                             </IconButton>
                                                         </Tooltip>
                                                     )
-                                                ) : checkingDuplicate ? (
-                                                    <CircularProgress size={16} />
-                                                ) : duplicateMeasurementError ? (
-                                                    <Tooltip title={duplicateMeasurementError}>
-                                                        <AlertTriangle size={16} color="#ef4444" />
-                                                    </Tooltip>
-                                                ) : formData.measurementNo?.trim() ? (
-                                                    <Tooltip title="Measurement number is available">
-                                                        <CheckCircle2 size={16} color="#10b981" />
-                                                    </Tooltip>
-                                                ) : null}
+                                                ) : (
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                        <Tooltip title="Pick a Random Available Measurement No">
+                                                            <IconButton size="small" onClick={() => fetchNextMeasurementNo(true)} edge="end">
+                                                                <Shuffle size={14} color="#7c3aed" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        {checkingDuplicate ? (
+                                                            <CircularProgress size={14} />
+                                                        ) : duplicateMeasurementError ? (
+                                                            <Tooltip title={duplicateMeasurementError}>
+                                                                <AlertTriangle size={15} color="#ef4444" />
+                                                            </Tooltip>
+                                                        ) : formData.measurementNo?.trim() ? (
+                                                            <Tooltip title="Measurement number is available">
+                                                                <CheckCircle2 size={15} color="#10b981" />
+                                                            </Tooltip>
+                                                        ) : null}
+                                                    </Box>
+                                                )}
                                             </InputAdornment>
                                         ),
                                     }}
@@ -2863,11 +2767,11 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                     sx: {
                         borderRadius: 3,
                         p: 0.5,
-                        bgcolor: "#ffffff",
+                        bgcolor: "background.paper",
                     }
                 }}
             >
-                <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem", color: "#111827", pt: 2.5, pb: 2, px: 3, borderBottom: "1px solid", borderColor: "divider" }}>
+                <DialogTitle sx={{ fontWeight: 700, fontSize: "1.25rem", color: "text.primary", pt: 2.5, pb: 2, px: 3, borderBottom: "1px solid", borderColor: "divider" }}>
                     New Ledger Entry
                 </DialogTitle>
 
@@ -2974,8 +2878,8 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                 textTransform: "none",
                                 px: 2.5,
                                 py: 0.8,
-                                color: "#4b5563",
-                                borderColor: "#d1d5db",
+                                color: "text.secondary",
+                                borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
                                 "&:hover": { borderColor: "#9ca3af", bgcolor: "#f9fafb" }
                             }}
                         >

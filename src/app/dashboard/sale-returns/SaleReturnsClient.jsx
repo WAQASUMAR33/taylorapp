@@ -34,12 +34,12 @@ import { Plus, Search, Eye, Trash2, RotateCcw, Printer } from "lucide-react";
 
 export default function SaleReturnsClient({ initialReturns, customers, products, banks, branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const userBranchId = session?.user?.branchId;
-    const canView = checkPermission(session, "sale-returns", "view") || checkPermission(session, "bookings", "view");
-    const canCreate = checkPermission(session, "sale-returns", "create") || checkPermission(session, "bookings", "create");
-    const canEdit = checkPermission(session, "sale-returns", "edit") || checkPermission(session, "bookings", "edit");
-    const canDelete = checkPermission(session, "sale-returns", "delete") || checkPermission(session, "bookings", "delete");
+    const canView = isAdmin || checkPermission(session, "sale-returns", "view") || checkPermission(session, "bookings", "view");
+    const canCreate = isAdmin || checkPermission(session, "sale-returns", "create") || checkPermission(session, "bookings", "create");
+    const canEdit = isAdmin || checkPermission(session, "sale-returns", "edit") || checkPermission(session, "bookings", "edit");
+    const canDelete = isAdmin || checkPermission(session, "sale-returns", "delete") || checkPermission(session, "bookings", "delete");
 
     const [returns, setReturns] = useState(initialReturns || []);
     const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -53,7 +53,7 @@ export default function SaleReturnsClient({ initialReturns, customers, products,
     const [filterBranchId, setFilterBranchId] = useState(isAdmin ? "ALL" : (userBranchId ? String(userBranchId) : "ALL"));
     const [selectedBranchId, setSelectedBranchId] = useState(userBranchId ? String(userBranchId) : (branches[0]?.id ? String(branches[0].id) : "1"));
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

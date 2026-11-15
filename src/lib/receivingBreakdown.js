@@ -15,7 +15,8 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
             amount: true,
             bookingId: true,
             receivingDate: true,
-            paymentMode: true
+            paymentMode: true,
+            source: true
         },
         orderBy: [
             { receivingDate: "desc" },
@@ -35,7 +36,7 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
                 select: { totalPrice: true }
             },
             receivings: {
-                select: { id: true, amount: true, receivingDate: true },
+                select: { id: true, amount: true, receivingDate: true, source: true },
                 orderBy: [
                     { receivingDate: "asc" },
                     { id: "asc" }
@@ -54,6 +55,9 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
         let productRemaining = productTotal;
 
         for (const rec of b.receivings) {
+            if ((rec.source || "").toUpperCase() === "TRANSFER") {
+                continue;
+            }
             const amt = parseFloat(rec.amount || 0);
             const toProd = Math.min(amt, productRemaining);
             const toStitch = amt - toProd;
@@ -68,7 +72,7 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
     }
 
     let totalAmount = 0;
-    let totalCount = receivings.length;
+    let totalCount = 0;
     let prodAmount = 0;
     let prodCount = 0;
     let stitchAmount = 0;
@@ -79,6 +83,11 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
     let bankAmount = 0;
 
     for (const rec of receivings) {
+        if ((rec.source || "").toUpperCase() === "TRANSFER") {
+            continue;
+        }
+
+        totalCount++;
         const amt = parseFloat(rec.amount || 0);
         totalAmount += amt;
 

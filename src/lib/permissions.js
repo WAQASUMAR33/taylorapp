@@ -1,16 +1,28 @@
-export function checkPermission(session, moduleKey, action = "view") {
-    if (!session?.user) return false;
-    const role = session.user.role;
+export function isUserAdmin(session) {
+    if (!session) return false;
+    const user = session?.user || session;
+    const role = String(user?.role || "").trim().toUpperCase();
+    return role === "ADMIN" || Boolean(user?.isAdmin);
+}
 
-    // ADMIN always has full permissions across all modules
-    if (role === "ADMIN") return true;
+export function checkPermission(session, moduleKey, action = "view") {
+    if (!session) return false;
+    const user = session?.user || session;
+    if (!user) return false;
+
+    // ADMIN always has full permissions across all modules and all tasks without any extra permission
+    if (isUserAdmin(session)) {
+        return true;
+    }
+
+    const role = String(user.role || "").trim().toUpperCase();
 
     // User Management, Branch Management, and Settings are strictly restricted to ADMIN
     if (moduleKey === "users" || moduleKey === "branches" || moduleKey === "settings") {
         return false;
     }
 
-    let permissions = session.user.permissions;
+    let permissions = user.permissions;
     if (typeof permissions === "string") {
         try {
             permissions = JSON.parse(permissions);

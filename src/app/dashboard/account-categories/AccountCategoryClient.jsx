@@ -34,11 +34,11 @@ import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Users } from "lucid
 
 export default function AccountCategoryClient({ initialCategories }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "categories", "view");
-    const canCreate = checkPermission(session, "categories", "create");
-    const canEdit = checkPermission(session, "categories", "edit");
-    const canDelete = checkPermission(session, "categories", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "categories", "view");
+    const canCreate = isAdmin || checkPermission(session, "categories", "create");
+    const canEdit = isAdmin || checkPermission(session, "categories", "edit");
+    const canDelete = isAdmin || checkPermission(session, "categories", "delete");
     const [categories, setCategories] = useState(initialCategories);
     const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);
@@ -48,7 +48,7 @@ export default function AccountCategoryClient({ initialCategories }) {
     const [successMessage, setSuccessMessage] = useState("");
     const [categoryName, setCategoryName] = useState("");
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

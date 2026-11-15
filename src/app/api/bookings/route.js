@@ -281,7 +281,20 @@ export async function GET(req) {
         const where = {};
 
         if (customerId) {
-            where.customerId = parseInt(customerId);
+            const cid = parseInt(customerId);
+            where.AND = where.AND || [];
+            where.AND.push({
+                OR: [
+                    { customerId: cid },
+                    { billingCustomerId: cid }
+                ]
+            });
+        }
+
+        const unpaidOnly = searchParams.get("unpaidOnly") === "true";
+        if (unpaidOnly) {
+            where.remainingAmount = { gt: 0 };
+            where.status = { notIn: ["CANCELLED"] };
         }
 
         if (branchId && branchId !== "ALL") {
@@ -840,67 +853,266 @@ export async function PUT(req) {
             const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentBooking.totalAmount);
             const newAdvance = advanceAmount !== undefined ? parseFloat(advanceAmount) : parseFloat(currentBooking.advanceAmount);
 
-            // Use billing customer for ledger/balance (fall back to booking customer)
-            const effectiveBillingId = currentBooking.billingCustomerId || currentBooking.customerId;
-            const billingName = currentBooking.billingCustomer?.name || currentBooking.customer.name;
+            // Determine previous billing customer and new billing customer
+            const prevBillingCustomerId = currentBooking.billingCustomerId || currentBooking.customerId;
+            const resolvedCustomerId = customerId !== undefined && customerId !== null ? parseInt(customerId) : currentBooking.customerId;
+            const resolvedBillingCustomerId = billingCustomerId !== undefined
+                ? (billingCustomerId ? parseInt(billingCustomerId) : resolvedCustomerId)
+                : (currentBooking.billingCustomerId || resolvedCustomerId);
 
-            // 1. Calculate Adjustments
-            const totalDiff = newTotal - parseFloat(currentBooking.totalAmount);
-            const advanceDiff = newAdvance - parseFloat(currentBooking.advanceAmount);
-            const balanceAdjustment = totalDiff - advanceDiff;
+            const isBillingCustomerChanged = prevBillingCustomerId !== resolvedBillingCustomerId;
 
-            // 2. Create Ledger Entries for Adjustments
-            if (totalDiff !== 0) {
-                await tx.ledgerentry.create({
-                    data: {
-                        customerId: effectiveBillingId,
-                        type: totalDiff > 0 ? "DEBIT" : "CREDIT",
-                        amount: Math.abs(totalDiff),
-                        description: `Booking Adjustment (Total): ${currentBooking.bookingNumber}`,
-                        bookingId: currentBooking.id
-                    }
-                });
-            }
+            if (isBillingCustomerChanged) {
+                // Fetch customer names for descriptions
+                const [bookingCust, prevBillingCust, newBillingCust] = await Promise.all([
+                    tx.customer.findUnique({ where: { id: resolvedCustomerId }, select: { id: true, name: true } }),
+                    tx.customer.findUnique({ where: { id: prevBillingCustomerId }, select: { id: true, name: true } }),
+                    tx.customer.findUnique({ where: { id: resolvedBillingCustomerId }, select: { id: true, name: true } })
+                ]);
 
-            if (advanceDiff !== 0) {
-                await tx.ledgerentry.create({
-                    data: {
-                        customerId: effectiveBillingId,
-                        type: advanceDiff > 0 ? "CREDIT" : "DEBIT",
-                        amount: Math.abs(advanceDiff),
-                        description: `Booking Adjustment (Advance): ${currentBooking.bookingNumber}`,
-                        bookingId: currentBooking.id
-                    }
-                });
+                const bookingCustName = bookingCust?.name || currentBooking.customer?.name || "Booking Account";
+                const prevBillingCustName = prevBillingCust?.name || currentBooking.billingCustomer?.name || currentBooking.customer?.name || "Account A";
+                const newBillingCustName = newBillingCust?.name || "Account B";
 
-                // SYNC TO CASH ACCOUNT
-                const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
-                if (cashAccount) {
+                const now = new Date();
+                const branchId = currentBooking.branchId || null;
+
+                // 1. Reverse Account A (Previous Billing Account)
+                const prevTotal = parseFloat(currentBooking.totalAmount || 0);
+                const prevAdvance = parseFloat(currentBooking.advanceAmount || 0);
+                const prevNet = prevTotal - prevAdvance;
+
+                // A. Reverse Booking Order Total on Account A (Credit)
+                if (prevTotal > 0) {
                     await tx.ledgerentry.create({
                         data: {
-                            customerId: cashAccount.id,
-                            type: advanceDiff > 0 ? 'DEBIT' : 'CREDIT',
-                            amount: Math.abs(advanceDiff),
-                            description: `Booking Advance Adjustment - ${billingName} (Booking #${currentBooking.bookingNumber})`,
+                            customerId: prevBillingCustomerId,
+                            type: "CREDIT",
+                            amount: prevTotal,
+                            description: `Booking Order Reversal: #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`,
                             bookingId: currentBooking.id,
-                            entryDate: new Date()
+                            branchId,
+                            entryDate: now
                         }
                     });
-                    await tx.customer.update({
-                        where: { id: cashAccount.id },
-                        data: { balance: { [advanceDiff > 0 ? 'increment' : 'decrement']: Math.abs(advanceDiff) } }
+                }
+
+                // B. Reverse Advance Payment on Account A (Debit) & Create Roster Reversal Entry
+                if (prevAdvance > 0) {
+                    const revReceiptNo = `REC-${currentBooking.bookingNumber}-REV-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`;
+                    const revReceiving = await tx.receiving.create({
+                        data: {
+                            receiptNo: revReceiptNo,
+                            customerId: prevBillingCustomerId,
+                            bookingId: currentBooking.id,
+                            amount: prevAdvance,
+                            paymentMode: "CASH",
+                            source: "TRANSFER",
+                            branchId,
+                            receivingDate: now,
+                            description: `Advance Payment Reversal for Booking #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`
+                        }
+                    });
+
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: prevBillingCustomerId,
+                            type: "DEBIT",
+                            amount: prevAdvance,
+                            description: `Advance Payment Reversal: #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`,
+                            bookingId: currentBooking.id,
+                            receivingId: revReceiving.id,
+                            branchId,
+                            entryDate: now
+                        }
+                    });
+                } else {
+                    // Create zero-amount roster audit entry for transfer reversal
+                    const revReceiptNo = `REC-${currentBooking.bookingNumber}-REV-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`;
+                    await tx.receiving.create({
+                        data: {
+                            receiptNo: revReceiptNo,
+                            customerId: prevBillingCustomerId,
+                            bookingId: currentBooking.id,
+                            amount: 0,
+                            paymentMode: "CASH",
+                            source: "TRANSFER",
+                            branchId,
+                            receivingDate: now,
+                            description: `Billing Account Transfer (Reversal) for Booking #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`
+                        }
                     });
                 }
-            }
 
-            // 3. Update Billing Customer Balance
-            if (balanceAdjustment !== 0) {
-                await tx.customer.update({
-                    where: { id: effectiveBillingId },
-                    data: {
-                        balance: { [balanceAdjustment > 0 ? 'increment' : 'decrement']: Math.abs(balanceAdjustment) }
+                // C. Update Balance of Account A
+                if (prevNet !== 0) {
+                    await tx.customer.update({
+                        where: { id: prevBillingCustomerId },
+                        data: {
+                            balance: { decrement: prevNet }
+                        }
+                    });
+                }
+
+                // 2. Post to Account B (New Billing Account)
+                const newNet = newTotal - newAdvance;
+
+                // A. Post Booking Order Total to Account B (Debit)
+                if (newTotal > 0) {
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: resolvedBillingCustomerId,
+                            type: "DEBIT",
+                            amount: newTotal,
+                            description: `Booking Order: #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`,
+                            bookingId: currentBooking.id,
+                            branchId,
+                            entryDate: now
+                        }
+                    });
+                }
+
+                // B. Post Advance Payment to Account B (Credit) & Create Roster Transfer Entry
+                if (newAdvance > 0) {
+                    const trfReceiptNo = `REC-${currentBooking.bookingNumber}-TRF-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`;
+                    const trfReceiving = await tx.receiving.create({
+                        data: {
+                            receiptNo: trfReceiptNo,
+                            customerId: resolvedBillingCustomerId,
+                            bookingId: currentBooking.id,
+                            amount: newAdvance,
+                            paymentMode: "CASH",
+                            source: "TRANSFER",
+                            branchId,
+                            receivingDate: now,
+                            description: `Advance Payment for Booking #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`
+                        }
+                    });
+
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: resolvedBillingCustomerId,
+                            type: "CREDIT",
+                            amount: newAdvance,
+                            description: `Advance Payment: #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`,
+                            bookingId: currentBooking.id,
+                            receivingId: trfReceiving.id,
+                            branchId,
+                            entryDate: now
+                        }
+                    });
+                } else {
+                    // Create zero-amount roster audit entry for transfer
+                    const trfReceiptNo = `REC-${currentBooking.bookingNumber}-TRF-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`;
+                    await tx.receiving.create({
+                        data: {
+                            receiptNo: trfReceiptNo,
+                            customerId: resolvedBillingCustomerId,
+                            bookingId: currentBooking.id,
+                            amount: 0,
+                            paymentMode: "CASH",
+                            source: "TRANSFER",
+                            branchId,
+                            receivingDate: now,
+                            description: `Billing Account Transfer for Booking #${currentBooking.bookingNumber} (Booking Account: ${bookingCustName}, Billing Account: ${newBillingCustName})`
+                        }
+                    });
+                }
+
+                // C. Update Balance of Account B
+                if (newNet !== 0) {
+                    await tx.customer.update({
+                        where: { id: resolvedBillingCustomerId },
+                        data: {
+                            balance: { increment: newNet }
+                        }
+                    });
+                }
+
+                // 3. Sync Cash difference if advance was modified during edit
+                const advanceDiff = newAdvance - prevAdvance;
+                if (advanceDiff !== 0) {
+                    const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                    if (cashAccount) {
+                        await tx.ledgerentry.create({
+                            data: {
+                                customerId: cashAccount.id,
+                                type: advanceDiff > 0 ? 'DEBIT' : 'CREDIT',
+                                amount: Math.abs(advanceDiff),
+                                description: `Booking Advance Adjustment - ${newBillingCustName} (Booking #${currentBooking.bookingNumber})`,
+                                bookingId: currentBooking.id,
+                                entryDate: now
+                            }
+                        });
+                        await tx.customer.update({
+                            where: { id: cashAccount.id },
+                            data: { balance: { [advanceDiff > 0 ? 'increment' : 'decrement']: Math.abs(advanceDiff) } }
+                        });
                     }
-                });
+                }
+            } else {
+                // Billing customer did NOT change — run normal diff adjustment on the current billing account
+                const effectiveBillingId = prevBillingCustomerId;
+                const billingName = currentBooking.billingCustomer?.name || currentBooking.customer.name;
+
+                // 1. Calculate Adjustments
+                const totalDiff = newTotal - parseFloat(currentBooking.totalAmount);
+                const advanceDiff = newAdvance - parseFloat(currentBooking.advanceAmount);
+                const balanceAdjustment = totalDiff - advanceDiff;
+
+                // 2. Create Ledger Entries for Adjustments
+                if (totalDiff !== 0) {
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: effectiveBillingId,
+                            type: totalDiff > 0 ? "DEBIT" : "CREDIT",
+                            amount: Math.abs(totalDiff),
+                            description: `Booking Adjustment (Total): ${currentBooking.bookingNumber}`,
+                            bookingId: currentBooking.id
+                        }
+                    });
+                }
+
+                if (advanceDiff !== 0) {
+                    await tx.ledgerentry.create({
+                        data: {
+                            customerId: effectiveBillingId,
+                            type: advanceDiff > 0 ? "CREDIT" : "DEBIT",
+                            amount: Math.abs(advanceDiff),
+                            description: `Booking Adjustment (Advance): ${currentBooking.bookingNumber}`,
+                            bookingId: currentBooking.id
+                        }
+                    });
+
+                    // SYNC TO CASH ACCOUNT
+                    const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                    if (cashAccount) {
+                        await tx.ledgerentry.create({
+                            data: {
+                                customerId: cashAccount.id,
+                                type: advanceDiff > 0 ? 'DEBIT' : 'CREDIT',
+                                amount: Math.abs(advanceDiff),
+                                description: `Booking Advance Adjustment - ${billingName} (Booking #${currentBooking.bookingNumber})`,
+                                bookingId: currentBooking.id,
+                                entryDate: new Date()
+                            }
+                        });
+                        await tx.customer.update({
+                            where: { id: cashAccount.id },
+                            data: { balance: { [advanceDiff > 0 ? 'increment' : 'decrement']: Math.abs(advanceDiff) } }
+                        });
+                    }
+                }
+
+                // 3. Update Billing Customer Balance
+                if (balanceAdjustment !== 0) {
+                    await tx.customer.update({
+                        where: { id: effectiveBillingId },
+                        data: {
+                            balance: { [balanceAdjustment > 0 ? 'increment' : 'decrement']: Math.abs(balanceAdjustment) }
+                        }
+                    });
+                }
             }
 
             // 4. Update staff assignments if provided

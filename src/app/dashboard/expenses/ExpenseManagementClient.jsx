@@ -45,10 +45,11 @@ const emptyForm = {
 
 export default function ExpenseManagementClient({ initialExpenses, branches = [] }) {
     const { data: session } = useSession();
-    const canView = checkPermission(session, "expenses", "view") || checkPermission(session, "stitching", "view");
-    const canCreate = checkPermission(session, "expenses", "create") || checkPermission(session, "stitching", "create");
-    const canEdit = checkPermission(session, "expenses", "edit") || checkPermission(session, "stitching", "edit");
-    const canDelete = checkPermission(session, "expenses", "delete") || checkPermission(session, "stitching", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "expenses", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = isAdmin || checkPermission(session, "expenses", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = isAdmin || checkPermission(session, "expenses", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = isAdmin || checkPermission(session, "expenses", "delete") || checkPermission(session, "stitching", "delete");
 
     const [expenses, setExpenses] = useState(initialExpenses);
 
@@ -210,7 +211,7 @@ export default function ExpenseManagementClient({ initialExpenses, branches = []
 
     const hasFilters = filterTitle || filterDateFrom || filterDateTo;
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

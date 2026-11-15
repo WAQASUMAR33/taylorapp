@@ -208,6 +208,45 @@ export async function POST(req) {
                 }
             });
 
+            // If payment exceeds this booking's remaining amount, allocate excess to customer's other open unpaid bookings
+            const excessPayment = Math.max(0, payAmt - currentRemaining);
+            if (excessPayment > 0) {
+                const otherUnpaid = await tx.booking.findMany({
+                    where: {
+                        id: { not: bId },
+                        OR: [
+                            { customerId: effectiveBillingId },
+                            { billingCustomerId: effectiveBillingId }
+                        ],
+                        remainingAmount: { gt: 0 },
+                        status: { notIn: ["CANCELLED"] }
+                    },
+                    orderBy: { bookingDate: "asc" }
+                });
+
+                let remExcess = excessPayment;
+                for (const ob of otherUnpaid) {
+                    if (remExcess <= 0) break;
+                    const obRem = parseFloat(ob.remainingAmount || 0);
+                    const obAdv = parseFloat(ob.advanceAmount || 0);
+                    const alloc = Math.min(obRem, remExcess);
+                    const newObRem = Math.max(0, obRem - alloc);
+                    const newObAdv = obAdv + alloc;
+                    const newObStatus = newObRem <= 0 ? "Clear" : "Partially Pending";
+
+                    await tx.booking.update({
+                        where: { id: ob.id },
+                        data: {
+                            remainingAmount: newObRem,
+                            advanceAmount: newObAdv,
+                            billStatus: newObStatus,
+                            status: newObRem <= 0 && (ob.status === "DELIVERED" || ob.status === "PARTIALLY_DELIVERED") ? "PAID" : ob.status
+                        }
+                    });
+                    remExcess -= alloc;
+                }
+            }
+
             const payEntryDate = new Date();
             const branchId = booking.branchId || session?.user?.branchId || 1;
 

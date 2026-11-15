@@ -5,7 +5,9 @@
  */
 
 export function isAdminSession(session) {
-    return session?.user?.role === "ADMIN";
+    if (!session) return false;
+    const user = session?.user || session;
+    return String(user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(user?.isAdmin);
 }
 
 /**

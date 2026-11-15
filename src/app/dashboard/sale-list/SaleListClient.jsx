@@ -153,9 +153,9 @@ function ExpandableRow({ bill }) {
 
 export default function SaleListClient({ initialBills, branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const userBranchId = session?.user?.branchId;
-    const canView = checkPermission(session, "sale-list", "view") || checkPermission(session, "bookings", "view");
+    const canView = isAdmin || checkPermission(session, "sale-list", "view") || checkPermission(session, "bookings", "view");
 
     const [search, setSearch] = useState("");
     const [dateFrom, setDateFrom] = useState("");
@@ -163,7 +163,7 @@ export default function SaleListClient({ initialBills, branches = [] }) {
     const [filterBranchId, setFilterBranchId] = useState(isAdmin ? "ALL" : (userBranchId ? String(userBranchId) : "ALL"));
     const [activeQuick, setActiveQuick] = useState(null);
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

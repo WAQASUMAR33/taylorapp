@@ -53,11 +53,11 @@ import {
 
 export default function MaterialManagementClient({ initialMaterials, branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "materials", "view");
-    const canCreate = checkPermission(session, "materials", "create");
-    const canEdit = checkPermission(session, "materials", "edit");
-    const canDelete = checkPermission(session, "materials", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "materials", "view");
+    const canCreate = isAdmin || checkPermission(session, "materials", "create");
+    const canEdit = isAdmin || checkPermission(session, "materials", "edit");
+    const canDelete = isAdmin || checkPermission(session, "materials", "delete");
     const [materials, setMaterials] = useState(initialMaterials);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -418,7 +418,7 @@ export default function MaterialManagementClient({ initialMaterials, branches = 
         m.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

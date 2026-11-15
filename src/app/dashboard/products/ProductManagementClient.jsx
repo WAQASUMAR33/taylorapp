@@ -99,7 +99,7 @@ export function getProductBranchStock(prod, branchId) {
 
 export default function ProductManagementClient({ initialProducts = [], initialBranches = [] }) {
     const { data: session, status } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const canView = isAdmin || checkPermission(session, "products", "view") || session?.user?.role === "STAFF" || session?.user?.role === "MANAGER";
     const canCreate = isAdmin || checkPermission(session, "products", "create");
     const canEdit = isAdmin || checkPermission(session, "products", "edit");
@@ -833,7 +833,7 @@ ${Array(Math.max(1, printQty)).fill(sticker).join("\n")}
         );
     }
 
-    if (!canView) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

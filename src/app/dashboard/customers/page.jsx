@@ -41,25 +41,34 @@ export default async function CustomersPage() {
 
     // Customers list is shared across all branches for all user roles
 
-    const customers = await prisma.customer.findMany({
-        where,
-        include: {
-            accountCategory: true
-        },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-    });
+    const [customers, totalCount, accountCategories, maxMeasResult] = await Promise.all([
+        prisma.customer.findMany({
+            where,
+            include: {
+                accountCategory: true
+            },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+        }),
+        prisma.customer.count({ where }),
+        prisma.accountCategory.findMany({
+            include: {
+                _count: {
+                    select: { customers: true }
+                }
+            },
+            orderBy: { name: "asc" },
+        }),
+        prisma.$queryRawUnsafe(`
+            SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
+            FROM customer 
+            WHERE measurementNo IS NOT NULL 
+              AND measurementNo REGEXP '^[0-9]+$' 
+              AND CAST(measurementNo AS UNSIGNED) < 1000000000
+        `)
+    ]);
 
-    const totalCount = await prisma.customer.count({ where });
-
-    const accountCategories = await prisma.accountCategory.findMany({
-        include: {
-            _count: {
-                select: { customers: true }
-            }
-        },
-        orderBy: { name: "asc" },
-    });
+    const maxMeasurementNo = maxMeasResult[0]?.maxNo != null ? Number(maxMeasResult[0].maxNo) : 0;
 
     // Serialize decimals and dates
     const serializedCustomers = customers.map(customer => ({
@@ -113,6 +122,7 @@ export default async function CustomersPage() {
             <CustomerManagementClient
                 initialCustomers={serializedCustomers}
                 initialTotalCount={totalCount}
+                initialMaxMeasurementNo={maxMeasurementNo}
                 accountCategories={serializedCategories}
             />
         </Box>

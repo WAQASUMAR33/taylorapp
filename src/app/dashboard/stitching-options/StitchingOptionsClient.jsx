@@ -22,17 +22,17 @@ const FIELD_SX = {
 
 export default function StitchingOptionsClient({ initialOptions }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "stitching-options", "view") || checkPermission(session, "stitching", "view");
-    const canCreate = checkPermission(session, "stitching-options", "create") || checkPermission(session, "stitching", "create");
-    const canEdit = checkPermission(session, "stitching-options", "edit") || checkPermission(session, "stitching", "edit");
-    const canDelete = checkPermission(session, "stitching-options", "delete") || checkPermission(session, "stitching", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "stitching-options", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = isAdmin || checkPermission(session, "stitching-options", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = isAdmin || checkPermission(session, "stitching-options", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = isAdmin || checkPermission(session, "stitching-options", "delete") || checkPermission(session, "stitching", "delete");
     const [options, setOptions] = useState(initialOptions || []);
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [error, setError] = useState("");
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

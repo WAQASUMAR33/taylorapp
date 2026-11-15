@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { writeBranchId } from "@/lib/branchScope";
-import { getNextCustomerId } from "@/lib/customerHelper";
+import { getNextMeasurementNo } from "@/lib/measurementHelper";
 
 export async function POST(req) {
     try {
@@ -26,18 +26,7 @@ export async function POST(req) {
         let trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
 
         if (measurementMode === "auto") {
-            const maxResult = await prisma.$queryRawUnsafe(`
-                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
-                FROM customer 
-                WHERE measurementNo IS NOT NULL 
-                  AND measurementNo REGEXP '^[0-9]+$' 
-                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
-            `);
-            let nextNum = (maxResult[0]?.maxNo != null ? Number(maxResult[0].maxNo) : 0) + 1;
-            while (await prisma.customer.findFirst({ where: { measurementNo: String(nextNum) }, select: { id: true } })) {
-                nextNum++;
-            }
-            trimmedMeasurementNo = String(nextNum);
+            trimmedMeasurementNo = await getNextMeasurementNo(prisma);
         } else if (trimmedMeasurementNo) {
             const existingMeasurementNo = await prisma.customer.findFirst({
                 where: {
@@ -46,48 +35,30 @@ export async function POST(req) {
             });
             if (existingMeasurementNo) {
                 return NextResponse.json(
-                    { error: `The number already exists, use another` },
+                    { error: `M# ${trimmedMeasurementNo} is already assigned to customer '${existingMeasurementNo.name}', please use another number` },
                     { status: 400 }
                 );
             }
         }
 
         const customer = await prisma.$transaction(async (tx) => {
-            let finalId;
-            const chosenId = customId || bodyId;
-            if (idMode === "custom" && chosenId) {
-                const parsedId = parseInt(chosenId);
-                if (isNaN(parsedId) || parsedId <= 0) {
-                    throw new Error("Invalid Customer Key. Must be a positive number.");
-                }
-                const existingWithId = await tx.customer.findUnique({
-                    where: { id: parsedId },
-                    select: { id: true, name: true }
-                });
-                if (existingWithId) {
-                    throw new Error(`Key #${parsedId} is already assigned to customer '${existingWithId.name}', please use another key.`);
-                }
-                finalId = parsedId;
-            } else {
-                finalId = await getNextCustomerId(tx);
-            }
+            const customerData = {
+                name,
+                fatherName,
+                measurementNo: trimmedMeasurementNo,
+                phone,
+                email,
+                address,
+                notes,
+                image: image || null,
+                balance: 0, // Start at 0, ledger will update it
+                code: code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+                accountCategoryId: accountCategoryId ? parseInt(accountCategoryId) : null,
+                branchId: branchId || null,
+            };
 
             const newCustomer = await tx.customer.create({
-                data: {
-                    id: finalId,
-                    name,
-                    fatherName,
-                    measurementNo: trimmedMeasurementNo,
-                    phone,
-                    email,
-                    address,
-                    notes,
-                    image: image || null,
-                    balance: 0, // Start at 0, ledger will update it
-                    code: code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-                    accountCategoryId: accountCategoryId ? parseInt(accountCategoryId) : null,
-                    branchId: branchId || null,
-                },
+                data: customerData,
             });
 
             const openingBalance = balance ? parseFloat(balance) : 0;
@@ -240,7 +211,7 @@ export async function GET(req) {
             });
         }
 
-        const [customers, totalCount] = await Promise.all([
+        const [customers, totalCount, maxMeasResult] = await Promise.all([
             prisma.customer.findMany({
                 where,
                 include: {
@@ -255,10 +226,19 @@ export async function GET(req) {
                 skip,
                 take: limitNum,
             }),
-            prisma.customer.count({ where })
+            prisma.customer.count({ where }),
+            prisma.$queryRawUnsafe(`
+                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
+                FROM customer 
+                WHERE measurementNo IS NOT NULL 
+                  AND measurementNo REGEXP '^[0-9]+$' 
+                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
+            `)
         ]);
 
-        return NextResponse.json({ customers, totalCount });
+        const maxMeasurementNo = maxMeasResult[0]?.maxNo != null ? Number(maxMeasResult[0].maxNo) : 0;
+
+        return NextResponse.json({ customers, totalCount, maxMeasurementNo });
     } catch (error) {
         console.error("Failed to fetch customers:", error);
         return NextResponse.json(

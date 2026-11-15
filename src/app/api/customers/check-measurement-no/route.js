@@ -35,7 +35,7 @@ export async function GET(req) {
         if (existing) {
             return NextResponse.json({
                 exists: true,
-                message: "The number already exists, use another",
+                message: `M# ${trimmed} is already assigned to customer '${existing.name}', please use another number`,
                 customer: { id: existing.id, name: existing.name },
             });
         }
@@ -49,4 +49,3 @@ export async function GET(req) {
         );
     }
 }
-

@@ -111,11 +111,11 @@ function MeasureField({ field, formData, onChange }) {
 
 export default function MeasurementManagementClient({ initialMeasurements = [], initialTotalCount = 0, branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "measurements", "view");
-    const canCreate = checkPermission(session, "measurements", "create");
-    const canEdit = checkPermission(session, "measurements", "edit");
-    const canDelete = checkPermission(session, "measurements", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "measurements", "view");
+    const canCreate = isAdmin || checkPermission(session, "measurements", "create");
+    const canEdit = isAdmin || checkPermission(session, "measurements", "edit");
+    const canDelete = isAdmin || checkPermission(session, "measurements", "delete");
     const [measurements, setMeasurements] = useState(initialMeasurements || []);
     const [totalCount, setTotalCount] = useState(initialTotalCount || 0);
     const [page, setPage] = useState(0);
@@ -559,7 +559,7 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
 
     const filteredMeasurements = measurements || [];
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

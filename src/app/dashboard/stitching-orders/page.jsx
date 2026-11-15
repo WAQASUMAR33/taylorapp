@@ -126,7 +126,8 @@ async function getBanks() {
 
 export default async function StitchingOrdersPage() {
     const session = await getServerSession(authOptions);
-    const canView = checkPermission(session, "stitching-orders", "view") || checkPermission(session, "bookings", "view");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN";
+    const canView = isAdmin || checkPermission(session, "stitching-orders", "view") || checkPermission(session, "bookings", "view");
     if (!canView) {
         redirect("/dashboard");
     }

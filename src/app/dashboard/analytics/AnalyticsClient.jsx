@@ -132,8 +132,8 @@ function StaffRow({ item, max, color }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function AnalyticsClient({ employees = [], branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "analytics", "view");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "analytics", "view");
     const tailors = employees.filter(e => e.role === "TAILOR" || e.role === "Tailor");
     const cutters = employees.filter(e => e.role === "CUTTER" || e.role === "Cutter");
     // If roles don't match strictly, fall back to all employees in dropdowns
@@ -194,7 +194,7 @@ export default function AnalyticsClient({ employees = [], branches = [] }) {
     const tailorMax = Math.max(...(data?.tailorBreakdown || []).map(t => t.amount), 1);
     const cutterMax = Math.max(...(data?.cutterBreakdown || []).map(c => c.amount), 1);
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

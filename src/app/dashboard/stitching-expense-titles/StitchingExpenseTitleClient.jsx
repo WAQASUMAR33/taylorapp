@@ -33,10 +33,11 @@ import { Search, Plus, Edit, Trash2, Save, X as XIcon, Tags, Receipt } from "luc
 
 export default function StitchingExpenseTitleClient({ initialTitles }) {
     const { data: session } = useSession();
-    const canView = checkPermission(session, "stitching-expense-titles", "view") || checkPermission(session, "stitching", "view");
-    const canCreate = checkPermission(session, "stitching-expense-titles", "create") || checkPermission(session, "stitching", "create");
-    const canEdit = checkPermission(session, "stitching-expense-titles", "edit") || checkPermission(session, "stitching", "edit");
-    const canDelete = checkPermission(session, "stitching-expense-titles", "delete") || checkPermission(session, "stitching", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "stitching-expense-titles", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = isAdmin || checkPermission(session, "stitching-expense-titles", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = isAdmin || checkPermission(session, "stitching-expense-titles", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = isAdmin || checkPermission(session, "stitching-expense-titles", "delete") || checkPermission(session, "stitching", "delete");
 
     const [titles, setTitles] = useState(initialTitles);
     const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +48,7 @@ export default function StitchingExpenseTitleClient({ initialTitles }) {
     const [successMessage, setSuccessMessage] = useState("");
     const [titleName, setTitleName] = useState("");
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

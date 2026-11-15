@@ -54,7 +54,7 @@ import {
 
 export default function BranchManagementClient({ initialBranches }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const canManage = isAdmin || checkPermission(session, "branches", "create") || checkPermission(session, "branches", "edit");
     const canDelete = isAdmin || checkPermission(session, "branches", "delete");
 

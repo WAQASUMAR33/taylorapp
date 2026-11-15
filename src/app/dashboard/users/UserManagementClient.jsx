@@ -222,11 +222,11 @@ const FIELD_SX = {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function UserManagementClient({ initialUsers, initialBranches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "users", "view");
-    const canCreate = checkPermission(session, "users", "create");
-    const canEdit = checkPermission(session, "users", "edit");
-    const canDelete = checkPermission(session, "users", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "users", "view");
+    const canCreate = isAdmin || checkPermission(session, "users", "create");
+    const canEdit = isAdmin || checkPermission(session, "users", "edit");
+    const canDelete = isAdmin || checkPermission(session, "users", "delete");
     const [users, setUsers] = useState(initialUsers);
     const [branches, setBranches] = useState(initialBranches);
     const [searchQuery, setSearchQuery] = useState("");

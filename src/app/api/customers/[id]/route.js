@@ -207,7 +207,7 @@ export async function PUT(req, { params }) {
             });
             if (existingMeasurementNo) {
                 return NextResponse.json(
-                    { error: `The number already exists, use another` },
+                    { error: `M# ${trimmedMeasurementNo} is already assigned to customer '${existingMeasurementNo.name}', please use another number` },
                     { status: 400 }
                 );
             }

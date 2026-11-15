@@ -157,7 +157,8 @@ export async function GET(req) {
         const transactions = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
             const source = rec.source || (isBooking ? "Advance" : "Ledger");
-            const receivingType = isBooking ? "From Booking" : "Received through Ledger";
+            const isTransfer = (source || "").toUpperCase() === "TRANSFER";
+            const receivingType = isTransfer ? "Billing Transfer" : (isBooking ? "From Booking" : "Received through Ledger");
 
             let bookingNum = rec.booking?.bookingNumber;
             if (!bookingNum && rec.description) {
@@ -201,7 +202,7 @@ export async function GET(req) {
                 ? rec.description.trim()
                 : (isBooking ? `Payment received for ${sourceRef}` : "Payment received through Ledger");
 
-            let paymentMethod = "Cash";
+            let paymentMethod = isTransfer ? "Transfer" : "Cash";
             if (rec.paymentMode === "BANK" || (rec.bank && rec.bank.name)) {
                 paymentMethod = rec.bank ? `Bank (${rec.bank.name})` : "Bank Account";
             } else if (rec.description && /bank/i.test(rec.description)) {

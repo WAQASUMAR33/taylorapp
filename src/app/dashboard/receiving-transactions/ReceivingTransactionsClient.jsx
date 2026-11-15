@@ -219,9 +219,10 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
         );
     }
 
-    const canView = checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "receiving-transactions", "view") || checkPermission(session, "ledger", "view");
 
-    if (!canView && authStatus === "authenticated") {
+    if (!canView && !isAdmin && authStatus === "authenticated") {
         return (
             <Box sx={{ p: 4, textAlign: "center" }}>
                 <Typography variant="h6" color="error">
@@ -697,16 +698,18 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                                     py: 0.25,
                                                     borderRadius: 1.5,
                                                     border: "1px solid",
-                                                    borderColor: tx.paymentMethod?.toLowerCase().includes("bank") ? "#8b5cf6" : "#10b981",
-                                                    color: tx.paymentMethod?.toLowerCase().includes("bank") ? "#7c3aed" : "#059669",
-                                                    bgcolor: tx.paymentMethod?.toLowerCase().includes("bank")
-                                                        ? (isDark ? "rgba(139, 92, 246, 0.12)" : "#f5f3ff")
-                                                        : (isDark ? "rgba(16, 185, 129, 0.12)" : "#ecfdf5"),
+                                                    borderColor: tx.paymentMethod?.toLowerCase().includes("transfer") ? "#2563eb" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#8b5cf6" : "#10b981"),
+                                                    color: tx.paymentMethod?.toLowerCase().includes("transfer") ? "#1d4ed8" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#7c3aed" : "#059669"),
+                                                    bgcolor: tx.paymentMethod?.toLowerCase().includes("transfer")
+                                                        ? (isDark ? "rgba(37, 99, 235, 0.12)" : "#eff6ff")
+                                                        : (tx.paymentMethod?.toLowerCase().includes("bank")
+                                                            ? (isDark ? "rgba(139, 92, 246, 0.12)" : "#f5f3ff")
+                                                            : (isDark ? "rgba(16, 185, 129, 0.12)" : "#ecfdf5")),
                                                     fontWeight: 600,
                                                     fontSize: "0.76rem"
                                                 }}
                                             >
-                                                {tx.paymentMethod?.toLowerCase().includes("bank") ? "Bank" : "Cash"}
+                                                {tx.paymentMethod?.toLowerCase().includes("transfer") ? "Transfer" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "Bank" : "Cash")}
                                             </Box>
                                         </Box>
 

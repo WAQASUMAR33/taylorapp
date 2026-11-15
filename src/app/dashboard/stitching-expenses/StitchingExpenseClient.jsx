@@ -42,11 +42,11 @@ const emptyForm = {
 
 export default function StitchingExpenseClient({ initialExpenses, expenseTitles, branches = [] }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN";
-    const canView = checkPermission(session, "stitching-expenses", "view") || checkPermission(session, "stitching", "view");
-    const canCreate = checkPermission(session, "stitching-expenses", "create") || checkPermission(session, "stitching", "create");
-    const canEdit = checkPermission(session, "stitching-expenses", "edit") || checkPermission(session, "stitching", "edit");
-    const canDelete = checkPermission(session, "stitching-expenses", "delete") || checkPermission(session, "stitching", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || session?.user?.role === "SUPERADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "stitching-expenses", "view") || checkPermission(session, "stitching", "view");
+    const canCreate = isAdmin || checkPermission(session, "stitching-expenses", "create") || checkPermission(session, "stitching", "create");
+    const canEdit = isAdmin || checkPermission(session, "stitching-expenses", "edit") || checkPermission(session, "stitching", "edit");
+    const canDelete = isAdmin || checkPermission(session, "stitching-expenses", "delete") || checkPermission(session, "stitching", "delete");
 
     const [expenses, setExpenses] = useState(initialExpenses);
 
@@ -66,7 +66,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles,
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
     useEffect(() => {
-        if (!canView) return;
+        if (!canView && !isAdmin) return;
         let isMounted = true;
         async function fetchAnalytics() {
             setAnalyticsLoading(true);
@@ -242,7 +242,7 @@ export default function StitchingExpenseClient({ initialExpenses, expenseTitles,
         setFilterBranchId("");
     }
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

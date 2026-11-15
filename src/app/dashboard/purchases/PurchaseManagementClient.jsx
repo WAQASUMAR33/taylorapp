@@ -51,11 +51,11 @@ const PAYMENT_METHODS = [
 
 export default function PurchaseManagementClient({ initialPurchases, suppliers, products, banks }) {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
-    const canView = checkPermission(session, "purchases", "view");
-    const canCreate = checkPermission(session, "purchases", "create");
-    const canEdit = checkPermission(session, "purchases", "edit");
-    const canDelete = checkPermission(session, "purchases", "delete");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "purchases", "view");
+    const canCreate = isAdmin || checkPermission(session, "purchases", "create");
+    const canEdit = isAdmin || checkPermission(session, "purchases", "edit");
+    const canDelete = isAdmin || checkPermission(session, "purchases", "delete");
     const [purchases, setPurchases] = useState(initialPurchases);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -186,7 +186,7 @@ export default function PurchaseManagementClient({ initialPurchases, suppliers, 
             supplierName.toLowerCase().includes(q);
     });
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

@@ -30,7 +30,8 @@ import { Search, TrendingDown, Package, X as XIcon } from "lucide-react";
 
 export default function StockOutRecordsClient({ initialRecords, materials }) {
     const { data: session } = useSession();
-    const canView = checkPermission(session, "material-out-records", "view") || checkPermission(session, "materials", "view");
+    const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+    const canView = isAdmin || checkPermission(session, "material-out-records", "view") || checkPermission(session, "materials", "view");
 
     const [records] = useState(initialRecords);
     const [searchQuery, setSearchQuery] = useState("");
@@ -40,7 +41,7 @@ export default function StockOutRecordsClient({ initialRecords, materials }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
 
-    if (!canView && session) {
+    if (!canView && !isAdmin && session) {
         return (
             <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
                 <Alert severity="error" variant="filled" sx={{ borderRadius: 2, maxWidth: 600 }}>

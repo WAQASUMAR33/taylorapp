@@ -49,7 +49,7 @@ import {
     IconButton,
 } from "@mui/material";
 
-import { checkPermission } from "@/lib/permissions";
+import { checkPermission, isUserAdmin } from "@/lib/permissions";
 
 const navSections = [
     {
@@ -132,9 +132,9 @@ export default function Sidebar({ collapsed, setCollapsed, drawerWidth, collapse
     const sidebarWidth = collapsed ? collapsedDrawerWidth : drawerWidth;
 
     const isItemAllowed = (item) => {
-        if (!session?.user) return false;
-        const role = session.user.role;
-        if (role === "ADMIN") return true;
+        if (!session) return false;
+        if (isUserAdmin(session)) return true;
+        const role = String(session?.user?.role || "").trim().toUpperCase();
 
         if (item.moduleKey === "users" || item.moduleKey === "branches" || item.moduleKey === "settings") {
             return false;
