@@ -177,15 +177,32 @@ export async function PUT(req, { params }) {
             );
         }
 
+        // Check if category is a tailor or cutter
+        let isStaffCategory = false;
+        if (accountCategoryId) {
+            const cat = await prisma.accountCategory.findUnique({
+                where: { id: parseInt(accountCategoryId) },
+                select: { name: true }
+            });
+            const catName = cat?.name?.toLowerCase() || "";
+            if (catName.includes("tailor") || catName.includes("cutter")) {
+                isStaffCategory = true;
+            }
+        }
+
         let trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
 
-        if (measurementMode === "auto") {
+        if (isStaffCategory) {
+            trimmedMeasurementNo = null;
+        } else if (measurementMode === "auto") {
             const maxResult = await prisma.$queryRawUnsafe(`
-                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
-                FROM customer 
-                WHERE measurementNo IS NOT NULL 
-                  AND measurementNo REGEXP '^[0-9]+$' 
-                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
+                SELECT MAX(CAST(c.measurementNo AS UNSIGNED)) AS maxNo 
+                FROM customer c
+                LEFT JOIN accountcategory ac ON c.accountCategoryId = ac.id
+                WHERE c.measurementNo IS NOT NULL 
+                  AND c.measurementNo REGEXP '^[0-9]+$' 
+                  AND CAST(c.measurementNo AS UNSIGNED) < 1000000000
+                  AND (ac.name IS NULL OR (LOWER(ac.name) NOT LIKE '%tailor%' AND LOWER(ac.name) NOT LIKE '%cutter%'))
             `);
             let nextNum = (maxResult[0]?.maxNo != null ? Number(maxResult[0].maxNo) : 0) + 1;
             while (await prisma.customer.findFirst({

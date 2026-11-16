@@ -23,9 +23,25 @@ export async function POST(req) {
             );
         }
 
+        // Check if category is a tailor or cutter
+        let isStaffCategory = false;
+        if (accountCategoryId) {
+            const cat = await prisma.accountCategory.findUnique({
+                where: { id: parseInt(accountCategoryId) },
+                select: { name: true }
+            });
+            const catName = cat?.name?.toLowerCase() || "";
+            if (catName.includes("tailor") || catName.includes("cutter")) {
+                isStaffCategory = true;
+            }
+        }
+
         let trimmedMeasurementNo = measurementNo ? measurementNo.trim() : null;
 
-        if (measurementMode === "auto") {
+        if (isStaffCategory) {
+            // Tailors and cutters are staff and do not take customer measurement numbers
+            trimmedMeasurementNo = null;
+        } else if (measurementMode === "auto") {
             trimmedMeasurementNo = await getNextMeasurementNo(prisma);
         } else if (trimmedMeasurementNo) {
             const existingMeasurementNo = await prisma.customer.findFirst({
@@ -133,9 +149,11 @@ export async function GET(req) {
         const orderBy = {};
         orderBy[orderField] = orderDirection;
 
-        // Base where condition to exclude cutters and tailors
-        const where = {
-            AND: [
+        // Base where condition: exclude cutters and tailors by default unless searching by measurementNo or specific categoryId
+        const where = { AND: [] };
+
+        if (!measurementNo && !categoryId) {
+            where.AND.push(
                 {
                     OR: [
                         { accountCategory: null },
@@ -160,8 +178,8 @@ export async function GET(req) {
                         }
                     ]
                 }
-            ]
-        };
+            );
+        }
 
         if (search) {
             where.AND.push({
@@ -228,11 +246,13 @@ export async function GET(req) {
             }),
             prisma.customer.count({ where }),
             prisma.$queryRawUnsafe(`
-                SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
-                FROM customer 
-                WHERE measurementNo IS NOT NULL 
-                  AND measurementNo REGEXP '^[0-9]+$' 
-                  AND CAST(measurementNo AS UNSIGNED) < 1000000000
+                SELECT MAX(CAST(c.measurementNo AS UNSIGNED)) AS maxNo 
+                FROM customer c
+                LEFT JOIN accountcategory ac ON c.accountCategoryId = ac.id
+                WHERE c.measurementNo IS NOT NULL 
+                  AND c.measurementNo REGEXP '^[0-9]+$' 
+                  AND CAST(c.measurementNo AS UNSIGNED) < 1000000000
+                  AND (ac.name IS NULL OR (LOWER(ac.name) NOT LIKE '%tailor%' AND LOWER(ac.name) NOT LIKE '%cutter%'))
             `)
         ]);
 

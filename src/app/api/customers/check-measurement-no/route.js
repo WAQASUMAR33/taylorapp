@@ -29,14 +29,21 @@ export async function GET(req) {
 
         const existing = await prisma.customer.findFirst({
             where: whereClause,
-            select: { id: true, name: true, measurementNo: true },
+            select: {
+                id: true,
+                name: true,
+                measurementNo: true,
+                accountCategory: { select: { id: true, name: true } }
+            },
         });
 
         if (existing) {
+            const catName = existing.accountCategory?.name?.trim();
+            const categoryLabel = catName ? ` (${catName})` : "";
             return NextResponse.json({
                 exists: true,
-                message: `M# ${trimmed} is already assigned to customer '${existing.name}', please use another number`,
-                customer: { id: existing.id, name: existing.name },
+                message: `M# ${trimmed} is already assigned to customer '${existing.name}'${categoryLabel}, please use another number`,
+                customer: { id: existing.id, name: existing.name, category: catName },
             });
         }
 

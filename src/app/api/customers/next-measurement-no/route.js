@@ -23,11 +23,13 @@ export async function GET(req) {
         }
 
         const maxResult = await prisma.$queryRawUnsafe(`
-            SELECT MAX(CAST(measurementNo AS UNSIGNED)) AS maxNo 
-            FROM customer 
-            WHERE measurementNo IS NOT NULL 
-              AND measurementNo REGEXP '^[0-9]+$' 
-              AND CAST(measurementNo AS UNSIGNED) < 1000000000
+            SELECT MAX(CAST(c.measurementNo AS UNSIGNED)) AS maxNo 
+            FROM customer c
+            LEFT JOIN accountcategory ac ON c.accountCategoryId = ac.id
+            WHERE c.measurementNo IS NOT NULL 
+              AND c.measurementNo REGEXP '^[0-9]+$' 
+              AND CAST(c.measurementNo AS UNSIGNED) < 1000000000
+              AND (ac.name IS NULL OR (LOWER(ac.name) NOT LIKE '%tailor%' AND LOWER(ac.name) NOT LIKE '%cutter%'))
         `);
 
         const highestNo = maxResult[0]?.maxNo != null ? Number(maxResult[0].maxNo) : 0;
