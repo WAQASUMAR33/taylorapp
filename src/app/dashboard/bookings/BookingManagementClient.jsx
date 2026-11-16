@@ -37,7 +37,9 @@ import {
     Checkbox,
     GlobalStyles,
     LinearProgress,
-    TablePagination
+    TablePagination,
+    Tabs,
+    Tab
 } from "@mui/material";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -1214,29 +1216,43 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [loadingPayCustomer, setLoadingPayCustomer] = useState(false);
     const [payCustomerOpenBookings, setPayCustomerOpenBookings] = useState([]);
     const [loadingOpenBookings, setLoadingOpenBookings] = useState(false);
+    const [selectedBookingIds, setSelectedBookingIds] = useState([]);
+    const [activeItemBookingId, setActiveItemBookingId] = useState(null);
     const [paying, setPaying] = useState(false);
 
-    const handleSelectBookingToPay = (targetBooking) => {
-        setPayBooking(targetBooking);
-        const rem = parseFloat(targetBooking.remainingAmount || 0);
-        // Initialize delivery quantities for undelivered items in targetBooking
-        const initialDel = {};
-        (targetBooking.items || []).forEach(item => {
-            if (item.itemStatus !== "DELIVERED") {
-                initialDel[item.id] = parseFloat(item.quantity) || 1;
+    const handleToggleBookingSelect = (bId) => {
+        setSelectedBookingIds(prev => {
+            if (prev.includes(bId)) {
+                if (prev.length <= 1) return prev; // Keep at least one selected
+                return prev.filter(id => id !== bId);
+            } else {
+                return [...prev, bId];
             }
         });
-        setPayDeliverQuantities(initialDel);
+    };
 
-        // Pre-fill payment amount with full balance if positive, otherwise target booking remaining
-        const fullBal = payCustomerBalance !== null
-            ? payCustomerBalance
-            : (parseFloat(targetBooking.billingCustomer?.balance ?? targetBooking.customer?.balance ?? 0));
-        setPayReceived((fullBal > 0 ? fullBal : rem).toString());
+    const handleToggleSelectAllBookings = () => {
+        if (!payCustomerOpenBookings || payCustomerOpenBookings.length === 0) return;
+        const allIds = payCustomerOpenBookings.map(b => b.id);
+        if (selectedBookingIds.length === allIds.length) {
+            setSelectedBookingIds([payBooking.id]);
+        } else {
+            setSelectedBookingIds(allIds);
+        }
+    };
+
+    const handleSelectOnlyBooking = (targetBooking) => {
+        setPayBooking(targetBooking);
+        setSelectedBookingIds([targetBooking.id]);
+        setActiveItemBookingId(targetBooking.id);
+        const rem = parseFloat(targetBooking.remainingAmount || 0);
+        setPayReceived(rem.toString());
     };
 
     const handleOpenPayDialog = (booking) => {
         setPayBooking(booking);
+        setSelectedBookingIds([booking.id]);
+        setActiveItemBookingId(booking.id);
         setPayDiscount("0");
         setPayPaymentMethod("CASH");
         setPayBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
@@ -1246,10 +1262,18 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const initialBalNum = parseFloat(initialBal) || 0;
         setPayCustomerBalance(initialBalNum);
 
-        // Show full balance for payment rather than single booking current balance
         const bookingRem = parseFloat(booking.remainingAmount || 0);
         const defaultPayAmt = initialBalNum > 0 ? initialBalNum : bookingRem;
         setPayReceived(defaultPayAmt.toString());
+
+        // Initialize delivery quantities for undelivered items of this booking
+        const initialDel = {};
+        (booking.items || []).forEach(item => {
+            if (item.itemStatus !== "DELIVERED") {
+                initialDel[item.id] = parseFloat(item.quantity) || 1;
+            }
+        });
+        setPayDeliverQuantities(initialDel);
 
         if (effectiveCustomerId) {
             setLoadingPayCustomer(true);
@@ -1278,6 +1302,22 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                         unpaidList.unshift(booking);
                     }
                     setPayCustomerOpenBookings(unpaidList);
+
+                    // Pre-select ALL open unpaid bookings when opened so multiple bookings can be paid together
+                    if (unpaidList.length > 0) {
+                        setSelectedBookingIds(unpaidList.map(b => b.id));
+                    }
+
+                    // Prepopulate deliver quantities for items in all open bookings
+                    const openDel = {};
+                    unpaidList.forEach(b => {
+                        (b.items || []).forEach(item => {
+                            if (item.itemStatus !== "DELIVERED") {
+                                openDel[item.id] = parseFloat(item.quantity) || 1;
+                            }
+                        });
+                    });
+                    setPayDeliverQuantities(prev => ({ ...openDel, ...prev }));
                 })
                 .catch(err => console.error("Failed to fetch customer open bookings", err))
                 .finally(() => setLoadingOpenBookings(false));
@@ -1285,14 +1325,6 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             setPayCustomerOpenBookings(bookingRem > 0 ? [booking] : []);
         }
 
-        // Initialize delivery quantities for undelivered items
-        const initialDel = {};
-        (booking.items || []).forEach(item => {
-            if (item.itemStatus !== "DELIVERED") {
-                initialDel[item.id] = parseFloat(item.quantity) || 1;
-            }
-        });
-        setPayDeliverQuantities(initialDel);
         setPayDialogOpen(true);
     };
 
@@ -1369,19 +1401,52 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                 throw new Error("Payment and discount amounts cannot be negative");
             }
 
-            const itemsDelivery = Object.entries(payDeliverQuantities).map(([itemId, qty]) => ({
-                itemId: parseInt(itemId),
-                deliverNowQty: parseFloat(qty) || 0
-            }));
+            // Target selected bookings
+            const selectedBookingsList = payCustomerOpenBookings.length > 0
+                ? payCustomerOpenBookings.filter(b => selectedBookingIds.includes(b.id))
+                : [payBooking];
+
+            // Allocate discount and payment across selected bookings
+            let remD = discount;
+            let remP = amount;
+
+            const bookingAllocations = selectedBookingsList.map((b, idx) => {
+                const bRem = parseFloat(b.remainingAmount || 0);
+                const d = Math.min(bRem, remD);
+                remD -= d;
+
+                const remAfterD = Math.max(0, bRem - d);
+                const isLast = (idx === selectedBookingsList.length - 1);
+                const p = isLast ? remP : Math.min(remAfterD, remP);
+                remP -= p;
+
+                const bItemsDelivery = (b.items || []).map(item => ({
+                    itemId: item.id,
+                    deliverNowQty: payDeliverQuantities[item.id] !== undefined
+                        ? parseFloat(payDeliverQuantities[item.id]) || 0
+                        : (item.itemStatus === "DELIVERED" ? 0 : (parseFloat(item.quantity) || 1))
+                }));
+
+                return {
+                    bookingId: b.id,
+                    paymentAmount: Math.max(0, p),
+                    discountAmount: Math.max(0, d),
+                    itemsDelivery: bItemsDelivery
+                };
+            });
+
+            const allItemsDelivery = bookingAllocations.flatMap(a => a.itemsDelivery);
 
             const res = await fetch("/api/bookings/pay", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     bookingId: payBooking.id,
+                    bookingIds: selectedBookingIds,
+                    bookingAllocations,
                     paymentAmount: amount,
                     discountAmount: discount,
-                    itemsDelivery,
+                    itemsDelivery: allItemsDelivery,
                     paymentMethod: payPaymentMethod,
                     bankId: payPaymentMethod === 'BANK' && payBankId ? parseInt(payBankId) : null
                 })
@@ -4153,20 +4218,58 @@ window.onload = function() {
     const paymentDialog = payBooking && (() => {
         const payAmount = parseFloat(payReceived) || 0;
         const discountAmount = parseFloat(payDiscount) || 0;
+
+        // Selected bookings list
+        const selectedBookingsList = payCustomerOpenBookings.length > 0
+            ? payCustomerOpenBookings.filter(b => selectedBookingIds.includes(b.id))
+            : [payBooking];
+
+        // Active primary booking
         const totalBill = parseFloat(payBooking.totalAmount || 0);
         const advanceAmt = parseFloat(payBooking.advanceAmount || 0);
         const currentRemaining = parseFloat(payBooking.remainingAmount || 0);
         const alreadyPaid = Math.max(0, totalBill - currentRemaining);
-        
-        const totalDeduction = payAmount + discountAmount;
-        const newBookingRemaining = Math.max(0, currentRemaining - totalDeduction);
+
+        // Combined totals for all selected bookings
+        const totalSelectedBill = selectedBookingsList.reduce((sum, b) => sum + parseFloat(b.totalAmount || 0), 0);
+        const totalSelectedAdvance = selectedBookingsList.reduce((sum, b) => sum + parseFloat(b.advanceAmount || 0), 0);
+        const totalSelectedDue = selectedBookingsList.reduce((sum, b) => sum + parseFloat(b.remainingAmount || 0), 0);
+
+        // Dynamic allocation map for all selected bookings
+        let tempRemD = discountAmount;
+        let tempRemP = payAmount;
+        const dynamicAllocMap = {};
+        selectedBookingsList.forEach((b, idx) => {
+            const bRem = parseFloat(b.remainingAmount || 0);
+            const d = Math.min(bRem, tempRemD);
+            tempRemD -= d;
+            const remAfterD = Math.max(0, bRem - d);
+            const isLast = (idx === selectedBookingsList.length - 1);
+            const p = isLast ? tempRemP : Math.min(remAfterD, tempRemP);
+            tempRemP -= p;
+            const newRem = Math.max(0, remAfterD - p);
+            dynamicAllocMap[b.id] = {
+                pay: p,
+                disc: d,
+                newRemaining: newRem,
+                willClear: newRem <= 0
+            };
+        });
+
+        // Combined remaining after payment & discount
+        const totalSelectedRemainingAfter = Math.max(0, totalSelectedDue - payAmount - discountAmount);
+        const newBookingRemaining = dynamicAllocMap[payBooking.id]
+            ? dynamicAllocMap[payBooking.id].newRemaining
+            : Math.max(0, currentRemaining - payAmount - discountAmount);
 
         // Customer Balance (from billing customer or main customer)
         const custObj = payBooking.billingCustomer || payBooking.customer || {};
         const custCurrentLedgerBal = payCustomerBalance !== null ? payCustomerBalance : parseFloat(custObj.balance || 0);
-        // Customer Total Due Before = customer ledger balance (which already reflects this booking's due)
         const custTotalDueBefore = custCurrentLedgerBal;
         const custRemainingBalanceAfter = custTotalDueBefore - payAmount - discountAmount;
+
+        // Currently selected tab for suit delivery
+        const currentItemBooking = selectedBookingsList.find(b => b.id === activeItemBookingId) || selectedBookingsList[0] || payBooking;
 
         return (
             <Dialog 
@@ -4196,7 +4299,9 @@ window.onload = function() {
                                 Receive Bill Payment
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                Booking #{payBooking.bookingNumber || payBooking.id}
+                                {selectedBookingsList.length > 1 
+                                    ? `Paying ${selectedBookingsList.length} Selected Bookings (${selectedBookingsList.map(b => '#' + (b.bookingNumber || b.id)).join(', ')})`
+                                    : `Booking #${payBooking.bookingNumber || payBooking.id}`}
                             </Typography>
                         </Box>
                     </Box>
@@ -4274,7 +4379,7 @@ window.onload = function() {
                         </Grid>
                     </Box>
 
-                    {/* Prominent Overall Balance & Booking Remaining Banner */}
+                    {/* Prominent Overall Balance & Selected Bookings Due Banner */}
                     <Box sx={{
                         bgcolor: '#f0fdf4',
                         border: '1.5px solid #86efac',
@@ -4311,31 +4416,33 @@ window.onload = function() {
                             <Grid size={{ xs: 12, sm: 6 }} sx={{ borderLeft: { xs: 'none', sm: '1px dashed #bbf7d0' }, pl: { xs: 0, sm: 2 } }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                     <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e3a8a', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                                        📋 This Booking Remaining
+                                        📋 {selectedBookingsList.length > 1 ? `Total Selected (${selectedBookingsList.length}) Due` : "This Booking Remaining"}
                                     </Typography>
                                     <Chip
                                         size="small"
-                                        label={currentRemaining > 0 ? "Booking Due" : "Cleared"}
+                                        label={selectedBookingsList.length > 1 ? `${selectedBookingsList.length} Bookings Selected` : (currentRemaining > 0 ? "Booking Due" : "Cleared")}
                                         sx={{
                                             height: 20,
                                             fontSize: '0.65rem',
                                             fontWeight: 800,
-                                            bgcolor: currentRemaining > 0 ? '#fef3c7' : '#dcfce7',
-                                            color: currentRemaining > 0 ? '#92400e' : '#15803d',
+                                            bgcolor: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#fef3c7' : '#dcfce7',
+                                            color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#92400e' : '#15803d',
                                         }}
                                     />
                                 </Box>
-                                <Typography variant="h5" sx={{ fontWeight: 900, color: currentRemaining > 0 ? '#b45309' : '#16a34a', lineHeight: 1.2 }}>
-                                    Rs. {currentRemaining.toLocaleString()}
+                                <Typography variant="h5" sx={{ fontWeight: 900, color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#b45309' : '#16a34a', lineHeight: 1.2 }}>
+                                    Rs. {(selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining).toLocaleString()}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
-                                    Balance remaining specifically for Booking #{payBooking.bookingNumber || payBooking.id}
+                                    {selectedBookingsList.length > 1 
+                                        ? `Combined remaining balance for ${selectedBookingsList.length} selected bookings`
+                                        : `Balance remaining specifically for Booking #${payBooking.bookingNumber || payBooking.id}`}
                                 </Typography>
                             </Grid>
                         </Grid>
                     </Box>
 
-                    {/* All Open / Unpaid Bookings for this Customer */}
+                    {/* All Open / Unpaid Bookings for this Customer with Multi-Select Checkboxes */}
                     <Box sx={{
                         bgcolor: '#f8fafc',
                         border: '1.5px solid #cbd5e1',
@@ -4344,7 +4451,7 @@ window.onload = function() {
                         mb: 2.5
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                 <Box sx={{ p: 0.6, bgcolor: '#e0e7ff', borderRadius: 1.5, display: 'flex', color: '#4338ca' }}>
                                     <ReceiptText size={16} />
                                 </Box>
@@ -4362,12 +4469,38 @@ window.onload = function() {
                                         color: payCustomerOpenBookings.length > 0 ? '#b91c1c' : '#15803d'
                                     }}
                                 />
+                                {payCustomerOpenBookings.length > 1 && (
+                                    <Chip
+                                        size="small"
+                                        label={`${selectedBookingIds.length} Selected`}
+                                        sx={{
+                                            height: 20,
+                                            fontSize: '0.68rem',
+                                            fontWeight: 800,
+                                            bgcolor: '#dbeafe',
+                                            color: '#1d4ed8'
+                                        }}
+                                    />
+                                )}
                             </Box>
-                            {payCustomerOpenBookings.length > 0 && (
-                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#b45309' }}>
-                                    Total Unpaid Bookings Due: Rs. {payCustomerOpenBookings.reduce((sum, b) => sum + (parseFloat(b.remainingAmount || 0)), 0).toLocaleString()}
-                                </Typography>
-                            )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                {payCustomerOpenBookings.length > 0 && (
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#b45309' }}>
+                                        Total Selected Due: Rs. {totalSelectedDue.toLocaleString()} (All Unpaid: Rs. {payCustomerOpenBookings.reduce((sum, b) => sum + (parseFloat(b.remainingAmount || 0)), 0).toLocaleString()})
+                                    </Typography>
+                                )}
+                                {payCustomerOpenBookings.length > 1 && (
+                                    <Button
+                                        size="small"
+                                        variant={selectedBookingIds.length === payCustomerOpenBookings.length ? "outlined" : "contained"}
+                                        color="primary"
+                                        onClick={handleToggleSelectAllBookings}
+                                        sx={{ textTransform: 'none', py: 0.2, px: 1.2, fontSize: '0.72rem', fontWeight: 800, borderRadius: 1.5 }}
+                                    >
+                                        {selectedBookingIds.length === payCustomerOpenBookings.length ? "Deselect Others" : "Select All Bookings"}
+                                    </Button>
+                                )}
+                            </Box>
                         </Box>
 
                         {loadingOpenBookings ? (
@@ -4380,40 +4513,70 @@ window.onload = function() {
                                 No other open unpaid bookings found for this customer.
                             </Typography>
                         ) : (
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 220, bgcolor: 'white' }}>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 250, bgcolor: 'white' }}>
                                 <Table size="small" stickyHeader>
                                     <TableHead>
                                         <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.72rem', color: '#475569' } }}>
+                                            <TableCell padding="checkbox" sx={{ bgcolor: '#f1f5f9', pl: 1 }}>
+                                                <Checkbox
+                                                    size="small"
+                                                    indeterminate={selectedBookingIds.length > 0 && selectedBookingIds.length < payCustomerOpenBookings.length}
+                                                    checked={payCustomerOpenBookings.length > 0 && selectedBookingIds.length === payCustomerOpenBookings.length}
+                                                    onChange={handleToggleSelectAllBookings}
+                                                    sx={{ p: 0.5 }}
+                                                />
+                                            </TableCell>
                                             <TableCell>Booking #</TableCell>
                                             <TableCell>Booking Date</TableCell>
                                             <TableCell>Delivery Date</TableCell>
                                             <TableCell align="right">Total Bill</TableCell>
                                             <TableCell align="right">Advance Paid</TableCell>
                                             <TableCell align="right">Remaining Due</TableCell>
-                                            <TableCell align="center">Action / Direct Pay</TableCell>
+                                            <TableCell align="center">Paying Now (Allocated)</TableCell>
+                                            <TableCell align="center">Action</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {payCustomerOpenBookings.map((b) => {
-                                            const isCurrent = b.id === payBooking.id;
+                                            const isSelected = selectedBookingIds.includes(b.id);
+                                            const isPrimary = b.id === payBooking.id;
                                             const remDue = parseFloat(b.remainingAmount || 0);
                                             const totAmt = parseFloat(b.totalAmount || 0);
                                             const advAmt = parseFloat(b.advanceAmount || 0);
+                                            const alloc = dynamicAllocMap[b.id];
 
                                             return (
                                                 <TableRow 
                                                     key={b.id}
+                                                    hover
+                                                    onClick={() => handleToggleBookingSelect(b.id)}
                                                     sx={{ 
-                                                        bgcolor: isCurrent ? '#f0fdf4 !important' : 'inherit',
-                                                        '&:hover': { bgcolor: isCurrent ? '#dcfce7 !important' : '#f8fafc' },
+                                                        cursor: 'pointer',
+                                                        bgcolor: isSelected ? (isPrimary ? '#eff6ff !important' : '#f8fafc !important') : 'inherit',
+                                                        '&:hover': { bgcolor: isSelected ? '#dbeafe !important' : '#f1f5f9' },
                                                         transition: 'background-color 0.15s'
                                                     }}
                                                 >
+                                                    <TableCell padding="checkbox" sx={{ pl: 1 }} onClick={(e) => e.stopPropagation()}>
+                                                        <Checkbox
+                                                            size="small"
+                                                            checked={isSelected}
+                                                            onChange={() => handleToggleBookingSelect(b.id)}
+                                                            sx={{ p: 0.5 }}
+                                                        />
+                                                    </TableCell>
                                                     <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                            <Typography variant="body2" sx={{ fontWeight: 800, color: isCurrent ? '#15803d' : '#0f172a', fontSize: '0.8rem' }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 800, color: isSelected ? '#1d4ed8' : '#0f172a', fontSize: '0.8rem' }}>
                                                                 #{b.bookingNumber || b.id}
                                                             </Typography>
+                                                            {isPrimary && (
+                                                                <Chip 
+                                                                    label="Primary" 
+                                                                    size="small" 
+                                                                    sx={{ height: 16, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#dbeafe', color: '#1e40af' }} 
+                                                                />
+                                                            )}
                                                             {b.bookingType && (
                                                                 <Chip 
                                                                     label={b.bookingType} 
@@ -4438,39 +4601,82 @@ window.onload = function() {
                                                     <TableCell align="right" sx={{ fontSize: '0.82rem', py: 0.8, fontWeight: 900, color: remDue > 0 ? '#b91c1c' : '#15803d' }}>
                                                         Rs. {remDue.toLocaleString()}
                                                     </TableCell>
-                                                    <TableCell align="center" sx={{ py: 0.6 }}>
-                                                        {isCurrent ? (
-                                                            <Chip 
-                                                                icon={<Check size={13} color="#15803d" />}
-                                                                label="Active Booking" 
-                                                                size="small" 
-                                                                sx={{ 
-                                                                    height: 22, 
-                                                                    fontSize: '0.68rem', 
-                                                                    fontWeight: 800, 
-                                                                    bgcolor: '#dcfce7', 
-                                                                    color: '#15803d',
-                                                                    border: '1px solid #86efac'
-                                                                }} 
-                                                            />
+                                                    <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
+                                                        {isSelected && alloc ? (
+                                                            alloc.willClear ? (
+                                                                <Chip 
+                                                                    size="small"
+                                                                    label={`✓ Rs. ${alloc.pay.toLocaleString()} (Clears Bill)`}
+                                                                    sx={{ 
+                                                                        height: 22, 
+                                                                        fontSize: '0.68rem', 
+                                                                        fontWeight: 800, 
+                                                                        bgcolor: '#dcfce7', 
+                                                                        color: '#15803d',
+                                                                        border: '1px solid #86efac'
+                                                                    }} 
+                                                                />
+                                                            ) : alloc.pay > 0 ? (
+                                                                <Chip 
+                                                                    size="small"
+                                                                    label={`Rs. ${alloc.pay.toLocaleString()} (Rem: Rs. ${alloc.newRemaining.toLocaleString()})`}
+                                                                    sx={{ 
+                                                                        height: 22, 
+                                                                        fontSize: '0.68rem', 
+                                                                        fontWeight: 800, 
+                                                                        bgcolor: '#fef3c7', 
+                                                                        color: '#92400e',
+                                                                        border: '1px solid #fde68a'
+                                                                    }} 
+                                                                />
+                                                            ) : (
+                                                                <Chip 
+                                                                    size="small"
+                                                                    label="Rs. 0 (Not paid)"
+                                                                    sx={{ height: 22, fontSize: '0.68rem', fontWeight: 600, bgcolor: '#f1f5f9', color: '#64748b' }} 
+                                                                />
+                                                            )
+                                                        ) : (
+                                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.72rem' }}>
+                                                                Excluded
+                                                            </Typography>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
+                                                        {isSelected ? (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="secondary"
+                                                                onClick={() => handleSelectOnlyBooking(b)}
+                                                                sx={{
+                                                                    borderRadius: 1.5,
+                                                                    textTransform: 'none',
+                                                                    py: 0.2,
+                                                                    px: 1,
+                                                                    fontSize: '0.68rem',
+                                                                    fontWeight: 700
+                                                                }}
+                                                            >
+                                                                Only This
+                                                            </Button>
                                                         ) : (
                                                             <Button
                                                                 size="small"
                                                                 variant="contained"
-                                                                onClick={() => handleSelectBookingToPay(b)}
-                                                                startIcon={<CreditCard size={12} />}
+                                                                onClick={() => handleToggleBookingSelect(b.id)}
                                                                 sx={{
                                                                     borderRadius: 1.5,
                                                                     textTransform: 'none',
-                                                                    py: 0.25,
-                                                                    px: 1.25,
-                                                                    fontSize: '0.72rem',
+                                                                    py: 0.2,
+                                                                    px: 1,
+                                                                    fontSize: '0.68rem',
                                                                     fontWeight: 800,
                                                                     bgcolor: '#2563eb',
                                                                     '&:hover': { bgcolor: '#1d4ed8' }
                                                                 }}
                                                             >
-                                                                Select & Pay
+                                                                + Include
                                                             </Button>
                                                         )}
                                                     </TableCell>
@@ -4483,9 +4689,30 @@ window.onload = function() {
                         )}
                     </Box>
 
-                    {/* Suit Quantity Tracking & Delivery Section */}
+                    {/* Booking Tabs for Item Delivery (if multiple bookings selected) */}
+                    {selectedBookingsList.length > 1 && (
+                        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, bgcolor: '#f1f5f9', p: 0.5, borderRadius: 2 }}>
+                            <Tabs
+                                value={currentItemBooking.id}
+                                onChange={(e, val) => setActiveItemBookingId(val)}
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5, fontWeight: 700, fontSize: '0.78rem' } }}
+                            >
+                                {selectedBookingsList.map(b => (
+                                    <Tab
+                                        key={b.id}
+                                        value={b.id}
+                                        label={`Booking #${b.bookingNumber || b.id} (${(b.items || []).length} items)`}
+                                    />
+                                ))}
+                            </Tabs>
+                        </Box>
+                    )}
+
+                    {/* Suit Quantity Tracking & Delivery Section for currentItemBooking */}
                     {(() => {
-                        const stitchingItems = (payBooking.items || []).filter(i => !i.productId);
+                        const stitchingItems = (currentItemBooking.items || []).filter(i => !i.productId);
                         if (stitchingItems.length === 0) return null;
 
                         const totalSuitQty = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
@@ -4508,7 +4735,7 @@ window.onload = function() {
                             <Box sx={{ bgcolor: isBookingClosed ? '#f0fdf4' : '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid', borderColor: isBookingClosed ? '#bbf7d0' : '#e2e8f0', mb: 2.5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
                                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        SUIT QUANTITY TRACKING
+                                        SUIT QUANTITY TRACKING — BOOKING #{currentItemBooking.bookingNumber || currentItemBooking.id}
                                     </Typography>
                                     {isBookingClosed ? (
                                         <Chip label="BOOKING CLOSED" size="small" sx={{ fontWeight: 800, bgcolor: '#16a34a', color: 'white', fontSize: '0.72rem' }} />
@@ -4540,11 +4767,11 @@ window.onload = function() {
                         );
                     })()}
 
-                    {/* Items Summary Table */}
-                    {(payBooking.items || []).length > 0 && (
+                    {/* Items Summary Table for currentItemBooking */}
+                    {(currentItemBooking.items || []).length > 0 && (
                         <Box sx={{ mb: 2.5 }}>
                             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Booking Items ({payBooking.items.length}) — <span style={{ color: '#3b82f6', textTransform: 'none' }}>Set Delivered Qty below</span>
+                                Booking Items ({currentItemBooking.items.length}) for #{currentItemBooking.bookingNumber || currentItemBooking.id} — <span style={{ color: '#3b82f6', textTransform: 'none' }}>Set Delivered Qty below</span>
                             </Typography>
                             <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 180 }}>
                                 <Table size="small" stickyHeader>
@@ -4559,7 +4786,7 @@ window.onload = function() {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {payBooking.items.map((item, idx) => {
+                                        {currentItemBooking.items.map((item, idx) => {
                                             const itemName = item.productId 
                                                 ? (item.product?.name || "Product Item")
                                                 : `${item.stitchingType || "Suit"} Stitching`;
@@ -4611,7 +4838,19 @@ window.onload = function() {
                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', mr: 0.5, letterSpacing: 0.5 }}>
                             QUICK FILL:
                         </Typography>
-                        {custTotalDueBefore > 0 && (
+                        {totalSelectedDue > 0 && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                color="primary"
+                                onClick={() => setPayReceived(totalSelectedDue.toString())}
+                                startIcon={<CreditCard size={14} />}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}
+                            >
+                                Pay All Selected ({selectedBookingsList.length}) (Rs. {totalSelectedDue.toLocaleString()})
+                            </Button>
+                        )}
+                        {custTotalDueBefore > 0 && custTotalDueBefore !== totalSelectedDue && (
                             <Button
                                 size="small"
                                 variant="contained"
@@ -4623,15 +4862,17 @@ window.onload = function() {
                                 Pay Full Customer Balance (Rs. {custTotalDueBefore.toLocaleString()})
                             </Button>
                         )}
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            onClick={() => setPayReceived(currentRemaining.toString())}
-                            sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, py: 0.5, px: 2 }}
-                        >
-                            Pay Active Booking Due (Rs. {currentRemaining.toLocaleString()})
-                        </Button>
+                        {selectedBookingsList.length > 1 && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="inherit"
+                                onClick={() => setPayReceived(currentRemaining.toString())}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, py: 0.5, px: 2 }}
+                            >
+                                Pay Primary Booking Due (Rs. {currentRemaining.toLocaleString()})
+                            </Button>
+                        )}
                     </Box>
 
                     {/* Amount Entry & Additional Discount Inputs */}
@@ -4639,16 +4880,12 @@ window.onload = function() {
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 fullWidth
-                                label={`Payment Amount Received (Full Balance: Rs. ${(custTotalDueBefore > 0 ? custTotalDueBefore : currentRemaining).toLocaleString()})`}
+                                label={`Payment Amount Received (Selected Due: Rs. ${totalSelectedDue.toLocaleString()})`}
                                 type="number"
                                 size="small"
                                 value={payReceived}
                                 onChange={(e) => setPayReceived(e.target.value)}
-                                helperText={
-                                    custTotalDueBefore > 0
-                                        ? `Customer full balance: Rs. ${custTotalDueBefore.toLocaleString()} | Active booking remaining: Rs. ${currentRemaining.toLocaleString()}`
-                                        : `Active booking remaining: Rs. ${currentRemaining.toLocaleString()}`
-                                }
+                                helperText={`Selected ${selectedBookingsList.length} booking(s) due: Rs. ${totalSelectedDue.toLocaleString()} | Customer full balance: Rs. ${custTotalDueBefore.toLocaleString()}`}
                                 InputProps={{
                                     startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
                                 }}
@@ -4740,14 +4977,14 @@ window.onload = function() {
 
                     {/* Booking Financial Breakdown Cards */}
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Booking Financial Breakdown
+                        Selected Bookings Financial Breakdown ({selectedBookingsList.length} Selected)
                     </Typography>
                     <Grid container spacing={1} sx={{ mb: 2 }}>
                         <Grid size={{ xs: 6, sm: 2 }}>
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL BILL</Typography>
                                 <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.82rem">
-                                    Rs. {totalBill.toLocaleString()}
+                                    Rs. {totalSelectedBill.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
@@ -4755,7 +4992,7 @@ window.onload = function() {
                             <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ALREADY PAID</Typography>
                                 <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.82rem">
-                                    Rs. {alreadyPaid.toLocaleString()}
+                                    Rs. {totalSelectedAdvance.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
@@ -4776,10 +5013,10 @@ window.onload = function() {
                             </Card>
                         </Grid>
                         <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: newBookingRemaining > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: newBookingRemaining > 0 ? '#fecaca' : '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">BOOKING REMAINING</Typography>
-                                <Typography variant="body2" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#15803d'} fontSize="0.82rem">
-                                    Rs. {newBookingRemaining.toLocaleString()}
+                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: totalSelectedRemainingAfter > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: totalSelectedRemainingAfter > 0 ? '#fecaca' : '#bbf7d0' }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">SELECTED REM.</Typography>
+                                <Typography variant="body2" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#15803d'} fontSize="0.82rem">
+                                    Rs. {totalSelectedRemainingAfter.toLocaleString()}
                                 </Typography>
                             </Card>
                         </Grid>
@@ -4806,10 +5043,10 @@ window.onload = function() {
                             </Grid>
                             <Grid size={{ xs: 12, sm: 4 }}>
                                 <Typography variant="caption" color="#64748b" fontWeight={700} display="block" fontSize="0.7rem">
-                                    THIS BOOKING REMAINING
+                                    SELECTED BOOKINGS REMAINING
                                 </Typography>
-                                <Typography variant="subtitle1" fontWeight={800} color={newBookingRemaining > 0 ? '#b91c1c' : '#047857'}>
-                                    Rs. {newBookingRemaining.toLocaleString()}
+                                <Typography variant="subtitle1" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#047857'}>
+                                    Rs. {totalSelectedRemainingAfter.toLocaleString()}
                                 </Typography>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 4 }}>
@@ -4848,7 +5085,13 @@ window.onload = function() {
                             '&:hover': { bgcolor: '#059669' } 
                         }}
                     >
-                        {paying ? <CircularProgress size={22} color="inherit" /> : (parseFloat(payBooking.remainingAmount || 0) <= 0 ? "Deliver Suits" : "Pay & Deliver")}
+                        {paying ? (
+                            <CircularProgress size={22} color="inherit" />
+                        ) : (
+                            selectedBookingsList.length > 1
+                                ? `Pay & Update ${selectedBookingsList.length} Bookings`
+                                : (parseFloat(payBooking.remainingAmount || 0) <= 0 ? "Deliver Suits" : "Pay & Deliver")
+                        )}
                     </Button>
                 </DialogActions>
             </Dialog>
