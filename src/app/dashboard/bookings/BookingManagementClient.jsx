@@ -67,6 +67,7 @@ import {
     Check,
     ReceiptText,
     CreditCard,
+    ArrowRightLeft,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -1218,6 +1219,11 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [loadingOpenBookings, setLoadingOpenBookings] = useState(false);
     const [selectedBookingIds, setSelectedBookingIds] = useState([]);
     const [activeItemBookingId, setActiveItemBookingId] = useState(null);
+    const [payDialogTab, setPayDialogTab] = useState(0); // 0 = Receive Payment, 1 = Transfer to Other Account
+    const [transferTargetCustomer, setTransferTargetCustomer] = useState(null);
+    const [transferAmount, setTransferAmount] = useState("");
+    const [transferNote, setTransferNote] = useState("");
+    const [transferring, setTransferring] = useState(false);
     const [paying, setPaying] = useState(false);
 
     const handleToggleBookingSelect = (bId) => {
@@ -1247,6 +1253,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setActiveItemBookingId(targetBooking.id);
         const rem = parseFloat(targetBooking.remainingAmount || 0);
         setPayReceived(rem.toString());
+        setTransferAmount(rem > 0 ? rem.toString() : "0");
     };
 
     const handleOpenPayDialog = (booking) => {
@@ -1256,6 +1263,9 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPayDiscount("0");
         setPayPaymentMethod("CASH");
         setPayBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
+        setPayDialogTab(0);
+        setTransferTargetCustomer(null);
+        setTransferNote("");
 
         const effectiveCustomerId = booking.billingCustomerId || booking.customerId;
         const initialBal = booking.billingCustomer?.balance ?? booking.customer?.balance ?? customers.find(c => c.id === effectiveCustomerId)?.balance ?? 0;
@@ -1265,6 +1275,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         const bookingRem = parseFloat(booking.remainingAmount || 0);
         const defaultPayAmt = initialBalNum > 0 ? initialBalNum : bookingRem;
         setPayReceived(defaultPayAmt.toString());
+        setTransferAmount(bookingRem > 0 ? bookingRem.toString() : "0");
 
         // Initialize delivery quantities for undelivered items of this booking
         const initialDel = {};
@@ -1306,6 +1317,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     // Pre-select ALL open unpaid bookings when opened so multiple bookings can be paid together
                     if (unpaidList.length > 0) {
                         setSelectedBookingIds(unpaidList.map(b => b.id));
+                        const totUnpaidDue = unpaidList.reduce((sum, b) => sum + (parseFloat(b.remainingAmount || 0)), 0);
+                        setTransferAmount(totUnpaidDue > 0 ? totUnpaidDue.toString() : (bookingRem > 0 ? bookingRem.toString() : "0"));
                     }
 
                     // Prepopulate deliver quantities for items in all open bookings
@@ -1466,6 +1479,69 @@ export default function BookingManagementClient({ initialBookings, customers, pr
             setError(err.message);
         } finally {
             setPaying(false);
+        }
+    };
+
+    const handleTransferSubmit = async () => {
+        if (!payBooking) return;
+        if (!transferTargetCustomer) {
+            setError("Please select a target customer account to transfer the balance to");
+            return;
+        }
+        const tAmt = parseFloat(transferAmount) || 0;
+        if (tAmt <= 0) {
+            setError("Transfer amount must be greater than zero");
+            return;
+        }
+
+        setTransferring(true);
+        setError("");
+        try {
+            const selectedBookingsList = payCustomerOpenBookings.length > 0
+                ? payCustomerOpenBookings.filter(b => selectedBookingIds.includes(b.id))
+                : [payBooking];
+
+            const itemsDelivery = [];
+            selectedBookingsList.forEach(b => {
+                (b.items || []).forEach(item => {
+                    if (item.itemStatus !== "DELIVERED") {
+                        const val = payDeliverQuantities[item.id] !== undefined
+                            ? parseFloat(payDeliverQuantities[item.id]) || 0
+                            : (parseFloat(item.quantity) || 1);
+                        itemsDelivery.push({
+                            itemId: item.id,
+                            deliverNowQty: val
+                        });
+                    }
+                });
+            });
+
+            const res = await fetch("/api/bookings/transfer-balance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    bookingId: payBooking.id,
+                    bookingIds: selectedBookingIds,
+                    targetCustomerId: transferTargetCustomer.id,
+                    transferAmount: tAmt,
+                    note: transferNote,
+                    itemsDelivery
+                })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to transfer balance");
+            }
+
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
+
+            setSuccessMessage(`Successfully transferred Rs. ${tAmt.toLocaleString()} to ${transferTargetCustomer.name}'s account!`);
+            setPayDialogOpen(false);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setTransferring(false);
         }
     };
 
@@ -4274,7 +4350,7 @@ window.onload = function() {
         return (
             <Dialog 
                 open={payDialogOpen} 
-                onClose={() => !paying && setPayDialogOpen(false)}
+                onClose={() => !paying && !transferring && setPayDialogOpen(false)}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
@@ -4287,21 +4363,32 @@ window.onload = function() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                    color: 'white'
+                    background: payDialogTab === 0 
+                        ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' 
+                        : 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)',
+                    color: 'white',
+                    transition: 'background 0.3s'
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, display: 'flex' }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                            {payDialogTab === 0 ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                            ) : (
+                                <ArrowRightLeft size={20} color="white" />
+                            )}
                         </Box>
                         <Box>
                             <Typography variant="h6" fontWeight={800} sx={{ color: 'white', lineHeight: 1.2 }}>
-                                Receive Bill Payment
+                                {payDialogTab === 0 ? "Receive Bill Payment" : "Transfer Booking Balance"}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                {selectedBookingsList.length > 1 
-                                    ? `Paying ${selectedBookingsList.length} Selected Bookings (${selectedBookingsList.map(b => '#' + (b.bookingNumber || b.id)).join(', ')})`
-                                    : `Booking #${payBooking.bookingNumber || payBooking.id}`}
+                            <Typography variant="caption" sx={{ color: '#c7d2fe' }}>
+                                {payDialogTab === 0 ? (
+                                    selectedBookingsList.length > 1 
+                                        ? `Paying ${selectedBookingsList.length} Selected Bookings (${selectedBookingsList.map(b => '#' + (b.bookingNumber || b.id)).join(', ')})`
+                                        : `Booking #${payBooking.bookingNumber || payBooking.id}`
+                                ) : (
+                                    `Transfer remaining balance of Booking #${payBooking.bookingNumber || payBooking.id} to another customer account`
+                                )}
                             </Typography>
                         </Box>
                     </Box>
@@ -4336,6 +4423,46 @@ window.onload = function() {
                             {error}
                         </Alert>
                     )}
+
+                    {/* Primary Mode Tabs: Receive Payment vs Transfer Balance */}
+                    <Paper elevation={0} sx={{ border: '1.5px solid #cbd5e1', borderRadius: 2.5, mb: 2.5, overflow: 'hidden' }}>
+                        <Tabs
+                            value={payDialogTab}
+                            onChange={(e, val) => setPayDialogTab(val)}
+                            variant="fullWidth"
+                            sx={{
+                                minHeight: 46,
+                                bgcolor: '#f1f5f9',
+                                '& .MuiTab-root': {
+                                    fontWeight: 800,
+                                    fontSize: '0.88rem',
+                                    textTransform: 'none',
+                                    minHeight: 46,
+                                    py: 1.2,
+                                    transition: 'all 0.2s',
+                                    '&.Mui-selected': {
+                                        color: payDialogTab === 0 ? '#15803d' : '#4338ca',
+                                        bgcolor: 'white'
+                                    }
+                                },
+                                '& .MuiTabs-indicator': {
+                                    height: 3,
+                                    bgcolor: payDialogTab === 0 ? '#16a34a' : '#6366f1'
+                                }
+                            }}
+                        >
+                            <Tab
+                                icon={<CreditCard size={18} />}
+                                iconPosition="start"
+                                label="💵 Receive Payment (Cash / Bank)"
+                            />
+                            <Tab
+                                icon={<ArrowRightLeft size={18} />}
+                                iconPosition="start"
+                                label="🔁 Transfer to Other Account"
+                            />
+                        </Tabs>
+                    </Paper>
 
                     {/* Customer & Booking Dates Section */}
                     <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid #e2e8f0', mb: 2 }}>
@@ -4379,720 +4506,1129 @@ window.onload = function() {
                         </Grid>
                     </Box>
 
-                    {/* Prominent Overall Balance & Selected Bookings Due Banner */}
-                    <Box sx={{
-                        bgcolor: '#f0fdf4',
-                        border: '1.5px solid #86efac',
-                        borderRadius: 2.5,
-                        p: 2,
-                        mb: 2.5,
-                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.08)'
-                    }}>
-                        <Grid container spacing={2} alignItems="center">
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#166534', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                                        💳 Overall Customer Balance
-                                    </Typography>
-                                    <Chip
-                                        size="small"
-                                        label={custTotalDueBefore > 0 ? "Pending Due" : custTotalDueBefore < 0 ? "Advance Credit" : "Nil / Cleared"}
-                                        sx={{
-                                            height: 20,
-                                            fontSize: '0.65rem',
-                                            fontWeight: 800,
-                                            bgcolor: custTotalDueBefore > 0 ? '#fee2e2' : '#dcfce7',
-                                            color: custTotalDueBefore > 0 ? '#b91c1c' : '#15803d',
-                                        }}
-                                    />
-                                </Box>
-                                <Typography variant="h5" sx={{ fontWeight: 900, color: custTotalDueBefore > 0 ? '#dc2626' : '#16a34a', lineHeight: 1.2 }}>
-                                    {loadingPayCustomer ? <CircularProgress size={20} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
-                                    Total account ledger balance across all bookings & orders
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 6 }} sx={{ borderLeft: { xs: 'none', sm: '1px dashed #bbf7d0' }, pl: { xs: 0, sm: 2 } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e3a8a', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                                        📋 {selectedBookingsList.length > 1 ? `Total Selected (${selectedBookingsList.length}) Due` : "This Booking Remaining"}
-                                    </Typography>
-                                    <Chip
-                                        size="small"
-                                        label={selectedBookingsList.length > 1 ? `${selectedBookingsList.length} Bookings Selected` : (currentRemaining > 0 ? "Booking Due" : "Cleared")}
-                                        sx={{
-                                            height: 20,
-                                            fontSize: '0.65rem',
-                                            fontWeight: 800,
-                                            bgcolor: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#fef3c7' : '#dcfce7',
-                                            color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#92400e' : '#15803d',
-                                        }}
-                                    />
-                                </Box>
-                                <Typography variant="h5" sx={{ fontWeight: 900, color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#b45309' : '#16a34a', lineHeight: 1.2 }}>
-                                    Rs. {(selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining).toLocaleString()}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
-                                    {selectedBookingsList.length > 1 
-                                        ? `Combined remaining balance for ${selectedBookingsList.length} selected bookings`
-                                        : `Balance remaining specifically for Booking #${payBooking.bookingNumber || payBooking.id}`}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    </Box>
-
-                    {/* All Open / Unpaid Bookings for this Customer with Multi-Select Checkboxes */}
-                    <Box sx={{
-                        bgcolor: '#f8fafc',
-                        border: '1.5px solid #cbd5e1',
-                        borderRadius: 2.5,
-                        p: 2,
-                        mb: 2.5
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                                <Box sx={{ p: 0.6, bgcolor: '#e0e7ff', borderRadius: 1.5, display: 'flex', color: '#4338ca' }}>
-                                    <ReceiptText size={16} />
-                                </Box>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1e293b' }}>
-                                    Customer's Open Unpaid Bookings
-                                </Typography>
-                                <Chip
-                                    size="small"
-                                    label={loadingOpenBookings ? "Loading..." : `${payCustomerOpenBookings.length} Unpaid`}
-                                    sx={{
-                                        height: 20,
-                                        fontSize: '0.68rem',
-                                        fontWeight: 800,
-                                        bgcolor: payCustomerOpenBookings.length > 0 ? '#fee2e2' : '#dcfce7',
-                                        color: payCustomerOpenBookings.length > 0 ? '#b91c1c' : '#15803d'
-                                    }}
-                                />
-                                {payCustomerOpenBookings.length > 1 && (
-                                    <Chip
-                                        size="small"
-                                        label={`${selectedBookingIds.length} Selected`}
-                                        sx={{
-                                            height: 20,
-                                            fontSize: '0.68rem',
-                                            fontWeight: 800,
-                                            bgcolor: '#dbeafe',
-                                            color: '#1d4ed8'
-                                        }}
-                                    />
-                                )}
+                    {/* TAB 0: RECEIVE BILL PAYMENT */}
+                    {payDialogTab === 0 ? (
+                        <>
+                            {/* Prominent Overall Balance & Selected Bookings Due Banner */}
+                            <Box sx={{
+                                bgcolor: '#f0fdf4',
+                                border: '1.5px solid #86efac',
+                                borderRadius: 2.5,
+                                p: 2,
+                                mb: 2.5,
+                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.08)'
+                            }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#166534', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                                💳 Overall Customer Balance
+                                            </Typography>
+                                            <Chip
+                                                size="small"
+                                                label={custTotalDueBefore > 0 ? "Pending Due" : custTotalDueBefore < 0 ? "Advance Credit" : "Nil / Cleared"}
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: custTotalDueBefore > 0 ? '#fee2e2' : '#dcfce7',
+                                                    color: custTotalDueBefore > 0 ? '#b91c1c' : '#15803d',
+                                                }}
+                                            />
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 900, color: custTotalDueBefore > 0 ? '#dc2626' : '#16a34a', lineHeight: 1.2 }}>
+                                            {loadingPayCustomer ? <CircularProgress size={20} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                            Total account ledger balance across all bookings & orders
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }} sx={{ borderLeft: { xs: 'none', sm: '1px dashed #bbf7d0' }, pl: { xs: 0, sm: 2 } }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e3a8a', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                                📋 {selectedBookingsList.length > 1 ? `Total Selected (${selectedBookingsList.length}) Due` : "This Booking Remaining"}
+                                            </Typography>
+                                            <Chip
+                                                size="small"
+                                                label={selectedBookingsList.length > 1 ? `${selectedBookingsList.length} Bookings Selected` : (currentRemaining > 0 ? "Booking Due" : "Cleared")}
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#fef3c7' : '#dcfce7',
+                                                    color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#92400e' : '#15803d',
+                                                }}
+                                            />
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 900, color: (selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining) > 0 ? '#b45309' : '#16a34a', lineHeight: 1.2 }}>
+                                            Rs. {(selectedBookingsList.length > 1 ? totalSelectedDue : currentRemaining).toLocaleString()}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                            {selectedBookingsList.length > 1 
+                                                ? `Combined remaining balance for ${selectedBookingsList.length} selected bookings`
+                                                : `Balance remaining specifically for Booking #${payBooking.bookingNumber || payBooking.id}`}
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                {payCustomerOpenBookings.length > 0 && (
-                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#b45309' }}>
-                                        Total Selected Due: Rs. {totalSelectedDue.toLocaleString()} (All Unpaid: Rs. {payCustomerOpenBookings.reduce((sum, b) => sum + (parseFloat(b.remainingAmount || 0)), 0).toLocaleString()})
+
+                            {/* All Open / Unpaid Bookings for this Customer with Multi-Select Checkboxes */}
+                            <Box sx={{
+                                bgcolor: '#f8fafc',
+                                border: '1.5px solid #cbd5e1',
+                                borderRadius: 2.5,
+                                p: 2,
+                                mb: 2.5
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                        <Box sx={{ p: 0.6, bgcolor: '#e0e7ff', borderRadius: 1.5, display: 'flex', color: '#4338ca' }}>
+                                            <ReceiptText size={16} />
+                                        </Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1e293b' }}>
+                                            Customer's Open Unpaid Bookings
+                                        </Typography>
+                                        <Chip
+                                            size="small"
+                                            label={loadingOpenBookings ? "Loading..." : `${payCustomerOpenBookings.length} Unpaid`}
+                                            sx={{
+                                                height: 20,
+                                                fontSize: '0.68rem',
+                                                fontWeight: 800,
+                                                bgcolor: payCustomerOpenBookings.length > 0 ? '#fee2e2' : '#dcfce7',
+                                                color: payCustomerOpenBookings.length > 0 ? '#b91c1c' : '#15803d'
+                                            }}
+                                        />
+                                        {payCustomerOpenBookings.length > 1 && (
+                                            <Chip
+                                                size="small"
+                                                label={`${selectedBookingIds.length} Selected`}
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: '0.68rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: '#dbeafe',
+                                                    color: '#1d4ed8'
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                        {payCustomerOpenBookings.length > 0 && (
+                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#b45309' }}>
+                                                Total Selected Due: Rs. {totalSelectedDue.toLocaleString()} (All Unpaid: Rs. {payCustomerOpenBookings.reduce((sum, b) => sum + (parseFloat(b.remainingAmount || 0)), 0).toLocaleString()})
+                                            </Typography>
+                                        )}
+                                        {payCustomerOpenBookings.length > 1 && (
+                                            <Button
+                                                size="small"
+                                                variant={selectedBookingIds.length === payCustomerOpenBookings.length ? "outlined" : "contained"}
+                                                color="primary"
+                                                onClick={handleToggleSelectAllBookings}
+                                                sx={{ textTransform: 'none', py: 0.2, px: 1.2, fontSize: '0.72rem', fontWeight: 800, borderRadius: 1.5 }}
+                                            >
+                                                {selectedBookingIds.length === payCustomerOpenBookings.length ? "Deselect Others" : "Select All Bookings"}
+                                            </Button>
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                {loadingOpenBookings ? (
+                                    <Box sx={{ py: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                                        <CircularProgress size={18} />
+                                        <Typography variant="caption" color="text.secondary">Loading open unpaid bookings...</Typography>
+                                    </Box>
+                                ) : payCustomerOpenBookings.length === 0 ? (
+                                    <Typography variant="body2" color="text.secondary" sx={{ py: 0.5, fontStyle: 'italic', fontSize: '0.8rem' }}>
+                                        No other open unpaid bookings found for this customer.
                                     </Typography>
-                                )}
-                                {payCustomerOpenBookings.length > 1 && (
-                                    <Button
-                                        size="small"
-                                        variant={selectedBookingIds.length === payCustomerOpenBookings.length ? "outlined" : "contained"}
-                                        color="primary"
-                                        onClick={handleToggleSelectAllBookings}
-                                        sx={{ textTransform: 'none', py: 0.2, px: 1.2, fontSize: '0.72rem', fontWeight: 800, borderRadius: 1.5 }}
-                                    >
-                                        {selectedBookingIds.length === payCustomerOpenBookings.length ? "Deselect Others" : "Select All Bookings"}
-                                    </Button>
-                                )}
-                            </Box>
-                        </Box>
-
-                        {loadingOpenBookings ? (
-                            <Box sx={{ py: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                                <CircularProgress size={18} />
-                                <Typography variant="caption" color="text.secondary">Loading open unpaid bookings...</Typography>
-                            </Box>
-                        ) : payCustomerOpenBookings.length === 0 ? (
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 0.5, fontStyle: 'italic', fontSize: '0.8rem' }}>
-                                No other open unpaid bookings found for this customer.
-                            </Typography>
-                        ) : (
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 250, bgcolor: 'white' }}>
-                                <Table size="small" stickyHeader>
-                                    <TableHead>
-                                        <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.72rem', color: '#475569' } }}>
-                                            <TableCell padding="checkbox" sx={{ bgcolor: '#f1f5f9', pl: 1 }}>
-                                                <Checkbox
-                                                    size="small"
-                                                    indeterminate={selectedBookingIds.length > 0 && selectedBookingIds.length < payCustomerOpenBookings.length}
-                                                    checked={payCustomerOpenBookings.length > 0 && selectedBookingIds.length === payCustomerOpenBookings.length}
-                                                    onChange={handleToggleSelectAllBookings}
-                                                    sx={{ p: 0.5 }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>Booking #</TableCell>
-                                            <TableCell>Booking Date</TableCell>
-                                            <TableCell>Delivery Date</TableCell>
-                                            <TableCell align="right">Total Bill</TableCell>
-                                            <TableCell align="right">Advance Paid</TableCell>
-                                            <TableCell align="right">Remaining Due</TableCell>
-                                            <TableCell align="center">Paying Now (Allocated)</TableCell>
-                                            <TableCell align="center">Action</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {payCustomerOpenBookings.map((b) => {
-                                            const isSelected = selectedBookingIds.includes(b.id);
-                                            const isPrimary = b.id === payBooking.id;
-                                            const remDue = parseFloat(b.remainingAmount || 0);
-                                            const totAmt = parseFloat(b.totalAmount || 0);
-                                            const advAmt = parseFloat(b.advanceAmount || 0);
-                                            const alloc = dynamicAllocMap[b.id];
-
-                                            return (
-                                                <TableRow 
-                                                    key={b.id}
-                                                    hover
-                                                    onClick={() => handleToggleBookingSelect(b.id)}
-                                                    sx={{ 
-                                                        cursor: 'pointer',
-                                                        bgcolor: isSelected ? (isPrimary ? '#eff6ff !important' : '#f8fafc !important') : 'inherit',
-                                                        '&:hover': { bgcolor: isSelected ? '#dbeafe !important' : '#f1f5f9' },
-                                                        transition: 'background-color 0.15s'
-                                                    }}
-                                                >
-                                                    <TableCell padding="checkbox" sx={{ pl: 1 }} onClick={(e) => e.stopPropagation()}>
+                                ) : (
+                                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 250, bgcolor: 'white' }}>
+                                        <Table size="small" stickyHeader>
+                                            <TableHead>
+                                                <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.72rem', color: '#475569' } }}>
+                                                    <TableCell padding="checkbox" sx={{ bgcolor: '#f1f5f9', pl: 1 }}>
                                                         <Checkbox
                                                             size="small"
-                                                            checked={isSelected}
-                                                            onChange={() => handleToggleBookingSelect(b.id)}
+                                                            indeterminate={selectedBookingIds.length > 0 && selectedBookingIds.length < payCustomerOpenBookings.length}
+                                                            checked={payCustomerOpenBookings.length > 0 && selectedBookingIds.length === payCustomerOpenBookings.length}
+                                                            onChange={handleToggleSelectAllBookings}
                                                             sx={{ p: 0.5 }}
                                                         />
                                                     </TableCell>
-                                                    <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                            <Typography variant="body2" sx={{ fontWeight: 800, color: isSelected ? '#1d4ed8' : '#0f172a', fontSize: '0.8rem' }}>
-                                                                #{b.bookingNumber || b.id}
-                                                            </Typography>
-                                                            {isPrimary && (
-                                                                <Chip 
-                                                                    label="Primary" 
-                                                                    size="small" 
-                                                                    sx={{ height: 16, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#dbeafe', color: '#1e40af' }} 
-                                                                />
-                                                            )}
-                                                            {b.bookingType && (
-                                                                <Chip 
-                                                                    label={b.bookingType} 
-                                                                    size="small" 
-                                                                    sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#f1f5f9' }} 
-                                                                />
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell sx={{ fontSize: '0.75rem', py: 0.8, color: '#64748b' }}>
-                                                        {b.bookingDate ? new Date(b.bookingDate).toLocaleDateString('en-GB') : "—"}
-                                                    </TableCell>
-                                                    <TableCell sx={{ fontSize: '0.75rem', py: 0.8, color: '#64748b' }}>
-                                                        {b.deliveryDate ? new Date(b.deliveryDate).toLocaleDateString('en-GB') : "—"}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 600 }}>
-                                                        Rs. {totAmt.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, color: '#15803d', fontWeight: 600 }}>
-                                                        Rs. {advAmt.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{ fontSize: '0.82rem', py: 0.8, fontWeight: 900, color: remDue > 0 ? '#b91c1c' : '#15803d' }}>
-                                                        Rs. {remDue.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
-                                                        {isSelected && alloc ? (
-                                                            alloc.willClear ? (
-                                                                <Chip 
-                                                                    size="small"
-                                                                    label={`✓ Rs. ${alloc.pay.toLocaleString()} (Clears Bill)`}
-                                                                    sx={{ 
-                                                                        height: 22, 
-                                                                        fontSize: '0.68rem', 
-                                                                        fontWeight: 800, 
-                                                                        bgcolor: '#dcfce7', 
-                                                                        color: '#15803d',
-                                                                        border: '1px solid #86efac'
-                                                                    }} 
-                                                                />
-                                                            ) : alloc.pay > 0 ? (
-                                                                <Chip 
-                                                                    size="small"
-                                                                    label={`Rs. ${alloc.pay.toLocaleString()} (Rem: Rs. ${alloc.newRemaining.toLocaleString()})`}
-                                                                    sx={{ 
-                                                                        height: 22, 
-                                                                        fontSize: '0.68rem', 
-                                                                        fontWeight: 800, 
-                                                                        bgcolor: '#fef3c7', 
-                                                                        color: '#92400e',
-                                                                        border: '1px solid #fde68a'
-                                                                    }} 
-                                                                />
-                                                            ) : (
-                                                                <Chip 
-                                                                    size="small"
-                                                                    label="Rs. 0 (Not paid)"
-                                                                    sx={{ height: 22, fontSize: '0.68rem', fontWeight: 600, bgcolor: '#f1f5f9', color: '#64748b' }} 
-                                                                />
-                                                            )
-                                                        ) : (
-                                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.72rem' }}>
-                                                                Excluded
-                                                            </Typography>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
-                                                        {isSelected ? (
-                                                            <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                color="secondary"
-                                                                onClick={() => handleSelectOnlyBooking(b)}
-                                                                sx={{
-                                                                    borderRadius: 1.5,
-                                                                    textTransform: 'none',
-                                                                    py: 0.2,
-                                                                    px: 1,
-                                                                    fontSize: '0.68rem',
-                                                                    fontWeight: 700
-                                                                }}
-                                                            >
-                                                                Only This
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                onClick={() => handleToggleBookingSelect(b.id)}
-                                                                sx={{
-                                                                    borderRadius: 1.5,
-                                                                    textTransform: 'none',
-                                                                    py: 0.2,
-                                                                    px: 1,
-                                                                    fontSize: '0.68rem',
-                                                                    fontWeight: 800,
-                                                                    bgcolor: '#2563eb',
-                                                                    '&:hover': { bgcolor: '#1d4ed8' }
-                                                                }}
-                                                            >
-                                                                + Include
-                                                            </Button>
-                                                        )}
-                                                    </TableCell>
+                                                    <TableCell>Booking #</TableCell>
+                                                    <TableCell>Booking Date</TableCell>
+                                                    <TableCell>Delivery Date</TableCell>
+                                                    <TableCell align="right">Total Bill</TableCell>
+                                                    <TableCell align="right">Advance Paid</TableCell>
+                                                    <TableCell align="right">Remaining Due</TableCell>
+                                                    <TableCell align="center">Paying Now (Allocated)</TableCell>
+                                                    <TableCell align="center">Action</TableCell>
                                                 </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        )}
-                    </Box>
+                                            </TableHead>
+                                            <TableBody>
+                                                {payCustomerOpenBookings.map((b) => {
+                                                    const isSelected = selectedBookingIds.includes(b.id);
+                                                    const isPrimary = b.id === payBooking.id;
+                                                    const remDue = parseFloat(b.remainingAmount || 0);
+                                                    const totAmt = parseFloat(b.totalAmount || 0);
+                                                    const advAmt = parseFloat(b.advanceAmount || 0);
+                                                    const alloc = dynamicAllocMap[b.id];
 
-                    {/* Booking Tabs for Item Delivery (if multiple bookings selected) */}
-                    {selectedBookingsList.length > 1 && (
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, bgcolor: '#f1f5f9', p: 0.5, borderRadius: 2 }}>
-                            <Tabs
-                                value={currentItemBooking.id}
-                                onChange={(e, val) => setActiveItemBookingId(val)}
-                                variant="scrollable"
-                                scrollButtons="auto"
-                                sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5, fontWeight: 700, fontSize: '0.78rem' } }}
-                            >
-                                {selectedBookingsList.map(b => (
-                                    <Tab
-                                        key={b.id}
-                                        value={b.id}
-                                        label={`Booking #${b.bookingNumber || b.id} (${(b.items || []).length} items)`}
-                                    />
-                                ))}
-                            </Tabs>
-                        </Box>
-                    )}
+                                                    return (
+                                                        <TableRow 
+                                                            key={b.id}
+                                                            hover
+                                                            onClick={() => handleToggleBookingSelect(b.id)}
+                                                            sx={{ 
+                                                                cursor: 'pointer',
+                                                                bgcolor: isSelected ? (isPrimary ? '#eff6ff !important' : '#f8fafc !important') : 'inherit',
+                                                                '&:hover': { bgcolor: isSelected ? '#dbeafe !important' : '#f1f5f9' },
+                                                                transition: 'background-color 0.15s'
+                                                            }}
+                                                        >
+                                                            <TableCell padding="checkbox" sx={{ pl: 1 }} onClick={(e) => e.stopPropagation()}>
+                                                                <Checkbox
+                                                                    size="small"
+                                                                    checked={isSelected}
+                                                                    onChange={() => handleToggleBookingSelect(b.id)}
+                                                                    sx={{ p: 0.5 }}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                                    <Typography variant="body2" sx={{ fontWeight: 800, color: isSelected ? '#1d4ed8' : '#0f172a', fontSize: '0.8rem' }}>
+                                                                        #{b.bookingNumber || b.id}
+                                                                    </Typography>
+                                                                    {isPrimary && (
+                                                                        <Chip 
+                                                                            label="Primary" 
+                                                                            size="small" 
+                                                                            sx={{ height: 16, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#dbeafe', color: '#1e40af' }} 
+                                                                        />
+                                                                    )}
+                                                                    {b.bookingType && (
+                                                                        <Chip 
+                                                                            label={b.bookingType} 
+                                                                            size="small" 
+                                                                            sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#f1f5f9' }} 
+                                                                        />
+                                                                    )}
+                                                                </Box>
+                                                            </TableCell>
+                                                            <TableCell sx={{ fontSize: '0.75rem', py: 0.8, color: '#64748b' }}>
+                                                                {b.bookingDate ? new Date(b.bookingDate).toLocaleDateString('en-GB') : "—"}
+                                                            </TableCell>
+                                                            <TableCell sx={{ fontSize: '0.75rem', py: 0.8, color: '#64748b' }}>
+                                                                {b.deliveryDate ? new Date(b.deliveryDate).toLocaleDateString('en-GB') : "—"}
+                                                            </TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 600 }}>
+                                                                Rs. {totAmt.toLocaleString()}
+                                                            </TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, color: '#15803d', fontWeight: 600 }}>
+                                                                Rs. {advAmt.toLocaleString()}
+                                                            </TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.82rem', py: 0.8, fontWeight: 900, color: remDue > 0 ? '#b91c1c' : '#15803d' }}>
+                                                                Rs. {remDue.toLocaleString()}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
+                                                                {isSelected && alloc ? (
+                                                                    alloc.willClear ? (
+                                                                        <Chip 
+                                                                            size="small"
+                                                                            label={`✓ Rs. ${alloc.pay.toLocaleString()} (Clears Bill)`}
+                                                                            sx={{ 
+                                                                                height: 22, 
+                                                                                fontSize: '0.68rem', 
+                                                                                fontWeight: 800, 
+                                                                                bgcolor: '#dcfce7', 
+                                                                                color: '#15803d',
+                                                                                border: '1px solid #86efac'
+                                                                            }} 
+                                                                        />
+                                                                    ) : alloc.pay > 0 ? (
+                                                                        <Chip 
+                                                                            size="small"
+                                                                            label={`Rs. ${alloc.pay.toLocaleString()} (Rem: Rs. ${alloc.newRemaining.toLocaleString()})`}
+                                                                            sx={{ 
+                                                                                height: 22, 
+                                                                                fontSize: '0.68rem', 
+                                                                                fontWeight: 800, 
+                                                                                bgcolor: '#fef3c7', 
+                                                                                color: '#92400e',
+                                                                                border: '1px solid #fde68a'
+                                                                            }} 
+                                                                        />
+                                                                    ) : (
+                                                                        <Chip 
+                                                                            size="small"
+                                                                            label="Rs. 0 (Not paid)"
+                                                                            sx={{ height: 22, fontSize: '0.68rem', fontWeight: 600, bgcolor: '#f1f5f9', color: '#64748b' }} 
+                                                                        />
+                                                                    )
+                                                                ) : (
+                                                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.72rem' }}>
+                                                                        Excluded
+                                                                    </Typography>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ py: 0.6 }} onClick={(e) => e.stopPropagation()}>
+                                                                {isSelected ? (
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        color="secondary"
+                                                                        onClick={() => handleSelectOnlyBooking(b)}
+                                                                        sx={{
+                                                                            borderRadius: 1.5,
+                                                                            textTransform: 'none',
+                                                                            py: 0.2,
+                                                                            px: 1,
+                                                                            fontSize: '0.68rem',
+                                                                            fontWeight: 700
+                                                                        }}
+                                                                    >
+                                                                        Only This
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="contained"
+                                                                        onClick={() => handleToggleBookingSelect(b.id)}
+                                                                        sx={{
+                                                                            borderRadius: 1.5,
+                                                                            textTransform: 'none',
+                                                                            py: 0.2,
+                                                                            px: 1,
+                                                                            fontSize: '0.68rem',
+                                                                            fontWeight: 800,
+                                                                            bgcolor: '#2563eb',
+                                                                            '&:hover': { bgcolor: '#1d4ed8' }
+                                                                        }}
+                                                                    >
+                                                                        + Include
+                                                                    </Button>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                )}
+                            </Box>
 
-                    {/* Suit Quantity Tracking & Delivery Section for currentItemBooking */}
-                    {(() => {
-                        const stitchingItems = (currentItemBooking.items || []).filter(i => !i.productId);
-                        if (stitchingItems.length === 0) return null;
-
-                        const totalSuitQty = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
-                        const alreadyDeliveredQty = stitchingItems
-                            .filter(i => i.itemStatus === "DELIVERED")
-                            .reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
-
-                        const deliverNowTotal = stitchingItems.reduce((sum, i) => {
-                            if (i.itemStatus === "DELIVERED") return sum;
-                            const inputVal = payDeliverQuantities[i.id];
-                            const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : (parseFloat(i.quantity) || 1);
-                            return sum + Math.min(val, parseFloat(i.quantity) || 1);
-                        }, 0);
-
-                        const totalDeliveredLive = alreadyDeliveredQty + deliverNowTotal;
-                        const remainingSuitQty = Math.max(0, totalSuitQty - totalDeliveredLive);
-                        const isBookingClosed = totalSuitQty > 0 && remainingSuitQty === 0;
-
-                        return (
-                            <Box sx={{ bgcolor: isBookingClosed ? '#f0fdf4' : '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid', borderColor: isBookingClosed ? '#bbf7d0' : '#e2e8f0', mb: 2.5 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
-                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        SUIT QUANTITY TRACKING — BOOKING #{currentItemBooking.bookingNumber || currentItemBooking.id}
-                                    </Typography>
-                                    {isBookingClosed ? (
-                                        <Chip label="BOOKING CLOSED" size="small" sx={{ fontWeight: 800, bgcolor: '#16a34a', color: 'white', fontSize: '0.72rem' }} />
-                                    ) : (
-                                        <Chip label={`${remainingSuitQty} Suit${remainingSuitQty !== 1 ? 's' : ''} Pending`} size="small" sx={{ fontWeight: 700, bgcolor: '#fef3c7', color: '#92400e', fontSize: '0.72rem' }} />
-                                    )}
+                            {/* Booking Tabs for Item Delivery (if multiple bookings selected) */}
+                            {selectedBookingsList.length > 1 && (
+                                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, bgcolor: '#f1f5f9', p: 0.5, borderRadius: 2 }}>
+                                    <Tabs
+                                        value={currentItemBooking.id}
+                                        onChange={(e, val) => setActiveItemBookingId(val)}
+                                        variant="scrollable"
+                                        scrollButtons="auto"
+                                        sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5, fontWeight: 700, fontSize: '0.78rem' } }}
+                                    >
+                                        {selectedBookingsList.map(b => (
+                                            <Tab
+                                                key={b.id}
+                                                value={b.id}
+                                                label={`Booking #${b.bookingNumber || b.id} (${(b.items || []).length} items)`}
+                                            />
+                                        ))}
+                                    </Tabs>
                                 </Box>
-                                <Grid container spacing={1.5}>
-                                    <Grid size={{ xs: 4 }}>
-                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2 }}>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL SUITS</Typography>
-                                            <Typography variant="body2" fontWeight={800} color="#1e293b">{totalSuitQty}</Typography>
+                            )}
+
+                            {/* Suit Quantity Tracking & Delivery Section for currentItemBooking */}
+                            {(() => {
+                                const stitchingItems = (currentItemBooking.items || []).filter(i => !i.productId);
+                                if (stitchingItems.length === 0) return null;
+
+                                const totalSuitQty = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+                                const alreadyDeliveredQty = stitchingItems
+                                    .filter(i => i.itemStatus === "DELIVERED")
+                                    .reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+
+                                const deliverNowTotal = stitchingItems.reduce((sum, i) => {
+                                    if (i.itemStatus === "DELIVERED") return sum;
+                                    const inputVal = payDeliverQuantities[i.id];
+                                    const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : (parseFloat(i.quantity) || 1);
+                                    return sum + Math.min(val, parseFloat(i.quantity) || 1);
+                                }, 0);
+
+                                const totalDeliveredLive = alreadyDeliveredQty + deliverNowTotal;
+                                const remainingSuitQty = Math.max(0, totalSuitQty - totalDeliveredLive);
+                                const isBookingClosed = totalSuitQty > 0 && remainingSuitQty === 0;
+
+                                return (
+                                    <Box sx={{ bgcolor: isBookingClosed ? '#f0fdf4' : '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid', borderColor: isBookingClosed ? '#bbf7d0' : '#e2e8f0', mb: 2.5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+                                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                SUIT QUANTITY TRACKING — BOOKING #{currentItemBooking.bookingNumber || currentItemBooking.id}
+                                            </Typography>
+                                            {isBookingClosed ? (
+                                                <Chip label="BOOKING CLOSED" size="small" sx={{ fontWeight: 800, bgcolor: '#16a34a', color: 'white', fontSize: '0.72rem' }} />
+                                            ) : (
+                                                <Chip label={`${remainingSuitQty} Suit${remainingSuitQty !== 1 ? 's' : ''} Pending`} size="small" sx={{ fontWeight: 700, bgcolor: '#fef3c7', color: '#92400e', fontSize: '0.72rem' }} />
+                                            )}
+                                        </Box>
+                                        <Grid container spacing={1.5}>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2 }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL SUITS</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color="#1e293b">{totalSuitQty}</Typography>
+                                                </Card>
+                                            </Grid>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                                    <Typography variant="caption" color="success.main" fontWeight={600} display="block" fontSize="0.65rem">DELIVERED QTY</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color="#15803d">{totalDeliveredLive}</Typography>
+                                                </Card>
+                                            </Grid>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: remainingSuitQty > 0 ? '#fde68a' : '#bbf7d0' }}>
+                                                    <Typography variant="caption" color={remainingSuitQty > 0 ? "warning.dark" : "success.main"} fontWeight={600} display="block" fontSize="0.65rem">REMAINING QTY</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color={remainingSuitQty > 0 ? "#b45309" : "#15803d"}>{remainingSuitQty}</Typography>
+                                                </Card>
+                                            </Grid>
+                                        </Grid>
+                                    </Box>
+                                );
+                            })()}
+
+                            {/* Items Summary Table for currentItemBooking */}
+                            {(currentItemBooking.items || []).length > 0 && (
+                                <Box sx={{ mb: 2.5 }}>
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Booking Items ({currentItemBooking.items.length}) for #{currentItemBooking.bookingNumber || currentItemBooking.id} — <span style={{ color: '#3b82f6', textTransform: 'none' }}>Set Delivered Qty below</span>
+                                    </Typography>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 180 }}>
+                                        <Table size="small" stickyHeader>
+                                            <TableHead>
+                                                <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
+                                                    <TableCell>Item Description</TableCell>
+                                                    <TableCell align="center">Total Qty</TableCell>
+                                                    <TableCell align="center" sx={{ color: '#059669' }}>Deliver Now</TableCell>
+                                                    <TableCell align="center" sx={{ color: '#b45309' }}>Rem. Qty</TableCell>
+                                                    <TableCell align="right">Unit Price</TableCell>
+                                                    <TableCell align="right">Total</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {currentItemBooking.items.map((item, idx) => {
+                                                    const itemName = item.productId 
+                                                        ? (item.product?.name || "Product Item")
+                                                        : `${item.stitchingType || "Suit"} Stitching`;
+                                                    const itemQty = parseFloat(item.quantity) || 1;
+                                                    const isDelivered = item.itemStatus === "DELIVERED";
+                                                    const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
+                                                    const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
+
+                                                    return (
+                                                        <TableRow key={item.id || idx}>
+                                                            <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
+                                                                {itemName}
+                                                                {isDelivered && <Chip label="DELIVERED" size="small" sx={{ ml: 1, height: 16, fontSize: '0.6rem', bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700 }} />}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
+                                                            <TableCell align="center" sx={{ py: 0.5 }}>
+                                                                {isDelivered || item.productId ? (
+                                                                    <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
+                                                                ) : (
+                                                                    <TextField
+                                                                        type="number"
+                                                                        size="small"
+                                                                        value={deliverNowVal}
+                                                                        onChange={(e) => {
+                                                                            const v = Math.min(itemQty, Math.max(0, parseFloat(e.target.value) || 0));
+                                                                            setPayDeliverQuantities(prev => ({ ...prev, [item.id]: v }));
+                                                                        }}
+                                                                        inputProps={{ min: 0, max: itemQty, style: { textAlign: 'center', padding: '2px 4px', fontSize: '0.8rem', fontWeight: 700 } }}
+                                                                        sx={{ width: 65 }}
+                                                                    />
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700, color: remainingVal > 0 ? '#b45309' : '#15803d' }}>
+                                                                {remainingVal}
+                                                            </TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Box>
+                            )}
+
+                            {/* Quick Payment Fill Buttons */}
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', mr: 0.5, letterSpacing: 0.5 }}>
+                                    QUICK FILL:
+                                </Typography>
+                                {totalSelectedDue > 0 && (
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => setPayReceived(totalSelectedDue.toString())}
+                                        startIcon={<CreditCard size={14} />}
+                                        sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}
+                                    >
+                                        Pay All Selected ({selectedBookingsList.length}) (Rs. {totalSelectedDue.toLocaleString()})
+                                    </Button>
+                                )}
+                                {custTotalDueBefore > 0 && custTotalDueBefore !== totalSelectedDue && (
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        color="success"
+                                        onClick={() => setPayReceived(custTotalDueBefore.toString())}
+                                        startIcon={<CreditCard size={14} />}
+                                        sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
+                                    >
+                                        Pay Full Customer Balance (Rs. {custTotalDueBefore.toLocaleString()})
+                                    </Button>
+                                )}
+                                {selectedBookingsList.length > 1 && (
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="inherit"
+                                        onClick={() => setPayReceived(currentRemaining.toString())}
+                                        sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, py: 0.5, px: 2 }}
+                                    >
+                                        Pay Primary Booking Due (Rs. {currentRemaining.toLocaleString()})
+                                    </Button>
+                                )}
+                            </Box>
+
+                            {/* Amount Entry & Additional Discount Inputs */}
+                            <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        label={`Payment Amount Received (Selected Due: Rs. ${totalSelectedDue.toLocaleString()})`}
+                                        type="number"
+                                        size="small"
+                                        value={payReceived}
+                                        onChange={(e) => setPayReceived(e.target.value)}
+                                        helperText={`Selected ${selectedBookingsList.length} booking(s) due: Rs. ${totalSelectedDue.toLocaleString()} | Customer full balance: Rs. ${custTotalDueBefore.toLocaleString()}`}
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2.5,
+                                                fontWeight: 800,
+                                                fontSize: '1.05rem',
+                                                bgcolor: 'white',
+                                                '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Additional Discount"
+                                        type="number"
+                                        size="small"
+                                        value={payDiscount}
+                                        onChange={(e) => setPayDiscount(e.target.value)}
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="secondary">Rs.</Typography></InputAdornment>
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2.5,
+                                                fontWeight: 800,
+                                                fontSize: '1.05rem',
+                                                bgcolor: 'white',
+                                                '& fieldset': { borderColor: '#ec4899', borderWidth: 2 }
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+                            </Grid>
+
+                            {/* Payment Account / Method Selection */}
+                            {banks && banks.length > 0 && (
+                                <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                                    <Grid size={{ xs: 12, sm: payPaymentMethod === 'BANK' ? 6 : 12 }}>
+                                        <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            label="Payment Receiving Account"
+                                            value={payPaymentMethod}
+                                            onChange={(e) => setPayPaymentMethod(e.target.value)}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    fontWeight: 700,
+                                                    bgcolor: 'white'
+                                                }
+                                            }}
+                                        >
+                                            <MenuItem value="CASH">💵 Cash Account (Drawer)</MenuItem>
+                                            <MenuItem value="BANK">🏦 Bank Account</MenuItem>
+                                        </TextField>
+                                    </Grid>
+                                    {payPaymentMethod === 'BANK' && (
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                label="Select Bank"
+                                                value={payBankId}
+                                                onChange={(e) => setPayBankId(e.target.value)}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 2,
+                                                        fontWeight: 700,
+                                                        bgcolor: 'white'
+                                                    }
+                                                }}
+                                            >
+                                                {banks.map((b) => (
+                                                    <MenuItem key={b.id} value={String(b.id)}>
+                                                        {b.name} {b.accountNumber ? `(${b.accountNumber})` : ''}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            )}
+
+                            {/* Booking Financial Breakdown Cards */}
+                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Selected Bookings Financial Breakdown ({selectedBookingsList.length} Selected)
+                            </Typography>
+                            <Grid container spacing={1} sx={{ mb: 2 }}>
+                                <Grid size={{ xs: 6, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL BILL</Typography>
+                                        <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.82rem">
+                                            Rs. {totalSelectedBill.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ALREADY PAID</Typography>
+                                        <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.82rem">
+                                            Rs. {totalSelectedAdvance.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#fdf2f8', borderRadius: 2, borderColor: '#fbcfe8' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ADD. DISCOUNT</Typography>
+                                        <Typography variant="body2" fontWeight={800} color="#be185d" fontSize="0.82rem">
+                                            Rs. {discountAmount.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">NOW PAYING</Typography>
+                                        <Typography variant="body2" fontWeight={800} color="#1d4ed8" fontSize="0.82rem">
+                                            Rs. {payAmount.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: totalSelectedRemainingAfter > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: totalSelectedRemainingAfter > 0 ? '#fecaca' : '#bbf7d0' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">SELECTED REM.</Typography>
+                                        <Typography variant="body2" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#15803d'} fontSize="0.82rem">
+                                            Rs. {totalSelectedRemainingAfter.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 2 }}>
+                                    <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: custRemainingBalanceAfter > 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 2, borderColor: custRemainingBalanceAfter > 0 ? '#fed7aa' : '#bbf7d0' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">OVERALL BALANCE</Typography>
+                                        <Typography variant="body2" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#c2410c' : '#15803d'} fontSize="0.82rem">
+                                            Rs. {custRemainingBalanceAfter.toLocaleString()}
+                                        </Typography>
+                                    </Card>
+                                </Grid>
+                            </Grid>
+
+                            {/* Customer Account Balance Box */}
+                            <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd' }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
+                                            OVERALL CUSTOMER BALANCE (BEFORE)
+                                        </Typography>
+                                        <Typography variant="subtitle1" fontWeight={800} color="#0c4a6e">
+                                            {loadingPayCustomer ? <CircularProgress size={16} sx={{ color: '#0369a1' }} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Typography variant="caption" color="#64748b" fontWeight={700} display="block" fontSize="0.7rem">
+                                            SELECTED BOOKINGS REMAINING
+                                        </Typography>
+                                        <Typography variant="subtitle1" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#047857'}>
+                                            Rs. {totalSelectedRemainingAfter.toLocaleString()}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
+                                            OVERALL CUSTOMER BALANCE (AFTER)
+                                        </Typography>
+                                        <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#b91c1c' : '#047857'}>
+                                            Rs. {custRemainingBalanceAfter.toLocaleString()}
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        </>
+                    ) : (
+                        /* TAB 1: TRANSFER TO OTHER ACCOUNT */
+                        <>
+                            {/* Prominent Transfer Overview Banner */}
+                            <Box sx={{
+                                bgcolor: '#eef2ff',
+                                border: '1.5px solid #a5b4fc',
+                                borderRadius: 2.5,
+                                p: 2,
+                                mb: 2.5,
+                                boxShadow: '0 2px 6px rgba(99, 102, 241, 0.08)'
+                            }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#3730a3', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                                👤 Source Account ({custObj.name || "Customer"})
+                                            </Typography>
+                                            <Chip
+                                                size="small"
+                                                label="Debt to Clear"
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: '#dcfce7',
+                                                    color: '#15803d',
+                                                }}
+                                            />
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 900, color: '#1e1b4b', lineHeight: 1.2 }}>
+                                            Rs. {custTotalDueBefore.toLocaleString()}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#4338ca', display: 'block', mt: 0.5 }}>
+                                            Current ledger debt balance of {custObj.name || "Customer"}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }} sx={{ borderLeft: { xs: 'none', sm: '1px dashed #c7d2fe' }, pl: { xs: 0, sm: 2 } }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#4338ca', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                                                📋 Booking Remaining Due to Transfer
+                                            </Typography>
+                                            <Chip
+                                                size="small"
+                                                label="Transfer Amount"
+                                                sx={{
+                                                    height: 20,
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: '#ede9fe',
+                                                    color: '#6d28d9',
+                                                }}
+                                            />
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 900, color: '#4338ca', lineHeight: 1.2 }}>
+                                            Rs. {totalSelectedDue.toLocaleString()}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                            Balance of Booking #{payBooking.bookingNumber || payBooking.id}
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            {/* Destination Target Account Selection */}
+                            <Box sx={{
+                                bgcolor: '#ffffff',
+                                border: '1.5px solid #818cf8',
+                                borderRadius: 2.5,
+                                p: 2,
+                                mb: 2.5
+                            }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#312e81', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
+                                    Select Target Customer / Account to Transfer Balance To *
+                                </Typography>
+                                <Autocomplete
+                                    options={(customerOptions || []).filter(c => c && c.id !== (payBooking.billingCustomerId || payBooking.customerId))}
+                                    getOptionLabel={(o) => `${o.name || ""}${o.phone ? ` (${o.phone})` : ""}${o.measurementNo ? ` [M# ${o.measurementNo}]` : ""}`}
+                                    value={transferTargetCustomer}
+                                    onChange={(_, val) => setTransferTargetCustomer(val)}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            size="small"
+                                            placeholder="Type name, phone, or measurement number to search target account..."
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    fontWeight: 700,
+                                                    bgcolor: '#f8fafc',
+                                                    '& fieldset': { borderColor: '#6366f1', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                    renderOption={(props, option) => {
+                                        const { key, ...rest } = props;
+                                        const optBal = parseFloat(option.balance || 0);
+                                        return (
+                                            <li key={key} {...rest}>
+                                                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={800} color="#0f172a">{option.name}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.2 }}>
+                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
+                                                            {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
+                                                        </Box>
+                                                    </Box>
+                                                    <Box sx={{ textAlign: 'right' }}>
+                                                        <Typography variant="caption" color="text.secondary" display="block">Current Bal</Typography>
+                                                        <Typography variant="body2" fontWeight={800} color={optBal > 0 ? '#b91c1c' : '#15803d'}>
+                                                            Rs. {optBal.toLocaleString()}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </li>
+                                        );
+                                    }}
+                                />
+
+                                {transferTargetCustomer && (
+                                    <Card variant="outlined" sx={{ mt: 1.5, p: 1.5, bgcolor: '#f5f3ff', borderRadius: 2, borderColor: '#c4b5fd' }}>
+                                        <Grid container spacing={1.5} alignItems="center">
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Typography variant="caption" color="#4c1d95" fontWeight={700} display="block">TARGET CUSTOMER DETAILS</Typography>
+                                                <Typography variant="subtitle2" fontWeight={800} color="#1e1b4b">
+                                                    {transferTargetCustomer.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {transferTargetCustomer.phone || "No phone"} {transferTargetCustomer.measurementNo ? `| M# ${transferTargetCustomer.measurementNo}` : ""}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">CURRENT BALANCE</Typography>
+                                                <Typography variant="body2" fontWeight={800} color={parseFloat(transferTargetCustomer.balance || 0) > 0 ? '#b91c1c' : '#15803d'}>
+                                                    Rs. {parseFloat(transferTargetCustomer.balance || 0).toLocaleString()}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid size={{ xs: 6, sm: 3 }}>
+                                                <Typography variant="caption" color="#6d28d9" fontWeight={700} display="block">NEW BALANCE (AFTER)</Typography>
+                                                <Typography variant="body2" fontWeight={900} color="#6d28d9">
+                                                    Rs. {(parseFloat(transferTargetCustomer.balance || 0) + (parseFloat(transferAmount) || 0)).toLocaleString()}
+                                                </Typography>
+                                            </Grid>
+                                        </Grid>
+                                    </Card>
+                                )}
+                            </Box>
+
+                            {/* Transfer Amount & Remarks Section */}
+                            <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2.5, border: '1.5px solid #cbd5e1', mb: 2.5 }}>
+                                <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', mr: 0.5, letterSpacing: 0.5 }}>
+                                        QUICK FILL:
+                                    </Typography>
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        onClick={() => setTransferAmount(String(totalSelectedDue))}
+                                        startIcon={<ArrowRightLeft size={14} />}
+                                        sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}
+                                    >
+                                        Transfer Full Remaining Due (Rs. {totalSelectedDue.toLocaleString()})
+                                    </Button>
+                                </Box>
+
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <TextField
+                                            fullWidth
+                                            label={`Transfer Amount (Remaining Due: Rs. ${totalSelectedDue.toLocaleString()})`}
+                                            type="number"
+                                            size="small"
+                                            value={transferAmount}
+                                            onChange={(e) => setTransferAmount(e.target.value)}
+                                            InputProps={{
+                                                startAdornment: <InputAdornment position="start"><Typography fontWeight={800} color="#4338ca">Rs.</Typography></InputAdornment>
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    fontWeight: 800,
+                                                    fontSize: '1.05rem',
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#6366f1', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <TextField
+                                            fullWidth
+                                            label="Transfer Remarks / Note (Optional)"
+                                            size="small"
+                                            value={transferNote}
+                                            onChange={(e) => setTransferNote(e.target.value)}
+                                            placeholder="e.g. Authorized transfer, brother account, etc."
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    fontWeight: 600,
+                                                    bgcolor: 'white'
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            {/* Automatic Double Entry Ledger Posting Preview */}
+                            <Box sx={{
+                                bgcolor: '#faf5ff',
+                                border: '1.5px solid #d8b4fe',
+                                borderRadius: 2.5,
+                                p: 2,
+                                mb: 2.5
+                            }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#6b21a8', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1.5 }}>
+                                    ⚖️ Automatic Double-Entry Ledger Posting Preview
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'white', borderColor: '#86efac' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={700}>1. SOURCE ACCOUNT</Typography>
+                                                <Chip label="CREDIT" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 900, bgcolor: '#dcfce7', color: '#15803d' }} />
+                                            </Box>
+                                            <Typography variant="subtitle2" fontWeight={800} color="#0f172a">{custObj.name || "Customer"}</Typography>
+                                            <Typography variant="h6" fontWeight={900} color="#15803d" sx={{ my: 0.5 }}>
+                                                - Rs. {(parseFloat(transferAmount) || 0).toLocaleString()}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                Balance will decrease from Rs. {custTotalDueBefore.toLocaleString()} ➔ Rs. {Math.max(0, custTotalDueBefore - (parseFloat(transferAmount) || 0)).toLocaleString()}
+                                            </Typography>
                                         </Card>
                                     </Grid>
-                                    <Grid size={{ xs: 4 }}>
-                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: '#bbf7d0' }}>
-                                            <Typography variant="caption" color="success.main" fontWeight={600} display="block" fontSize="0.65rem">DELIVERED QTY</Typography>
-                                            <Typography variant="body2" fontWeight={800} color="#15803d">{totalDeliveredLive}</Typography>
-                                        </Card>
-                                    </Grid>
-                                    <Grid size={{ xs: 4 }}>
-                                        <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: remainingSuitQty > 0 ? '#fde68a' : '#bbf7d0' }}>
-                                            <Typography variant="caption" color={remainingSuitQty > 0 ? "warning.dark" : "success.main"} fontWeight={600} display="block" fontSize="0.65rem">REMAINING QTY</Typography>
-                                            <Typography variant="body2" fontWeight={800} color={remainingSuitQty > 0 ? "#b45309" : "#15803d"}>{remainingSuitQty}</Typography>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
+                                        <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'white', borderColor: '#fca5a5' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={700}>2. TARGET ACCOUNT</Typography>
+                                                <Chip label="DEBIT" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 900, bgcolor: '#fee2e2', color: '#b91c1c' }} />
+                                            </Box>
+                                            <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
+                                                {transferTargetCustomer ? transferTargetCustomer.name : "(Select target account above)"}
+                                            </Typography>
+                                            <Typography variant="h6" fontWeight={900} color="#b91c1c" sx={{ my: 0.5 }}>
+                                                + Rs. {(parseFloat(transferAmount) || 0).toLocaleString()}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                Balance will increase from Rs. {transferTargetCustomer ? parseFloat(transferTargetCustomer.balance || 0).toLocaleString() : '0'} ➔ Rs. {transferTargetCustomer ? (parseFloat(transferTargetCustomer.balance || 0) + (parseFloat(transferAmount) || 0)).toLocaleString() : (parseFloat(transferAmount) || 0).toLocaleString()}
+                                            </Typography>
                                         </Card>
                                     </Grid>
                                 </Grid>
                             </Box>
-                        );
-                    })()}
 
-                    {/* Items Summary Table for currentItemBooking */}
-                    {(currentItemBooking.items || []).length > 0 && (
-                        <Box sx={{ mb: 2.5 }}>
-                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Booking Items ({currentItemBooking.items.length}) for #{currentItemBooking.bookingNumber || currentItemBooking.id} — <span style={{ color: '#3b82f6', textTransform: 'none' }}>Set Delivered Qty below</span>
-                            </Typography>
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 180 }}>
-                                <Table size="small" stickyHeader>
-                                    <TableHead>
-                                        <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
-                                            <TableCell>Item Description</TableCell>
-                                            <TableCell align="center">Total Qty</TableCell>
-                                            <TableCell align="center" sx={{ color: '#059669' }}>Deliver Now</TableCell>
-                                            <TableCell align="center" sx={{ color: '#b45309' }}>Rem. Qty</TableCell>
-                                            <TableCell align="right">Unit Price</TableCell>
-                                            <TableCell align="right">Total</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {currentItemBooking.items.map((item, idx) => {
-                                            const itemName = item.productId 
-                                                ? (item.product?.name || "Product Item")
-                                                : `${item.stitchingType || "Suit"} Stitching`;
-                                            const itemQty = parseFloat(item.quantity) || 1;
-                                            const isDelivered = item.itemStatus === "DELIVERED";
-                                            const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
-                                            const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
+                            {/* Suit Delivery Section in Transfer Tab (Deliver Suits while transferring) */}
+                            {(() => {
+                                const stitchingItems = (currentItemBooking.items || []).filter(i => !i.productId);
+                                if (stitchingItems.length === 0) return null;
 
-                                            return (
-                                                <TableRow key={item.id || idx}>
-                                                    <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
-                                                        {itemName}
-                                                        {isDelivered && <Chip label="DELIVERED" size="small" sx={{ ml: 1, height: 16, fontSize: '0.6rem', bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700 }} />}
-                                                    </TableCell>
-                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
-                                                    <TableCell align="center" sx={{ py: 0.5 }}>
-                                                        {isDelivered || item.productId ? (
-                                                            <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
-                                                        ) : (
-                                                            <TextField
-                                                                type="number"
-                                                                size="small"
-                                                                value={deliverNowVal}
-                                                                onChange={(e) => {
-                                                                    const v = Math.min(itemQty, Math.max(0, parseFloat(e.target.value) || 0));
-                                                                    setPayDeliverQuantities(prev => ({ ...prev, [item.id]: v }));
-                                                                }}
-                                                                inputProps={{ min: 0, max: itemQty, style: { textAlign: 'center', padding: '2px 4px', fontSize: '0.8rem', fontWeight: 700 } }}
-                                                                sx={{ width: 65 }}
-                                                            />
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700, color: remainingVal > 0 ? '#b45309' : '#15803d' }}>
-                                                        {remainingVal}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
-                                                    <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
+                                const totalSuitQty = stitchingItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+                                const alreadyDeliveredQty = stitchingItems
+                                    .filter(i => i.itemStatus === "DELIVERED")
+                                    .reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0);
+
+                                const deliverNowTotal = stitchingItems.reduce((sum, i) => {
+                                    if (i.itemStatus === "DELIVERED") return sum;
+                                    const inputVal = payDeliverQuantities[i.id];
+                                    const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : (parseFloat(i.quantity) || 1);
+                                    return sum + Math.min(val, parseFloat(i.quantity) || 1);
+                                }, 0);
+
+                                const totalDeliveredLive = alreadyDeliveredQty + deliverNowTotal;
+                                const remainingSuitQty = Math.max(0, totalSuitQty - totalDeliveredLive);
+                                const isBookingClosed = totalSuitQty > 0 && remainingSuitQty === 0;
+
+                                return (
+                                    <Box sx={{ bgcolor: isBookingClosed ? '#f0fdf4' : '#f8fafc', p: 2, borderRadius: 2.5, border: '1px solid', borderColor: isBookingClosed ? '#bbf7d0' : '#e2e8f0', mb: 2.5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+                                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                SUIT QUANTITY TRACKING — BOOKING #{currentItemBooking.bookingNumber || currentItemBooking.id}
+                                            </Typography>
+                                            {isBookingClosed ? (
+                                                <Chip label="BOOKING CLOSED" size="small" sx={{ fontWeight: 800, bgcolor: '#16a34a', color: 'white', fontSize: '0.72rem' }} />
+                                            ) : (
+                                                <Chip label={`${remainingSuitQty} Suit${remainingSuitQty !== 1 ? 's' : ''} Pending`} size="small" sx={{ fontWeight: 700, bgcolor: '#fef3c7', color: '#92400e', fontSize: '0.72rem' }} />
+                                            )}
+                                        </Box>
+                                        <Grid container spacing={1.5}>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2 }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL SUITS</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color="#1e293b">{totalSuitQty}</Typography>
+                                                </Card>
+                                            </Grid>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: '#bbf7d0' }}>
+                                                    <Typography variant="caption" color="success.main" fontWeight={600} display="block" fontSize="0.65rem">DELIVERED QTY</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color="#15803d">{totalDeliveredLive}</Typography>
+                                                </Card>
+                                            </Grid>
+                                            <Grid size={{ xs: 4 }}>
+                                                <Card variant="outlined" sx={{ p: 1, textAlign: 'center', bgcolor: 'white', borderRadius: 2, borderColor: remainingSuitQty > 0 ? '#fde68a' : '#bbf7d0' }}>
+                                                    <Typography variant="caption" color={remainingSuitQty > 0 ? "warning.dark" : "success.main"} fontWeight={600} display="block" fontSize="0.65rem">REMAINING QTY</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color={remainingSuitQty > 0 ? "#b45309" : "#15803d"}>{remainingSuitQty}</Typography>
+                                                </Card>
+                                            </Grid>
+                                        </Grid>
+                                    </Box>
+                                );
+                            })()}
+
+                            {/* Booking Items Delivery List for Transfer */}
+                            {(currentItemBooking.items || []).length > 0 && (
+                                <Box sx={{ mb: 2.5 }}>
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Booking Items ({currentItemBooking.items.length}) — <span style={{ color: '#6366f1', textTransform: 'none' }}>Deliver suits with this transfer (optional)</span>
+                                    </Typography>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, maxHeight: 180 }}>
+                                        <Table size="small" stickyHeader>
+                                            <TableHead>
+                                                <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 700, fontSize: '0.75rem' } }}>
+                                                    <TableCell>Item Description</TableCell>
+                                                    <TableCell align="center">Total Qty</TableCell>
+                                                    <TableCell align="center" sx={{ color: '#059669' }}>Deliver Now</TableCell>
+                                                    <TableCell align="center" sx={{ color: '#b45309' }}>Rem. Qty</TableCell>
+                                                    <TableCell align="right">Unit Price</TableCell>
+                                                    <TableCell align="right">Total</TableCell>
                                                 </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-                    )}
+                                            </TableHead>
+                                            <TableBody>
+                                                {currentItemBooking.items.map((item, idx) => {
+                                                    const itemName = item.productId 
+                                                        ? (item.product?.name || "Product Item")
+                                                        : `${item.stitchingType || "Suit"} Stitching`;
+                                                    const itemQty = parseFloat(item.quantity) || 1;
+                                                    const isDelivered = item.itemStatus === "DELIVERED";
+                                                    const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
+                                                    const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
 
-                    {/* Quick Payment Fill Buttons */}
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', mr: 0.5, letterSpacing: 0.5 }}>
-                            QUICK FILL:
-                        </Typography>
-                        {totalSelectedDue > 0 && (
-                            <Button
-                                size="small"
-                                variant="contained"
-                                color="primary"
-                                onClick={() => setPayReceived(totalSelectedDue.toString())}
-                                startIcon={<CreditCard size={14} />}
-                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}
-                            >
-                                Pay All Selected ({selectedBookingsList.length}) (Rs. {totalSelectedDue.toLocaleString()})
-                            </Button>
-                        )}
-                        {custTotalDueBefore > 0 && custTotalDueBefore !== totalSelectedDue && (
-                            <Button
-                                size="small"
-                                variant="contained"
-                                color="success"
-                                onClick={() => setPayReceived(custTotalDueBefore.toString())}
-                                startIcon={<CreditCard size={14} />}
-                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 800, py: 0.5, px: 2, bgcolor: '#059669', '&:hover': { bgcolor: '#047857' } }}
-                            >
-                                Pay Full Customer Balance (Rs. {custTotalDueBefore.toLocaleString()})
-                            </Button>
-                        )}
-                        {selectedBookingsList.length > 1 && (
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="inherit"
-                                onClick={() => setPayReceived(currentRemaining.toString())}
-                                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, py: 0.5, px: 2 }}
-                            >
-                                Pay Primary Booking Due (Rs. {currentRemaining.toLocaleString()})
-                            </Button>
-                        )}
-                    </Box>
-
-                    {/* Amount Entry & Additional Discount Inputs */}
-                    <Grid container spacing={2} sx={{ mb: 2.5 }}>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
-                                fullWidth
-                                label={`Payment Amount Received (Selected Due: Rs. ${totalSelectedDue.toLocaleString()})`}
-                                type="number"
-                                size="small"
-                                value={payReceived}
-                                onChange={(e) => setPayReceived(e.target.value)}
-                                helperText={`Selected ${selectedBookingsList.length} booking(s) due: Rs. ${totalSelectedDue.toLocaleString()} | Customer full balance: Rs. ${custTotalDueBefore.toLocaleString()}`}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="primary">Rs.</Typography></InputAdornment>
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2.5,
-                                        fontWeight: 800,
-                                        fontSize: '1.05rem',
-                                        bgcolor: 'white',
-                                        '& fieldset': { borderColor: '#3b82f6', borderWidth: 2 }
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Additional Discount"
-                                type="number"
-                                size="small"
-                                value={payDiscount}
-                                onChange={(e) => setPayDiscount(e.target.value)}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="secondary">Rs.</Typography></InputAdornment>
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2.5,
-                                        fontWeight: 800,
-                                        fontSize: '1.05rem',
-                                        bgcolor: 'white',
-                                        '& fieldset': { borderColor: '#ec4899', borderWidth: 2 }
-                                    }
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-
-                    {/* Payment Account / Method Selection */}
-                    {banks && banks.length > 0 && (
-                        <Grid container spacing={2} sx={{ mb: 2.5 }}>
-                            <Grid size={{ xs: 12, sm: payPaymentMethod === 'BANK' ? 6 : 12 }}>
-                                <TextField
-                                    select
-                                    fullWidth
-                                    size="small"
-                                    label="Payment Receiving Account"
-                                    value={payPaymentMethod}
-                                    onChange={(e) => setPayPaymentMethod(e.target.value)}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: 2,
-                                            fontWeight: 700,
-                                            bgcolor: 'white'
-                                        }
-                                    }}
-                                >
-                                    <MenuItem value="CASH">💵 Cash Account (Drawer)</MenuItem>
-                                    <MenuItem value="BANK">🏦 Bank Account</MenuItem>
-                                </TextField>
-                            </Grid>
-                            {payPaymentMethod === 'BANK' && (
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                        select
-                                        fullWidth
-                                        size="small"
-                                        label="Select Bank"
-                                        value={payBankId}
-                                        onChange={(e) => setPayBankId(e.target.value)}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: 2,
-                                                fontWeight: 700,
-                                                bgcolor: 'white'
-                                            }
-                                        }}
-                                    >
-                                        {banks.map((b) => (
-                                            <MenuItem key={b.id} value={String(b.id)}>
-                                                {b.name} {b.accountNumber ? `(${b.accountNumber})` : ''}
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                </Grid>
+                                                    return (
+                                                        <TableRow key={item.id || idx}>
+                                                            <TableCell sx={{ fontSize: '0.8rem', py: 0.8 }}>
+                                                                {itemName}
+                                                                {isDelivered && <Chip label="DELIVERED" size="small" sx={{ ml: 1, height: 16, fontSize: '0.6rem', bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700 }} />}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
+                                                            <TableCell align="center" sx={{ py: 0.5 }}>
+                                                                {isDelivered || item.productId ? (
+                                                                    <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
+                                                                ) : (
+                                                                    <TextField
+                                                                        type="number"
+                                                                        size="small"
+                                                                        value={deliverNowVal}
+                                                                        onChange={(e) => {
+                                                                            const v = Math.min(itemQty, Math.max(0, parseFloat(e.target.value) || 0));
+                                                                            setPayDeliverQuantities(prev => ({ ...prev, [item.id]: v }));
+                                                                        }}
+                                                                        inputProps={{ min: 0, max: itemQty, style: { textAlign: 'center', padding: '2px 4px', fontSize: '0.8rem', fontWeight: 700 } }}
+                                                                        sx={{ width: 65 }}
+                                                                    />
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700, color: remainingVal > 0 ? '#b45309' : '#15803d' }}>
+                                                                {remainingVal}
+                                                            </TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8 }}>Rs. {parseFloat(item.unitPrice || 0).toLocaleString()}</TableCell>
+                                                            <TableCell align="right" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>Rs. {parseFloat(item.totalPrice || 0).toLocaleString()}</TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Box>
                             )}
-                        </Grid>
+                        </>
                     )}
-
-                    {/* Booking Financial Breakdown Cards */}
-                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Selected Bookings Financial Breakdown ({selectedBookingsList.length} Selected)
-                    </Typography>
-                    <Grid container spacing={1} sx={{ mb: 2 }}>
-                        <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">TOTAL BILL</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#0f172a" fontSize="0.82rem">
-                                    Rs. {totalSelectedBill.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#f0fdf4', borderRadius: 2, borderColor: '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ALREADY PAID</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#15803d" fontSize="0.82rem">
-                                    Rs. {totalSelectedAdvance.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#fdf2f8', borderRadius: 2, borderColor: '#fbcfe8' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">ADD. DISCOUNT</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#be185d" fontSize="0.82rem">
-                                    Rs. {discountAmount.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: '#eff6ff', borderRadius: 2, borderColor: '#bfdbfe' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">NOW PAYING</Typography>
-                                <Typography variant="body2" fontWeight={800} color="#1d4ed8" fontSize="0.82rem">
-                                    Rs. {payAmount.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 6, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: totalSelectedRemainingAfter > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 2, borderColor: totalSelectedRemainingAfter > 0 ? '#fecaca' : '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">SELECTED REM.</Typography>
-                                <Typography variant="body2" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#15803d'} fontSize="0.82rem">
-                                    Rs. {totalSelectedRemainingAfter.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 2 }}>
-                            <Card variant="outlined" sx={{ p: 1.25, textAlign: 'center', bgcolor: custRemainingBalanceAfter > 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 2, borderColor: custRemainingBalanceAfter > 0 ? '#fed7aa' : '#bbf7d0' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" fontSize="0.65rem">OVERALL BALANCE</Typography>
-                                <Typography variant="body2" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#c2410c' : '#15803d'} fontSize="0.82rem">
-                                    Rs. {custRemainingBalanceAfter.toLocaleString()}
-                                </Typography>
-                            </Card>
-                        </Grid>
-                    </Grid>
-
-                    {/* Customer Account Balance Box */}
-                    <Box sx={{ bgcolor: '#f0f9ff', p: 2, borderRadius: 2.5, border: '1px solid #bae6fd' }}>
-                        <Grid container spacing={2} alignItems="center">
-                            <Grid size={{ xs: 12, sm: 4 }}>
-                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
-                                    OVERALL CUSTOMER BALANCE (BEFORE)
-                                </Typography>
-                                <Typography variant="subtitle1" fontWeight={800} color="#0c4a6e">
-                                    {loadingPayCustomer ? <CircularProgress size={16} sx={{ color: '#0369a1' }} /> : `Rs. ${custTotalDueBefore.toLocaleString()}`}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 4 }}>
-                                <Typography variant="caption" color="#64748b" fontWeight={700} display="block" fontSize="0.7rem">
-                                    SELECTED BOOKINGS REMAINING
-                                </Typography>
-                                <Typography variant="subtitle1" fontWeight={800} color={totalSelectedRemainingAfter > 0 ? '#b91c1c' : '#047857'}>
-                                    Rs. {totalSelectedRemainingAfter.toLocaleString()}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 4 }}>
-                                <Typography variant="caption" color="#0369a1" fontWeight={700} display="block" fontSize="0.7rem">
-                                    OVERALL CUSTOMER BALANCE (AFTER)
-                                </Typography>
-                                <Typography variant="subtitle1" fontWeight={800} color={custRemainingBalanceAfter > 0 ? '#b91c1c' : '#047857'}>
-                                    Rs. {custRemainingBalanceAfter.toLocaleString()}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    </Box>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, pb: 3, pt: 1.5, borderTop: '1px solid', borderColor: 'divider', justifyContent: 'space-between' }}>
                     <Button 
                         variant="outlined" 
                         color="inherit" 
-                        disabled={paying}
+                        disabled={paying || transferring}
                         onClick={() => setPayDialogOpen(false)}
                         sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600 }}
                     >
                         Cancel
                     </Button>
-                    <Button 
-                        variant="contained" 
-                        disabled={paying}
-                        onClick={handlePaySubmit}
-                        sx={{ 
-                            textTransform: 'none', 
-                            borderRadius: 2, 
-                            fontWeight: 700, 
-                            px: 4, 
-                            py: 1,
-                            bgcolor: '#10b981', 
-                            '&:hover': { bgcolor: '#059669' } 
-                        }}
-                    >
-                        {paying ? (
-                            <CircularProgress size={22} color="inherit" />
-                        ) : (
-                            selectedBookingsList.length > 1
-                                ? `Pay & Update ${selectedBookingsList.length} Bookings`
-                                : (parseFloat(payBooking.remainingAmount || 0) <= 0 ? "Deliver Suits" : "Pay & Deliver")
-                        )}
-                    </Button>
+                    {payDialogTab === 0 ? (
+                        <Button 
+                            variant="contained" 
+                            disabled={paying}
+                            onClick={handlePaySubmit}
+                            sx={{ 
+                                textTransform: 'none', 
+                                borderRadius: 2, 
+                                fontWeight: 700, 
+                                px: 4, 
+                                py: 1,
+                                bgcolor: '#10b981', 
+                                '&:hover': { bgcolor: '#059669' } 
+                            }}
+                        >
+                            {paying ? (
+                                <CircularProgress size={22} color="inherit" />
+                            ) : (
+                                selectedBookingsList.length > 1
+                                    ? `Pay & Update ${selectedBookingsList.length} Bookings`
+                                    : (parseFloat(payBooking.remainingAmount || 0) <= 0 ? "Deliver Suits" : "Pay & Deliver")
+                            )}
+                        </Button>
+                    ) : (
+                        <Button 
+                            variant="contained" 
+                            disabled={transferring || !transferTargetCustomer || !transferAmount || parseFloat(transferAmount) <= 0}
+                            onClick={handleTransferSubmit}
+                            startIcon={transferring ? null : <ArrowRightLeft size={16} />}
+                            sx={{ 
+                                textTransform: 'none', 
+                                borderRadius: 2, 
+                                fontWeight: 700, 
+                                px: 4, 
+                                py: 1,
+                                bgcolor: '#6366f1', 
+                                '&:hover': { bgcolor: '#4f46e5' } 
+                            }}
+                        >
+                            {transferring ? (
+                                <CircularProgress size={22} color="inherit" />
+                            ) : (
+                                `Transfer Rs. ${(parseFloat(transferAmount) || 0).toLocaleString()} to ${transferTargetCustomer ? transferTargetCustomer.name : 'Account'}`
+                            )}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
         );

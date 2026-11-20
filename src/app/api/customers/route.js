@@ -8,6 +8,7 @@ import { getNextMeasurementNo } from "@/lib/measurementHelper";
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
+        const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
         const body = await req.json();
         const {
             name, fatherName, measurementNo, phone, email, address, notes, code,
@@ -77,7 +78,8 @@ export async function POST(req) {
                 data: customerData,
             });
 
-            const openingBalance = balance ? parseFloat(balance) : 0;
+            // Only admin account can set an initial opening balance
+            const openingBalance = (isAdmin && balance) ? parseFloat(balance) : 0;
             if (openingBalance !== 0) {
                 await tx.ledgerentry.create({
                     data: {

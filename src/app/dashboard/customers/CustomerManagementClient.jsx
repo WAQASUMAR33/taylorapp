@@ -2394,20 +2394,23 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                             <TextField
                                 fullWidth
                                 size="small"
-                                label="Opening Balance"
+                                label={formData.id ? "Balance" : "Opening Balance"}
                                 name="balance"
                                 type="number"
-                                required
+                                required={isAdmin}
                                 placeholder="0.00"
                                 value={formData.balance}
                                 onChange={handleInputChange}
                                 variant="outlined"
+                                disabled={!isAdmin}
+                                helperText={!isAdmin ? "Only admin account can edit balance" : undefined}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Typography variant="body2" fontWeight={600}>Rs.</Typography>
+                                            <Typography variant="body2" fontWeight={600} color={!isAdmin ? "text.disabled" : "inherit"}>Rs.</Typography>
                                         </InputAdornment>
                                     ),
+                                    readOnly: !isAdmin,
                                 }}
                             />
                         </Grid>

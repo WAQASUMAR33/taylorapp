@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function GET(req, { params }) {
@@ -166,6 +168,9 @@ export async function DELETE(req, { params }) {
 
 export async function PUT(req, { params }) {
     try {
+        const session = await getServerSession(authOptions);
+        const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
+
         const { id } = await params;
         const body = await req.json();
         const { name, fatherName, measurementNo, phone, email, address, notes, code, accountCategoryId, balance, image, measurementMode } = body;
@@ -239,11 +244,14 @@ export async function PUT(req, { params }) {
                 throw new Error("Customer not found");
             }
 
-            const newBalance = balance ? parseFloat(balance) : 0;
             const currentBalance = parseFloat(existingCustomer.balance);
+            // Only admin account can edit/adjust customer balance
+            const newBalance = (isAdmin && balance !== undefined && balance !== null && balance !== "")
+                ? parseFloat(balance)
+                : currentBalance;
             const adjustment = newBalance - currentBalance;
 
-            if (adjustment !== 0) {
+            if (isAdmin && adjustment !== 0) {
                 await tx.ledgerentry.create({
                     data: {
                         customerId: parseInt(id),
