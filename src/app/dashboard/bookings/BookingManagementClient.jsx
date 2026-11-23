@@ -68,6 +68,12 @@ import {
     ReceiptText,
     CreditCard,
     ArrowRightLeft,
+    Clock,
+    CheckCircle2,
+    BadgeCheck,
+    Send,
+    DollarSign,
+    Wallet,
 } from "lucide-react";
 
 const BOOKING_STATUSES = [
@@ -1225,6 +1231,89 @@ export default function BookingManagementClient({ initialBookings, customers, pr
     const [transferNote, setTransferNote] = useState("");
     const [transferring, setTransferring] = useState(false);
     const [paying, setPaying] = useState(false);
+
+    // Cashier Confirmation Modal State (Step 2)
+    const [confirmBooking, setConfirmBooking] = useState(null);
+    const [confirmAdvanceAmount, setConfirmAdvanceAmount] = useState("");
+    const [confirmPaymentMethod, setConfirmPaymentMethod] = useState("CASH");
+    const [confirmBankId, setConfirmBankId] = useState("");
+    const [confirmCashAmount, setConfirmCashAmount] = useState("");
+    const [confirmBankAmount, setConfirmBankAmount] = useState("");
+    const [confirmNotes, setConfirmNotes] = useState("");
+    const [confirming, setConfirming] = useState(false);
+    const [confirmError, setConfirmError] = useState("");
+
+    // Booking Creation Confirmation Mode (Step 1 vs 1-step direct)
+    const [confirmImmediately, setConfirmImmediately] = useState(false);
+
+    // Confirmation Tab Filter ("ALL" | "UNCONFIRMED" | "CONFIRMED")
+    const [filterConfirmationTab, setFilterConfirmationTab] = useState("ALL");
+
+    const handleOpenConfirmDialog = (booking) => {
+        setConfirmBooking(booking);
+        setConfirmAdvanceAmount(booking.advanceAmount ? String(parseFloat(booking.advanceAmount)) : "");
+        setConfirmPaymentMethod("CASH");
+        setConfirmBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
+        setConfirmCashAmount("");
+        setConfirmBankAmount("");
+        setConfirmNotes("");
+        setConfirmError("");
+    };
+
+    const handleConfirmSubmit = async () => {
+        if (!confirmBooking) return;
+        setConfirming(true);
+        setConfirmError("");
+
+        try {
+            const adv = parseFloat(confirmAdvanceAmount || 0);
+            const total = parseFloat(confirmBooking.totalAmount || 0);
+            if (adv > total) {
+                throw new Error(`Advance amount (Rs. ${adv.toLocaleString()}) cannot exceed total bill (Rs. ${total.toLocaleString()})`);
+            }
+
+            if (confirmPaymentMethod === "BANK" && !confirmBankId) {
+                throw new Error("Please select a bank account");
+            }
+            if (confirmPaymentMethod === "BOTH") {
+                const cAmt = parseFloat(confirmCashAmount || 0);
+                const bAmt = parseFloat(confirmBankAmount || 0);
+                if (cAmt + bAmt !== adv) {
+                    throw new Error(`Cash amount (Rs. ${cAmt}) + Bank amount (Rs. ${bAmt}) must equal total advance (Rs. ${adv})`);
+                }
+                if (bAmt > 0 && !confirmBankId) {
+                    throw new Error("Please select a bank account");
+                }
+            }
+
+            const response = await fetch("/api/bookings/confirm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    bookingId: confirmBooking.id,
+                    advanceAmount: adv,
+                    paymentMethod: confirmPaymentMethod,
+                    bankId: (confirmPaymentMethod === "BANK" || confirmPaymentMethod === "BOTH") ? parseInt(confirmBankId) : null,
+                    cashAmount: confirmPaymentMethod === "BOTH" ? parseFloat(confirmCashAmount || 0) : 0,
+                    bankAmount: confirmPaymentMethod === "BOTH" ? parseFloat(confirmBankAmount || 0) : 0,
+                    notes: confirmNotes
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to confirm booking");
+            }
+
+            setSuccessMessage(`Booking #${confirmBooking.bookingNumber} confirmed and advance of Rs. ${adv.toLocaleString()} recorded successfully!`);
+            setConfirmBooking(null);
+            await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
+        } catch (err) {
+            setConfirmError(err.message);
+        } finally {
+            setConfirming(false);
+        }
+    };
 
     const handleToggleBookingSelect = (bId) => {
         setSelectedBookingIds(prev => {
@@ -3069,6 +3158,7 @@ window.onload = function() {
                 remainingAmount: finalBalance,
                 notes: formData.notes,
                 branchId: formData.branchId ? parseInt(formData.branchId) : (session?.user?.branchId || (branches[0]?.id ? parseInt(branches[0].id) : 1)),
+                confirmNow: !editingBookingId && Boolean(confirmImmediately),
                 items: [
                     ...finalStitchingItems.map(item => ({
                         productId: item.productId || null,
@@ -3132,7 +3222,13 @@ window.onload = function() {
 
             await loadBookingsData(filterDateFrom, filterDateTo, searchQuery, filterDeliveryFrom, filterDeliveryTo, filterCustomerId);
 
-            setSuccessMessage(isEdit ? "Booking updated successfully!" : "Booking created successfully!");
+            setSuccessMessage(
+                isEdit 
+                    ? "Booking updated successfully!" 
+                    : (confirmImmediately 
+                        ? "Booking created and confirmed successfully!" 
+                        : "Booking created successfully (Sent to Cashier for confirmation)!")
+            );
             setShowForm(false);
             resetForm();
         } catch (err) {
@@ -3271,6 +3367,7 @@ window.onload = function() {
 
     const resetForm = () => {
         setEditingBookingId(null);
+        setConfirmImmediately(false);
         setFormData({
             customerId: "",
             customerCode: "",
@@ -3491,7 +3588,11 @@ window.onload = function() {
         const matchesMeasurementNo = !filterMeasurementNo ||
             (b.customer?.measurementNo || "").toLowerCase().includes(filterMeasurementNo.toLowerCase());
 
-        return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus && matchesMeasurementNo;
+        const matchesConfirmation = filterConfirmationTab === "ALL" ||
+            (filterConfirmationTab === "UNCONFIRMED" && b.isConfirmed === false) ||
+            (filterConfirmationTab === "CONFIRMED" && b.isConfirmed !== false);
+
+        return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus && matchesMeasurementNo && matchesConfirmation;
     }).sort((a, b) => {
         if (sortBy === "bookingNo_asc") {
             return (parseInt(a.bookingNumber) || a.id) - (parseInt(b.bookingNumber) || b.id);
@@ -3526,6 +3627,11 @@ window.onload = function() {
 
     const pendingSuitCount = filteredBookings.reduce((sum, b) =>
         sum + (b.items || []).filter(i => !i.productId && i.itemStatus !== "DELIVERED").reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0), 0);
+
+    const unconfirmedBookingsCount = (bookings || []).filter(b => {
+        const matchesBranch = selectedBranchId === "ALL" || String(b.branchId) === String(selectedBranchId);
+        return matchesBranch && b.isConfirmed === false;
+    }).length;
 
     const paginatedBookings = filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -3563,14 +3669,52 @@ window.onload = function() {
                     <Box sx={{ p: 1, bgcolor: '#8b5cf6', borderRadius: 1.5, display: 'flex' }}>
                         <ShoppingCart size={18} color="white" />
                     </Box>
-                    <Typography variant="h6" fontWeight={700}>{editingBookingId ? `Edit Booking #${editingBookingId}` : 'Sales Order / Booking'}</Typography>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700}>
+                            {editingBookingId ? `Edit Booking #${editingBookingId}` : 'Sales Order / Booking'}
+                        </Typography>
+                        {!editingBookingId && (
+                            <Typography variant="caption" color="text.secondary">
+                                Step 1 of 2: Customer, Items & Measurements • Cashier will receive payment & confirm
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    {!editingBookingId && (
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    size="small"
+                                    checked={confirmImmediately}
+                                    onChange={(e) => setConfirmImmediately(e.target.checked)}
+                                    color="success"
+                                />
+                            }
+                            label={
+                                <Typography variant="caption" fontWeight={700} color={confirmImmediately ? "#059669" : "text.secondary"}>
+                                    {confirmImmediately ? "Confirm Directly (Single Step)" : "2-Step Flow (Send to Cashier)"}
+                                </Typography>
+                            }
+                            sx={{ mr: 1, bgcolor: confirmImmediately ? '#ecfdf5' : '#f8fafc', px: 1.5, py: 0.3, borderRadius: 2, border: '1px solid', borderColor: confirmImmediately ? '#a7f3d0' : '#e2e8f0' }}
+                        />
+                    )}
                     <Button variant="outlined" color="inherit" startIcon={<XIcon size={16} />} onClick={() => { setShowForm(false); resetForm(); }} disabled={loading}
                         sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
-                    <Button variant="contained" startIcon={<Save size={16} />} onClick={handleSubmit} disabled={loading}
-                        sx={{ borderRadius: 2, textTransform: 'none', bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
-                        {loading ? <CircularProgress size={18} color="inherit" /> : (editingBookingId ? 'Update Booking' : 'Save Booking')}
+                    <Button variant="contained" 
+                        startIcon={confirmImmediately ? <BadgeCheck size={16} /> : <Save size={16} />} 
+                        onClick={handleSubmit} 
+                        disabled={loading}
+                        sx={{ 
+                            borderRadius: 2, textTransform: 'none', 
+                            bgcolor: confirmImmediately ? '#059669' : '#8b5cf6', 
+                            '&:hover': { bgcolor: confirmImmediately ? '#047857' : '#7c3aed' } 
+                        }}>
+                        {loading ? <CircularProgress size={18} color="inherit" /> : (
+                            editingBookingId 
+                                ? 'Update Booking' 
+                                : (confirmImmediately ? 'Save & Confirm Directly' : 'Save Booking (Send to Cashier)')
+                        )}
                     </Button>
                 </Box>
             </DialogTitle>
@@ -4269,10 +4413,12 @@ window.onload = function() {
                                             sx={FIELD_SX} />
                                     </Grid>
                                     <Grid size={{ xs: 4 }}>
-                                        <TextField fullWidth size="small" label="Advance Amount" required
+                                        <TextField fullWidth size="small" label="Advance Amount"
                                             value={formData.advanceAmount}
                                             onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                             disabled={!!editingBookingId && !isAdmin}
+                                            helperText={!editingBookingId ? (confirmImmediately ? "Collected now" : "Agreed advance (cashier confirms)") : undefined}
+                                            FormHelperTextProps={{ sx: { fontSize: '0.68rem', fontWeight: 600, color: confirmImmediately ? '#059669' : '#b45309' } }}
                                             InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
                                             sx={FIELD_SX} />
                                     </Grid>
@@ -4290,6 +4436,364 @@ window.onload = function() {
         </Dialog>
     );
     // --- end formDialog ---
+
+    // ── Cashier Confirmation Dialog (Step 2) ─────────────────────────
+    const confirmDialog = confirmBooking && (() => {
+        const totalBill = parseFloat(confirmBooking.totalAmount || 0);
+        const agreedAdvance = parseFloat(confirmBooking.advanceAmount || 0);
+        const inputAdvance = parseFloat(confirmAdvanceAmount) || 0;
+        const projectedRemaining = Math.max(0, totalBill - inputAdvance);
+        const willClear = projectedRemaining <= 0;
+
+        const effectiveCustomer = confirmBooking.billingCustomer || confirmBooking.customer;
+        const customerName = effectiveCustomer?.name || "Customer";
+        const customerPhone = effectiveCustomer?.phone || "";
+        const customerMNo = effectiveCustomer?.measurementNo || effectiveCustomer?.code || "";
+
+        return (
+            <Dialog
+                open={Boolean(confirmBooking)}
+                onClose={() => !confirming && setConfirmBooking(null)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        overflow: 'hidden'
+                    }
+                }}
+            >
+                {/* Header */}
+                <DialogTitle sx={{
+                    background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+                    color: 'white',
+                    p: 2.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex' }}>
+                            <CheckCircle2 size={24} color="white" />
+                        </Box>
+                        <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" fontWeight={800} color="white" sx={{ letterSpacing: 0.5 }}>
+                                    Step 2: Cashier Confirmation & Finance
+                                </Typography>
+                                <Chip
+                                    label="Cashier Counter"
+                                    size="small"
+                                    sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 800, fontSize: '0.68rem', height: 20 }}
+                                />
+                            </Box>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                                Booking #{confirmBooking.bookingNumber} • Confirm order and record advance collection in ledger
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <IconButton size="small" onClick={() => !confirming && setConfirmBooking(null)} sx={{ color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' } }}>
+                        <XIcon size={20} />
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3 }}>
+                    {confirmError && (
+                        <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }} onClose={() => setConfirmError("")}>
+                            {confirmError}
+                        </Alert>
+                    )}
+
+                    {/* Customer & Booking Details Card */}
+                    <Card variant="outlined" sx={{ p: 2, mb: 2.5, borderRadius: 2.5, bgcolor: '#f8fafc', borderColor: '#e2e8f0' }}>
+                        <Grid container spacing={2} alignItems="center">
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    Customer & Account
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight={800} color="#1e293b">
+                                    {customerName}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5, flexWrap: 'wrap' }}>
+                                    {customerPhone && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            📞 {customerPhone}
+                                        </Typography>
+                                    )}
+                                    {customerMNo && (
+                                        <Typography variant="caption" sx={{ bgcolor: '#e0e7ff', color: '#4338ca', px: 1, py: 0.2, borderRadius: 1, fontWeight: 700 }}>
+                                            M# {customerMNo}
+                                        </Typography>
+                                    )}
+                                    {confirmBooking.branch?.name && (
+                                        <Typography variant="caption" sx={{ bgcolor: '#ecfdf5', color: '#065f46', px: 1, py: 0.2, borderRadius: 1, fontWeight: 700 }}>
+                                            🏪 {confirmBooking.branch.name}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' }, gap: 3 }}>
+                                    <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>Total Order Bill</Typography>
+                                        <Typography variant="h5" fontWeight={800} color="#059669">
+                                            Rs. {totalBill.toLocaleString()}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>Agreed Advance</Typography>
+                                        <Typography variant="h6" fontWeight={700} color="#b45309">
+                                            Rs. {agreedAdvance.toLocaleString()}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </Card>
+
+                    {/* Step 2 Inputs: Advance Amount & Payment Method */}
+                    <Grid container spacing={2.5}>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card variant="outlined" sx={{ p: 2, borderRadius: 2.5, borderColor: '#cbd5e1', height: '100%' }}>
+                                <Typography variant="subtitle2" fontWeight={800} color="#1e293b" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <DollarSign size={18} color="#059669" />
+                                    Advance Amount Collected
+                                </Typography>
+
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Advance Received"
+                                    value={confirmAdvanceAmount}
+                                    onChange={(e) => setConfirmAdvanceAmount(e.target.value)}
+                                    placeholder="0"
+                                    type="number"
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start"><Typography fontWeight={700} color="text.secondary">Rs.</Typography></InputAdornment>
+                                    }}
+                                    sx={{
+                                        mb: 1.5,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 2,
+                                            fontWeight: 800,
+                                            fontSize: '1.1rem'
+                                        }
+                                    }}
+                                />
+
+                                {/* Quick Fill Buttons */}
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                                    {agreedAdvance > 0 && agreedAdvance !== totalBill && (
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => setConfirmAdvanceAmount(agreedAdvance.toString())}
+                                            sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: 1.5, borderColor: '#f59e0b', color: '#b45309', py: 0.2 }}
+                                        >
+                                            Agreed: Rs. {agreedAdvance.toLocaleString()}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => setConfirmAdvanceAmount(totalBill.toString())}
+                                        sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: 1.5, borderColor: '#059669', color: '#059669', py: 0.2 }}
+                                    >
+                                        Full: Rs. {totalBill.toLocaleString()}
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => setConfirmAdvanceAmount("0")}
+                                        sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: 1.5, borderColor: '#94a3b8', color: '#64748b', py: 0.2 }}
+                                    >
+                                        Zero (On Account)
+                                    </Button>
+                                </Box>
+
+                                {/* Payment Mode */}
+                                {inputAdvance > 0 && (
+                                    <Box sx={{ mt: 1, pt: 1.5, borderTop: '1px dashed #e2e8f0' }}>
+                                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                            Payment Method
+                                        </Typography>
+                                        <RadioGroup
+                                            row
+                                            value={confirmPaymentMethod}
+                                            onChange={(e) => setConfirmPaymentMethod(e.target.value)}
+                                        >
+                                            <FormControlLabel value="CASH" control={<Radio size="small" color="success" />} label={<Typography variant="body2" fontWeight={600}>Cash</Typography>} />
+                                            <FormControlLabel value="BANK" control={<Radio size="small" color="success" />} label={<Typography variant="body2" fontWeight={600}>Bank Transfer</Typography>} />
+                                            <FormControlLabel value="BOTH" control={<Radio size="small" color="success" />} label={<Typography variant="body2" fontWeight={600}>Both (Split)</Typography>} />
+                                        </RadioGroup>
+
+                                        {(confirmPaymentMethod === "BANK" || confirmPaymentMethod === "BOTH") && (
+                                            <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                                                <InputLabel id="confirm-bank-label">Select Bank Account</InputLabel>
+                                                <Select
+                                                    labelId="confirm-bank-label"
+                                                    label="Select Bank Account"
+                                                    value={confirmBankId}
+                                                    onChange={(e) => setConfirmBankId(e.target.value)}
+                                                    sx={{ borderRadius: 2 }}
+                                                >
+                                                    {(banks || []).map((b) => (
+                                                        <MenuItem key={b.id} value={String(b.id)}>
+                                                            {b.name} ({b.accountNumber || "Bank"})
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        )}
+
+                                        {confirmPaymentMethod === "BOTH" && (
+                                            <Grid container spacing={1.5} sx={{ mt: 1 }}>
+                                                <Grid size={{ xs: 6 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Cash Part"
+                                                        value={confirmCashAmount}
+                                                        onChange={(e) => setConfirmCashAmount(e.target.value)}
+                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Bank Part"
+                                                        value={confirmBankAmount}
+                                                        onChange={(e) => setConfirmBankAmount(e.target.value)}
+                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        )}
+                                    </Box>
+                                )}
+
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Cashier Remarks / Receipt Note"
+                                    value={confirmNotes}
+                                    onChange={(e) => setConfirmNotes(e.target.value)}
+                                    placeholder="e.g. Received at counter 1"
+                                    sx={{ mt: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                />
+                            </Card>
+                        </Grid>
+
+                        {/* Balance & Double Entry Summary Card */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Card variant="outlined" sx={{ p: 2, borderRadius: 2.5, bgcolor: '#f0fdf4', borderColor: '#bbf7d0', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={800} color="#166534" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Wallet size={18} color="#166534" />
+                                        Finance & Ledger Preview
+                                    </Typography>
+
+                                    <Box sx={{ bgcolor: 'white', p: 2, borderRadius: 2, border: '1px solid #dcfce7', mb: 2 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                            <Typography variant="body2" color="text.secondary">Total Order Bill:</Typography>
+                                            <Typography variant="body2" fontWeight={700}>Rs. {totalBill.toLocaleString()}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                            <Typography variant="body2" color="#059669" fontWeight={600}>Advance Received:</Typography>
+                                            <Typography variant="body2" fontWeight={800} color="#059669">
+                                                Rs. {inputAdvance.toLocaleString()}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Typography variant="subtitle2" fontWeight={700} color={projectedRemaining > 0 ? '#b91c1c' : '#15803d'}>
+                                                Remaining Balance Due:
+                                            </Typography>
+                                            <Typography variant="h6" fontWeight={800} color={projectedRemaining > 0 ? '#b91c1c' : '#15803d'}>
+                                                Rs. {projectedRemaining.toLocaleString()}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                                            <Chip
+                                                label={willClear ? "Bill Fully Cleared" : (inputAdvance > 0 ? "Partially Pending" : "Pending Full Bill")}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: willClear ? '#d1fae5' : (inputAdvance > 0 ? '#fee2e2' : '#fef3c7'),
+                                                    color: willClear ? '#065f46' : (inputAdvance > 0 ? '#991b1b' : '#92400e'),
+                                                    fontWeight: 800,
+                                                    fontSize: '0.68rem',
+                                                    height: 20
+                                                }}
+                                            />
+                                        </Box>
+                                    </Box>
+
+                                    <Box sx={{ px: 1 }}>
+                                        <Typography variant="caption" fontWeight={700} color="#15803d" sx={{ display: 'block', mb: 0.5 }}>
+                                            Automated Double-Entry Accounting:
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
+                                            • <strong>DEBIT Rs. {totalBill.toLocaleString()}</strong> to customer ledger (order created).<br />
+                                            {inputAdvance > 0 ? (
+                                                <>
+                                                    • <strong>CREDIT Rs. {inputAdvance.toLocaleString()}</strong> to customer ledger (payment received).<br />
+                                                    • <strong>DEBIT Rs. {inputAdvance.toLocaleString()}</strong> to {confirmPaymentMethod === 'BANK' ? 'Bank Account' : (confirmPaymentMethod === 'BOTH' ? 'Cash & Bank Accounts' : 'Cash Account')}.
+                                                </>
+                                            ) : (
+                                                <>• No advance payment credited (0 received). Full bill remains as customer debit.</>
+                                            )}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #bbf7d0' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Once confirmed, this booking becomes active and will be officially booked for tailoring & cutting.
+                                    </Typography>
+                                </Box>
+                            </Card>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 2.5, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                    <Button
+                        variant="outlined"
+                        onClick={() => !confirming && setConfirmBooking(null)}
+                        disabled={confirming}
+                        sx={{ borderRadius: 2, textTransform: 'none', color: '#64748b', borderColor: '#cbd5e1' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleConfirmSubmit}
+                        disabled={confirming}
+                        startIcon={confirming ? <CircularProgress size={16} color="inherit" /> : <CheckCircle2 size={18} />}
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            px: 3,
+                            fontWeight: 800,
+                            bgcolor: '#059669',
+                            boxShadow: '0 4px 14px rgba(5,150,105,0.35)',
+                            '&:hover': { bgcolor: '#047857' }
+                        }}
+                    >
+                        {confirming ? "Confirming..." : (
+                            inputAdvance > 0
+                                ? `Confirm & Receive Rs. ${inputAdvance.toLocaleString()}`
+                                : "Confirm Booking Without Advance"
+                        )}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
+    })();
 
     const paymentDialog = payBooking && (() => {
         const payAmount = parseFloat(payReceived) || 0;
@@ -6256,6 +6760,7 @@ window.onload = function() {
     return (
         <Box sx={{ width: '100%', p: 3 }}>
             {formDialog}
+            {confirmDialog}
             {paymentDialog}
             {checkoutDialog}
 
@@ -6276,6 +6781,23 @@ window.onload = function() {
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {unconfirmedBookingsCount > 0 && (
+                        <Chip
+                            icon={<Clock size={14} color="#b45309" />}
+                            label={`${unconfirmedBookingsCount} awaiting cashier`}
+                            onClick={() => setFilterConfirmationTab(filterConfirmationTab === "UNCONFIRMED" ? "ALL" : "UNCONFIRMED")}
+                            sx={{
+                                bgcolor: '#fef3c7',
+                                color: '#b45309',
+                                fontWeight: 800,
+                                borderRadius: 2,
+                                border: '1.5px solid #f59e0b',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(245,158,11,0.25)',
+                                '&:hover': { bgcolor: '#fde68a' }
+                            }}
+                        />
+                    )}
                     <Chip
                         label={`${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''}`}
                         sx={{ bgcolor: '#f5f3ff', color: '#7c3aed', fontWeight: 600, borderRadius: 2 }}
@@ -6520,6 +7042,59 @@ window.onload = function() {
                 </Box>
             </Box>
 
+            {/* ── Confirmation Status Filter Tabs ── */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                <Tabs
+                    value={filterConfirmationTab}
+                    onChange={(e, val) => setFilterConfirmationTab(val)}
+                    sx={{
+                        minHeight: 38,
+                        '& .MuiTab-root': {
+                            minHeight: 38,
+                            py: 0.5,
+                            px: 2,
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            borderRadius: 2
+                        },
+                        '& .MuiTabs-indicator': {
+                            borderRadius: 3,
+                            height: 3,
+                            bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#f59e0b' : '#8b5cf6'
+                        }
+                    }}
+                >
+                    <Tab label={`All Bookings (${bookings?.length || 0})`} value="ALL" />
+                    <Tab
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                <span>⏳ Awaiting Cashier</span>
+                                {unconfirmedBookingsCount > 0 && (
+                                    <Chip
+                                        size="small"
+                                        label={unconfirmedBookingsCount}
+                                        sx={{
+                                            height: 19,
+                                            fontSize: '0.7rem',
+                                            fontWeight: 800,
+                                            bgcolor: '#f59e0b',
+                                            color: 'white'
+                                        }}
+                                    />
+                                )}
+                            </Box>
+                        }
+                        value="UNCONFIRMED"
+                        sx={{
+                            color: unconfirmedBookingsCount > 0 ? '#b45309 !important' : 'inherit',
+                            bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#fef3c7' : 'transparent'
+                        }}
+                    />
+                    <Tab label="✅ Confirmed Bookings" value="CONFIRMED" />
+                </Tabs>
+            </Box>
+
             <TableContainer component={Card} elevation={0} sx={{ 
                 borderRadius: 3, 
                 border: '1px solid', 
@@ -6731,7 +7306,22 @@ window.onload = function() {
                                     {/* Status */}
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            {(() => {
+                                            {booking.isConfirmed === false ? (
+                                                <Chip
+                                                    icon={<Clock size={12} color="#b45309" />}
+                                                    label="Awaiting Cashier"
+                                                    size="small"
+                                                    sx={{
+                                                        height: 24,
+                                                        fontSize: '0.73rem',
+                                                        fontWeight: 800,
+                                                        bgcolor: '#fef3c7',
+                                                        color: '#b45309',
+                                                        border: '1.5px solid #fde68a',
+                                                        alignSelf: 'flex-start'
+                                                    }}
+                                                />
+                                            ) : (() => {
                                                 const isLocked = isBookingClosedAndPaid(booking);
                                                 const stitchItems = (booking.items || []).filter(i => !i.productId);
                                                 const totalSuitQty = stitchItems.reduce((s, i) => s + (parseFloat(i.quantity) || 1), 0);
@@ -6803,7 +7393,11 @@ window.onload = function() {
                                             let bg = "#fef3c7";
                                             let color = "#92400e";
 
-                                            if (rem <= 0 || (adv >= total && total > 0) || booking.billStatus === "Clear" || booking.billStatus === "Clear Bill") {
+                                            if (booking.isConfirmed === false) {
+                                                label = "Awaiting Cashier";
+                                                bg = "#fef3c7";
+                                                color = "#b45309";
+                                            } else if (rem <= 0 || (adv >= total && total > 0) || booking.billStatus === "Clear" || booking.billStatus === "Clear Bill") {
                                                 label = "Clear";
                                                 bg = "#d1fae5";
                                                 color = "#065f46";
@@ -6841,14 +7435,37 @@ window.onload = function() {
                                     </TableCell>
                                     {/* Actions */}
                                     <TableCell align="right">
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, alignItems: 'center' }}>
+                                            {booking.isConfirmed === false && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => handleOpenConfirmDialog(booking)}
+                                                    startIcon={<CheckCircle2 size={14} />}
+                                                    sx={{
+                                                        bgcolor: '#059669',
+                                                        color: 'white',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.73rem',
+                                                        textTransform: 'none',
+                                                        borderRadius: 2,
+                                                        px: 1.2,
+                                                        py: 0.4,
+                                                        whiteSpace: 'nowrap',
+                                                        boxShadow: '0 2px 6px rgba(5,150,105,0.3)',
+                                                        '&:hover': { bgcolor: '#047857' }
+                                                    }}
+                                                >
+                                                    Confirm & Cashier
+                                                </Button>
+                                            )}
                                             <Tooltip title="View Details">
                                                 <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => handleViewBooking(booking)}><Eye size={17} /></IconButton>
                                             </Tooltip>
                                             <Tooltip title="Edit Booking">
                                                 <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => handleEdit(booking)}><Pencil size={17} /></IconButton>
                                             </Tooltip>
-                                            {(() => {
+                                            {booking.isConfirmed !== false && (() => {
                                                 const rem = parseFloat(booking.remainingAmount || 0);
                                                 const adv = parseFloat(booking.advanceAmount || 0);
                                                 const total = parseFloat(booking.totalAmount || 0);

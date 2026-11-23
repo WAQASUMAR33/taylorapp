@@ -423,7 +423,8 @@ export async function POST(req) {
             pocketType,
             shalwarType,
             hasShalwarPocket,
-            hasFrontPockets
+            hasFrontPockets,
+            confirmNow = false
         } = body;
 
         const resolvedBranchId = (session?.user?.role !== "ADMIN" && session?.user?.branchId)
@@ -493,6 +494,14 @@ export async function POST(req) {
                 ? parseFloat(remainingAmount)
                 : Math.max(0, parsedTotal - parsedAdvance);
 
+            const shouldConfirmNow = Boolean(confirmNow);
+            const isConfirmed = shouldConfirmNow;
+            const confirmedAt = shouldConfirmNow ? new Date() : null;
+            const confirmedById = shouldConfirmNow && session?.user?.id ? parseInt(session.user.id) : null;
+            const initialBillStatus = !shouldConfirmNow
+                ? "Awaiting Confirmation"
+                : (calcRemaining <= 0 ? "Clear" : (parsedAdvance <= 0 ? "Pending" : "Partially Pending"));
+
             // 1. Create the booking
             const booking = await tx.booking.create({
                 data: {
@@ -509,10 +518,13 @@ export async function POST(req) {
                     totalAmount: parsedTotal,
                     advanceAmount: parsedAdvance,
                     remainingAmount: calcRemaining,
-                    billStatus: calcRemaining <= 0 ? "Clear" : (parsedAdvance <= 0 ? "Pending" : "Partially Pending"),
+                    billStatus: initialBillStatus,
                     notes,
                     status: "PENDING",
                     branchId: resolvedBranchId || null,
+                    isConfirmed: isConfirmed,
+                    confirmedAt: confirmedAt,
+                    confirmedById: confirmedById,
                     staff: {
                         create: [
                             ...resolvedTailorIds.map(id => ({ customerId: id, role: "TAILOR" })),
@@ -659,8 +671,8 @@ export async function POST(req) {
                 });
             }
 
-            // 3. Create ledger entries for this booking (against billing customer)
-            if (parseFloat(totalAmount) > 0) {
+            // 3. Create ledger entries for this booking (only when confirmed immediately)
+            if (shouldConfirmNow && parseFloat(totalAmount) > 0) {
                 const billingName = effectiveBillingId !== parseInt(customerId)
                     ? (await tx.customer.findUnique({ where: { id: effectiveBillingId }, select: { name: true } }))?.name
                     : booking.customer.name;
@@ -845,8 +857,8 @@ export async function PUT(req) {
             if (advanceAmount !== undefined) {
                 const parsedAdvance = parseFloat(advanceAmount);
                 const currentAdvance = parseFloat(currentBooking.advanceAmount);
-                if (parsedAdvance !== currentAdvance && !isAdmin) {
-                    throw new Error("Only an admin can edit the advance amount.");
+                if (currentBooking.isConfirmed && parsedAdvance !== currentAdvance && !isAdmin) {
+                    throw new Error("Only an admin can edit the advance amount of a confirmed booking.");
                 }
             }
 
@@ -862,7 +874,8 @@ export async function PUT(req) {
 
             const isBillingCustomerChanged = prevBillingCustomerId !== resolvedBillingCustomerId;
 
-            if (isBillingCustomerChanged) {
+            if (currentBooking.isConfirmed) {
+                if (isBillingCustomerChanged) {
                 // Fetch customer names for descriptions
                 const [bookingCust, prevBillingCust, newBillingCust] = await Promise.all([
                     tx.customer.findUnique({ where: { id: resolvedCustomerId }, select: { id: true, name: true } }),
@@ -1114,6 +1127,10 @@ export async function PUT(req) {
                     });
                 }
             }
+            } else {
+                // Booking is not yet confirmed by cashier — no ledger entries exist, keep status awaiting
+                updateData.billStatus = "Awaiting Confirmation";
+            }
 
             // 4. Update staff assignments if provided
             if (resolvedTailorIds !== undefined || resolvedCutterIds !== undefined) {
@@ -1330,23 +1347,25 @@ export async function DELETE(req) {
                 throw new Error("Booking not found");
             }
 
-            // 1. Revert Balance
-            const balanceReversal = parseFloat(booking.totalAmount) - parseFloat(booking.advanceAmount);
-            await tx.customer.update({
-                where: { id: booking.customerId },
-                data: {
-                    balance: { decrement: balanceReversal }
-                }
-            });
+            // 1. Revert Balance & Cash only if confirmed (unconfirmed bookings have no ledger entries)
+            if (booking.isConfirmed) {
+                const balanceReversal = parseFloat(booking.totalAmount) - parseFloat(booking.advanceAmount);
+                await tx.customer.update({
+                    where: { id: booking.customerId },
+                    data: {
+                        balance: { decrement: balanceReversal }
+                    }
+                });
 
-            // 2. Revert Cash if advance was paid
-            if (parseFloat(booking.advanceAmount) > 0) {
-                const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
-                if (cashAccount) {
-                    await tx.customer.update({
-                        where: { id: cashAccount.id },
-                        data: { balance: { decrement: parseFloat(booking.advanceAmount) } }
-                    });
+                // 2. Revert Cash if advance was paid
+                if (parseFloat(booking.advanceAmount) > 0) {
+                    const cashAccount = await tx.customer.findFirst({ where: { name: 'Cash Account' } });
+                    if (cashAccount) {
+                        await tx.customer.update({
+                            where: { id: cashAccount.id },
+                            data: { balance: { decrement: parseFloat(booking.advanceAmount) } }
+                        });
+                    }
                 }
             }
 

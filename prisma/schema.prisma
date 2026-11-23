@@ -364,6 +364,9 @@ model booking {
   notes             String?
   billStatus        String?        @default("Partial Pending")
   branchId          Int?
+  isConfirmed       Boolean        @default(true)
+  confirmedAt       DateTime?
+  confirmedById     Int?
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
