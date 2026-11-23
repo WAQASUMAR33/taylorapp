@@ -466,24 +466,38 @@ export async function POST(req) {
 
         // Use transaction to ensure data integrity
         const result = await prisma.$transaction(async (tx) => {
-            // Generate monthly-reset booking number: YYYYMM-NNNN (restarts at 0001 each month)
+            // Fetch branch to get branch short code
+            const targetBranch = resolvedBranchId 
+                ? await tx.branch.findUnique({ where: { id: resolvedBranchId }, select: { id: true, code: true, name: true } })
+                : null;
+            const branchCode = (targetBranch?.code || "GR").trim().toUpperCase();
+
+            // Generate monthly-reset booking number with branch short code: [CODE]-YYYYMM-NNNN
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth(); // 0-indexed
             const mm = String(month + 1).padStart(2, "0");
-            const prefix = `${year}${mm}-`;
+            const prefix = `${branchCode}-${year}${mm}-`;
 
-            // Find the last booking number for this month by looking at bookingNumber prefix
+            // Find the last booking number for this branch and this month
             const lastBooking = await tx.booking.findFirst({
-                where: { bookingNumber: { startsWith: prefix } },
+                where: {
+                    OR: [
+                        { bookingNumber: { startsWith: prefix } },
+                        ...(branchCode === "GR" ? [{ bookingNumber: { startsWith: `${year}${mm}-` } }] : [])
+                    ]
+                },
                 orderBy: { bookingNumber: "desc" },
                 select: { bookingNumber: true }
             });
 
             let nextSeq = 1;
-            if (lastBooking) {
-                const lastSeq = parseInt(lastBooking.bookingNumber.split("-")[1], 10);
-                nextSeq = lastSeq + 1;
+            if (lastBooking && lastBooking.bookingNumber) {
+                const parts = lastBooking.bookingNumber.split("-");
+                const lastNum = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(lastNum)) {
+                    nextSeq = lastNum + 1;
+                }
             }
             const seq = String(nextSeq).padStart(4, "0");
             const bookingNumber = `${prefix}${seq}`;

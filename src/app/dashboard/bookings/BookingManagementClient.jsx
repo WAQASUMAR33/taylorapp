@@ -3595,10 +3595,10 @@ window.onload = function() {
         return matchesSearch && matchesCustomer && matchesFrom && matchesTo && matchesDeliveryFrom && matchesDeliveryTo && matchesItemStatus && matchesMeasurementNo && matchesConfirmation;
     }).sort((a, b) => {
         if (sortBy === "bookingNo_asc") {
-            return (parseInt(a.bookingNumber) || a.id) - (parseInt(b.bookingNumber) || b.id);
+            return (a.bookingNumber || "").localeCompare(b.bookingNumber || "", undefined, { numeric: true });
         }
         if (sortBy === "bookingNo_desc") {
-            return (parseInt(b.bookingNumber) || b.id) - (parseInt(a.bookingNumber) || a.id);
+            return (b.bookingNumber || "").localeCompare(a.bookingNumber || "", undefined, { numeric: true });
         }
         if (sortBy === "deliveryDate_desc") {
             const da = a.deliveryDate ? new Date(a.deliveryDate) : null;
@@ -3725,7 +3725,21 @@ window.onload = function() {
                     {/* ── Row 1: Header fields with Branch ── */}
                     <Grid container spacing={2} sx={{ mb: 2 }}>
                         <Grid size={{ xs: 6, md: 2.4 }}>
-                            <TextField fullWidth size="small" label="Serial Number" value="Auto Generated" disabled sx={DISABLED_SX} />
+                            {(() => {
+                                const currentBranchId = formData.branchId || (branches.length > 0 ? String(branches[0].id) : "1");
+                                const curBranch = branches.find(b => String(b.id) === String(currentBranchId));
+                                const bCode = (curBranch?.code || "GR").trim().toUpperCase();
+                                return (
+                                    <TextField 
+                                        fullWidth 
+                                        size="small" 
+                                        label="Booking #" 
+                                        value={editingBookingId ? `Editing #${editingBookingId}` : `${bCode}-YYYYMM-XXXX (Auto)`} 
+                                        disabled 
+                                        sx={DISABLED_SX} 
+                                    />
+                                );
+                            })()}
                         </Grid>
                         <Grid size={{ xs: 6, md: 2.4 }}>
                             <FormControl fullWidth size="small" sx={FIELD_SX}>
