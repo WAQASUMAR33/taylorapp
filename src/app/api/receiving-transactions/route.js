@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { scopeBranchParam } from "@/lib/branchScope";
-import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
+import { calculateReceivingSummary, buildSaleReturnWhere, mapSaleReturnToTransaction } from "@/lib/receivingBreakdown";
 
 export async function GET(req) {
     try {
@@ -79,8 +79,8 @@ export async function GET(req) {
             baseWhere.AND.push({ OR: searchOr });
         }
 
-        // Calculate receiving breakdown and summary
-        const { summary, bookingAllocationMap } = await calculateReceivingSummary(prisma, baseWhere);
+        // Calculate receiving breakdown and summary (deducts sale returns)
+        const { summary, bookingAllocationMap } = await calculateReceivingSummary(prisma, baseWhere, search);
 
         // Build where filter for specific source
         const where = { ...baseWhere };
@@ -117,19 +117,10 @@ export async function GET(req) {
             ];
         }
 
-        // Determine orderBy
-        let orderBy = [];
-        if (sortBy === "amount") {
-            orderBy = [{ amount: sortOrder }, { id: sortOrder }];
-        } else if (sortBy === "type") {
-            orderBy = [{ bookingId: sortOrder === "asc" ? "desc" : "asc" }, { receivingDate: "desc" }];
-        } else if (sortBy === "receiptNo") {
-            orderBy = [{ receiptNo: sortOrder }, { id: sortOrder }];
-        } else {
-            orderBy = [{ receivingDate: sortOrder }, { id: sortOrder }];
-        }
+        const saleReturnWhere = buildSaleReturnWhere(baseWhere, search);
+        const shouldIncludeReturns = source === "ALL" || source === "PRODUCT";
 
-        const [receivings, totalCount] = await Promise.all([
+        const [receivings, saleReturns] = await Promise.all([
             prisma.receiving.findMany({
                 where,
                 include: {
@@ -146,18 +137,29 @@ export async function GET(req) {
                             status: true
                         }
                     }
-                },
-                orderBy,
-                skip,
-                take: limit
+                }
             }),
-            prisma.receiving.count({ where })
+            shouldIncludeReturns
+                ? prisma.sale_return.findMany({
+                    where: saleReturnWhere,
+                    include: {
+                        customer: true,
+                        bank: true,
+                        branch: true,
+                        items: {
+                            include: {
+                                product: { select: { id: true, name: true, sku: true } }
+                            }
+                        }
+                    }
+                })
+                : Promise.resolve([])
         ]);
 
-        const transactions = receivings.map(rec => {
+        const mappedReceivings = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
-            const source = rec.source || (isBooking ? "Advance" : "Ledger");
-            const isTransfer = (source || "").toUpperCase() === "TRANSFER";
+            const recSource = rec.source || (isBooking ? "Advance" : "Ledger");
+            const isTransfer = (recSource || "").toUpperCase() === "TRANSFER";
             const receivingType = isTransfer ? "Billing Transfer" : (isBooking ? "From Booking" : "Received through Ledger");
 
             let bookingNum = rec.booking?.bookingNumber;
@@ -166,7 +168,6 @@ export async function GET(req) {
                 if (match) bookingNum = match[1];
             }
 
-            // Customer account secondary subtext: "over [digits / code]"
             let accountOver = "";
             if (rec.customer?.phone && rec.customer.phone.trim().length >= 4) {
                 const cleanPhone = rec.customer.phone.trim();
@@ -224,12 +225,13 @@ export async function GET(req) {
 
             return {
                 id: rec.id,
+                isReturn: false,
                 receiptNo,
                 rawReceiptNo: rec.receiptNo || `REC-${rec.id}`,
                 rawDate: rec.receivingDate.toISOString(),
                 formattedDate,
                 formattedTime,
-                source,
+                source: recSource,
                 receivingType,
                 sourceRef,
                 accountName: rec.customer?.name || "Customer",
@@ -252,7 +254,27 @@ export async function GET(req) {
             };
         });
 
+        const mappedReturns = (shouldIncludeReturns ? saleReturns : []).map(mapSaleReturnToTransaction);
+
+        // Merge receivings and returns
+        const allTransactions = [...mappedReceivings, ...mappedReturns];
+
+        // Sort all transactions
+        if (sortBy === "amount") {
+            allTransactions.sort((a, b) => sortOrder === "asc" ? a.amount - b.amount : b.amount - a.amount);
+        } else if (sortBy === "receiptNo") {
+            allTransactions.sort((a, b) => sortOrder === "asc" ? a.receiptNo.localeCompare(b.receiptNo) : b.receiptNo.localeCompare(a.receiptNo));
+        } else {
+            // default: date desc
+            allTransactions.sort((a, b) => {
+                const diff = new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime();
+                return sortOrder === "asc" ? -diff : diff;
+            });
+        }
+
+        const totalCount = allTransactions.length;
         const totalPages = Math.ceil(totalCount / limit) || 1;
+        const transactions = allTransactions.slice(skip, skip + limit);
 
         return NextResponse.json({
             transactions,

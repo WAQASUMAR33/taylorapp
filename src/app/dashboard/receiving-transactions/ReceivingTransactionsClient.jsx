@@ -84,7 +84,8 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
         stitching: { amount: initialData?.summary?.stitching?.amount ?? 0, count: initialData?.summary?.stitching?.count ?? 0 },
         ledger: { amount: initialData?.summary?.ledger?.amount ?? 0, count: initialData?.summary?.ledger?.count ?? 0 },
         cash: { amount: initialData?.summary?.cash?.amount ?? 0, count: 0 },
-        bank: { amount: initialData?.summary?.bank?.amount ?? 0, count: 0 }
+        bank: { amount: initialData?.summary?.bank?.amount ?? 0, count: 0 },
+        returns: { amount: initialData?.summary?.returns?.amount ?? 0, count: initialData?.summary?.returns?.count ?? 0 }
     }));
     const [loading, setLoading] = useState(false);
 
@@ -135,7 +136,8 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                         stitching: { amount: data.summary.stitching?.amount ?? 0, count: data.summary.stitching?.count ?? 0 },
                         ledger: { amount: data.summary.ledger?.amount ?? 0, count: data.summary.ledger?.count ?? 0 },
                         cash: { amount: data.summary.cash?.amount ?? 0, count: 0 },
-                        bank: { amount: data.summary.bank?.amount ?? 0, count: 0 }
+                        bank: { amount: data.summary.bank?.amount ?? 0, count: 0 },
+                        returns: { amount: data.summary.returns?.amount ?? 0, count: data.summary.returns?.count ?? 0 }
                     });
                 }
             }
@@ -549,10 +551,14 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                                     px: 1.25,
                                                     py: 0.4,
                                                     borderRadius: 1.5,
-                                                    bgcolor: isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff",
+                                                    bgcolor: tx.isReturn
+                                                        ? (isDark ? "rgba(239, 68, 68, 0.15)" : "#fee2e2")
+                                                        : (isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff"),
                                                     border: "1px solid",
-                                                    borderColor: isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe",
-                                                    color: "#2563eb",
+                                                    borderColor: tx.isReturn
+                                                        ? (isDark ? "rgba(239, 68, 68, 0.35)" : "#fca5a5")
+                                                        : (isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe"),
+                                                    color: tx.isReturn ? "#dc2626" : "#2563eb",
                                                     fontWeight: 700,
                                                     fontSize: "0.76rem",
                                                     letterSpacing: "0.01em",
@@ -608,7 +614,7 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                                 sx={{
                                                     fontWeight: 700,
                                                     fontSize: "0.85rem",
-                                                    color: "text.primary",
+                                                    color: tx.isReturn ? "#dc2626" : "text.primary",
                                                     lineHeight: 1.2
                                                 }}
                                             >
@@ -698,18 +704,26 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                                     py: 0.25,
                                                     borderRadius: 1.5,
                                                     border: "1px solid",
-                                                    borderColor: tx.paymentMethod?.toLowerCase().includes("transfer") ? "#2563eb" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#8b5cf6" : "#10b981"),
-                                                    color: tx.paymentMethod?.toLowerCase().includes("transfer") ? "#1d4ed8" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#7c3aed" : "#059669"),
-                                                    bgcolor: tx.paymentMethod?.toLowerCase().includes("transfer")
-                                                        ? (isDark ? "rgba(37, 99, 235, 0.12)" : "#eff6ff")
-                                                        : (tx.paymentMethod?.toLowerCase().includes("bank")
-                                                            ? (isDark ? "rgba(139, 92, 246, 0.12)" : "#f5f3ff")
-                                                            : (isDark ? "rgba(16, 185, 129, 0.12)" : "#ecfdf5")),
+                                                    borderColor: tx.isReturn
+                                                        ? (isDark ? "rgba(239, 68, 68, 0.4)" : "#fca5a5")
+                                                        : (tx.paymentMethod?.toLowerCase().includes("transfer") ? "#2563eb" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#8b5cf6" : "#10b981")),
+                                                    color: tx.isReturn
+                                                        ? "#dc2626"
+                                                        : (tx.paymentMethod?.toLowerCase().includes("transfer") ? "#1d4ed8" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "#7c3aed" : "#059669")),
+                                                    bgcolor: tx.isReturn
+                                                        ? (isDark ? "rgba(239, 68, 68, 0.12)" : "#fef2f2")
+                                                        : (tx.paymentMethod?.toLowerCase().includes("transfer")
+                                                            ? (isDark ? "rgba(37, 99, 235, 0.12)" : "#eff6ff")
+                                                            : (tx.paymentMethod?.toLowerCase().includes("bank")
+                                                                ? (isDark ? "rgba(139, 92, 246, 0.12)" : "#f5f3ff")
+                                                                : (isDark ? "rgba(16, 185, 129, 0.12)" : "#ecfdf5"))),
                                                     fontWeight: 600,
                                                     fontSize: "0.76rem"
                                                 }}
                                             >
-                                                {tx.paymentMethod?.toLowerCase().includes("transfer") ? "Transfer" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "Bank" : "Cash")}
+                                                {tx.isReturn
+                                                    ? `Refund (${tx.paymentMethod || "Cash"})`
+                                                    : (tx.paymentMethod?.toLowerCase().includes("transfer") ? "Transfer" : (tx.paymentMethod?.toLowerCase().includes("bank") ? "Bank" : "Cash"))}
                                             </Box>
                                         </Box>
 
@@ -732,11 +746,13 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                                 sx={{
                                                     fontSize: "0.96rem",
                                                     fontWeight: 700,
-                                                    color: "text.primary",
+                                                    color: tx.isReturn || amtNum < 0 ? "#dc2626" : "text.primary",
                                                     lineHeight: 1.2
                                                 }}
                                             >
-                                                {isNaN(amtNum) || amtNum === 0 ? "0" : amtNum.toLocaleString()}
+                                                {isNaN(amtNum) || amtNum === 0 
+                                                    ? "0" 
+                                                    : (amtNum < 0 ? `-Rs. ${Math.abs(amtNum).toLocaleString()}` : amtNum.toLocaleString())}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -915,6 +931,11 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
                         {formatCount(summary?.total?.count)} transactions
+                        {Boolean(summary?.returns?.amount && summary.returns.amount > 0) && (
+                            <span style={{ color: "#dc2626", marginLeft: 6, fontWeight: 600 }}>
+                                (-{formatCurrency(summary.returns.amount)} returns)
+                            </span>
+                        )}
                     </Typography>
                 </Card>
 
@@ -963,6 +984,11 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
 
                     <Typography sx={{ fontSize: "0.8rem", color: "#6b7280", fontWeight: 500, mt: "auto" }}>
                         {formatCount(summary?.product?.count)} product sales recorded
+                        {Boolean(summary?.returns?.amount && summary.returns.amount > 0) && (
+                            <span style={{ color: "#dc2626", marginLeft: 6, fontWeight: 600 }}>
+                                (-{formatCurrency(summary.returns.amount)} returns)
+                            </span>
+                        )}
                     </Typography>
                 </Card>
 

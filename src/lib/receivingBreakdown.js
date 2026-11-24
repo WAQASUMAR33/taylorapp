@@ -3,10 +3,122 @@
  * "Developer Notes - Receiving Logic:
  *  First put amount in Product Receiving, and when that gets cleared, add amount in Stitching Receiving.
  *  Formula:
- *  Total Receiving = Product Receiving + Stitching Receiving + Ledger Receiving."
+ *  Total Receiving = Product Receiving + Stitching Receiving + Ledger Receiving.
+ *  Sale returns:
+ *  Subtracted from Total Receiving, Product Receiving, and Cash/Bank."
  */
 
-export async function calculateReceivingSummary(prisma, baseWhere) {
+export function buildSaleReturnWhere(baseWhere = {}, search = "") {
+    const saleReturnWhere = {
+        customer: {
+            name: { not: "Cash Account" }
+        }
+    };
+
+    if (baseWhere.branchId) {
+        saleReturnWhere.branchId = baseWhere.branchId;
+    }
+
+    if (baseWhere.receivingDate) {
+        saleReturnWhere.returnDate = baseWhere.receivingDate;
+    }
+
+    if (search && search.trim()) {
+        const q = search.trim();
+        const searchOr = [
+            { returnNumber: { contains: q } },
+            { notes: { contains: q } },
+            {
+                customer: {
+                    OR: [
+                        { name: { contains: q } },
+                        { phone: { contains: q } },
+                        { code: { contains: q } },
+                        { fatherName: { contains: q } },
+                        { address: { contains: q } }
+                    ]
+                }
+            }
+        ];
+        const searchNum = parseFloat(q.replace(/[^0-9.]/g, ""));
+        if (!isNaN(searchNum) && searchNum > 0) {
+            searchOr.push({ totalAmount: searchNum });
+        }
+        saleReturnWhere.AND = [{ OR: searchOr }];
+    }
+
+    return saleReturnWhere;
+}
+
+export function mapSaleReturnToTransaction(ret) {
+    const amtNum = parseFloat(ret.totalAmount ? ret.totalAmount.toString() : 0);
+    const negativeAmt = -Math.abs(amtNum);
+    const d = new Date(ret.returnDate);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1);
+    const year = d.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    const formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    let accountOver = "";
+    if (ret.customer?.phone && ret.customer.phone.trim().length >= 4) {
+        accountOver = `over ${ret.customer.phone.trim().slice(-4)}`;
+    } else if (ret.customer?.code) {
+        accountOver = `over ${ret.customer.code.replace(/^CUST-/i, "")}`;
+    } else if (ret.customer?.id) {
+        accountOver = `over ${ret.customer.id}`;
+    } else {
+        accountOver = "over --";
+    }
+
+    const itemsSummary = (ret.items || [])
+        .map(i => `${i.product?.name || 'Product'} (x${i.quantity})`)
+        .join(', ');
+
+    const actualDescription = ret.notes 
+        ? `Sale Return: ${ret.notes}${itemsSummary ? ` [${itemsSummary}]` : ''}`
+        : (itemsSummary ? `Product Sale Return: ${itemsSummary}` : `Product Sale Return #${ret.returnNumber}`);
+
+    let paymentMethod = "Cash";
+    if (ret.paymentMode === "BANK" || (ret.bank && ret.bank.name)) {
+        paymentMethod = ret.bank ? `Bank (${ret.bank.name})` : "Bank Account";
+    } else if (ret.paymentMode === "LEDGER") {
+        paymentMethod = "Ledger Adjustment";
+    }
+
+    return {
+        id: `return-${ret.id}`,
+        returnId: ret.id,
+        isReturn: true,
+        receiptNo: ret.returnNumber,
+        rawReceiptNo: ret.returnNumber,
+        rawDate: ret.returnDate ? ret.returnDate.toISOString() : new Date().toISOString(),
+        formattedDate,
+        formattedTime,
+        source: "Sale Return",
+        receivingType: "Sale Return (Refund)",
+        sourceRef: `Return #${ret.returnNumber}`,
+        accountName: ret.customer?.name || "Customer",
+        accountOver,
+        address: ret.customer?.address || "",
+        description: actualDescription,
+        rawDescription: ret.notes || "",
+        paymentMethod,
+        amount: negativeAmt,
+        amountDisplay: `-${amtNum.toLocaleString()} PKR`,
+        productAmount: negativeAmt,
+        stitchingAmount: 0,
+        ledgerAmount: 0,
+        pendingBalance: 0,
+        bookingId: null,
+        bookingNumber: null,
+        customerId: ret.customerId,
+        receivingId: null,
+        branch: ret.branch ? { id: ret.branch.id, name: ret.branch.name, code: ret.branch.code } : null
+    };
+}
+
+export async function calculateReceivingSummary(prisma, baseWhere, search = "") {
     // 1. Fetch matching receivings
     const receivings = await prisma.receiving.findMany({
         where: baseWhere,
@@ -109,14 +221,49 @@ export async function calculateReceivingSummary(prisma, baseWhere) {
         }
     }
 
+    // 3. Fetch matching sale returns to deduct from receiving totals
+    const saleReturnWhere = buildSaleReturnWhere(baseWhere, search);
+    const saleReturns = await prisma.sale_return.findMany({
+        where: saleReturnWhere,
+        select: {
+            id: true,
+            totalAmount: true,
+            paymentMode: true,
+            returnDate: true
+        }
+    });
+
+    let returnTotalAmount = 0;
+    let returnCashAmount = 0;
+    let returnBankAmount = 0;
+    const returnCount = saleReturns.length;
+
+    for (const ret of saleReturns) {
+        const amt = parseFloat(ret.totalAmount || 0);
+        returnTotalAmount += amt;
+        if ((ret.paymentMode || "").toUpperCase() === "BANK") {
+            returnBankAmount += amt;
+        } else {
+            returnCashAmount += amt;
+        }
+    }
+
+    // Subtract sale returns from totals (reflect in minus)
+    const finalTotalAmount = totalAmount - returnTotalAmount;
+    const finalProductAmount = prodAmount - returnTotalAmount;
+    const finalCashAmount = cashAmount - returnCashAmount;
+    const finalBankAmount = bankAmount - returnBankAmount;
+    const finalTotalCount = totalCount + returnCount;
+
     return {
         summary: {
-            total: { amount: totalAmount, count: totalCount },
-            product: { amount: prodAmount, count: prodCount },
+            total: { amount: finalTotalAmount, count: finalTotalCount },
+            product: { amount: finalProductAmount, count: prodCount + returnCount },
             stitching: { amount: stitchAmount, count: stitchCount },
             ledger: { amount: ledgerAmount, count: ledgerCount },
-            cash: { amount: cashAmount, count: 0 },
-            bank: { amount: bankAmount, count: 0 }
+            cash: { amount: finalCashAmount, count: 0 },
+            bank: { amount: finalBankAmount, count: 0 },
+            returns: { amount: returnTotalAmount, count: returnCount }
         },
         bookingAllocationMap
     };

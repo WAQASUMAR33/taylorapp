@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getScopedBranchId, filterBranches } from "@/lib/branchScope";
 import ReceivingTransactionsClient from "./ReceivingTransactionsClient";
 import { Box, CircularProgress } from "@mui/material";
-import { calculateReceivingSummary } from "@/lib/receivingBreakdown";
+import { calculateReceivingSummary, buildSaleReturnWhere, mapSaleReturnToTransaction } from "@/lib/receivingBreakdown";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,8 @@ export default async function ReceivingTransactionsPage() {
             stitching: { amount: 0, count: 0 },
             ledger: { amount: 0, count: 0 },
             cash: { amount: 0, count: 0 },
-            bank: { amount: 0, count: 0 }
+            bank: { amount: 0, count: 0 },
+            returns: { amount: 0, count: 0 }
         }
     };
 
@@ -55,8 +56,9 @@ export default async function ReceivingTransactionsPage() {
         };
 
         const { summary, bookingAllocationMap } = await calculateReceivingSummary(prisma, baseWhere);
+        const saleReturnWhere = buildSaleReturnWhere(baseWhere);
 
-        const [receivings, totalCount] = await Promise.all([
+        const [receivings, saleReturns] = await Promise.all([
             prisma.receiving.findMany({
                 where: baseWhere,
                 include: {
@@ -73,17 +75,24 @@ export default async function ReceivingTransactionsPage() {
                             status: true
                         }
                     }
-                },
-                orderBy: [
-                    { receivingDate: "desc" },
-                    { id: "desc" }
-                ],
-                take: limit
+                }
             }),
-            prisma.receiving.count({ where: baseWhere })
+            prisma.sale_return.findMany({
+                where: saleReturnWhere,
+                include: {
+                    customer: true,
+                    bank: true,
+                    branch: true,
+                    items: {
+                        include: {
+                            product: { select: { id: true, name: true, sku: true } }
+                        }
+                    }
+                }
+            })
         ]);
 
-        const transactions = receivings.map(rec => {
+        const mappedReceivings = receivings.map(rec => {
             const isBooking = !!rec.bookingId;
             const source = rec.source || (isBooking ? "Advance" : "Ledger");
             const isTransfer = (source || "").toUpperCase() === "TRANSFER";
@@ -152,6 +161,7 @@ export default async function ReceivingTransactionsPage() {
 
             return {
                 id: rec.id,
+                isReturn: false,
                 receiptNo,
                 rawReceiptNo: rec.receiptNo || `REC-${rec.id}`,
                 rawDate: rec.receivingDate.toISOString(),
@@ -175,9 +185,19 @@ export default async function ReceivingTransactionsPage() {
                 bookingId: rec.bookingId,
                 bookingNumber: bookingNum || null,
                 customerId: rec.customerId,
-                receivingId: rec.id
+                receivingId: rec.id,
+                branch: rec.branch ? { id: rec.branch.id, name: rec.branch.name, code: rec.branch.code } : null
             };
         });
+
+        const mappedReturns = saleReturns.map(mapSaleReturnToTransaction);
+        const allTransactions = [...mappedReceivings, ...mappedReturns];
+
+        // Sort descending by date
+        allTransactions.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+
+        const totalCount = allTransactions.length;
+        const transactions = allTransactions.slice(0, limit);
 
         initialData = {
             transactions,
@@ -199,16 +219,12 @@ export default async function ReceivingTransactionsPage() {
     });
 
     return (
-        <Box sx={{ width: "100%", minHeight: "100%" }}>
-            <Suspense
-                fallback={
-                    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
-                        <CircularProgress />
-                    </Box>
-                }
-            >
-                <ReceivingTransactionsClient initialData={initialData} branches={filterBranches(session, branches)} />
-            </Suspense>
-        </Box>
+        <Suspense fallback={
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+                <CircularProgress />
+            </Box>
+        }>
+            <ReceivingTransactionsClient initialData={initialData} branches={branches} />
+        </Suspense>
     );
 }
