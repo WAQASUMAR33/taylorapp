@@ -1512,7 +1512,7 @@ export default function BookingManagementClient({ initialBookings, customers, pr
                     if (item.itemStatus !== "DELIVERED") {
                         const val = payDeliverQuantities[item.id] !== undefined
                             ? parseFloat(payDeliverQuantities[item.id]) || 0
-                            : (parseFloat(item.quantity) || 1);
+                            : 0;
                         itemsDelivery.push({
                             itemId: item.id,
                             deliverNowQty: val
@@ -4841,7 +4841,24 @@ window.onload = function() {
                     <Paper elevation={0} sx={{ border: '1.5px solid #cbd5e1', borderRadius: 2.5, mb: 2.5, overflow: 'hidden' }}>
                         <Tabs
                             value={payDialogTab}
-                            onChange={(e, val) => setPayDialogTab(val)}
+                            onChange={(e, val) => {
+                                setPayDialogTab(val);
+                                if (val === 1) {
+                                    // When switching to Transfer tab, default deliver now to 0 for all items
+                                    const zeroMap = {};
+                                    (payCustomerOpenBookings || []).forEach(b => {
+                                        (b.items || []).forEach(item => {
+                                            zeroMap[item.id] = 0;
+                                        });
+                                    });
+                                    if (payBooking) {
+                                        (payBooking.items || []).forEach(item => {
+                                            zeroMap[item.id] = 0;
+                                        });
+                                    }
+                                    setPayDeliverQuantities(zeroMap);
+                                }
+                            }}
                             variant="fullWidth"
                             sx={{
                                 minHeight: 46,
@@ -5335,7 +5352,8 @@ window.onload = function() {
                                                         : `${item.stitchingType || "Suit"} Stitching`;
                                                     const itemQty = parseFloat(item.quantity) || 1;
                                                     const isDelivered = item.itemStatus === "DELIVERED";
-                                                    const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
+                                                    // In Payment tab, Deliver Now defaults to item quantity for undelivered items
+                                                    const deliverNowVal = isDelivered ? 0 : (payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty);
                                                     const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
 
                                                     return (
@@ -5346,8 +5364,8 @@ window.onload = function() {
                                                             </TableCell>
                                                             <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
                                                             <TableCell align="center" sx={{ py: 0.5 }}>
-                                                                {isDelivered || item.productId ? (
-                                                                    <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
+                                                                {isDelivered ? (
+                                                                    <Typography variant="body2" color="text.secondary" fontWeight={700}>0</Typography>
                                                                 ) : (
                                                                     <TextField
                                                                         type="number"
@@ -5873,7 +5891,7 @@ window.onload = function() {
                                 const deliverNowTotal = stitchingItems.reduce((sum, i) => {
                                     if (i.itemStatus === "DELIVERED") return sum;
                                     const inputVal = payDeliverQuantities[i.id];
-                                    const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : (parseFloat(i.quantity) || 1);
+                                    const val = inputVal !== undefined ? parseFloat(inputVal) || 0 : 0;
                                     return sum + Math.min(val, parseFloat(i.quantity) || 1);
                                 }, 0);
 
@@ -5942,7 +5960,8 @@ window.onload = function() {
                                                         : `${item.stitchingType || "Suit"} Stitching`;
                                                     const itemQty = parseFloat(item.quantity) || 1;
                                                     const isDelivered = item.itemStatus === "DELIVERED";
-                                                    const deliverNowVal = payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : itemQty;
+                                                    // In Transfer tab, Deliver Now defaults to 0 as we are only transferring the balance
+                                                    const deliverNowVal = isDelivered ? 0 : (payDeliverQuantities[item.id] !== undefined ? payDeliverQuantities[item.id] : 0);
                                                     const remainingVal = Math.max(0, itemQty - (isDelivered ? itemQty : (parseFloat(deliverNowVal) || 0)));
 
                                                     return (
@@ -5953,8 +5972,8 @@ window.onload = function() {
                                                             </TableCell>
                                                             <TableCell align="center" sx={{ fontSize: '0.8rem', py: 0.8, fontWeight: 700 }}>{itemQty}</TableCell>
                                                             <TableCell align="center" sx={{ py: 0.5 }}>
-                                                                {isDelivered || item.productId ? (
-                                                                    <Typography variant="body2" color="success.main" fontWeight={700}>{itemQty}</Typography>
+                                                                {isDelivered ? (
+                                                                    <Typography variant="body2" color="text.secondary" fontWeight={700}>0</Typography>
                                                                 ) : (
                                                                     <TextField
                                                                         type="number"
