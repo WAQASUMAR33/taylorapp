@@ -241,20 +241,6 @@ function CustomerBill({ booking, branch }) {
     const billingCust = booking.billingCustomer || booking.customer;
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
-    const suitDetailValue = (item) => {
-        const rows = [];
-        if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
-        if (item.pohnchaType) rows.push(['Bottom', item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net (Jaali)' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net + Embroidery']);
-        if (item.gheraType) rows.push(['Daman', item.gheraType === 'seedha' ? 'Straight' : 'Round']);
-        if (item.galaType) rows.push([`Collar`, `${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`]);
-        if (item.pocketType) rows.push(['Pocket', item.pocketType === 'single' ? 'Single' : 'Double']);
-        if (item.hasFrontPockets) rows.push(['Front Pockets', 'Yes']);
-        if (item.hasShalwarPocket) rows.push(['Shalwar Pocket', 'Yes']);
-        if (item.shalwarType) rows.push(['Shalwar', item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar']);
-        if (item.itemNote) rows.push(['Note', item.itemNote]);
-        return rows;
-    };
-
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', maxWidth: '72mm', margin: '0 auto', boxSizing: 'border-box' }}>
             {/* Dynamic printing styles handled by GlobalStyles below */}
@@ -376,37 +362,6 @@ function CustomerBill({ booking, branch }) {
                 );
             })()}
 
-            {/* Suit Details Section */}
-            {(() => {
-                const itemsWithDetails = (booking.items || []).filter(item => suitDetailValue(item).length > 0);
-                if (itemsWithDetails.length === 0) return null;
-
-                return (
-                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-                        <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '4px' }}>
-                            Order Details:
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                                {itemsWithDetails.map((item, idx) => {
-                                    const details = suitDetailValue(item);
-                                    const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                                    const itemType = isWskot ? "Waistcoat" : "Suit";
-                                    return (
-                                        <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
-                                            <td style={{ padding: '4px 0', fontSize: '9px', lineHeight: '1.4' }}>
-                                                <span style={{ fontWeight: 'bold' }}>{itemType} #{idx + 1}: </span>
-                                                {details.map(([label, val]) => `${label}: ${val}`).join('  |  ')}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                );
-            })()}
-
             {/* Totals Section */}
             {(() => {
                 const totalDiscount = (booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0);
@@ -512,20 +467,6 @@ function MergedCustomerBill({ bookings, branch }) {
     const advanceAmount = sortedBookings.reduce((sum, b) => sum + parseFloat(b.advanceAmount || 0), 0);
     const remainingAmount = sortedBookings.reduce((sum, b) => sum + parseFloat(b.remainingAmount || 0), 0);
 
-    const suitDetailValue = (item) => {
-        const rows = [];
-        if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
-        if (item.pohnchaType) rows.push(['Bottom', item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net (Jaali)' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net + Embroidery']);
-        if (item.gheraType) rows.push(['Daman', item.gheraType === 'seedha' ? 'Straight' : 'Round']);
-        if (item.galaType) rows.push([`Collar`, `${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`]);
-        if (item.pocketType) rows.push(['Pocket', item.pocketType === 'single' ? 'Single' : 'Double']);
-        if (item.hasFrontPockets) rows.push(['Front Pockets', 'Yes']);
-        if (item.hasShalwarPocket) rows.push(['Shalwar Pocket', 'Yes']);
-        if (item.shalwarType) rows.push(['Shalwar', item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar']);
-        if (item.itemNote) rows.push(['Note', item.itemNote]);
-        return rows;
-    };
-
     return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#000', width: '100%', maxWidth: '72mm', margin: '0 auto', boxSizing: 'border-box' }}>
             {/* Custom POS Header with Branch Branding */}
@@ -626,42 +567,6 @@ function MergedCustomerBill({ bookings, branch }) {
                     </tbody>
                 </table>
             </div>
-
-            {/* Suit Details Section */}
-            {(() => {
-                const itemsWithDetails = sortedBookings.flatMap((booking) => 
-                    (booking.items || [])
-                        .filter(item => suitDetailValue(item).length > 0)
-                        .map(item => ({ booking, item }))
-                );
-                
-                if (itemsWithDetails.length === 0) return null;
-
-                return (
-                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-                        <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '4px' }}>
-                            Order Details:
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                                {itemsWithDetails.map(({ booking, item }, idx) => {
-                                    const details = suitDetailValue(item);
-                                    const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                                    const itemType = isWskot ? "Waistcoat" : "Suit";
-                                    return (
-                                        <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
-                                            <td style={{ padding: '4px 0', fontSize: '9px', lineHeight: '1.4' }}>
-                                                <span style={{ fontWeight: 'bold' }}>{itemType} #{idx + 1} (Bill #{booking.bookingNumber || booking.id}): </span>
-                                                {details.map(([label, val]) => `${label}: ${val}`).join('  |  ')}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                );
-            })()}
 
             {/* Totals Section */}
             {(() => {
@@ -2147,20 +2052,6 @@ ${allBookingsHtml}
         const branchNotes = activeBranch?.notes || "";
         let currentBranchNotes = branchNotes;
 
-        const suitDetailValue = (item) => {
-            const rows = [];
-            if (item.cuffType) rows.push(['Cuff', item.cuffType === 'single' ? 'Single' : item.cuffType === 'double folding' ? 'Double Folding' : 'Open Sleeve']);
-            if (item.pohnchaType) rows.push(['Bottom', item.pohnchaType === 'saada' ? 'Simple' : item.pohnchaType === 'jaali' ? 'Net (Jaali)' : item.pohnchaType === 'karhaai' ? 'Embroidery' : 'Net + Embroidery']);
-            if (item.gheraType) rows.push(['Daman', item.gheraType === 'seedha' ? 'Straight' : 'Round']);
-            if (item.galaType) rows.push(['Collar', `${item.galaType === 'ban' ? 'Ban' : 'Collar'}${item.galaSize ? ` (${item.galaSize}")` : ''}`]);
-            if (item.pocketType) rows.push(['Pocket', item.pocketType === 'single' ? 'Single' : 'Double']);
-            if (item.hasFrontPockets) rows.push(['Front Pockets', 'Yes']);
-            if (item.hasShalwarPocket) rows.push(['Shalwar Pocket', 'Yes']);
-            if (item.shalwarType) rows.push(['Shalwar', item.shalwarType === 'pajama' ? 'Pajama' : 'Shalwar']);
-            if (item.itemNote) rows.push(['Note', item.itemNote]);
-            return rows;
-        };
-
         const renderHeader = (titleText) => `
             <div style="text-align: center; margin-bottom: 6px;">
                 ${logo ? `<img src="${logo}" alt="Logo" onerror="this.src='/logo.png';" style="width: 44px; height: 44px; object-fit: contain; margin-bottom: 2px;" />` : ''}
@@ -2210,29 +2101,6 @@ ${allBookingsHtml}
                     </tr>
                 `;
             }).join('');
-
-            const itemsWithDetails = (booking.items || []).filter(item => suitDetailValue(item).length > 0);
-            const suitDetailsHtml = itemsWithDetails.length > 0 ? `
-                <div style="margin-top: 6px; margin-bottom: 6px;">
-                    <div style="font-size: 9.5px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Order Details:</div>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tbody>
-                            ${itemsWithDetails.map((item, idx) => {
-                                const details = suitDetailValue(item);
-                                const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                                const itemType = isWskot ? "Waistcoat" : "Suit";
-                                return `
-                                    <tr style="border-bottom: 1px dotted #ccc;">
-                                        <td style="padding: 3px 0; font-size: 8.5px; line-height: 1.35;">
-                                            <strong>${itemType} #${idx + 1}:</strong> ${details.map(([l, v]) => `${l}: ${v}`).join('  |  ')}
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            ` : '';
 
             const totalDiscount = (booking.items || []).reduce((sum, item) => sum + parseFloat(item.discount || 0), 0);
             const netTotal = parseFloat(booking.totalAmount || 0);
@@ -2312,8 +2180,6 @@ ${allBookingsHtml}
                                 </table>
                             </div>
                         ` : ''}
-
-                        ${suitDetailsHtml}
 
                         <div style="margin-top: 6px; margin-bottom: 6px;">
                             <table style="width: 100%; border-collapse: collapse;">
@@ -2412,12 +2278,6 @@ ${allBookingsHtml}
                 }).join('');
             }).join('');
 
-            const itemsWithDetails = sortedBookings.flatMap((booking) =>
-                (booking.items || [])
-                    .filter(item => suitDetailValue(item).length > 0)
-                    .map(item => ({ booking, item }))
-            );
-
             return `
                 <div class="receipt-page">
                     <div class="receipt">
@@ -2465,28 +2325,6 @@ ${allBookingsHtml}
                                 </tbody>
                             </table>
                         </div>
-
-                        ${itemsWithDetails.length > 0 ? `
-                            <div style="margin-top: 6px; margin-bottom: 6px;">
-                                <div style="font-size: 9.5px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Order Details:</div>
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <tbody>
-                                        ${itemsWithDetails.map(({ booking, item }, idx) => {
-                                            const details = suitDetailValue(item);
-                                            const isWskot = item.stitchingType === "WAISTCOAT" || (!item.qameez_lambai && item.wskot_lambai);
-                                            const itemType = isWskot ? "Waistcoat" : "Suit";
-                                            return `
-                                                <tr style="border-bottom: 1px dotted #ccc;">
-                                                    <td style="padding: 3px 0; font-size: 8.5px; line-height: 1.35;">
-                                                        <strong>${itemType} #${idx + 1} (Bill #${booking.bookingNumber || booking.id}):</strong> ${details.map(([l, v]) => `${l}: ${v}`).join('  |  ')}
-                                                    </td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ` : ''}
 
                         <div style="margin-top: 6px; margin-bottom: 6px;">
                             <table style="width: 100%; border-collapse: collapse;">
