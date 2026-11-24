@@ -198,12 +198,13 @@ function PermissionsGrid({ permissions, onChange, role }) {
                             <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", justifyContent: "flex-end" }}>
                                 {mod.actions.map(action => {
                                     const active = isAdmin || (permissions?.[mod.key]?.[action] ?? false);
-                                    const ac = ACTION_COLORS[action];
+                                    const ac = ACTION_COLORS[action] || { bg: "#f3f4f6", color: "#6b7280" };
+                                    const actionLabel = ACTION_LABELS[action] || action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
                                     return (
-                                        <Tooltip key={action} title={isAdmin ? `${action} (always on)` : `Toggle ${action}`}>
+                                        <Tooltip key={action} title={isAdmin ? `${actionLabel} (always on)` : `Toggle ${actionLabel}`}>
                                             <Chip
                                                 size="small"
-                                                label={action}
+                                                label={actionLabel}
                                                 onClick={() => handleToggle(mod.key, action)}
                                                 sx={{
                                                     height: 22, fontSize: "0.68rem", fontWeight: 600,
@@ -211,7 +212,7 @@ function PermissionsGrid({ permissions, onChange, role }) {
                                                     bgcolor: active ? ac.bg : "#f3f4f6",
                                                     color: active ? ac.color : "#9ca3af",
                                                     border: `1px solid ${active ? ac.bg : "#e5e7eb"}`,
-                                                    textTransform: "capitalize",
+                                                    textTransform: "none",
                                                     transition: "all 0.15s",
                                                     "&:hover": isAdmin ? {} : {
                                                         bgcolor: active ? ac.bg : "#e5e7eb",
