@@ -867,30 +867,33 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                                             }
                                         }}
                                     >
-                                        {/* Col 1: Receipt Badge #REC-202609-0544-7145 */}
+                                        {/* Col 1: Transaction Roster ID (e.g. #TR-0001) */}
                                         <Box>
-                                            <Box
-                                                sx={{
-                                                    display: "inline-block",
-                                                    px: 1.25,
-                                                    py: 0.4,
-                                                    borderRadius: 1.5,
-                                                    bgcolor: tx.isReturn
-                                                        ? (isDark ? "rgba(239, 68, 68, 0.15)" : "#fee2e2")
-                                                        : (isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff"),
-                                                    border: "1px solid",
-                                                    borderColor: tx.isReturn
-                                                        ? (isDark ? "rgba(239, 68, 68, 0.35)" : "#fca5a5")
-                                                        : (isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe"),
-                                                    color: tx.isReturn ? "#dc2626" : "#2563eb",
-                                                    fontWeight: 700,
-                                                    fontSize: "0.76rem",
-                                                    letterSpacing: "0.01em",
-                                                    whiteSpace: "nowrap"
-                                                }}
-                                            >
-                                                #{tx.receiptNo}
-                                            </Box>
+                                            <Tooltip title={tx.rawReceiptNo ? `Ref: ${tx.rawReceiptNo}` : undefined}>
+                                                <Box
+                                                    sx={{
+                                                        display: "inline-block",
+                                                        px: 1.25,
+                                                        py: 0.4,
+                                                        borderRadius: 1.5,
+                                                        bgcolor: tx.isReturn
+                                                            ? (isDark ? "rgba(239, 68, 68, 0.15)" : "#fee2e2")
+                                                            : (isDark ? "rgba(37, 99, 235, 0.15)" : "#eff6ff"),
+                                                        border: "1px solid",
+                                                        borderColor: tx.isReturn
+                                                            ? (isDark ? "rgba(239, 68, 68, 0.35)" : "#fca5a5")
+                                                            : (isDark ? "rgba(37, 99, 235, 0.35)" : "#bfdbfe"),
+                                                        color: tx.isReturn ? "#dc2626" : "#2563eb",
+                                                        fontWeight: 800,
+                                                        fontSize: "0.8rem",
+                                                        letterSpacing: "0.02em",
+                                                        whiteSpace: "nowrap",
+                                                        cursor: tx.rawReceiptNo ? "help" : "default"
+                                                    }}
+                                                >
+                                                    #{tx.receiptNo}
+                                                </Box>
+                                            </Tooltip>
                                             {tx.branch && (
                                                 <Box sx={{ mt: 0.5 }}>
                                                     <Chip

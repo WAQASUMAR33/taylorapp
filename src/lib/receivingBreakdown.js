@@ -44,6 +44,11 @@ export function buildSaleReturnWhere(baseWhere = {}, search = "") {
         if (!isNaN(searchNum) && searchNum > 0) {
             searchOr.push({ totalAmount: searchNum });
         }
+        const cleanRet = q.replace(/^(RET|TR|REC|TXN)-?/i, "").trim();
+        const retNum = parseInt(cleanRet, 10);
+        if (!isNaN(retNum) && retNum > 0) {
+            searchOr.push({ id: retNum });
+        }
         saleReturnWhere.AND = [{ OR: searchOr }];
     }
 
@@ -53,12 +58,22 @@ export function buildSaleReturnWhere(baseWhere = {}, search = "") {
 export function mapSaleReturnToTransaction(ret) {
     const amtNum = parseFloat(ret.totalAmount ? ret.totalAmount.toString() : 0);
     const negativeAmt = -Math.abs(amtNum);
-    const d = new Date(ret.returnDate);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1);
-    const year = d.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-    const formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const exactDate = ret.createdAt || ret.returnDate || new Date();
+    const d = new Date(exactDate);
+    const formattedDate = d.toLocaleDateString("en-GB", {
+        timeZone: "Asia/Karachi",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+    });
+    const formattedTime = d.toLocaleTimeString("en-US", {
+        timeZone: "Asia/Karachi",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    });
+
+    const simpleId = `RET-${String(ret.id).padStart(4, "0")}`;
 
     let accountOver = "";
     if (ret.customer?.phone && ret.customer.phone.trim().length >= 4) {
@@ -77,7 +92,7 @@ export function mapSaleReturnToTransaction(ret) {
 
     const actualDescription = ret.notes 
         ? `Sale Return: ${ret.notes}${itemsSummary ? ` [${itemsSummary}]` : ''}`
-        : (itemsSummary ? `Product Sale Return: ${itemsSummary}` : `Product Sale Return #${ret.returnNumber}`);
+        : (itemsSummary ? `Product Sale Return: ${itemsSummary}` : `Product Sale Return #${simpleId}`);
 
     let paymentMethod = "Cash";
     if (ret.paymentMode === "BANK" || (ret.bank && ret.bank.name)) {
@@ -90,14 +105,14 @@ export function mapSaleReturnToTransaction(ret) {
         id: `return-${ret.id}`,
         returnId: ret.id,
         isReturn: true,
-        receiptNo: ret.returnNumber,
+        receiptNo: simpleId,
         rawReceiptNo: ret.returnNumber,
-        rawDate: ret.returnDate ? ret.returnDate.toISOString() : new Date().toISOString(),
+        rawDate: d.toISOString(),
         formattedDate,
         formattedTime,
         source: "Sale Return",
         receivingType: "Sale Return (Refund)",
-        sourceRef: `Return #${ret.returnNumber}`,
+        sourceRef: `Return #${simpleId}`,
         accountName: ret.customer?.name || "Customer",
         accountOver,
         address: ret.customer?.address || "",

@@ -126,10 +126,9 @@ export default async function ReceivingTransactionsPage() {
             const pendingBalance = Math.max(0, rawPending);
             const amountNum = parseFloat(rec.amount.toString());
 
-            let receiptNo = rec.receiptNo || `REC-${rec.id}`;
-            if (receiptNo.startsWith("REC-LEGACY-")) {
-                receiptNo = receiptNo.replace("REC-LEGACY-", "REC-");
-            }
+            // Simple Transaction Roster ID (e.g. TR-0001)
+            const simpleId = `TR-${String(rec.id).padStart(4, "0")}`;
+            const rawReceipt = rec.receiptNo || `REC-${rec.id}`;
 
             const sourceRef = isBooking 
                 ? (bookingNum ? `Booking #${bookingNum}` : `Booking #${rec.bookingId}`)
@@ -146,12 +145,21 @@ export default async function ReceivingTransactionsPage() {
                 paymentMethod = "Bank Account";
             }
 
-            const d = new Date(rec.receivingDate);
-            const day = String(d.getDate()).padStart(2, "0");
-            const month = String(d.getMonth() + 1);
-            const year = d.getFullYear();
-            const formattedDate = `${day}/${month}/${year}`;
-            const formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+            // Exact timestamp when transaction occurred in Pakistan Standard Time (Asia/Karachi)
+            const exactDate = rec.createdAt || rec.receivingDate || new Date();
+            const d = new Date(exactDate);
+            const formattedDate = d.toLocaleDateString("en-GB", {
+                timeZone: "Asia/Karachi",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+            const formattedTime = d.toLocaleTimeString("en-US", {
+                timeZone: "Asia/Karachi",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            });
 
             const alloc = bookingAllocationMap.get(rec.id) || {
                 productAmount: 0,
@@ -162,9 +170,9 @@ export default async function ReceivingTransactionsPage() {
             return {
                 id: rec.id,
                 isReturn: false,
-                receiptNo,
-                rawReceiptNo: rec.receiptNo || `REC-${rec.id}`,
-                rawDate: rec.receivingDate.toISOString(),
+                receiptNo: simpleId,
+                rawReceiptNo: rawReceipt,
+                rawDate: d.toISOString(),
                 formattedDate,
                 formattedTime,
                 source,
