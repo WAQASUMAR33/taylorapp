@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Table,
     TableBody,
@@ -64,6 +65,7 @@ import {
     Shirt,
     Square,
     Calendar,
+    CalendarPlus,
     RotateCw,
     CheckCircle2,
     AlertTriangle,
@@ -134,6 +136,7 @@ const formatMeasurementDate = (dateInput) => {
 };
 
 export default function CustomerManagementClient({ initialCustomers, initialTotalCount, initialMaxMeasurementNo = 0, accountCategories }) {
+    const router = useRouter();
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const { data: session } = useSession();
@@ -2089,6 +2092,15 @@ export default function CustomerManagementClient({ initialCustomers, initialTota
                                             <Tooltip title="Delete">
                                                 <IconButton size="small" color="error" onClick={() => handleOpenDeleteDialog(customer)}>
                                                     <Trash2 size={17} />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="New Booking">
+                                                <IconButton
+                                                    size="small"
+                                                    sx={{ color: "#6366f1", "&:hover": { bgcolor: "#eef2ff" } }}
+                                                    onClick={() => router.push(`/dashboard/bookings?customerId=${customer.id}&new=true`)}
+                                                >
+                                                    <CalendarPlus size={17} />
                                                 </IconButton>
                                             </Tooltip>
                                         </Stack>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@mui/material";
 import {
     Edit, Trash2, Search, Plus, User, Calendar, Ruler, Printer,
-    Shirt, Square, MapPin, Phone, MessageCircle, Copy, Share2,
+    Shirt, Square, MapPin, Phone, MessageCircle, Copy, Share2, CalendarPlus,
 } from "lucide-react";
 
 // ── Urdu labels for all measurement fields ──────────────────────────────────
@@ -110,6 +111,7 @@ function MeasureField({ field, formData, onChange }) {
 }
 
 export default function MeasurementManagementClient({ initialMeasurements = [], initialTotalCount = 0, branches = [] }) {
+    const router = useRouter();
     const { data: session } = useSession();
     const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const canView = isAdmin || checkPermission(session, "measurements", "view");
@@ -694,6 +696,20 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
                                                         <Trash2 size={17} />
                                                     </IconButton>
                                                 </Tooltip>
+                                                <Tooltip title="New Booking for Customer">
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: '#6366f1', '&:hover': { bgcolor: '#eef2ff' } }}
+                                                        onClick={() => {
+                                                            const custId = m.customerId || m.customer?.id;
+                                                            if (custId) {
+                                                                router.push(`/dashboard/bookings?customerId=${custId}&new=true`);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <CalendarPlus size={17} />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
@@ -1144,7 +1160,28 @@ export default function MeasurementManagementClient({ initialMeasurements = [], 
 
                 <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider", gap: 1 }}>
                     {selectedCustomer && (
-                        <Box sx={{ mr: 'auto', display: 'flex', gap: 1 }}>
+                        <Box sx={{ mr: 'auto', display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<CalendarPlus size={16} />}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                                    color: '#fff',
+                                    textTransform: 'none',
+                                    borderRadius: 2,
+                                    fontWeight: 600,
+                                    boxShadow: '0 2px 8px rgba(139,92,246,0.3)',
+                                    '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
+                                }}
+                                onClick={() => {
+                                    if (selectedCustomer?.id) {
+                                        router.push(`/dashboard/bookings?customerId=${selectedCustomer.id}&new=true`);
+                                    }
+                                }}
+                            >
+                                New Booking
+                            </Button>
                             <Button
                                 size="small"
                                 variant="outlined"

@@ -206,7 +206,11 @@ async function getBranches() {
     }
 }
 
-export default async function BookingsPage() {
+export default async function BookingsPage(props) {
+    const sp = props?.searchParams ? await props.searchParams : {};
+    const initialCustomerId = sp?.customerId || null;
+    const initialOpenNewBooking = sp?.new === "true" || sp?.newBooking === "true";
+
     const session = await getServerSession(authOptions);
     const isAdmin = session?.user?.role === "ADMIN";
     const userBranchId = session?.user?.branchId;
@@ -269,6 +273,8 @@ export default async function BookingsPage() {
                     banks={banks}
                     branches={branches}
                     userBranchId={userBranchId}
+                    initialCustomerId={initialCustomerId}
+                    initialOpenNewBooking={initialOpenNewBooking}
                 />
             </Box>
         </Box>

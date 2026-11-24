@@ -891,7 +891,7 @@ function TailorTicket({ booking, measurements, branch }) {
     );
 }
 
-export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks, branches = [], userBranchId = null }) {
+export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks, branches = [], userBranchId = null, initialCustomerId = null, initialOpenNewBooking = false }) {
     const { data: session } = useSession();
     const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
     const userRole = String(session?.user?.role || "").trim().toUpperCase();
@@ -2601,7 +2601,7 @@ window.onload = function() {
     const tailors = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "tailor");
     const cutters = (employees || []).filter(e => e.accountCategory?.name?.toLowerCase() === "cutter");
 
-    const handleCustomerChange = async (customerId) => {
+    const handleCustomerChange = async (customerId, customerObj = null) => {
         if (!customerId) {
             setFormData(prev => ({
                 ...prev,
@@ -2614,7 +2614,23 @@ window.onload = function() {
             setCustomerMeasurements(null);
             return;
         }
-        const customer = (customerOptions || []).find(c => c.id === parseInt(customerId));
+        let customer = customerObj || (customerOptions || []).find(c => c.id === parseInt(customerId));
+        if (!customer) {
+            try {
+                const res = await fetch(`/api/customers/${customerId}`);
+                if (res.ok) {
+                    customer = await res.json();
+                    if (customer) {
+                        setCustomerOptions(prev => {
+                            const exists = prev.some(c => c.id === customer.id);
+                            return exists ? prev : [customer, ...prev];
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch customer by ID:", err);
+            }
+        }
         if (customer) {
             setFormData(prev => ({
                 ...prev,
@@ -2624,8 +2640,17 @@ window.onload = function() {
                 customerAddress: customer.address || "",
                 customerPhone: customer.phone || ""
             }));
+            setCustomerSearchFilters({
+                name: customer.name || "",
+                fatherName: customer.fatherName || "",
+                phone: customer.phone || "",
+                address: customer.address || "",
+                measurementNo: customer.measurementNo || ""
+            });
+            setShowCustomerGrid(false);
+
             // Fetch saved measurements and pre-fill any stitching cart items
-            const measurement = await fetchMeasurements(customer.id);
+            const measurement = await fetchMeasurements(customer.id, customer.measurementNo);
             setCustomerMeasurements(measurement);
             if (measurement) {
                 setCartItems(prev => prev.map(item =>
@@ -2634,6 +2659,27 @@ window.onload = function() {
             }
         }
     };
+
+    // Auto-select customer and open booking modal if customerId or new is passed via props or URL
+    const hasInitializedFromUrl = React.useRef(false);
+    React.useEffect(() => {
+        if (hasInitializedFromUrl.current) return;
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        const urlParams = new URLSearchParams(search);
+        const targetCustId = urlParams.get("customerId") || initialCustomerId;
+        const shouldOpen = urlParams.get("new") === "true" || urlParams.get("newBooking") === "true" || initialOpenNewBooking;
+
+        if (targetCustId || shouldOpen) {
+            hasInitializedFromUrl.current = true;
+            if (targetCustId) {
+                handleCustomerChange(targetCustId).then(() => {
+                    setShowForm(true);
+                });
+            } else if (shouldOpen) {
+                setShowForm(true);
+            }
+        }
+    }, [initialCustomerId, initialOpenNewBooking]);
 
     const handleFilterChange = (field, value) => {
         const updatedFilters = { ...customerSearchFilters, [field]: value };
