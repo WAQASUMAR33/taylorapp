@@ -572,6 +572,7 @@ enum user_role {
   ADMIN
   MANAGER
   STAFF
+  CASHIER
 }
 
 enum booking_type {

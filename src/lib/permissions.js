@@ -5,6 +5,13 @@ export function isUserAdmin(session) {
     return role === "ADMIN" || Boolean(user?.isAdmin);
 }
 
+export function isUserCashier(session) {
+    if (!session) return false;
+    const user = session?.user || session;
+    const role = String(user?.role || "").trim().toUpperCase();
+    return role === "CASHIER" || Boolean(checkPermission(session, "bookings", "receive_cash"));
+}
+
 export function checkPermission(session, moduleKey, action = "view") {
     if (!session) return false;
     const user = session?.user || session;
@@ -42,6 +49,27 @@ export function checkPermission(session, moduleKey, action = "view") {
     if (role === "MANAGER") {
         return moduleKey !== "users" && moduleKey !== "branches" && moduleKey !== "settings";
     }
+
+    if (role === "CASHIER") {
+        if (action === "view") {
+            return [
+                "dashboard",
+                "bookings",
+                "customers",
+                "receiving-transactions",
+                "ledger",
+                "sale-list"
+            ].includes(moduleKey);
+        }
+        if (action === "receive_cash") {
+            return ["bookings", "receiving-transactions"].includes(moduleKey);
+        }
+        if (action === "create" && moduleKey === "ledger") {
+            return true;
+        }
+        return false;
+    }
+
     if (role === "STAFF") {
         if (action === "view") {
             return [
@@ -54,6 +82,9 @@ export function checkPermission(session, moduleKey, action = "view") {
                 "sale-list", 
                 "sale-returns"
             ].includes(moduleKey);
+        }
+        if (action === "create" && ["bookings", "customers", "measurements"].includes(moduleKey)) {
+            return true;
         }
         return false;
     }

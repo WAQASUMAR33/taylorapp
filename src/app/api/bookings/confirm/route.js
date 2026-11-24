@@ -81,6 +81,15 @@ async function syncPaymentToAccounts(tx, { paymentMethod, bankId, advAmt, cashAm
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
+        const userRole = String(session?.user?.role || "").trim().toUpperCase();
+        const isAdmin = userRole === "ADMIN" || Boolean(session?.user?.isAdmin);
+        const isCashier = userRole === "CASHIER" || Boolean(session?.user?.permissions?.bookings?.receive_cash);
+        if (!isAdmin && !isCashier) {
+            return NextResponse.json(
+                { error: "Only cashiers or administrators can confirm bookings and receive cash." },
+                { status: 403 }
+            );
+        }
         const body = await req.json();
         const {
             bookingId,

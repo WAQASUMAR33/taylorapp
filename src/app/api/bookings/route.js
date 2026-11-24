@@ -390,6 +390,13 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
+        const userRole = String(session?.user?.role || "").trim().toUpperCase();
+        if (userRole === "CASHIER") {
+            return NextResponse.json(
+                { error: "Cashiers are not permitted to create bookings. Only Staff and Admin can create bookings." },
+                { status: 403 }
+            );
+        }
         const body = await req.json();
         const {
             customerId,

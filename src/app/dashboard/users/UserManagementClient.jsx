@@ -21,11 +21,12 @@ import {
 } from "lucide-react";
 
 // ─── Role config ──────────────────────────────────────────────────────────────
-const ROLES = ["ADMIN", "MANAGER", "STAFF"];
+const ROLES = ["ADMIN", "MANAGER", "CASHIER", "STAFF"];
 
 const ROLE_META = {
     ADMIN: { color: "error", icon: ShieldCheck, gradient: "linear-gradient(135deg, #f87171 0%, #ef4444 100%)", shadow: "rgba(239,68,68,0.3)" },
     MANAGER: { color: "primary", icon: UserCog, gradient: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)", shadow: "rgba(59,130,246,0.3)" },
+    CASHIER: { color: "warning", icon: ReceiptText, gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", shadow: "rgba(245,158,11,0.3)" },
     STAFF: { color: "success", icon: User, gradient: "linear-gradient(135deg, #34d399 0%, #10b981 100%)", shadow: "rgba(16,185,129,0.3)" },
 };
 
@@ -34,7 +35,7 @@ const MODULES = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, actions: ["view"] },
     { key: "customers", label: "Account Management", icon: Users, actions: ["view", "create", "edit", "delete"] },
     { key: "measurements", label: "Measurements", icon: Ruler, actions: ["view", "create", "edit", "delete"] },
-    { key: "bookings", label: "Bookings", icon: Calendar, actions: ["view", "create", "edit", "delete"] },
+    { key: "bookings", label: "Bookings", icon: Calendar, actions: ["view", "create", "edit", "delete", "receive_cash"] },
     { key: "analytics", label: "Analytics", icon: BarChart3, actions: ["view"] },
     { key: "sale-list", label: "Sale History", icon: ClipboardList, actions: ["view"] },
     { key: "sale-returns", label: "Sale Returns", icon: RotateCcw, actions: ["view", "create", "edit", "delete"] },
@@ -46,7 +47,7 @@ const MODULES = [
     { key: "stitching-expenses", label: "Stitching Expenses", icon: Receipt, actions: ["view", "create", "edit", "delete"] },
     { key: "stitching-expense-titles", label: "Stitching Expense Titles", icon: Tags, actions: ["view", "create", "edit", "delete"] },
     { key: "ledger", label: "Ledger", icon: BookText, actions: ["view", "create"] },
-    { key: "receiving-transactions", label: "Transaction Roster", icon: ReceiptText, actions: ["view"] },
+    { key: "receiving-transactions", label: "Transaction Roster", icon: ReceiptText, actions: ["view", "receive_cash"] },
     { key: "categories", label: "Account Categories", icon: Tags, actions: ["view", "create", "edit", "delete"] },
     { key: "stitching-options", label: "Stitching Option Pricing", icon: SlidersHorizontal, actions: ["view", "create", "edit", "delete"] },
     { key: "branches", label: "Branch Management", icon: Store, actions: ["view", "create", "edit", "delete"] },
@@ -73,7 +74,7 @@ const STAFF_ALLOWED_MODULES = [
 const DEFAULT_STAFF_PERMISSIONS = Object.fromEntries(
     MODULES.map(m => [
         m.key,
-        Object.fromEntries(m.actions.map(a => [a, STAFF_ALLOWED_MODULES.includes(m.key) && a === "view"]))
+        Object.fromEntries(m.actions.map(a => [a, STAFF_ALLOWED_MODULES.includes(m.key) && (a === "view" || (m.key === "bookings" && a === "create"))]))
     ])
 );
 
@@ -82,6 +83,15 @@ const ACTION_COLORS = {
     create: { bg: "#d1fae5", color: "#065f46" },
     edit: { bg: "#fef3c7", color: "#92400e" },
     delete: { bg: "#fee2e2", color: "#991b1b" },
+    receive_cash: { bg: "#dcfce7", color: "#15803d" },
+};
+
+const ACTION_LABELS = {
+    view: "View",
+    create: "Create",
+    edit: "Edit",
+    delete: "Delete",
+    receive_cash: "Receive Cash",
 };
 
 function getDefaultPermissions(role) {
@@ -90,6 +100,18 @@ function getDefaultPermissions(role) {
         MODULES.map(m => [m.key, Object.fromEntries(
             m.actions.map(a => [a, m.key !== "users" && m.key !== "branches" && m.key !== "settings"])
         )])
+    );
+    if (role === "CASHIER") return Object.fromEntries(
+        MODULES.map(m => [
+            m.key,
+            Object.fromEntries(m.actions.map(a => {
+                if (m.key === "bookings") return [a, a === "view" || a === "receive_cash"];
+                if (m.key === "receiving-transactions") return [a, true];
+                if (m.key === "ledger") return [a, true];
+                if (["dashboard", "customers", "sale-list"].includes(m.key)) return [a, a === "view"];
+                return [a, false];
+            }))
+        ])
     );
     return DEFAULT_STAFF_PERMISSIONS;
 }

@@ -989,8 +989,12 @@ function TailorTicket({ booking, measurements, branch }) {
 export default function BookingManagementClient({ initialBookings, customers, products, employees, stitchingOptions: initialStitchingOptions, banks, branches = [], userBranchId = null }) {
     const { data: session } = useSession();
     const isAdmin = String(session?.user?.role || "").trim().toUpperCase() === "ADMIN" || Boolean(session?.user?.isAdmin);
-    const canView = isAdmin || checkPermission(session, "bookings", "view");
-    const canCreate = isAdmin || checkPermission(session, "bookings", "create");
+    const userRole = String(session?.user?.role || "").trim().toUpperCase();
+    const isCashier = userRole === "CASHIER" || Boolean(checkPermission(session, "bookings", "receive_cash"));
+    const canMakeBooking = (isAdmin || userRole === "STAFF" || userRole === "MANAGER" || (!isCashier && checkPermission(session, "bookings", "create"))) && !isCashier;
+    const canViewCashierQueues = isCashier || isAdmin;
+    const canView = isAdmin || checkPermission(session, "bookings", "view") || isCashier;
+    const canCreate = canMakeBooking;
     const canEdit = isAdmin || checkPermission(session, "bookings", "edit");
     const canDelete = isAdmin || checkPermission(session, "bookings", "delete");
     const stitchingOptions = initialStitchingOptions || [];
@@ -1249,6 +1253,12 @@ export default function BookingManagementClient({ initialBookings, customers, pr
 
     // Confirmation Tab Filter ("ALL" | "UNCONFIRMED" | "CONFIRMED")
     const [filterConfirmationTab, setFilterConfirmationTab] = useState("ALL");
+
+    useEffect(() => {
+        if (isCashier && !isAdmin) {
+            setFilterConfirmationTab("UNCONFIRMED");
+        }
+    }, [isCashier, isAdmin]);
 
     const handleOpenConfirmDialog = (booking) => {
         setConfirmBooking(booking);
@@ -3682,7 +3692,7 @@ window.onload = function() {
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    {!editingBookingId && (
+                    {!editingBookingId && isAdmin && (
                         <FormControlLabel
                             control={
                                 <Switch
@@ -6796,7 +6806,7 @@ window.onload = function() {
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {unconfirmedBookingsCount > 0 && (
+                    {canViewCashierQueues && unconfirmedBookingsCount > 0 && (
                         <Chip
                             icon={<Clock size={14} color="#b45309" />}
                             label={`${unconfirmedBookingsCount} awaiting cashier`}
@@ -7041,74 +7051,78 @@ window.onload = function() {
                             Print Selected ({selectedIds.size})
                         </Button>
                     )}
-                    <Button
-                        variant="contained"
-                        startIcon={<Plus size={18} />}
-                        onClick={() => setShowForm(true)}
-                        sx={{
-                            borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
-                            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                            boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
-                            '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
-                        }}
-                    >
-                        New Booking
-                    </Button>
+                    {canMakeBooking && (
+                        <Button
+                            variant="contained"
+                            startIcon={<Plus size={18} />}
+                            onClick={() => setShowForm(true)}
+                            sx={{
+                                borderRadius: 2, textTransform: 'none', px: 3, whiteSpace: 'nowrap',
+                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                                boxShadow: '0 4px 14px rgba(139,92,246,0.35)',
+                                '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }
+                            }}
+                        >
+                            New Booking
+                        </Button>
+                    )}
                 </Box>
             </Box>
 
-            {/* ── Confirmation Status Filter Tabs ── */}
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                <Tabs
-                    value={filterConfirmationTab}
-                    onChange={(e, val) => setFilterConfirmationTab(val)}
-                    sx={{
-                        minHeight: 38,
-                        '& .MuiTab-root': {
-                            minHeight: 38,
-                            py: 0.5,
-                            px: 2,
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            fontSize: '0.82rem',
-                            borderRadius: 2
-                        },
-                        '& .MuiTabs-indicator': {
-                            borderRadius: 3,
-                            height: 3,
-                            bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#f59e0b' : '#8b5cf6'
-                        }
-                    }}
-                >
-                    <Tab label={`All Bookings (${bookings?.length || 0})`} value="ALL" />
-                    <Tab
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                                <span>⏳ Awaiting Cashier</span>
-                                {unconfirmedBookingsCount > 0 && (
-                                    <Chip
-                                        size="small"
-                                        label={unconfirmedBookingsCount}
-                                        sx={{
-                                            height: 19,
-                                            fontSize: '0.7rem',
-                                            fontWeight: 800,
-                                            bgcolor: '#f59e0b',
-                                            color: 'white'
-                                        }}
-                                    />
-                                )}
-                            </Box>
-                        }
-                        value="UNCONFIRMED"
+            {/* ── Confirmation Status Filter Tabs (Only Cashier & Admin) ── */}
+            {canViewCashierQueues && (
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                    <Tabs
+                        value={filterConfirmationTab}
+                        onChange={(e, val) => setFilterConfirmationTab(val)}
                         sx={{
-                            color: unconfirmedBookingsCount > 0 ? '#b45309 !important' : 'inherit',
-                            bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#fef3c7' : 'transparent'
+                            minHeight: 38,
+                            '& .MuiTab-root': {
+                                minHeight: 38,
+                                py: 0.5,
+                                px: 2,
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.82rem',
+                                borderRadius: 2
+                            },
+                            '& .MuiTabs-indicator': {
+                                borderRadius: 3,
+                                height: 3,
+                                bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#f59e0b' : '#8b5cf6'
+                            }
                         }}
-                    />
-                    <Tab label="✅ Confirmed Bookings" value="CONFIRMED" />
-                </Tabs>
-            </Box>
+                    >
+                        <Tab label={`All Bookings (${bookings?.length || 0})`} value="ALL" />
+                        <Tab
+                            label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                    <span>⏳ Awaiting Cashier</span>
+                                    {unconfirmedBookingsCount > 0 && (
+                                        <Chip
+                                            size="small"
+                                            label={unconfirmedBookingsCount}
+                                            sx={{
+                                                height: 19,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 800,
+                                                bgcolor: '#f59e0b',
+                                                color: 'white'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            }
+                            value="UNCONFIRMED"
+                            sx={{
+                                color: unconfirmedBookingsCount > 0 ? '#b45309 !important' : 'inherit',
+                                bgcolor: filterConfirmationTab === 'UNCONFIRMED' ? '#fef3c7' : 'transparent'
+                            }}
+                        />
+                        <Tab label="✅ Confirmed Bookings" value="CONFIRMED" />
+                    </Tabs>
+                </Box>
+            )}
 
             <TableContainer component={Card} elevation={0} sx={{ 
                 borderRadius: 3, 
@@ -7451,7 +7465,7 @@ window.onload = function() {
                                     {/* Actions */}
                                     <TableCell align="right">
                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, alignItems: 'center' }}>
-                                            {booking.isConfirmed === false && (
+                                            {booking.isConfirmed === false && canViewCashierQueues && (
                                                 <Button
                                                     variant="contained"
                                                     size="small"
@@ -7508,6 +7522,10 @@ window.onload = function() {
                                                             </IconButton>
                                                         </Tooltip>
                                                     );
+                                                }
+
+                                                if (!canViewCashierQueues) {
+                                                    return null;
                                                 }
 
                                                 return (
