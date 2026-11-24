@@ -27,6 +27,244 @@ import {
 import { useSession } from "next-auth/react";
 import { checkPermission } from "@/lib/permissions";
 
+function generateTransactionRosterReportHtml({
+    transactions,
+    summary,
+    branch,
+    dateFrom,
+    dateTo,
+    datePreset,
+    source,
+    generatedBy
+}) {
+    const brandName = branch?.name || "Grace Cloth and Tailors";
+    const brandLogo = branch?.logo || "/logo.png";
+    const brandPhone = branch?.phone || "";
+    const brandAddress = branch?.address || "";
+    const brandSlogan = branch?.slogan || "";
+
+    const periodText = (dateFrom && dateTo)
+        ? (dateFrom === dateTo ? `Date: ${dateFrom}` : `Period: ${dateFrom} to ${dateTo}`)
+        : (dateFrom ? `From: ${dateFrom}` : (dateTo ? `Up to: ${dateTo}` : "All Recorded Transactions"));
+
+    const now = new Date();
+    const printTimeStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+        " at " + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    const totalNetAmt = summary?.total?.amount ?? 0;
+    const prodAmt = summary?.product?.amount ?? 0;
+    const stitchAmt = summary?.stitching?.amount ?? 0;
+    const ledgerAmt = summary?.ledger?.amount ?? 0;
+    const cashAmt = summary?.cash?.amount ?? 0;
+    const bankAmt = summary?.bank?.amount ?? 0;
+    const returnsAmt = summary?.returns?.amount ?? 0;
+
+    const rowsHtml = transactions.map((t, idx) => {
+        const isRet = Boolean(t.isReturn || t.amount < 0);
+        const numAmt = parseFloat(t.amount || 0);
+
+        const formattedAmt = isRet
+            ? `<span style="color:#b91c1c;font-weight:700;">-Rs. ${Math.abs(numAmt).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`
+            : `<span style="font-weight:700;">Rs. ${numAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+
+        const typeBadge = isRet
+            ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;">Return (Refund)</span>`
+            : `<span style="background:#f1f5f9;color:#334155;padding:2px 6px;border-radius:4px;font-weight:600;font-size:10px;">${t.receivingType || t.source || 'Receiving'}</span>`;
+
+        const modeBadge = t.paymentMethod?.toLowerCase().includes("bank")
+            ? `<span style="color:#6d28d9;font-weight:600;">Bank</span>`
+            : `<span style="color:#047857;font-weight:600;">Cash</span>`;
+
+        return `
+            <tr style="border-bottom:1px solid #e2e8f0;${isRet ? 'background:#fff8f8;' : (idx % 2 === 1 ? 'background:#f8fafc;' : '')}">
+                <td style="padding:6px 8px;text-align:center;font-size:10px;color:#64748b;">${idx + 1}</td>
+                <td style="padding:6px 8px;font-family:monospace;font-weight:700;font-size:11px;color:${isRet ? '#b91c1c' : '#1d4ed8'};">#${t.receiptNo}</td>
+                <td style="padding:6px 8px;font-size:10.5px;white-space:nowrap;">
+                    <div>${t.formattedDate}</div>
+                    <div style="font-size:9.5px;color:#64748b;">${t.formattedTime || ''}</div>
+                </td>
+                <td style="padding:6px 8px;font-size:11px;">
+                    <div style="font-weight:700;color:#0f172a;">${t.accountName || 'Customer'}</div>
+                    <div style="font-size:9.5px;color:#64748b;">${t.accountOver || ''} ${t.address ? '• ' + t.address : ''}</div>
+                </td>
+                <td style="padding:6px 8px;font-size:10.5px;">${typeBadge}</td>
+                <td style="padding:6px 8px;font-size:10.5px;font-family:monospace;color:#475569;">${t.sourceRef || '—'}</td>
+                <td style="padding:6px 8px;font-size:10.5px;text-align:center;">${modeBadge}</td>
+                <td style="padding:6px 8px;font-size:10px;color:#475569;max-width:240px;line-height:1.3;">${t.description || '—'}</td>
+                <td style="padding:6px 8px;text-align:right;font-size:11.5px;white-space:nowrap;">${formattedAmt}</td>
+            </tr>
+        `;
+    }).join("");
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Transaction Roster Report - ${brandName}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 11px; line-height: 1.4; padding: 16px; }
+    
+    .toolbar { position: sticky; top: 0; background: #1e293b; color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .toolbar h3 { font-size: 13px; font-weight: 600; }
+    .toolbar button { background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; margin-left: 8px; }
+    .toolbar button.close-btn { background: #475569; }
+    .toolbar button:hover { opacity: 0.9; }
+
+    .header-box { border-bottom: 2.5px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; }
+    .header-logo { width: 68px; height: 68px; object-fit: contain; }
+    .header-content { flex: 1; text-align: center; }
+    .header-content h1 { font-size: 22px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: #0f172a; }
+    .header-content .tagline { font-size: 11px; font-style: italic; color: #475569; margin-top: 2px; }
+    .header-content .contact { font-size: 11px; font-weight: 600; color: #1e293b; margin-top: 4px; }
+    .header-content .address { font-size: 10.5px; color: #64748b; margin-top: 2px; }
+
+    .report-title-banner { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .report-title-banner .title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; }
+    .report-title-banner .meta { font-size: 10.5px; color: #475569; font-weight: 600; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .summary-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; background: #fafafa; }
+    .summary-card.highlight { background: #f0fdf4; border-color: #86efac; }
+    .summary-card.return-card { background: #fef2f2; border-color: #fca5a5; }
+    .summary-card .lbl { font-size: 9.5px; text-transform: uppercase; font-weight: 700; color: #64748b; }
+    .summary-card .val { font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+    .summary-card.highlight .val { color: #15803d; }
+    .summary-card.return-card .val { color: #b91c1c; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    thead { display: table-header-group; }
+    thead tr { background: #0f172a; color: #fff; }
+    th { padding: 7px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid #334155; }
+    td { border: 1px solid #e2e8f0; vertical-align: middle; }
+    tfoot tr { background: #0f172a; color: #fff; font-weight: 800; }
+    tfoot td { border: 1px solid #334155; padding: 8px; font-size: 11px; }
+
+    .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 36px; padding-top: 12px; page-break-inside: avoid; }
+    .sig-line { border-top: 1.5px solid #64748b; padding-top: 6px; text-align: center; font-size: 11px; font-weight: 700; color: #334155; }
+
+    @media print {
+        .toolbar { display: none !important; }
+        body { padding: 0 !important; font-size: 10px !important; }
+        .summary-card .val { font-size: 12px !important; }
+        table { font-size: 9.5px !important; }
+        @page { size: A4 landscape; margin: 8mm; }
+    }
+</style>
+</head>
+<body>
+    <div class="toolbar">
+        <div>
+            <h3>Transaction Roster Report • Ready to Print</h3>
+            <span style="font-size:11px;opacity:0.85;">${transactions.length} record(s) loaded</span>
+        </div>
+        <div>
+            <button class="close-btn" onclick="window.close()">Close</button>
+            <button onclick="window.print()">🖨️ Print Report</button>
+        </div>
+    </div>
+
+    <div class="header-box">
+        <img class="header-logo" src="${brandLogo}" alt="Logo" onerror="this.src='/logo.png'"/>
+        <div class="header-content">
+            <h1>${brandName}</h1>
+            ${brandSlogan ? `<div class="tagline">“${brandSlogan}”</div>` : ''}
+            <div class="contact">
+                ${brandPhone ? `<span>📞 ${brandPhone}</span>` : ''}
+                ${branch?.code ? `<span style="margin-left:12px;background:#e2e8f0;padding:1px 6px;border-radius:4px;">Branch Code: ${branch.code}</span>` : ''}
+            </div>
+            ${brandAddress ? `<div class="address">${brandAddress}</div>` : ''}
+        </div>
+    </div>
+
+    <div class="report-title-banner">
+        <div>
+            <div class="title">Transaction Roster & Cash Receiving Report</div>
+            <div style="font-size:10px;color:#64748b;margin-top:2px;">Category Filter: <strong>${source}</strong></div>
+        </div>
+        <div class="meta" style="text-align:right;">
+            <div>${periodText}</div>
+            <div style="font-size:9.5px;color:#64748b;margin-top:2px;">Generated on: ${printTimeStr} ${generatedBy ? `• By: ${generatedBy}` : ''}</div>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card highlight">
+            <div class="lbl">Total Net Receiving</div>
+            <div class="val">Rs. ${totalNetAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Product Receiving</div>
+            <div class="val">Rs. ${prodAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Stitching Receiving</div>
+            <div class="val">Rs. ${stitchAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Ledger Receiving</div>
+            <div class="val">Rs. ${ledgerAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Cash Received</div>
+            <div class="val">Rs. ${cashAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Bank Received</div>
+            <div class="val">Rs. ${bankAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card return-card">
+            <div class="lbl">Sale Returns (Deducted)</div>
+            <div class="val">-Rs. ${returnsAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="summary-card">
+            <div class="lbl">Total Transactions</div>
+            <div class="val">${transactions.length} record(s)</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:30px;">#</th>
+                <th style="width:110px;text-align:left;">Receipt / Ref #</th>
+                <th style="width:95px;text-align:left;">Date & Time</th>
+                <th style="width:150px;text-align:left;">Customer Account</th>
+                <th style="width:110px;text-align:left;">Transaction Type</th>
+                <th style="width:105px;text-align:left;">Source Ref</th>
+                <th style="width:65px;text-align:center;">Mode</th>
+                <th style="text-align:left;">Description / Details</th>
+                <th style="width:115px;text-align:right;">Amount (PKR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml || `<tr><td colspan="9" style="text-align:center;padding:24px;color:#94a3b8;">No transactions found for the selected period.</td></tr>`}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="7" style="text-align:right;letter-spacing:0.5px;">TOTAL TRANSACTIONS: ${transactions.length} | NET RECEIVING SUM:</td>
+                <td colspan="2" style="text-align:right;font-size:12px;letter-spacing:0.5px;">Rs. ${totalNetAmt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="signatures">
+        <div class="sig-line">Prepared By (Staff / Data Entry)</div>
+        <div class="sig-line">Cashier / Counter In-charge</div>
+        <div class="sig-line">Audited & Verified (Manager / Admin)</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 400);
+        };
+    </script>
+</body>
+</html>`;
+}
+
 export default function ReceivingTransactionsClient({ initialData, branches = [] }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -211,6 +449,72 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
             setSource(cardSource);
         }
         setPage(1);
+    };
+
+    const [printingReport, setPrintingReport] = useState(false);
+
+    const handlePrintReport = async () => {
+        setPrintingReport(true);
+        try {
+            const params = new URLSearchParams({
+                page: "1",
+                limit: "5000",
+                source,
+                sortBy,
+                sortOrder
+            });
+
+            if (debouncedSearch) {
+                params.append("search", debouncedSearch);
+            }
+            if (dateFrom) {
+                params.append("dateFrom", dateFrom);
+            }
+            if (dateTo) {
+                params.append("dateTo", dateTo);
+            }
+            if (selectedBranchId && selectedBranchId !== "ALL") {
+                params.append("branchId", selectedBranchId);
+            }
+
+            const res = await fetch(`/api/receiving-transactions?${params.toString()}`);
+            let reportTransactions = transactions;
+            let reportSummary = summary;
+            if (res.ok) {
+                const data = await res.json();
+                reportTransactions = data.transactions || transactions;
+                reportSummary = data.summary || summary;
+            }
+
+            const activeBranch = (selectedBranchId && selectedBranchId !== "ALL")
+                ? branches.find(b => String(b.id) === String(selectedBranchId))
+                : (session?.user?.branchId ? branches.find(b => String(b.id) === String(session.user.branchId)) : null)
+                  || branches[0];
+
+            const html = generateTransactionRosterReportHtml({
+                transactions: reportTransactions,
+                summary: reportSummary,
+                branch: activeBranch,
+                dateFrom,
+                dateTo,
+                datePreset,
+                source,
+                generatedBy: session?.user?.name || session?.user?.email || "Cashier"
+            });
+
+            const win = window.open("", "_blank");
+            if (win) {
+                win.document.write(html);
+                win.document.close();
+            } else {
+                alert("Please allow popups to open the printable report.");
+            }
+        } catch (err) {
+            console.error("Failed to generate report:", err);
+            alert("Error generating report. Please try again.");
+        } finally {
+            setPrintingReport(false);
+        }
     };
 
     if (authStatus === "loading") {
@@ -483,11 +787,31 @@ export default function ReceivingTransactionsClient({ initialData, branches = []
                             <RotateCcw size={16} className={loading ? "animate-spin" : ""} />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Print List">
-                        <IconButton size="small" onClick={() => window.print()}>
-                            <Printer size={16} />
-                        </IconButton>
-                    </Tooltip>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={printingReport ? <CircularProgress size={14} color="inherit" /> : <Printer size={15} />}
+                        onClick={handlePrintReport}
+                        disabled={loading || printingReport}
+                        sx={{
+                            borderRadius: 1.5,
+                            textTransform: "none",
+                            fontWeight: 700,
+                            fontSize: "0.8rem",
+                            height: 34,
+                            px: 1.5,
+                            borderColor: isDark ? "rgba(255,255,255,0.2)" : "#cbd5e1",
+                            color: isDark ? "#e2e8f0" : "#334155",
+                            bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
+                            "&:hover": {
+                                borderColor: "#2563eb",
+                                bgcolor: isDark ? "rgba(37,99,235,0.12)" : "#eff6ff",
+                                color: "#2563eb"
+                            }
+                        }}
+                    >
+                        {printingReport ? "Generating..." : "Print Report"}
+                    </Button>
                 </Box>
             </Paper>
 
