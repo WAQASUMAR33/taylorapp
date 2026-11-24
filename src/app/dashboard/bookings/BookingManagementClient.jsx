@@ -3225,6 +3225,7 @@ window.onload = function() {
             id: i + 1,
             productId: item.productId,
             productName: item.product?.name || "",
+            sku: item.product?.sku || "",
             quantity: item.quantity || 1,
             unitPrice: parseFloat(item.unitPrice) || 0,
             discount: parseFloat(item.discount) || 0,
@@ -3695,6 +3696,7 @@ window.onload = function() {
                                                 label="Name *"
                                                 value={customerSearchFilters.name}
                                                 onChange={(e) => handleFilterChange("name", e.target.value)}
+                                                disabled={Boolean(editingBookingId)}
                                                 required
                                                 sx={FIELD_SX}
                                             />
@@ -3708,6 +3710,7 @@ window.onload = function() {
                                                 label="Father Name"
                                                 value={customerSearchFilters.fatherName}
                                                 onChange={(e) => handleFilterChange("fatherName", e.target.value)}
+                                                disabled={Boolean(editingBookingId)}
                                                 sx={FIELD_SX}
                                             />
                                         </Box>
@@ -3720,6 +3723,7 @@ window.onload = function() {
                                                 label="Phone Number"
                                                 value={customerSearchFilters.phone}
                                                 onChange={(e) => handleFilterChange("phone", e.target.value)}
+                                                disabled={Boolean(editingBookingId)}
                                                 sx={FIELD_SX}
                                             />
                                         </Box>
@@ -3732,6 +3736,7 @@ window.onload = function() {
                                                 label="Address"
                                                 value={customerSearchFilters.address}
                                                 onChange={(e) => handleFilterChange("address", e.target.value)}
+                                                disabled={Boolean(editingBookingId)}
                                                 sx={FIELD_SX}
                                             />
                                         </Box>
@@ -3744,6 +3749,7 @@ window.onload = function() {
                                                 label="Measurement No"
                                                 value={customerSearchFilters.measurementNo}
                                                 onChange={(e) => handleFilterChange("measurementNo", e.target.value)}
+                                                disabled={Boolean(editingBookingId)}
                                                 sx={FIELD_SX}
                                             />
                                         </Box>
@@ -4076,9 +4082,9 @@ window.onload = function() {
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell sx={{ verticalAlign: 'top', pt: 1.5 }}>
-                                                    <Tooltip title="Remove item">
+                                                    <Tooltip title={editingBookingId ? "Cannot remove suit in edit mode" : "Remove item"}>
                                                         <span>
-                                                            <IconButton size="small" color="error" onClick={() => handleRemoveRow(index)} disabled={cartItems.length === 1}>
+                                                            <IconButton size="small" color="error" onClick={() => handleRemoveRow(index)} disabled={cartItems.length === 1 || Boolean(editingBookingId)}>
                                                                 <Trash2 size={15} />
                                                             </IconButton>
                                                         </span>
@@ -4090,95 +4096,111 @@ window.onload = function() {
                                 </TableBody>
                             </Table>
                         </TableContainer>
-                        <Button startIcon={<Plus size={15} />} onClick={handleAddRow} size="small"
-                            sx={{ mt: 1, textTransform: 'none', color: '#8b5cf6', fontWeight: 600 }}>
-                            Add New Item
-                        </Button>
+                        {!editingBookingId && (
+                            <Button startIcon={<Plus size={15} />} onClick={handleAddRow} size="small"
+                                sx={{ mt: 1, textTransform: 'none', color: '#8b5cf6', fontWeight: 600 }}>
+                                Add New Item
+                            </Button>
+                        )}
                     </Box>
 
                     {/* ── Products / Accessories ── */}
                     <Box sx={{ mb: 2 }}>
                         <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #f59e0b', pl: 1.5 }}>
                             <Typography variant="subtitle2" fontWeight={700} color="#1f2937">Products / Accessories</Typography>
-                            <Button startIcon={<Plus size={15} />} onClick={handleAddProductItem} size="small"
-                                sx={{ textTransform: 'none', color: '#f59e0b', fontWeight: 600 }}>
-                                Add Product
-                            </Button>
-                        </Box>
-
-                        {/* Barcode scanner / product name filter */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                            <Autocomplete
-                                freeSolo
-                                size="small"
-                                options={products || []}
-                                getOptionLabel={(o) => typeof o === 'string' ? o : `${o.name}${o.sku ? ` [${o.sku}]` : ''}`}
-                                filterOptions={(options, { inputValue }) => {
-                                    const q = (inputValue || '').toLowerCase().trim();
-                                    if (!q) return [];
-                                    return options.filter(p =>
-                                        (p.name || '').toLowerCase().includes(q) ||
-                                        (p.sku || '').toLowerCase().includes(q) ||
-                                        (p.barcode || '').toLowerCase().includes(q)
-                                    ).slice(0, 10);
-                                }}
-                                inputValue={scanCode}
-                                onInputChange={(_, val, reason) => { if (reason !== 'reset') setScanCode(val); }}
-                                onChange={(_, value) => {
-                                    if (!value) return;
-                                    if (typeof value === 'object') {
-                                        addProductToItems(value);
-                                        setScanCode('');
-                                        setTimeout(() => scanRef.current?.focus(), 50);
-                                    } else {
-                                        handleBookingScan(value);
-                                    }
-                                }}
-                                renderOption={(props, option) => {
-                                    const { key, ...rest } = props;
-                                    return (
-                                        <li key={key} {...rest}>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
-                                                {option.sku && <Typography variant="caption" color="text.secondary">SKU: {option.sku}</Typography>}
-                                            </Box>
-                                        </li>
-                                    );
-                                }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        inputRef={scanRef}
-                                        size="small"
-                                        placeholder="Scan barcode or type product name..."
-                                        autoComplete="off"
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <ScanLine size={16} color="#f59e0b" />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: 2,
-                                                bgcolor: 'white',
-                                                '& fieldset': { borderColor: '#f59e0b', borderWidth: 1.5 },
-                                                '&:hover fieldset': { borderColor: '#d97706' },
-                                                '&.Mui-focused fieldset': { borderColor: '#d97706', borderWidth: 2 },
-                                            },
-                                        }}
-                                    />
-                                )}
-                                sx={{ width: 340 }}
-                            />
-                            {scanStatus && (
-                                <Alert severity={scanStatus.type} sx={{ py: 0, px: 1.5, borderRadius: 2, fontSize: '0.8rem' }} variant="filled">
-                                    {scanStatus.msg}
-                                </Alert>
+                            {!editingBookingId && (
+                                <Button startIcon={<Plus size={15} />} onClick={handleAddProductItem} size="small"
+                                    sx={{ textTransform: 'none', color: '#f59e0b', fontWeight: 600 }}>
+                                    Add Product
+                                </Button>
                             )}
                         </Box>
+
+                        {editingBookingId ? (
+                            <Alert severity="info" sx={{ mb: 1.5, borderRadius: 2, fontSize: '0.82rem', py: 0.5 }}>
+                                🔒 <strong>Products are locked:</strong> Products cannot be added, modified, or removed during booking edit. Only stitching options can be adjusted.
+                            </Alert>
+                        ) : (
+                            /* Barcode scanner / product name filter */
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                                <Autocomplete
+                                    freeSolo
+                                    size="small"
+                                    options={products || []}
+                                    getOptionLabel={(o) => typeof o === 'string' ? o : `${o.name}${o.sku ? ` [${o.sku}]` : ''}`}
+                                    filterOptions={(options, { inputValue }) => {
+                                        const q = (inputValue || '').toLowerCase().trim();
+                                        if (!q) return [];
+                                        return options.filter(p =>
+                                            (p.name || '').toLowerCase().includes(q) ||
+                                            (p.sku || '').toLowerCase().includes(q) ||
+                                            (p.barcode || '').toLowerCase().includes(q)
+                                        ).slice(0, 10);
+                                    }}
+                                    inputValue={scanCode}
+                                    onInputChange={(_, val, reason) => { if (reason !== 'reset') setScanCode(val); }}
+                                    onChange={(_, value) => {
+                                        if (!value) return;
+                                        if (typeof value === 'object') {
+                                            addProductToItems(value);
+                                            setScanCode('');
+                                            setTimeout(() => scanRef.current?.focus(), 50);
+                                        } else {
+                                            handleBookingScan(value);
+                                        }
+                                    }}
+                                    renderOption={(props, option) => {
+                                        const { key, ...rest } = props;
+                                        return (
+                                            <li key={key} {...rest}>
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                                                    {option.sku && <Typography variant="caption" color="text.secondary">SKU: {option.sku}</Typography>}
+                                                </Box>
+                                            </li>
+                                        );
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            inputRef={scanRef}
+                                            size="small"
+                                            placeholder="Scan barcode or type product name..."
+                                            autoComplete="off"
+                                            InputProps={{
+                                                ...params.InputProps,
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <ScanLine size={16} color="#f59e0b" />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#f59e0b', borderWidth: 1.5 },
+                                                    '&:hover fieldset': { borderColor: '#d97706' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#d97706', borderWidth: 2 },
+                                                },
+                                            }}
+                                        />
+                                    )}
+                                    sx={{ width: 340 }}
+                                />
+                                {scanStatus && (
+                                    <Alert severity={scanStatus.type} sx={{ py: 0, px: 1.5, borderRadius: 2, fontSize: '0.8rem' }} variant="filled">
+                                        {scanStatus.msg}
+                                    </Alert>
+                                )}
+                            </Box>
+                        )}
+
+                        {editingBookingId && productItems.length === 0 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mb: 1 }}>
+                                No products attached to this booking.
+                            </Typography>
+                        )}
 
                         {productItems.length > 0 && (
                             <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
@@ -4187,54 +4209,87 @@ window.onload = function() {
                                         <TableRow sx={{ bgcolor: '#fef3c7' }}>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 40 }}>#</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151' }}>Product</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80 }}>Qty</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: '#374151', width: 80, textAlign: 'center' }}>Qty</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Unit Price</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: '#374151', width: 110 }}>Total</TableCell>
                                             <TableCell sx={{ width: 40 }} />
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {productItems.map((item, index) => (
-                                            <TableRow key={item.id} sx={{ '&:hover': { bgcolor: '#fffbeb' } }}>
-                                                <TableCell sx={{ color: '#6b7280', fontWeight: 600 }}>{index + 1}</TableCell>
-                                                <TableCell>
-                                                    <Autocomplete
-                                                        options={products || []}
-                                                        getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ''}` || ""}
-                                                        value={(products || []).find(p => p.id === item.productId) || null}
-                                                        onChange={(_, nv) => handleProductSelect(index, nv)}
-                                                        size="small"
-                                                        renderInput={(params) => (
-                                                            <TextField {...params} size="small" placeholder="Select product"
-                                                                sx={{ minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                        {productItems.map((item, index) => {
+                                            const matchedProduct = (products || []).find(p => p.id === item.productId);
+                                            const prodName = matchedProduct?.name || item.productName || item.product?.name || `Product #${item.productId}`;
+                                            const prodSku = matchedProduct?.sku || item.sku || item.product?.sku || '';
+
+                                            return (
+                                                <TableRow key={item.id} sx={{ '&:hover': { bgcolor: '#fffbeb' } }}>
+                                                    <TableCell sx={{ color: '#6b7280', fontWeight: 600 }}>{index + 1}</TableCell>
+                                                    <TableCell>
+                                                        {editingBookingId ? (
+                                                            <Box>
+                                                                <Typography variant="body2" fontWeight={700} color="#1f2937">
+                                                                    {prodName}
+                                                                </Typography>
+                                                                {prodSku && (
+                                                                    <Typography variant="caption" sx={{ color: '#6b7280', bgcolor: '#f3f4f6', px: 0.8, py: 0.2, borderRadius: 1 }}>
+                                                                        SKU: {prodSku}
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                        ) : (
+                                                            <Autocomplete
+                                                                options={products || []}
+                                                                getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ''}` || ""}
+                                                                value={matchedProduct || null}
+                                                                onChange={(_, nv) => handleProductSelect(index, nv)}
+                                                                size="small"
+                                                                renderInput={(params) => (
+                                                                    <TextField {...params} size="small" placeholder="Select product"
+                                                                        sx={{ minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                                )}
+                                                            />
                                                         )}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField type="number" size="small" value={item.quantity}
-                                                        onChange={(e) => handleProductItemChange(index, 'quantity', e.target.value)}
-                                                        inputProps={{ min: 0.01, step: "any", style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
-                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TextField type="number" size="small" value={item.unitPrice}
-                                                        onChange={(e) => handleProductItemChange(index, 'unitPrice', e.target.value)}
-                                                        inputProps={{ min: 0, style: { width: 80 } }}
-                                                        InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
-                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" fontWeight={800} color="#f59e0b">
-                                                        Rs.{parseFloat(item.totalPrice || 0).toLocaleString()}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <IconButton size="small" color="error" onClick={() => handleRemoveProductItem(index)}>
-                                                        <Trash2 size={15} />
-                                                    </IconButton>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                    </TableCell>
+                                                    <TableCell sx={{ textAlign: 'center' }}>
+                                                        {editingBookingId ? (
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                {item.quantity}
+                                                            </Typography>
+                                                        ) : (
+                                                            <TextField type="number" size="small" value={item.quantity}
+                                                                onChange={(e) => handleProductItemChange(index, 'quantity', e.target.value)}
+                                                                inputProps={{ min: 0.01, step: "any", style: { textAlign: 'center', padding: '4px 8px', width: 50 } }}
+                                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {editingBookingId ? (
+                                                            <Typography variant="body2" fontWeight={600} color="#374151">
+                                                                Rs.&nbsp;{parseFloat(item.unitPrice || 0).toLocaleString()}
+                                                            </Typography>
+                                                        ) : (
+                                                            <TextField type="number" size="small" value={item.unitPrice}
+                                                                onChange={(e) => handleProductItemChange(index, 'unitPrice', e.target.value)}
+                                                                inputProps={{ min: 0, style: { width: 80 } }}
+                                                                InputProps={{ startAdornment: <InputAdornment position="start">Rs.</InputAdornment> }}
+                                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white' } }} />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" fontWeight={800} color="#f59e0b">
+                                                            Rs.{parseFloat(item.totalPrice || 0).toLocaleString()}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {!editingBookingId && (
+                                                            <IconButton size="small" color="error" onClick={() => handleRemoveProductItem(index)}>
+                                                                <Trash2 size={15} />
+                                                            </IconButton>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
