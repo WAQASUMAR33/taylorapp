@@ -1270,6 +1270,8 @@ export default function BookingManagementClient({ initialBookings, customers, pr
         setPayBankId(banks && banks.length > 0 ? String(banks[0].id) : "");
         setPayDialogTab(0);
         setTransferTargetCustomer(null);
+        setTransferSearchFilters({ name: "", fatherName: "", phone: "", address: "", measurementNo: "" });
+        setShowTransferGrid(false);
         setTransferNote("");
 
         const effectiveCustomerId = booking.billingCustomerId || booking.customerId;
@@ -2707,6 +2709,57 @@ window.onload = function() {
             setShowBillingGrid(true);
             setCustomerSearchInput(value);
         }
+    };
+
+    // Transfer Target Customer search filters (Payment dialog Tab 1)
+    const [transferSearchFilters, setTransferSearchFilters] = useState({
+        name: "",
+        fatherName: "",
+        phone: "",
+        address: "",
+        measurementNo: ""
+    });
+    const [showTransferGrid, setShowTransferGrid] = useState(false);
+
+    const filteredTransferCustomers = (customerOptions || []).filter(c => {
+        if (!c) return false;
+        const currentCustId = payBooking ? (payBooking.billingCustomerId || payBooking.customerId) : null;
+        if (c.id === currentCustId) return false;
+
+        const matchName = !transferSearchFilters.name || (c.name || "").toLowerCase().includes(transferSearchFilters.name.toLowerCase());
+        const matchFather = !transferSearchFilters.fatherName || (c.fatherName || "").toLowerCase().includes(transferSearchFilters.fatherName.toLowerCase());
+        const matchPhone = !transferSearchFilters.phone || (c.phone || "").toLowerCase().includes(transferSearchFilters.phone.toLowerCase());
+        const matchAddress = !transferSearchFilters.address || (c.address || "").toLowerCase().includes(transferSearchFilters.address.toLowerCase());
+        const matchMeas = !transferSearchFilters.measurementNo || (c.measurementNo || "").toLowerCase().includes(transferSearchFilters.measurementNo.toLowerCase());
+        return matchName && matchFather && matchPhone && matchAddress && matchMeas;
+    });
+
+    const hasActiveTransferSearch = Object.values(transferSearchFilters).some(val => val.trim() !== "");
+
+    const handleTransferFilterChange = (field, value) => {
+        const updatedFilters = { ...transferSearchFilters, [field]: value };
+        setTransferSearchFilters(updatedFilters);
+        
+        const isAnyFieldActive = Object.values(updatedFilters).some(v => v.trim() !== "");
+        if (!isAnyFieldActive) {
+            setTransferTargetCustomer(null);
+            setShowTransferGrid(false);
+        } else {
+            setShowTransferGrid(true);
+            setCustomerSearchInput(value);
+        }
+    };
+
+    const handleSelectTransferTarget = (cust) => {
+        setTransferTargetCustomer(cust);
+        setTransferSearchFilters({
+            name: cust.name || "",
+            fatherName: cust.fatherName || "",
+            phone: cust.phone || "",
+            address: cust.address || "",
+            measurementNo: cust.measurementNo || ""
+        });
+        setShowTransferGrid(false);
     };
 
     const handleProductChange = (index, productId) => {
@@ -5748,54 +5801,170 @@ window.onload = function() {
                                 p: 2,
                                 mb: 2.5
                             }}>
-                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#312e81', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
-                                    Select Target Customer / Account to Transfer Balance To *
-                                </Typography>
-                                <Autocomplete
-                                    options={(customerOptions || []).filter(c => c && c.id !== (payBooking.billingCustomerId || payBooking.customerId))}
-                                    getOptionLabel={(o) => `${o.name || ""}${o.phone ? ` (${o.phone})` : ""}${o.measurementNo ? ` [M# ${o.measurementNo}]` : ""}`}
-                                    value={transferTargetCustomer}
-                                    onChange={(_, val) => setTransferTargetCustomer(val)}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#312e81', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        Select Target Customer / Account to Transfer Balance To *
+                                    </Typography>
+                                    {transferTargetCustomer && (
+                                        <Chip
+                                            label={`Selected: ${transferTargetCustomer.name}${transferTargetCustomer.phone ? ` (${transferTargetCustomer.phone})` : ''}${transferTargetCustomer.measurementNo ? ` [M# ${transferTargetCustomer.measurementNo}]` : ''}`}
                                             size="small"
-                                            placeholder="Type name, phone, or measurement number to search target account..."
+                                            onDelete={() => {
+                                                setTransferTargetCustomer(null);
+                                                setTransferSearchFilters({ name: "", fatherName: "", phone: "", address: "", measurementNo: "" });
+                                                setShowTransferGrid(false);
+                                            }}
+                                            sx={{ bgcolor: '#4f46e5', color: 'white', fontWeight: 700 }}
+                                        />
+                                    )}
+                                </Box>
+
+                                {/* Target Customer Search Inputs in a single row */}
+                                <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', lg: 'row' }, width: '100%', alignItems: 'center' }}>
+                                    <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Name *"
+                                            value={transferSearchFilters.name}
+                                            onChange={(e) => handleTransferFilterChange("name", e.target.value)}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: 2,
-                                                    fontWeight: 700,
-                                                    bgcolor: '#f8fafc',
-                                                    '& fieldset': { borderColor: '#6366f1', borderWidth: 2 }
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#c7d2fe' },
+                                                    '&:hover fieldset': { borderColor: '#6366f1' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4f46e5', borderWidth: 2 }
                                                 }
                                             }}
                                         />
-                                    )}
-                                    renderOption={(props, option) => {
-                                        const { key, ...rest } = props;
-                                        const optBal = parseFloat(option.balance || 0);
-                                        return (
-                                            <li key={key} {...rest}>
-                                                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                                                    <Box>
-                                                        <Typography variant="body2" fontWeight={800} color="#0f172a">{option.name}</Typography>
-                                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.2 }}>
-                                                            {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
-                                                            {option.measurementNo && <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 600 }}>M# {option.measurementNo}</Typography>}
-                                                            {option.address && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{option.address}</Typography>}
-                                                        </Box>
-                                                    </Box>
-                                                    <Box sx={{ textAlign: 'right' }}>
-                                                        <Typography variant="caption" color="text.secondary" display="block">Current Bal</Typography>
-                                                        <Typography variant="body2" fontWeight={800} color={optBal > 0 ? '#b91c1c' : '#15803d'}>
-                                                            Rs. {optBal.toLocaleString()}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                            </li>
-                                        );
-                                    }}
-                                />
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Father Name"
+                                            value={transferSearchFilters.fatherName}
+                                            onChange={(e) => handleTransferFilterChange("fatherName", e.target.value)}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#c7d2fe' },
+                                                    '&:hover fieldset': { borderColor: '#6366f1' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4f46e5', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 1.1, minWidth: 0, width: '100%' }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Phone Number"
+                                            value={transferSearchFilters.phone}
+                                            onChange={(e) => handleTransferFilterChange("phone", e.target.value)}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#c7d2fe' },
+                                                    '&:hover fieldset': { borderColor: '#6366f1' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4f46e5', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 1.6, minWidth: 0, width: '100%' }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Address"
+                                            value={transferSearchFilters.address}
+                                            onChange={(e) => handleTransferFilterChange("address", e.target.value)}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#c7d2fe' },
+                                                    '&:hover fieldset': { borderColor: '#6366f1' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4f46e5', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 0.8, minWidth: 0, width: '100%' }}>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Measurement No"
+                                            value={transferSearchFilters.measurementNo}
+                                            onChange={(e) => handleTransferFilterChange("measurementNo", e.target.value)}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    bgcolor: 'white',
+                                                    '& fieldset': { borderColor: '#c7d2fe' },
+                                                    '&:hover fieldset': { borderColor: '#6366f1' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4f46e5', borderWidth: 2 }
+                                                }
+                                            }}
+                                        />
+                                    </Box>
+                                </Box>
+
+                                {/* Clickable Target Customer Search Results Grid */}
+                                {showTransferGrid && hasActiveTransferSearch && filteredTransferCustomers.length > 0 && (
+                                    <Card variant="outlined" sx={{ mt: 1.5, border: '1px solid #c7d2fe', borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                                        <TableContainer sx={{ maxHeight: 220 }}>
+                                            <Table size="small" stickyHeader>
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Name</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Father Name</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Phone Number</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Address</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151' }}>Measurement No</TableCell>
+                                                        <TableCell sx={{ fontWeight: 700, backgroundColor: '#eef2ff', color: '#374151', textAlign: 'right' }}>Current Balance</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {filteredTransferCustomers.map((cust) => {
+                                                        const optBal = parseFloat(cust.balance || 0);
+                                                        return (
+                                                            <TableRow 
+                                                                key={cust.id} 
+                                                                hover 
+                                                                onClick={() => handleSelectTransferTarget(cust)}
+                                                                sx={{ 
+                                                                    cursor: 'pointer',
+                                                                    '&:hover': {
+                                                                        backgroundColor: '#e0e7ff !important'
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <TableCell sx={{ fontWeight: 700, color: '#1e1b4b' }}>{cust.name}</TableCell>
+                                                                <TableCell color="text.secondary">{cust.fatherName || "—"}</TableCell>
+                                                                <TableCell color="text.secondary">{cust.phone || "—"}</TableCell>
+                                                                <TableCell color="text.secondary">{cust.address || "—"}</TableCell>
+                                                                <TableCell sx={{ color: '#4338ca', fontWeight: 700 }}>{cust.measurementNo ? `M# ${cust.measurementNo}` : "—"}</TableCell>
+                                                                <TableCell sx={{ textAlign: 'right', fontWeight: 800, color: optBal > 0 ? '#b91c1c' : '#15803d' }}>
+                                                                    Rs. {optBal.toLocaleString()}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    </Card>
+                                )}
+
+                                {showTransferGrid && hasActiveTransferSearch && filteredTransferCustomers.length === 0 && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                                        No accounts found matching search filters.
+                                    </Typography>
+                                )}
 
                                 {transferTargetCustomer && (
                                     <Card variant="outlined" sx={{ mt: 1.5, p: 1.5, bgcolor: '#f5f3ff', borderRadius: 2, borderColor: '#c4b5fd' }}>
